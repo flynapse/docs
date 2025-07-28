@@ -1,8 +1,9 @@
 {
-  "title": "Flynapse AI Docs",
-  "description": "Technical documentation for Flynapse AI copilots",
-  "version": "0.1.0",
-  "src": "./README.md",
-  "output": "./build",
-  "theme": "default"
+  "name": "Flynapse AI Docs",
+  "sidebar": [
+    {
+      "label": "Overview",
+      "file": "README.md"
+    }
+  ]
 }
