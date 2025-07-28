@@ -1,14 +1,16 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "$schema": "https://mintlify.com/schema/docs.schema.json",
   "name": "Flynapse AI Docs",
+  "theme": "mint",
   "colors": {
     "primary": "#0066cc"
   },
-  "navigation": [
-    {
-      "group": "Overview",
-      "pages": ["README.md"]
-    }
-  ]
+  "navigation": {
+    "structure": [
+      {
+        "label": "Overview",
+        "page": "README.md"
+      }
+    ]
+  }
 }
