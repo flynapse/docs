@@ -6,11 +6,18 @@
     "primary": "#0066cc"
   },
   "navigation": {
-    "structure": [
+    "pages": [
       {
-        "label": "Overview",
-        "page": "README.md"
+        "title": "Overview",
+        "path": "/",
+        "filePath": "README.md"
       }
-    ]
+    ],
+    "languages": [],
+    "versions": [],
+    "tabs": [],
+    "dropdowns": [],
+    "anchors": [],
+    "groups": []
   }
 }
