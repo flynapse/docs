@@ -1,0 +1,350 @@
+---
+title: 'Authentication'
+description: 'Learn how to authenticate with the Flynapse API'
+---
+
+# Authentication
+
+Flynapse provides multiple authentication methods to secure API access and ensure proper authorization for different use cases.
+
+## Authentication Methods
+
+### 1. JWT Bearer Token (Recommended)
+
+JWT (JSON Web Token) authentication is the recommended method for most API interactions. It provides secure, stateless authentication with built-in expiration.
+
+#### Getting a JWT Token
+
+**Login Endpoint:**
+
+```bash
+POST /api/v1/auth/login
+```
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_in": 3600,
+    "token_type": "Bearer",
+    "user": {
+      "id": "user_123",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "role": "engineer"
+    }
+  }
+}
+```
+
+#### Using JWT Tokens
+
+Include the JWT token in the Authorization header:
+
+```bash
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Token Refresh
+
+When a JWT token expires, use the refresh token to get a new one:
+
+```bash
+POST /api/v1/auth/refresh
+```
+
+**Request Body:**
+
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### 2. API Key Authentication
+
+API keys are suitable for server-to-server communication and automated scripts. They provide long-term access without user interaction.
+
+#### Getting an API Key
+
+1. **From Dashboard**: Generate API keys from your Flynapse dashboard
+2. **From Admin**: Request API keys from your system administrator
+
+#### Using API Keys
+
+Include the API key in the X-API-Key header:
+
+```bash
+X-API-Key: fl_1234567890abcdef1234567890abcdef
+```
+
+### 3. OAuth 2.0 (Enterprise)
+
+For enterprise customers, Flynapse supports OAuth 2.0 integration with your existing identity providers.
+
+#### Supported Providers
+
+- **Azure AD**: Microsoft Azure Active Directory
+- **Okta**: Okta Identity Platform
+- **Google Workspace**: Google Workspace SSO
+- **Custom**: Custom OAuth 2.0 providers
+
+#### OAuth Flow
+
+1. **Authorization Request**: Redirect users to Flynapse authorization URL
+2. **User Consent**: User grants permission to your application
+3. **Authorization Code**: Flynapse returns an authorization code
+4. **Token Exchange**: Exchange code for access token
+5. **API Access**: Use access token for API requests
+
+## Authentication Headers
+
+### Required Headers
+
+All authenticated requests must include one of the following headers:
+
+```bash
+# JWT Bearer Token
+Authorization: Bearer <jwt-token>
+
+# OR API Key
+X-API-Key: <api-key>
+
+# OR OAuth 2.0
+Authorization: Bearer <oauth-access-token>
+```
+
+### Optional Headers
+
+```bash
+# Request ID for tracking
+X-Request-ID: req_123456789
+
+# Client information
+X-Client-Version: 1.0.0
+X-Client-Name: my-app
+```
+
+## User Roles and Permissions
+
+Flynapse implements role-based access control (RBAC) with the following roles:
+
+### Available Roles
+
+| Role | Description | Permissions |
+|------|-------------|-------------|
+| `admin` | System Administrator | Full access to all features and user management |
+| `manager` | Team Manager | Access to team data, user management within team |
+| `engineer` | Maintenance Engineer | Document access, search, commenting, sharing |
+| `viewer` | Read-only User | Document viewing and search only |
+| `api_user` | API-only User | Programmatic access via API keys |
+
+### Permission Matrix
+
+| Feature | Admin | Manager | Engineer | Viewer | API User |
+|---------|-------|---------|----------|--------|----------|
+| Document Search | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Document Viewing | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Document Comments | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Document Sharing | ✅ | ✅ | ✅ | ❌ | ❌ |
+| User Management | ✅ | ✅ | ❌ | ❌ | ❌ |
+| System Settings | ✅ | ❌ | ❌ | ❌ | ❌ |
+| API Access | ✅ | ✅ | ✅ | ❌ | ✅ |
+
+## Security Best Practices
+
+### 1. Token Management
+
+- **Store Securely**: Store tokens in secure environment variables or secret management systems
+- **Rotate Regularly**: Regularly rotate API keys and refresh JWT tokens
+- **Monitor Usage**: Monitor token usage for suspicious activity
+- **Scope Minimally**: Use the minimum required permissions for each application
+
+### 2. Network Security
+
+- **Use HTTPS**: Always use HTTPS for API communications
+- **Validate Certificates**: Verify SSL certificates to prevent man-in-the-middle attacks
+- **Rate Limiting**: Respect rate limits and implement exponential backoff
+
+### 3. Error Handling
+
+- **Handle 401 Errors**: Implement proper token refresh logic
+- **Log Security Events**: Log authentication failures and suspicious activity
+- **Graceful Degradation**: Handle authentication failures gracefully
+
+## Error Responses
+
+### Authentication Errors
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or expired token",
+    "details": {
+      "token_type": "jwt",
+      "expired_at": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+### Permission Errors
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Insufficient permissions",
+    "details": {
+      "required_permission": "document.comment",
+      "user_permissions": ["document.view", "document.search"]
+    }
+  }
+}
+```
+
+## Code Examples
+
+### Python SDK
+
+```python
+from flynapse import FlynapseClient
+
+# JWT Authentication
+client = FlynapseClient(
+    email="user@example.com",
+    password="your-password"
+)
+
+# API Key Authentication
+client = FlynapseClient(api_key="fl_1234567890abcdef")
+
+# OAuth 2.0 Authentication
+client = FlynapseClient(oauth_token="oauth_access_token")
+```
+
+### JavaScript SDK
+
+```javascript
+const { FlynapseClient } = require('@flynapse/sdk');
+
+// JWT Authentication
+const client = new FlynapseClient({
+  email: 'user@example.com',
+  password: 'your-password'
+});
+
+// API Key Authentication
+const client = new FlynapseClient({
+  apiKey: 'fl_1234567890abcdef'
+});
+
+// OAuth 2.0 Authentication
+const client = new FlynapseClient({
+  oauthToken: 'oauth_access_token'
+});
+```
+
+### cURL Examples
+
+```bash
+# JWT Authentication
+curl -X POST "https://api.flynapse.ai/v1/search/documents" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "thrust reverser"}'
+
+# API Key Authentication
+curl -X POST "https://api.flynapse.ai/v1/search/documents" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "thrust reverser"}'
+```
+
+## Session Management
+
+### JWT Token Lifecycle
+
+1. **Login**: User authenticates and receives JWT token
+2. **API Requests**: Token used for authenticated requests
+3. **Expiration**: Token expires after configured time (default: 1 hour)
+4. **Refresh**: Use refresh token to get new access token
+5. **Logout**: Invalidate tokens on logout
+
+### Session Configuration
+
+```json
+{
+  "session_timeout": 3600,
+  "refresh_token_expiry": 2592000,
+  "max_concurrent_sessions": 5,
+  "idle_timeout": 1800
+}
+```
+
+## Multi-Factor Authentication (MFA)
+
+Enterprise customers can enable MFA for enhanced security:
+
+### MFA Methods
+
+- **SMS**: One-time codes sent via SMS
+- **Email**: One-time codes sent via email
+- **TOTP**: Time-based one-time passwords (Google Authenticator, Authy)
+- **Hardware Tokens**: Physical security keys (YubiKey)
+
+### MFA Flow
+
+1. **Login Attempt**: User provides email/password
+2. **MFA Challenge**: System requests second factor
+3. **Verification**: User provides MFA code
+4. **Token Issuance**: System issues JWT token upon successful verification
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| 401 Unauthorized | Expired or invalid token | Refresh JWT token or regenerate API key |
+| 403 Forbidden | Insufficient permissions | Contact admin to update user role |
+| 429 Too Many Requests | Rate limit exceeded | Implement exponential backoff |
+| 500 Internal Server Error | Server-side issue | Contact support with request ID |
+
+### Debug Information
+
+Include debug headers for troubleshooting:
+
+```bash
+X-Debug: true
+X-Request-ID: req_123456789
+```
+
+## Support
+
+For authentication issues:
+
+- **Documentation**: This authentication guide
+- **Support Email**: auth-support@flynapse.ai
+- **Community Forum**: [community.flynapse.ai](https://community.flynapse.ai)
+- **Emergency Contact**: security@flynapse.ai (for security incidents)
+
+---
+
+*Secure your Flynapse integration with proper authentication* 

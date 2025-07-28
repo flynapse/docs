@@ -1,0 +1,285 @@
+---
+title: 'API Reference Introduction'
+description: 'Comprehensive API documentation for the Flynapse platform'
+---
+
+# Flynapse API Reference
+
+Welcome to the Flynapse API documentation. Our APIs provide programmatic access to all platform features, enabling you to integrate Flynapse's AI capabilities into your applications and workflows.
+
+## API Overview
+
+The Flynapse platform exposes a comprehensive set of REST APIs organized into logical service groups:
+
+- **Authentication API**: User authentication and session management
+- **Search API**: Document search and retrieval operations
+- **Chat API**: Conversational AI interactions
+- **Document API**: Document management and viewing
+- **Collaboration API**: Comments, sharing, and team features
+- **User Management API**: User profiles and permissions
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://api.flynapse.ai/v1
+```
+
+## Authentication
+
+Most API endpoints require authentication. Flynapse supports multiple authentication methods:
+
+### JWT Bearer Token (Recommended)
+
+```bash
+Authorization: Bearer <your-jwt-token>
+```
+
+### API Key
+
+```bash
+X-API-Key: <your-api-key>
+```
+
+For detailed authentication information, see our [Authentication Guide](/api-reference/authentication).
+
+## Request Format
+
+All API requests should include the following headers:
+
+```bash
+Content-Type: application/json
+Accept: application/json
+```
+
+## Response Format
+
+All API responses follow a consistent JSON format:
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response data here
+  },
+  "meta": {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "request_id": "req_123456789"
+  }
+}
+```
+
+### Error Responses
+
+Error responses include detailed error information:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "The request parameters are invalid",
+    "details": {
+      "field": "query",
+      "issue": "Query parameter is required"
+    }
+  },
+  "meta": {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "request_id": "req_123456789"
+  }
+}
+```
+
+## Rate Limiting
+
+API requests are subject to rate limiting to ensure fair usage:
+
+- **Standard Plan**: 1,000 requests per hour
+- **Professional Plan**: 10,000 requests per hour
+- **Enterprise Plan**: 100,000 requests per hour
+
+Rate limit headers are included in all responses:
+
+```bash
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1642234567
+```
+
+## Pagination
+
+List endpoints support pagination using cursor-based pagination:
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "next_cursor": "eyJpZCI6IjEyMzQ1Njc4OTAifQ==",
+    "has_more": true,
+    "total_count": 150
+  }
+}
+```
+
+To get the next page, include the cursor in your request:
+
+```bash
+GET /api/v1/documents?cursor=eyJpZCI6IjEyMzQ1Njc4OTAifQ==
+```
+
+## SDKs and Libraries
+
+Official SDKs are available for popular programming languages:
+
+### Python
+
+```bash
+pip install flynapse-sdk
+```
+
+```python
+from flynapse import FlynapseClient
+
+client = FlynapseClient(api_key="your-api-key")
+response = client.search.documents(query="thrust reverser removal")
+```
+
+### JavaScript/Node.js
+
+```bash
+npm install @flynapse/sdk
+```
+
+```javascript
+const { FlynapseClient } = require('@flynapse/sdk');
+
+const client = new FlynapseClient({ apiKey: 'your-api-key' });
+const response = await client.search.documents({ query: 'thrust reverser removal' });
+```
+
+### cURL Examples
+
+All API endpoints can be accessed directly via cURL:
+
+```bash
+# Search for documents
+curl -X POST "https://api.flynapse.ai/v1/search/documents" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "thrust reverser removal",
+    "filters": {
+      "document_types": ["AMM", "SB"],
+      "aircraft_types": ["A320"]
+    }
+  }'
+```
+
+## API Versioning
+
+The Flynapse API uses semantic versioning. The current version is `v1`.
+
+- **Stable APIs**: No breaking changes within the same major version
+- **Deprecation Policy**: APIs are deprecated with 12 months notice
+- **Migration Guides**: Provided for all breaking changes
+
+## Webhooks
+
+Flynapse supports webhooks for real-time notifications:
+
+```json
+{
+  "event": "document.commented",
+  "data": {
+    "document_id": "doc_123",
+    "comment_id": "comment_456",
+    "user_id": "user_789",
+    "page_number": 15
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+## Testing
+
+### Sandbox Environment
+
+For testing and development, use our sandbox environment:
+
+```
+https://api-sandbox.flynapse.ai/v1
+```
+
+### Postman Collection
+
+Download our [Postman Collection](https://flynapse.ai/api/postman-collection.json) for easy API testing.
+
+## Support
+
+- **API Documentation**: This documentation site
+- **SDK Documentation**: Language-specific guides in our SDK repositories
+- **Support Email**: api-support@flynapse.ai
+- **Community Forum**: [community.flynapse.ai](https://community.flynapse.ai)
+
+## Quick Start Examples
+
+### 1. Search for Documents
+
+```python
+from flynapse import FlynapseClient
+
+client = FlynapseClient(api_key="your-api-key")
+
+# Search for thrust reverser procedures
+response = client.search.documents(
+    query="thrust reverser removal procedure",
+    filters={
+        "document_types": ["AMM", "SB"],
+        "aircraft_types": ["A320"]
+    },
+    limit=10
+)
+
+print(f"Found {len(response.data)} documents")
+for doc in response.data:
+    print(f"- {doc.title} ({doc.document_type})")
+```
+
+### 2. Start a Chat Session
+
+```python
+# Start a new chat session
+chat_response = client.chat.create_session(
+    copilot_type="mro",
+    initial_message="How do I remove a thrust reverser on an A320?"
+)
+
+session_id = chat_response.data.session_id
+print(f"Chat session created: {session_id}")
+```
+
+### 3. Get Document Details
+
+```python
+# Get detailed information about a document
+doc_response = client.documents.get("doc_123456")
+document = doc_response.data
+
+print(f"Document: {document.title}")
+print(f"Type: {document.document_type}")
+print(f"Aircraft: {document.aircraft_type}")
+print(f"Version: {document.version}")
+```
+
+## Next Steps
+
+- Learn about [Authentication](/api-reference/authentication) methods
+- Explore the [Search API](/api-reference/search) for document retrieval
+- Check out the [Chat API](/api-reference/chat) for conversational interactions
+- Review the [Document API](/api-reference/documents) for document management
+
+---
+
+*Build powerful aviation applications with the Flynapse API* 

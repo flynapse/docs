@@ -1,0 +1,265 @@
+---
+title: 'Components Overview'
+description: 'Explore the core components and technical architecture of the Flynapse platform'
+---
+
+# Flynapse Platform Components
+
+The Flynapse platform is built on a modular, scalable architecture that combines AI services, document processing, and collaboration features to deliver intelligent aviation copilots.
+
+## Core Platform Components
+
+### 1. AI Copilot Layer
+
+The copilot layer provides specialized AI assistants for different aviation domains, each built on shared core services.
+
+**Available Copilots:**
+- **MRO Co-Pilot**: Maintenance, Repair, and Operations documentation assistant
+- **AOCC Co-Pilot**: Airline Operations Control Center assistant (coming soon)
+- **Cabin Co-Pilot**: Cabin crew operations assistant (coming soon)
+
+**Copilot Features:**
+- **Domain-Specific Knowledge**: Specialized training for aviation documentation
+- **Conversational Interface**: Natural language interaction capabilities
+- **Context Management**: Maintains conversation context across sessions
+- **Document Integration**: Direct access to relevant technical documentation
+
+### 2. Conversational AI Engine
+
+The conversational AI engine powers natural language interactions across all copilots.
+
+**Core Capabilities:**
+- **Natural Language Processing**: Understands aviation terminology and context
+- **Intent Recognition**: Identifies user intent (search, summarize, compare, etc.)
+- **Context Management**: Maintains conversation state and document selections
+- **Response Generation**: Generates contextual, accurate responses
+- **Follow-up Handling**: Processes follow-up queries and refinements
+
+**Technical Stack:**
+- **LLM Integration**: OpenAI GPT-4, Claude, or custom models
+- **Prompt Engineering**: Optimized prompts for aviation domain
+- **Response Orchestration**: Coordinates multiple AI services for complex queries
+
+### 3. Document Processing & Indexing
+
+The document processing system handles ingestion, parsing, and indexing of technical documentation.
+
+**Document Types Supported:**
+- **AMM (Aircraft Maintenance Manual)**: Maintenance procedures and instructions
+- **SB (Service Bulletins)**: Manufacturer service instructions
+- **IPC (Illustrated Parts Catalog)**: Parts identification and ordering
+- **AD (Airworthiness Directives)**: Regulatory requirements and modifications
+
+**Processing Pipeline:**
+- **Document Ingestion**: PDF upload and validation
+- **Text Extraction**: OCR and text parsing from complex layouts
+- **Metadata Extraction**: Automatic extraction of document type, aircraft, version
+- **Chunking**: Intelligent document segmentation for search
+- **Vector Embedding**: Conversion to searchable vector representations
+
+### 4. Semantic Search Engine
+
+The search engine provides intelligent document retrieval based on semantic understanding.
+
+**Search Features:**
+- **Semantic Matching**: Finds documents based on meaning, not just keywords
+- **Multi-Modal Search**: Combines text, metadata, and document structure
+- **Relevance Scoring**: Ranks results by relevance to query
+- **Filtering**: Real-time filtering by document type, aircraft, date, etc.
+- **Page-Level Precision**: Identifies specific pages within documents
+
+**Technical Implementation:**
+- **Vector Database**: Pinecone, Weaviate, or similar for embedding storage
+- **Hybrid Search**: Combines vector similarity with traditional keyword search
+- **Query Expansion**: Automatically expands queries with aviation terminology
+- **Result Ranking**: ML-based ranking for optimal result ordering
+
+### 5. Document Viewer & Navigation
+
+The document viewer provides advanced PDF viewing capabilities with collaboration features.
+
+**Viewer Features:**
+- **Lazy Loading**: High-performance rendering of large documents
+- **Hierarchical Navigation**: Multi-level table of contents
+- **Page-Level Comments**: Add comments on specific pages
+- **Search Within Documents**: Ctrl+F functionality with highlighting
+- **Document Metadata**: Display of document information and version history
+
+**Navigation Components:**
+- **Table of Contents**: Auto-generated hierarchical index
+- **Page Navigation**: Jump to specific pages or sections
+- **Auto-Highlighting**: Highlights current section in TOC
+- **Breadcrumb Navigation**: Shows current location in document structure
+
+### 6. Collaboration & Sharing System
+
+The collaboration system enables team interaction and knowledge sharing.
+
+**Collaboration Features:**
+- **Page-Level Comments**: Add public or private comments on specific pages
+- **Comment Feed**: View and interact with team comments
+- **Voting System**: Like/dislike comments with live counts
+- **Document Sharing**: Share documents via email with custom messages
+- **Activity Tracking**: Monitor team activity and document usage
+
+**Sharing Capabilities:**
+- **Email Integration**: Send documents and summaries via email
+- **Copy to Clipboard**: Quick copying of text and summaries
+- **Export Options**: PDF export with comments and annotations
+- **Access Control**: Granular permissions for sharing and collaboration
+
+### 7. User Management & Authentication
+
+The user management system handles authentication, authorization, and user preferences.
+
+**Authentication Features:**
+- **Multi-Factor Authentication**: Enhanced security for aviation environments
+- **Single Sign-On**: Integration with enterprise identity providers
+- **Session Management**: Secure session handling and timeout
+- **Role-Based Access**: Granular permissions for different user types
+
+**User Management:**
+- **Profile Management**: User profiles and preferences
+- **Usage Analytics**: Track user activity and platform usage
+- **Audit Logging**: Comprehensive logging of all user actions
+- **Team Management**: Group users into teams and departments
+
+## MRO Co-Pilot Specific Components
+
+### 1. Document Selection Interface
+
+The document selection interface allows users to interact with search results and manage document batches.
+
+**Selection Features:**
+- **Document Cards**: Visual representation of search results
+- **Bulk Selection**: Select multiple documents for batch operations
+- **Visual Feedback**: Clear indication of selected documents
+- **Action Buttons**: Preview, open, download, and share options
+
+**Card Components:**
+- **Document Title**: Clear identification of document content
+- **Metadata Tags**: Document type, aircraft, version information
+- **Snippet Preview**: Relevant text excerpt from document
+- **Action Icons**: Compact action buttons for common operations
+
+### 2. Chat Interface Components
+
+The chat interface provides the conversational experience for interacting with the MRO Co-Pilot.
+
+**Chat Features:**
+- **Message Threading**: Organized conversation history
+- **Assistant Reply Blocks**: Structured responses with document batches
+- **Interactive Elements**: Clickable documents and action buttons
+- **Context Preservation**: Maintains conversation context across messages
+
+**Reply Block Structure:**
+- **Document Batch**: Visual display of relevant documents
+- **Assistant Message**: AI-generated response or summary
+- **Action Buttons**: Copy, share, like/dislike functionality
+- **Selection Controls**: Document selection and bulk actions
+
+### 3. Filtering & Search Controls
+
+The filtering system provides precise control over search results and document discovery.
+
+**Filter Types:**
+- **Document Type Filters**: AMM, SB, AD, IPC checkboxes
+- **Aircraft Type Filters**: A320, B737, and other aircraft models
+- **Date Range Filters**: Filter by document creation or modification date
+- **Version Filters**: Filter by document version or revision
+
+**Filter Behavior:**
+- **Real-time Application**: Filters apply immediately to current results
+- **Context Preservation**: Filters maintain across conversation
+- **Visual Feedback**: Clear indication of active filters
+- **Reset Options**: Easy clearing of all applied filters
+
+## Technical Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend Layer                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │ React/Next.js│  │ Document    │  │ Chat        │        │
+│  │ UI Components│  │ Viewer      │  │ Interface   │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+├─────────────────────────────────────────────────────────────┤
+│                    API Gateway                              │
+│  • Authentication & Authorization                           │
+│  • Rate Limiting & Security                                 │
+│  • Request Routing & Load Balancing                         │
+├─────────────────────────────────────────────────────────────┤
+│                    Microservices Layer                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │ AI Service  │  │ Search      │  │ Document    │        │
+│  │ (LLM/RAG)   │  │ Service     │  │ Service     │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │ Chat        │  │ User        │  │ Collaboration│        │
+│  │ Service     │  │ Service     │  │ Service     │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+├─────────────────────────────────────────────────────────────┤
+│                    Data Layer                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │ Vector DB   │  │ Document    │  │ User DB     │        │
+│  │ (Embeddings)│  │ Storage     │  │ (Auth/Profiles)│      │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │ Search      │  │ Chat        │  │ Analytics   │        │
+│  │ Index       │  │ History     │  │ & Logs      │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Integration Patterns
+
+### 1. Document Ingestion Pipeline
+Automated processing of uploaded technical documentation with metadata extraction and indexing.
+
+### 2. Real-time Search & Retrieval
+Low-latency search across document libraries with intelligent result ranking.
+
+### 3. Conversational AI Flow
+Natural language processing pipeline from user input to contextual response generation.
+
+### 4. Collaboration Workflow
+Team interaction patterns for commenting, sharing, and knowledge management.
+
+## Performance & Scalability
+
+### 1. Document Processing
+- **Parallel Processing**: Multi-threaded document ingestion
+- **Incremental Updates**: Efficient updates for document modifications
+- **Caching**: Intelligent caching of frequently accessed documents
+
+### 2. Search Performance
+- **Vector Indexing**: Optimized vector database for fast similarity search
+- **Query Optimization**: Efficient query processing and result ranking
+- **Result Caching**: Cache common search results for improved performance
+
+### 3. User Experience
+- **Lazy Loading**: On-demand loading of document pages and components
+- **Progressive Enhancement**: Graceful degradation for slower connections
+- **Responsive Design**: Optimized for various screen sizes and devices
+
+## Security & Compliance
+
+### 1. Data Protection
+- **Encryption**: End-to-end encryption for all data in transit and at rest
+- **Access Control**: Role-based permissions and multi-factor authentication
+- **Audit Logging**: Comprehensive tracking of all user actions and data access
+
+### 2. Aviation Compliance
+- **Regulatory Standards**: Built to meet aviation industry security requirements
+- **Data Retention**: Configurable data retention policies
+- **Backup & Recovery**: Robust backup and disaster recovery procedures
+
+## Next Steps
+
+- Explore our [API Reference](/api-reference/introduction) for technical implementation details
+- Learn about [Authentication](/api-reference/authentication) for secure access
+- Contact our support team for component-specific guidance and customization
+
+---
+
+*Build powerful aviation AI solutions with Flynapse's modular component architecture* 

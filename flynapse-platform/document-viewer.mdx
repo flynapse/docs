@@ -1,0 +1,385 @@
+---
+title: 'Document Viewer - Advanced PDF Viewer with Collaboration'
+description: 'Complete guide to the Flynapse Document Viewer - Full-featured PDF viewer with navigation and collaboration'
+---
+
+# Document Viewer - Advanced PDF Viewer with Collaboration
+
+The Flynapse Document Viewer provides a comprehensive PDF viewing experience designed specifically for technical aviation documentation. It combines high-performance rendering with advanced navigation, search capabilities, and team collaboration features.
+
+## Overview
+
+The Document Viewer enables users to view technical documents (AMM, SB, IPC, AD, etc.) in full detail, starting from the most relevant page based on search context. It supports hierarchical navigation, page-level collaboration, metadata viewing, and document-wide search functionality.
+
+### Key Features
+
+- **Intelligent Page Opening**: Automatically opens to the most relevant page
+- **Hierarchical Navigation**: Multi-level table of contents with auto-highlighting
+- **Page-Level Comments**: Add public or private comments on specific pages
+- **Document Search**: Ctrl+F functionality with match highlighting
+- **Collaboration Tools**: Comment feed, voting, and sharing capabilities
+- **Metadata Display**: Comprehensive document information and version tracking
+
+## Interface Layout
+
+### 🔝 Top Navigation Bar
+
+The top navigation provides document-specific controls and actions:
+
+**Left Section:**
+- **🏢 Company Logo**: Flynapse branding
+- **🛠️ Product Name**: "Flynapse MRO Co-Pilot" indicator
+- **📄 Document Title**: Current document name and identifier
+
+**Right Section:**
+- **⬇️ Download**: Download full document as PDF
+- **🔍 Search**: Open document search dialog (Ctrl + F)
+- **👤 User Menu**: Settings, profile, and logout options
+
+### 🧾 Left Sidebar - Document Index (Table of Contents)
+
+The left sidebar provides hierarchical navigation through the document structure:
+
+#### Back to Chat Button
+- **🔙 Back to Chat**: Returns to the main chat interface
+- **Position**: Located at the very top of the sidebar
+- **Functionality**: Preserves current document context
+
+#### Hierarchical TOC
+**Structure:**
+- **Multi-level Support**: Chapter > Section > Subsection hierarchy
+- **Scrollable Interface**: Handles large document structures
+- **Clickable Navigation**: Direct navigation to specific pages
+- **Auto-highlighting**: Highlights current section based on visible page
+
+**TOC Features:**
+- **Dynamic Highlighting**: TOC entry highlights as user scrolls through pages
+- **Collapsible Sections**: Expand/collapse sections for better navigation
+- **Search Integration**: TOC entries highlight when opened from search results
+- **Breadcrumb Navigation**: Shows current location in document structure
+
+### 📄 Main Content - Scrollable Document Viewer
+
+The main content area provides the primary document viewing experience:
+
+#### Document Rendering
+- **Lazy Loading**: Pages rendered on-demand for optimal performance
+- **High-Quality Display**: Crisp, clear PDF rendering
+- **Responsive Design**: Adapts to different screen sizes
+- **Zoom Controls**: Pan and zoom functionality for detailed viewing
+
+#### Page Navigation
+- **Page Headers**: Optional display of page number and section title
+- **Smooth Scrolling**: Fluid navigation through document pages
+- **Keyboard Navigation**: Arrow keys, Page Up/Down, Home/End support
+- **Progress Indicator**: Visual indication of current position in document
+
+#### Interactive Features
+- **Right-click Context Menu**: Add comments, copy text, and other actions
+- **Text Selection**: Select and copy text from rendered pages
+- **Comment Indicators**: Visual badges on pages with comments
+- **Link Navigation**: Click internal document links and references
+
+### 🔍 Search Dialog
+
+The search dialog provides powerful document search capabilities:
+
+#### Trigger Methods
+- **Search Button**: Click the search icon in the top navigation
+- **Keyboard Shortcut**: Ctrl + F (or Cmd + F on Mac)
+- **Context Menu**: Right-click and select "Search in Document"
+
+#### Search Interface
+**Modal Overlay Components:**
+- **🔎 Search Input**: Enter search keywords or phrases
+- **⏭️ Next Button**: Navigate to next match
+- **⏮️ Previous Button**: Navigate to previous match
+- **🔢 Match Counter**: Display current match position (e.g., "2 of 5")
+- **❌ Close Button**: Close search dialog
+
+#### Search Features
+- **Real-time Highlighting**: Matches highlighted directly in viewer
+- **Case Sensitivity**: Optional case-sensitive search
+- **Whole Word Matching**: Option to match complete words only
+- **Regular Expressions**: Advanced pattern matching support
+- **Search Scope**: Search within visible, text-rendered pages
+
+### 📋 Right Sidebar - Document Metadata & Comments
+
+The right sidebar provides document information and collaboration features:
+
+#### Document Metadata Card
+**Information Display:**
+- **📘 Document Type**: AMM, SB, AD, IPC, etc.
+- **✈️ Aircraft Type**: A320, B737, A350, etc.
+- **🔁 Version**: Revision number and date
+- **📅 Last Updated**: Document modification date
+- **📊 Page Count**: Total number of pages
+- **👤 Uploaded By**: User who uploaded the document
+
+#### Comment Feed
+**Integrated Comment System:**
+- **Scrollable Feed**: View all comments for the document
+- **Public Comments**: Comments visible to all users
+- **Private Comments**: Comments visible only to the author
+- **Comment Details**: Text, page number, visibility, timestamp, author
+- **Interaction Features**: Like/dislike buttons with live upvote counts
+
+## Page-Level Commenting
+
+### Adding Comments
+
+**Methods:**
+- **Right-click**: Right-click on any page to add a comment
+- **Comment Button**: Click comment icon in page controls
+- **Keyboard Shortcut**: Ctrl + Shift + C
+
+**Comment Modal:**
+- **Comment Text**: Multi-line text input for comment content
+- **Visibility Toggle**: Choose between 🌐 Public and 🔒 Private
+- **Page Reference**: Automatic page number assignment
+- **Preview**: Preview comment before posting
+
+### Comment Management
+
+**Comment Features:**
+- **Edit Comments**: Modify existing comments (author only)
+- **Delete Comments**: Remove comments (author and admins only)
+- **Reply to Comments**: Threaded comment responses
+- **Comment Search**: Search through comments by content or author
+
+**Visual Indicators:**
+- **Comment Badges**: Small indicators on pages with comments
+- **Comment Count**: Number of comments per page
+- **Highlighted Pages**: Pages with comments highlighted in TOC
+
+## Collaboration Features
+
+### Comment Feed Integration
+
+**Feed Location:**
+- **Bottom of Right Sidebar**: Integrated into metadata panel
+- **Scrollable Interface**: Handles large numbers of comments
+- **Real-time Updates**: New comments appear immediately
+- **Filtering Options**: Filter by visibility, author, or date
+
+**Comment Display:**
+- **Comment Text**: Full comment content
+- **Page Number**: Clickable link to jump to page
+- **Visibility Tag**: Public/Private indicator
+- **Timestamp**: When comment was added
+- **Author Name**: Commenter name (for public comments)
+- **Vote Buttons**: 👍/👎 with live upvote count
+
+### Voting System
+
+**Vote Features:**
+- **Like/Dislike**: Simple thumbs up/down voting
+- **Live Counts**: Real-time display of vote totals
+- **User Tracking**: Track which users have voted
+- **Vote History**: Maintain voting history for analytics
+
+**Vote Behavior:**
+- **One Vote Per User**: Users can only vote once per comment
+- **Vote Changes**: Users can change their vote
+- **Vote Removal**: Users can remove their vote
+- **Anonymous Voting**: Votes are anonymous to other users
+
+### Comment Navigation
+
+**Navigation Features:**
+- **Click to Navigate**: Click comment page number to jump to page
+- **Highlighted Comments**: Current page comments highlighted in feed
+- **Comment Preview**: Hover to preview comment content
+- **Quick Actions**: Quick reply, edit, or delete options
+
+## Document Search Functionality
+
+### Search Within Documents
+
+**Search Capabilities:**
+- **Text Search**: Search for specific words or phrases
+- **Case Options**: Case-sensitive or case-insensitive search
+- **Word Boundaries**: Match complete words or partial matches
+- **Regular Expressions**: Advanced pattern matching
+- **Search History**: Remember recent search terms
+
+**Search Results:**
+- **Match Highlighting**: Highlight all matches in document
+- **Current Match**: Highlight current match with different color
+- **Match Navigation**: Navigate between matches with buttons
+- **Match Counter**: Show current match position and total count
+
+### Advanced Search Features
+
+**Search Options:**
+- **Scope Selection**: Search entire document or current section
+- **Filter by Page Range**: Limit search to specific pages
+- **Search in Comments**: Include comments in search results
+- **Export Results**: Export search results to file
+
+## Performance & Optimization
+
+### Lazy Loading
+
+**Loading Strategy:**
+- **On-Demand Rendering**: Load pages as user scrolls
+- **Preloading**: Preload adjacent pages for smooth navigation
+- **Caching**: Cache rendered pages for faster access
+- **Memory Management**: Unload distant pages to conserve memory
+
+### Rendering Optimization
+
+**Performance Features:**
+- **Vector Graphics**: High-quality rendering at any zoom level
+- **Compression**: Optimized file sizes for faster loading
+- **Progressive Loading**: Load low-resolution preview first
+- **Background Processing**: Process pages in background threads
+
+## Keyboard Shortcuts
+
+### Navigation Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + F` | Open search dialog |
+| `Ctrl + G` | Go to page |
+| `Ctrl + Home` | Go to first page |
+| `Ctrl + End` | Go to last page |
+| `Page Up/Down` | Navigate pages |
+| `Arrow Keys` | Scroll document |
+| `Ctrl + Shift + C` | Add comment |
+
+### Search Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Enter` | Find next match |
+| `Shift + Enter` | Find previous match |
+| `Escape` | Close search dialog |
+| `Ctrl + Shift + F` | Advanced search options |
+
+### Comment Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Shift + C` | Add comment |
+| `Ctrl + Shift + E` | Edit comment |
+| `Ctrl + Shift + D` | Delete comment |
+| `Ctrl + Shift + R` | Reply to comment |
+
+## Use Cases
+
+### 1. Detailed Procedure Review
+
+**Scenario**: Engineer needs to review detailed maintenance procedures
+
+**Workflow:**
+1. Open document from search results
+2. Navigate to relevant section using TOC
+3. Read through procedure step-by-step
+4. Add comments for clarification points
+5. Share findings with team
+
+### 2. Regulatory Compliance Review
+
+**Scenario**: Review airworthiness directive for compliance requirements
+
+**Workflow:**
+1. Search for specific compliance requirements
+2. Navigate between relevant sections
+3. Add comments for action items
+4. Create compliance checklist
+5. Share with compliance team
+
+### 3. Training and Reference
+
+**Scenario**: Use document as training material for new engineers
+
+**Workflow:**
+1. Navigate to training sections
+2. Add training notes as comments
+3. Highlight important procedures
+4. Create training guide from comments
+5. Share training materials
+
+### 4. Quality Assurance
+
+**Scenario**: QA engineer reviewing maintenance procedures
+
+**Workflow:**
+1. Review procedures for accuracy
+2. Add comments for corrections needed
+3. Flag safety-critical information
+4. Vote on comment quality
+5. Generate QA report
+
+## Best Practices
+
+### 1. Effective Navigation
+
+- **Use TOC**: Leverage table of contents for quick navigation
+- **Search First**: Use search to find specific content quickly
+- **Bookmark Pages**: Use comments to bookmark important pages
+- **Keyboard Shortcuts**: Learn and use keyboard shortcuts for efficiency
+
+### 2. Collaboration
+
+- **Add Context**: Provide context in comments for team members
+- **Use Visibility**: Choose appropriate visibility for comments
+- **Vote Helpfully**: Vote on comments to highlight valuable information
+- **Reply Thoughtfully**: Use replies to continue discussions
+
+### 3. Document Management
+
+- **Organize Comments**: Use consistent comment formatting
+- **Update Regularly**: Review and update comments as procedures change
+- **Archive Old Comments**: Archive outdated comments to reduce clutter
+- **Export Important Info**: Export critical information for external use
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| Document not loading | Check file permissions and try refresh |
+| Search not working | Verify document has text content |
+| Comments not saving | Check network connection and permissions |
+| Slow performance | Close other applications and try again |
+| Navigation issues | Clear browser cache and reload |
+
+### Performance Tips
+
+- **Close Unused Tabs**: Close other browser tabs for better performance
+- **Use Bookmarks**: Bookmark frequently accessed pages
+- **Optimize Network**: Use stable internet connection for large documents
+- **Update Browser**: Keep browser updated for best compatibility
+
+## Integration with MRO Co-Pilot
+
+### Seamless Workflow
+
+**From Chat to Viewer:**
+1. Search for documents in MRO Co-Pilot
+2. Click "Open" on document card
+3. Automatically opens to relevant page
+4. Continue collaboration in document viewer
+5. Return to chat with context preserved
+
+**Context Preservation:**
+- **Search Context**: Maintains search query context
+- **Document Selection**: Preserves selected documents
+- **Conversation History**: Links back to original conversation
+- **User Preferences**: Maintains user settings and preferences
+
+## Next Steps
+
+- Explore the [MRO Co-Pilot Interface](/flynapse-platform/mro-co-pilot) for search and chat features
+- Learn about [API Integration](/api-reference/introduction) for custom document handling
+- Review [Authentication](/api-reference/authentication) for secure access
+- Contact our team for [Custom Training](/contact) and implementation support
+
+---
+
+*Transform document viewing with AI-powered navigation and collaboration* 

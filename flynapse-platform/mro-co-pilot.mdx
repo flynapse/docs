@@ -1,0 +1,408 @@
+---
+title: 'MRO Co-Pilot - Unified Search & Chat Interface'
+description: 'Complete guide to the MRO Co-Pilot - AI-powered maintenance documentation assistant'
+---
+
+# MRO Co-Pilot - Unified Search & Chat Interface
+
+The MRO Co-Pilot is Flynapse's flagship AI assistant designed specifically for Maintenance, Repair, and Operations (MRO) engineers. It enables seamless interaction with complex technical documentation through an intuitive conversational interface.
+
+## Overview
+
+The MRO Co-Pilot transforms how aviation maintenance professionals access and interact with technical documentation. Instead of manually searching through thousands of pages of AMMs, SBs, IPCs, and ADs, engineers can simply ask questions in natural language and receive intelligent, contextual responses.
+
+### Key Benefits
+
+- **Time Savings**: Find relevant information in seconds instead of hours
+- **Improved Accuracy**: AI-powered search reduces human error
+- **Enhanced Collaboration**: Share findings and add comments to documents
+- **Contextual Understanding**: AI understands aviation terminology and procedures
+- **Document Intelligence**: Automatic summarization and comparison capabilities
+
+## Interface Components
+
+### 🔝 Top Navigation Bar
+
+The top navigation provides access to core platform features:
+
+**Left Section:**
+- **Company Logo**: Flynapse branding
+- **Product Name**: "Flynapse MRO Co-Pilot" indicator
+
+**Right Section:**
+- **User Menu**: Dropdown with settings and logout options
+- **Settings**: User preferences and account management
+- **Logout**: Secure session termination
+
+### 🧭 Left Sidebar - Navigation & Filters
+
+The left sidebar provides navigation controls and filtering options:
+
+#### New Chat Button
+- **Modern Design**: Clean "new message" icon (ChatGPT-style)
+- **Functionality**: Starts a fresh conversation session
+- **Keyboard Shortcut**: Ctrl/Cmd + N
+
+#### Filters Section
+**Document Type Filters:**
+- **AMM** (Aircraft Maintenance Manual): Maintenance procedures and instructions
+- **SB** (Service Bulletins): Manufacturer service instructions
+- **AD** (Airworthiness Directives): Regulatory requirements
+- **IPC** (Illustrated Parts Catalog): Parts identification and ordering
+
+**Aircraft Type Filters:**
+- **A320**: Airbus A320 family
+- **B737**: Boeing 737 family
+- **A350**: Airbus A350 family
+- **B787**: Boeing 787 family
+- **Custom**: Additional aircraft types as needed
+
+**Filter Behavior:**
+- **Real-time Application**: Filters apply immediately to current search results
+- **Context Preservation**: Filters maintain across conversation turns
+- **Visual Feedback**: Clear indication of active filters
+- **Reset Options**: Easy clearing of all applied filters
+
+#### Chat History
+**Title**: 🕑 Chat History
+
+**Features:**
+- **Recent Chats**: Clickable list of recent conversations
+- **Active Highlighting**: Current chat session is highlighted
+- **Hover Actions**: Delete and rename options on hover
+- **Timestamps**: Display of chat creation and last activity times
+- **Search**: Search through chat history by title or content
+
+### 💬 Main Panel - Chat & Document Viewer
+
+The main panel is the heart of the MRO Co-Pilot interface, combining conversational AI with document interaction.
+
+#### Chat Flow Structure
+
+Each user query triggers an assistant reply block with the following structure:
+
+**Block Types:**
+
+| Block Type | Interactivity | Description |
+|------------|---------------|-------------|
+| Latest Assistant Reply | ✅ Active | Supports document selection and interaction |
+| Previous Replies | ❌ Disabled | Read-only, interactivity disabled |
+
+#### Assistant Reply Block Components
+
+##### 1. Document Batch
+
+Each document is displayed as an interactive card with:
+
+**Card Elements:**
+- **Title**: Document title (e.g., "AMM 78-31-00 Removal")
+- **Snippet**: Relevant text excerpt with page number
+- **Tags**: Document type, aircraft type, version (color-coded)
+- **Action Buttons**: Preview, Open, Download (icon-based for compactness)
+- **Selection Checkbox**: Top-right checkbox for document selection
+
+**Bulk Actions:**
+- **Select All / Deselect All**: Toggle all documents in the batch
+- **Availability**: Only enabled for the latest assistant reply block
+
+##### 2. Assistant Message
+
+**For Search Queries:**
+```
+"I found X documents related to your query about [topic]..."
+```
+
+**For Summary Requests:**
+```
+"Here's a summary based on Y selected document(s): [summary content]"
+```
+
+**Message Features:**
+- **Context Awareness**: References selected documents and conversation history
+- **Action Integration**: Copy, share, like/dislike buttons
+- **Traceability**: Clear indication of which documents informed the response
+
+##### 3. Visual Feedback
+
+**Selected Document Indicators:**
+- **Colored Border**: Highlighted border around selected cards
+- **Tinted Background**: Subtle background color change
+- **Status Line**: "Showing summary based on X selected document(s)"
+
+##### 4. Interactive Features
+
+Each assistant reply includes:
+
+- **Copy to Clipboard**: Quick copying of responses and summaries
+- **Share via Email**: Email sharing with recipient input dialog
+- **Thumbs Up/Down**: Feedback mechanism for response quality
+- **Follow-up Actions**: Contextual action buttons based on response type
+
+#### Functional Logic
+
+##### Selection Behavior
+
+**Latest Assistant Reply Block:**
+- ✅ Checkbox interaction enabled
+- ✅ Document highlighting active
+- ✅ Action buttons functional
+- ✅ Bulk actions available
+
+**Previous Reply Blocks:**
+- ❌ Dimmed appearance (reduced opacity)
+- ❌ Non-interactive elements
+- ❌ Buttons and checkboxes disabled
+- ❌ Bulk actions disabled
+
+##### Document Reuse Logic
+
+**Reuse Capabilities:**
+- **Review Again**: Re-examine previously found documents
+- **Reselection**: Select documents from previous batches for new actions
+- **Context Preservation**: Maintain document context across conversation
+
+##### Follow-up Query Behavior
+
+Users can issue follow-up queries such as:
+
+- **Filter Refinement**: "Only show AMMs and SBs"
+- **Summary Requests**: "Give me a summary of these documents"
+- **Comparison Queries**: "What's the difference between these documents?"
+- **Specific Questions**: "What tools are needed for this procedure?"
+
+The assistant responds based on currently selected documents in the active block.
+
+### 📄 Document Card Design
+
+Each document card provides comprehensive information and interaction options:
+
+**Card Layout:**
+```
+┌─────────────────────────────────────┐
+│ ☑ Title: AMM 78-31-00 Removal      │
+│                                     │
+│ Snippet: Remove thrust reverser...  │
+│ Page 15, Section 3.2               │
+│                                     │
+│ [AMM] [A320] [Rev 3] [Jan 2024]    │
+│                                     │
+│ [👁️ Preview] [📄 Open] [⬇️ Download] │
+└─────────────────────────────────────┘
+```
+
+**Card Elements:**
+- **Title**: Clear document identification
+- **Snippet**: Relevant text excerpt with page reference
+- **Tags**: Document type, aircraft, version, date (color-coded)
+- **Action Buttons**: Preview, Open, Download (icon-based)
+- **Selection Checkbox**: Top-right for bulk operations
+
+### 🆕 User Input Box
+
+The input box provides the primary interface for user interaction:
+
+**Components:**
+- **Text Input Field**: Placeholder "Ask a question..."
+- **Send Button**: Submit message to AI assistant
+- **Character Counter**: Optional character limit indicator
+
+**Behavior:**
+- **Sticky Positioning**: Anchored to bottom of chat panel
+- **Auto-scroll**: Scrolls with chat content
+- **Clean Styling**: System font, minimal design
+- **Keyboard Support**: Enter to send, Shift+Enter for new line
+
+## Example Chat Flow
+
+### Scenario: Thrust Reverser Removal Procedure
+
+**User Query:**
+```
+"How to remove thrust reverser?"
+```
+
+**Assistant Response:**
+```
+I found 5 documents relevant to your query about thrust reverser removal:
+
+[Document Cards Displayed]
+- AMM 78-31-00 Removal (AMM • A320)
+- SB 78-31-001 Thrust Reverser Inspection (SB • A320)
+- AD 2024-01-15 Thrust Reverser Safety (AD • A320)
+- IPC 78-31-00 Thrust Reverser Parts (IPC • A320)
+- AMM 78-31-01 Installation (AMM • A320)
+```
+
+**User Follow-up:**
+```
+"Only show AMMs and SBs"
+```
+
+**Assistant Response:**
+```
+Filtered down to 2 documents matching your filters:
+
+[Filtered Document Cards]
+- AMM 78-31-00 Removal (AMM • A320)
+- SB 78-31-001 Thrust Reverser Inspection (SB • A320)
+```
+
+**User Request:**
+```
+"Give me a summary"
+```
+
+**Assistant Response:**
+```
+Here's a summary based on 2 selected documents:
+
+**AMM 78-31-00 Removal Procedure:**
+1. Safety precautions and equipment required
+2. Step-by-step removal process
+3. Inspection points and quality checks
+
+**SB 78-31-001 Inspection Requirements:**
+- Additional inspection criteria
+- Updated safety procedures
+- Compliance requirements
+
+[Selected Document Cards Displayed Again]
+```
+
+## Advanced Features
+
+### Document Viewer Integration
+
+When users click "Open" on a document card, they're taken to the full document viewer with:
+
+- **Relevant Page Opening**: Automatically opens to the most relevant page
+- **Hierarchical Navigation**: Table of contents with auto-highlighting
+- **Page-Level Comments**: Add comments on specific pages
+- **Search Within Document**: Ctrl+F functionality with highlighting
+- **Collaboration Features**: Comment feed and voting system
+
+### Collaboration & Sharing
+
+**Document Sharing:**
+- **Email Integration**: Share documents with custom messages
+- **Team Collaboration**: Add comments visible to team members
+- **Voting System**: Like/dislike comments with live counts
+- **Activity Tracking**: Monitor team document usage
+
+**Comment System:**
+- **Page-Level Comments**: Add comments on specific document pages
+- **Public/Private Visibility**: Control comment visibility
+- **Comment Feed**: View and interact with team comments
+- **Comment Navigation**: Click comments to jump to relevant pages
+
+### AI-Powered Features
+
+**Intelligent Search:**
+- **Semantic Understanding**: Understands aviation terminology
+- **Context Awareness**: Maintains conversation context
+- **Relevance Ranking**: Prioritizes most relevant documents
+- **Query Expansion**: Automatically expands queries with related terms
+
+**Document Intelligence:**
+- **Automatic Summarization**: Generate summaries of selected documents
+- **Comparison Analysis**: Compare multiple documents for differences
+- **Procedure Extraction**: Extract step-by-step procedures
+- **Safety Highlighting**: Identify safety-critical information
+
+## Use Cases
+
+### 1. Routine Maintenance Procedures
+
+**Scenario**: Engineer needs to perform routine maintenance on landing gear
+
+**Workflow:**
+1. Ask: "Show me landing gear inspection procedures"
+2. Filter by aircraft type: A320
+3. Select relevant AMM documents
+4. Request summary of procedures
+5. Share findings with team
+
+### 2. Emergency Repairs
+
+**Scenario**: Aircraft has thrust reverser issue requiring immediate attention
+
+**Workflow:**
+1. Search: "thrust reverser troubleshooting"
+2. Filter by document type: AMM, SB
+3. Review emergency procedures
+4. Add comments for team awareness
+5. Download relevant procedures
+
+### 3. Regulatory Compliance
+
+**Scenario**: New airworthiness directive requires immediate action
+
+**Workflow:**
+1. Search: "AD 2024-01-15 compliance"
+2. Review affected aircraft types
+3. Compare with existing procedures
+4. Generate compliance checklist
+5. Share with maintenance team
+
+### 4. Training and Knowledge Transfer
+
+**Scenario**: New engineer needs to learn specific procedures
+
+**Workflow:**
+1. Search: "engine removal training"
+2. Filter by experience level
+3. Generate step-by-step guide
+4. Add training notes as comments
+5. Create knowledge base entry
+
+## Best Practices
+
+### 1. Effective Querying
+
+- **Be Specific**: "A320 landing gear inspection" vs "landing gear"
+- **Use Aviation Terms**: Leverage standard aviation terminology
+- **Include Context**: Mention aircraft type, system, or component
+- **Ask Follow-ups**: Refine searches based on initial results
+
+### 2. Document Management
+
+- **Select Relevant Documents**: Choose documents that match your needs
+- **Use Filters**: Apply document type and aircraft filters early
+- **Review Summaries**: Use AI summaries to quickly assess relevance
+- **Add Comments**: Contribute to team knowledge base
+
+### 3. Collaboration
+
+- **Share Findings**: Use email sharing for important discoveries
+- **Add Comments**: Document insights and observations
+- **Vote on Comments**: Help identify valuable information
+- **Maintain Context**: Reference previous conversations when relevant
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| No search results | Try different keywords or remove filters |
+| Irrelevant documents | Apply more specific filters or refine query |
+| Slow response | Check network connection and try again |
+| Document not loading | Verify document permissions and try refresh |
+
+### Getting Help
+
+- **In-App Help**: Click help icon for contextual assistance
+- **Documentation**: Refer to this guide for detailed information
+- **Support**: Contact support@flynapse.ai for technical issues
+- **Training**: Request training sessions for your team
+
+## Next Steps
+
+- Explore the [Document Viewer](/flynapse-platform/document-viewer) for detailed document interaction
+- Learn about [API Integration](/api-reference/introduction) for custom applications
+- Review [Authentication](/api-reference/authentication) for secure access
+- Contact our team for [Custom Training](/contact) and implementation support
+
+---
+
+*Transform your maintenance operations with AI-powered document intelligence* 

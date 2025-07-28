@@ -1,0 +1,79 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Flynapse Docs",
+  "colors": {
+    "primary": "#16A34A",
+    "light": "#07C983",
+    "dark": "#15803D"
+  },
+  "favicon": "/favicon.png",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Home",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "flynapse-platform/introduction",
+              "flynapse-platform/components/overview"
+            ]
+          },
+          {
+            "group": "MRO Co-Pilot",
+            "pages": [
+              "flynapse-platform/mro-co-pilot",
+              "flynapse-platform/document-viewer"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Documentation",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Website",
+          "href": "https://flynapse.ai",
+          "icon": "globe"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/flynapse-dark.svg",
+    "dark": "/logo/flynapse-light.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:richard@flynapse.ai"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Contact Us",
+      "href": "https://flynapse.ai"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/flynapse",
+      "github": "https://github.com/flynapse",
+      "linkedin": "https://linkedin.com/company/flynapse"
+    }
+  }
+}
