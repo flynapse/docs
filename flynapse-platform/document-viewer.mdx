@@ -22,211 +22,156 @@ The Document Viewer enables users to view technical documents (AMM, SB, IPC, AD,
 
 ## Interface Layout
 
-### 🔝 Top Navigation Bar
+### 🔝 Page Header
 
-The top navigation provides document-specific controls and actions:
+The page header provides navigation and branding:
 
-**Left Section:**
+**Components:**
 - **🏢 Company Logo**: Flynapse branding
-- **🛠️ Product Name**: "Flynapse MRO Co-Pilot" indicator
-- **📄 Document Title**: Current document name and identifier
-
-**Right Section:**
-- **⬇️ Download**: Download full document as PDF
-- **🔍 Search**: Open document search dialog (Ctrl + F)
+- **🛠️ Product Name**: "Flynapse MRO Co-Pilot" or "Flynapse Pilot Co-Pilot" indicator
 - **👤 User Menu**: Settings, profile, and logout options
+- **🔙 Back Button**: Returns to the main chat interface (when applicable)
 
-### 🧾 Left Sidebar - Document Index (Table of Contents)
+### 🧾 Left Sidebar - Navigation & Comments
 
-The left sidebar provides hierarchical navigation through the document structure:
+The left sidebar provides document navigation and collaboration features:
 
-#### Back to Chat Button
+#### Sidebar Header
 - **🔙 Back to Chat**: Returns to the main chat interface
-- **Position**: Located at the very top of the sidebar
-- **Functionality**: Preserves current document context
+- **📋 Toggle Sidebar**: Collapse/expand sidebar for more viewing space
+- **Position**: Located at the top of the sidebar
 
-#### Hierarchical TOC
+#### Table of Contents (TOC)
 **Structure:**
-- **Multi-level Support**: Chapter > Section > Subsection hierarchy
-- **Scrollable Interface**: Handles large document structures
+- **Multi-level Support**: Hierarchical chapter > section > subsection structure
+- **Collapsible Sections**: Expand/collapse sections with chevron icons
 - **Clickable Navigation**: Direct navigation to specific pages
 - **Auto-highlighting**: Highlights current section based on visible page
 
 **TOC Features:**
-- **Dynamic Highlighting**: TOC entry highlights as user scrolls through pages
-- **Collapsible Sections**: Expand/collapse sections for better navigation
-- **Search Integration**: TOC entries highlight when opened from search results
-- **Breadcrumb Navigation**: Shows current location in document structure
+- **Visual Hierarchy**: Different bullet styles for different levels
+- **Page Numbers**: Display page numbers for each section
+- **Current Page Highlighting**: Active section highlighted with primary color
+- **Scrollable Interface**: Handles large document structures
+- **Section Count**: Shows total number of sections available
 
-### 📄 Main Content - Scrollable Document Viewer
+### 📄 Main Content Area
 
-The main content area provides the primary document viewing experience:
+The main content area contains the document header, toolbar, and PDF canvas:
 
-#### Document Rendering
-- **Lazy Loading**: Pages rendered on-demand for optimal performance
-- **High-Quality Display**: Crisp, clear PDF rendering
-- **Responsive Design**: Adapts to different screen sizes
-- **Zoom Controls**: Pan and zoom functionality for detailed viewing
-
-#### Page Navigation
-- **Page Headers**: Optional display of page number and section title
-- **Smooth Scrolling**: Fluid navigation through document pages
-- **Keyboard Navigation**: Arrow keys, Page Up/Down, Home/End support
-- **Progress Indicator**: Visual indication of current position in document
-
-#### Interactive Features
-- **Right-click Context Menu**: Add comments, copy text, and other actions
-- **Text Selection**: Select and copy text from rendered pages
-- **Comment Indicators**: Visual badges on pages with comments
-- **Link Navigation**: Click internal document links and references
-
-### 🔍 Search Dialog
-
-The search dialog provides powerful document search capabilities:
-
-#### Trigger Methods
-- **Search Button**: Click the search icon in the top navigation
-- **Keyboard Shortcut**: Ctrl + F (or Cmd + F on Mac)
-- **Context Menu**: Right-click and select "Search in Document"
-
-#### Search Interface
-**Modal Overlay Components:**
-- **🔎 Search Input**: Enter search keywords or phrases
-- **⏭️ Next Button**: Navigate to next match
-- **⏮️ Previous Button**: Navigate to previous match
-- **🔢 Match Counter**: Display current match position (e.g., "2 of 5")
-- **❌ Close Button**: Close search dialog
-
-#### Search Features
-- **Real-time Highlighting**: Matches highlighted directly in viewer
-- **Case Sensitivity**: Optional case-sensitive search
-- **Whole Word Matching**: Option to match complete words only
-- **Regular Expressions**: Advanced pattern matching support
-- **Search Scope**: Search within visible, text-rendered pages
-
-### 📋 Right Sidebar - Document Metadata & Comments
-
-The right sidebar provides document information and collaboration features:
-
-#### Document Metadata Card
+#### Document Header
 **Information Display:**
-- **📘 Document Type**: AMM, SB, AD, IPC, etc.
-- **✈️ Aircraft Type**: A320, B737, A350, etc.
-- **🔁 Version**: Revision number and date
-- **📅 Last Updated**: Document modification date
+- **📄 Document Title**: Full document name with overflow handling
+- **📘 Document Type**: AMM, SB, AD, IPC, etc. with icon
+- **✈️ Aircraft Type**: A320, B737, A350, etc. with plane icon
+- **🔁 Version**: Document version with book icon
+- **📅 Last Modified**: Document modification date with clock icon
 - **📊 Page Count**: Total number of pages
-- **👤 Uploaded By**: User who uploaded the document
 
-#### Comment Feed
-**Integrated Comment System:**
-- **Scrollable Feed**: View all comments for the document
-- **Public Comments**: Comments visible to all users
-- **Private Comments**: Comments visible only to the author
-- **Comment Details**: Text, page number, visibility, timestamp, author
-- **Interaction Features**: Like/dislike buttons with live upvote counts
+**Responsive Design:**
+- **Desktop**: Horizontal layout with all metadata visible
+- **Mobile**: Vertical stack with compact metadata badges
 
-## Page-Level Commenting
+#### PDF Toolbar
+**Search Controls:**
+- **🔍 Search Input**: Enter search terms with real-time highlighting
+- **⏭️ Next/Previous**: Navigate between search matches
+- **🔢 Match Counter**: Shows current match position (e.g., "2 of 5")
+- **❌ Clear Search**: Clear search and remove highlighting
 
-### Adding Comments
+**Navigation Controls:**
+- **⬅️➡️ Page Navigation**: Previous/next page buttons
+- **📄 Page Input**: Direct page number input with validation
+- **🏠 First/Last**: Jump to first or last page
 
-**Methods:**
-- **Right-click**: Right-click on any page to add a comment
-- **Comment Button**: Click comment icon in page controls
-- **Keyboard Shortcut**: Ctrl + Shift + C
+**Zoom Controls:**
+- **🔍+ Zoom In**: Increase document scale
+- **🔍- Zoom Out**: Decrease document scale
+- **🔄 Reset Zoom**: Return to default scale
+- **📏 Fit Width**: Scale to fit page width
 
-**Comment Modal:**
-- **Comment Text**: Multi-line text input for comment content
-- **Visibility Toggle**: Choose between 🌐 Public and 🔒 Private
+**Actions:**
+- **⬇️ Download**: Download full document as PDF
+- **🖨️ Print**: Print document
+- **📋 Toggle Sidebar**: Show/hide left sidebar
+
+#### PDF Canvas
+**Rendering Features:**
+- **High-Quality Display**: Crisp, clear PDF rendering
+- **Lazy Loading**: Pages rendered on-demand for performance
+- **Zoom & Pan**: Full zoom functionality with smooth panning
+- **Touch Support**: Mobile touch gestures for navigation
+
+**Interactive Features:**
+- **Click to Comment**: Click anywhere on page to add comments
+- **Comment Pins**: Visual indicators showing comment locations
+- **Search Highlighting**: Real-time highlighting of search matches
+- **Smooth Scrolling**: Fluid navigation through document pages
+
+### 💬 Comments Section
+
+The comments section is integrated into the left sidebar:
+
+#### Comment Features
+**Adding Comments:**
+- **Click to Comment**: Click anywhere on the PDF canvas to add a comment
+- **Position Tracking**: Comments are anchored to specific X,Y coordinates
 - **Page Reference**: Automatic page number assignment
-- **Preview**: Preview comment before posting
+- **Visibility Options**: Choose between public and private comments
 
-### Comment Management
-
-**Comment Features:**
+**Comment Management:**
 - **Edit Comments**: Modify existing comments (author only)
 - **Delete Comments**: Remove comments (author and admins only)
-- **Reply to Comments**: Threaded comment responses
-- **Comment Search**: Search through comments by content or author
-
-**Visual Indicators:**
-- **Comment Badges**: Small indicators on pages with comments
-- **Comment Count**: Number of comments per page
-- **Highlighted Pages**: Pages with comments highlighted in TOC
-
-## Collaboration Features
-
-### Comment Feed Integration
-
-**Feed Location:**
-- **Bottom of Right Sidebar**: Integrated into metadata panel
-- **Scrollable Interface**: Handles large numbers of comments
-- **Real-time Updates**: New comments appear immediately
-- **Filtering Options**: Filter by visibility, author, or date
+- **Vote System**: Thumbs up/down voting on comments
+- **Real-time Updates**: Comments appear immediately for all users
 
 **Comment Display:**
-- **Comment Text**: Full comment content
-- **Page Number**: Clickable link to jump to page
-- **Visibility Tag**: Public/Private indicator
-- **Timestamp**: When comment was added
-- **Author Name**: Commenter name (for public comments)
-- **Vote Buttons**: 👍/👎 with live upvote count
-
-### Voting System
-
-**Vote Features:**
-- **Like/Dislike**: Simple thumbs up/down voting
-- **Live Counts**: Real-time display of vote totals
-- **User Tracking**: Track which users have voted
-- **Vote History**: Maintain voting history for analytics
-
-**Vote Behavior:**
-- **One Vote Per User**: Users can only vote once per comment
-- **Vote Changes**: Users can change their vote
-- **Vote Removal**: Users can remove their vote
-- **Anonymous Voting**: Votes are anonymous to other users
-
-### Comment Navigation
-
-**Navigation Features:**
-- **Click to Navigate**: Click comment page number to jump to page
-- **Highlighted Comments**: Current page comments highlighted in feed
-- **Comment Preview**: Hover to preview comment content
-- **Quick Actions**: Quick reply, edit, or delete options
+- **Comment Feed**: Scrollable list of all document comments
+- **Page Navigation**: Click page numbers to jump to comment locations
+- **Author Information**: Shows comment author and timestamp
+- **Visibility Indicators**: Clear public/private status
 
 ## Document Search Functionality
 
 ### Search Within Documents
 
-**Search Capabilities:**
-- **Text Search**: Search for specific words or phrases
-- **Case Options**: Case-sensitive or case-insensitive search
-- **Word Boundaries**: Match complete words or partial matches
-- **Regular Expressions**: Advanced pattern matching
-- **Search History**: Remember recent search terms
+**Search Features:**
+- **Real-time Search**: Search input in toolbar with instant highlighting
+- **Match Navigation**: Navigate between search results with next/previous buttons
+- **Match Counter**: Shows current match position and total count
+- **Highlighting**: All matches highlighted directly in the PDF canvas
+- **Clear Search**: Remove search highlighting and reset view
 
-**Search Results:**
-- **Match Highlighting**: Highlight all matches in document
-- **Current Match**: Highlight current match with different color
-- **Match Navigation**: Navigate between matches with buttons
-- **Match Counter**: Show current match position and total count
+**Search Behavior:**
+- **Text Search**: Search for specific words or phrases within the document
+- **Case Insensitive**: Search is case-insensitive by default
+- **Whole Document**: Searches across the entire document content
+- **Visual Feedback**: Current match highlighted differently from other matches
 
-### Advanced Search Features
+## Responsive Design
 
-**Search Options:**
-- **Scope Selection**: Search entire document or current section
-- **Filter by Page Range**: Limit search to specific pages
-- **Search in Comments**: Include comments in search results
-- **Export Results**: Export search results to file
+### Mobile Optimization
+
+**Mobile Features:**
+- **Touch Gestures**: Swipe, pinch-to-zoom, and touch navigation
+- **Responsive Layout**: Adapts to different screen sizes
+- **Collapsible Sidebar**: Sidebar can be hidden for more viewing space
+- **Mobile Toolbar**: Compact toolbar with essential controls
+- **Touch-Friendly**: Large touch targets for easy interaction
+
+**Tablet Support:**
+- **Hybrid Layout**: Combines desktop and mobile features
+- **Adaptive UI**: Interface adjusts based on screen size
+- **Touch and Mouse**: Supports both touch and mouse interactions
 
 ## Performance & Optimization
 
 ### Lazy Loading
 
 **Loading Strategy:**
-- **On-Demand Rendering**: Load pages as user scrolls
-- **Preloading**: Preload adjacent pages for smooth navigation
-- **Caching**: Cache rendered pages for faster access
-- **Memory Management**: Unload distant pages to conserve memory
+- **On-Demand Rendering**: Pages rendered as needed for optimal performance
+- **Memory Management**: Efficient memory usage for large documents
+- **Background Processing**: Non-blocking operations for smooth experience
 
 ### Rendering Optimization
 
@@ -303,17 +248,6 @@ The right sidebar provides document information and collaboration features:
 4. Create training guide from comments
 5. Share training materials
 
-### 4. Quality Assurance
-
-**Scenario**: QA engineer reviewing maintenance procedures
-
-**Workflow:**
-1. Review procedures for accuracy
-2. Add comments for corrections needed
-3. Flag safety-critical information
-4. Vote on comment quality
-5. Generate QA report
-
 ## Best Practices
 
 ### 1. Effective Navigation
@@ -337,6 +271,32 @@ The right sidebar provides document information and collaboration features:
 - **Archive Old Comments**: Archive outdated comments to reduce clutter
 - **Export Important Info**: Export critical information for external use
 
+## Keyboard Shortcuts
+
+### Navigation Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Page Up/Down` | Navigate pages |
+| `Arrow Keys` | Scroll document |
+| `Home/End` | Go to first/last page |
+
+### Search Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Enter` | Find next match |
+| `Shift + Enter` | Find previous match |
+| `Escape` | Clear search |
+
+### Zoom Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + Plus` | Zoom in |
+| `Ctrl + Minus` | Zoom out |
+| `Ctrl + 0` | Reset zoom |
+
 ## Troubleshooting
 
 ### Common Issues
@@ -356,12 +316,12 @@ The right sidebar provides document information and collaboration features:
 - **Optimize Network**: Use stable internet connection for large documents
 - **Update Browser**: Keep browser updated for best compatibility
 
-## Integration with MRO Co-Pilot
+## Integration with Co-Pilots
 
 ### Seamless Workflow
 
 **From Chat to Viewer:**
-1. Search for documents in MRO Co-Pilot
+1. Search for documents in MRO or Pilot Co-Pilot
 2. Click "Open" on document card
 3. Automatically opens to relevant page
 4. Continue collaboration in document viewer
@@ -376,7 +336,6 @@ The right sidebar provides document information and collaboration features:
 ## Next Steps
 
 - Explore the [MRO Co-Pilot Interface](/flynapse-platform/mro-co-pilot) for search and chat features
-- Learn about [API Integration](/api-reference/introduction) for custom document handling
 - Review [Authentication](/api-reference/authentication) for secure access
 - Contact our team for [Custom Training](/contact) and implementation support
 
