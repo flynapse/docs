@@ -14,39 +14,34 @@
         "tab": "Home",
         "groups": [
           {
-            "group": "Get Started",
+            "group": "Getting Started",
             "pages": [
               "flynapse-platform/introduction",
-              "flynapse-platform/components/overview"
+              "flynapse-platform/authentication-onboarding",
+              "flynapse-platform/copilot-selection-access",
+              "flynapse-platform/navigation-interface-guide"
             ]
           },
           {
-            "group": "MRO Co-Pilot",
+            "group": "AI Co-Pilots",
             "pages": [
+              "flynapse-platform/chat-user-guide",
               "flynapse-platform/mro-co-pilot",
+              "flynapse-platform/pilot-co-pilot",
               "flynapse-platform/document-viewer"
             ]
           },
           {
-            "group": "Pilot Co-Pilot",
+            "group": "Account & Settings",
             "pages": [
-              "flynapse-platform/pilot-co-pilot"
-            ]
-          },
-          {
-            "group": "Settings & Administration",
-            "pages": [
+              "flynapse-platform/account-profile-management",
               "flynapse-platform/settings-role-management"
             ]
           },
           {
-            "group": "User Guides",
+            "group": "Technical Reference",
             "pages": [
-              "flynapse-platform/authentication-onboarding",
-              "flynapse-platform/copilot-selection-access",
-              "flynapse-platform/account-profile-management",
-              "flynapse-platform/navigation-interface-guide",
-              "flynapse-platform/chat-user-guide"
+              "flynapse-platform/components/overview"
             ]
           }
         ]
