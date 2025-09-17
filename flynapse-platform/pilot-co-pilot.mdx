@@ -1,0 +1,541 @@
+---
+title: 'Pilot Co-Pilot - Flight Operations AI Assistant'
+description: 'Complete guide to the Pilot Co-Pilot - AI-powered flight operations and pilot support assistant'
+---
+
+# Pilot Co-Pilot - Flight Operations AI Assistant
+
+The Pilot Co-Pilot is Flynapse's specialized AI assistant designed specifically for flight crews and pilots. It enables seamless interaction with flight operations documentation through an intuitive conversational interface, providing instant access to FCOM (Flight Crew Operating Manual) and QRH (Quick Reference Handbook) procedures.
+
+## Overview
+
+The Pilot Co-Pilot transforms how flight crews access and interact with critical flight operations documentation. Instead of manually searching through complex FCOM and QRH documents, pilots can simply ask questions in natural language and receive intelligent, contextual responses with exact procedure references.
+
+### Key Benefits
+
+- **Time-Critical Access**: Find emergency procedures and checklists in seconds
+- **Enhanced Safety**: AI-powered search reduces human error in high-stress situations
+- **Crew Collaboration**: Share findings and add notes to procedures
+- **Aviation Expertise**: AI understands flight operations terminology and procedures
+- **Document Intelligence**: Automatic procedure extraction and emergency protocol guidance
+
+## Interface Components
+
+### 🔝 Top Navigation Bar
+
+The top navigation provides access to core platform features:
+
+**Left Section:**
+- **Company Logo**: Flynapse branding
+- **Product Name**: "Flynapse Pilot Co-Pilot" indicator
+
+**Right Section:**
+- **User Menu**: Dropdown with settings and logout options
+- **Settings**: User preferences and account management
+- **Logout**: Secure session termination
+
+### 🧭 Left Sidebar - Navigation & Filters
+
+The left sidebar provides navigation controls and filtering options:
+
+#### New Chat Button
+- **Modern Design**: Clean "new message" icon (ChatGPT-style)
+- **Functionality**: Starts a fresh conversation session
+- **Keyboard Shortcut**: Ctrl/Cmd + N
+
+#### Filters Section
+**Document Type Filters:**
+- **FCOM** (Flight Crew Operating Manual): Normal and abnormal procedures
+- **QRH** (Quick Reference Handbook): Emergency procedures and checklists
+
+**Aircraft Type Filters:**
+- **B737**: Boeing 737 family (including 737 MAX variants)
+- **A320**: Airbus A320 family
+- **A350**: Airbus A350 family
+- **B787**: Boeing 787 family
+- **Custom**: Additional aircraft types as needed
+
+**Filter Behavior:**
+- **Real-time Application**: Filters apply immediately to current search results
+- **Context Preservation**: Filters maintain across conversation turns
+- **Visual Feedback**: Clear indication of active filters
+- **Reset Options**: Easy clearing of all applied filters
+
+#### Chat History
+**Title**: 🕑 Chat History
+
+**Features:**
+- **Recent Chats**: Clickable list of recent conversations
+- **Active Highlighting**: Current chat session is highlighted
+- **Hover Actions**: Delete and rename options on hover
+- **Timestamps**: Display of chat creation and last activity times
+- **Search**: Search through chat history by title or content
+
+### 💬 Main Panel - Chat & Document Viewer
+
+The main panel is the heart of the Pilot Co-Pilot interface, combining conversational AI with document interaction.
+
+#### Chat Flow Structure
+
+Each user query triggers an assistant reply block with the following structure:
+
+**Block Types:**
+
+| Block Type | Interactivity | Description |
+|------------|---------------|-------------|
+| Latest Assistant Reply | ✅ Active | Supports document selection and interaction |
+| Previous Replies | ❌ Disabled | Read-only, interactivity disabled |
+
+#### Assistant Reply Block Components
+
+##### 1. Document Batch
+
+Each document is displayed as an interactive card with:
+
+**Card Elements:**
+- **Title**: Document title (e.g., "FCOM 4.20.10 Engine Failure")
+- **Snippet**: Relevant text excerpt with page number
+- **Tags**: Document type, aircraft type, version (color-coded)
+- **Action Buttons**: Preview, Open, Download (icon-based for compactness)
+- **Selection Checkbox**: Top-right checkbox for document selection
+
+**Bulk Actions:**
+- **Select All / Deselect All**: Toggle all documents in the batch
+- **Availability**: Only enabled for the latest assistant reply block
+
+##### 2. Assistant Message
+
+**For Search Queries:**
+```
+"I found X documents related to your query about [topic]..."
+```
+
+**For Summary Requests:**
+```
+"Here's a summary based on Y selected document(s): [summary content]"
+```
+
+**Message Features:**
+- **Context Awareness**: References selected documents and conversation history
+- **Action Integration**: Copy, share, like/dislike buttons
+- **Traceability**: Clear indication of which documents informed the response
+
+##### 3. Visual Feedback
+
+**Selected Document Indicators:**
+- **Colored Border**: Highlighted border around selected cards
+- **Tinted Background**: Subtle background color change
+- **Status Line**: "Showing summary based on X selected document(s)"
+
+##### 4. Interactive Features
+
+Each assistant reply includes:
+
+- **Copy to Clipboard**: Quick copying of responses and summaries
+- **Share via Email**: Email sharing with recipient input dialog
+- **Thumbs Up/Down**: Feedback mechanism for response quality
+- **Follow-up Actions**: Contextual action buttons based on response type
+
+#### Functional Logic
+
+##### Selection Behavior
+
+**Latest Assistant Reply Block:**
+- ✅ Checkbox interaction enabled
+- ✅ Document highlighting active
+- ✅ Action buttons functional
+- ✅ Bulk actions available
+
+**Previous Reply Blocks:**
+- ❌ Dimmed appearance (reduced opacity)
+- ❌ Non-interactive elements
+- ❌ Buttons and checkboxes disabled
+- ❌ Bulk actions disabled
+
+##### Document Reuse Logic
+
+**Reuse Capabilities:**
+- **Review Again**: Re-examine previously found documents
+- **Reselection**: Select documents from previous batches for new actions
+- **Context Preservation**: Maintain document context across conversation
+
+##### Follow-up Query Behavior
+
+Users can issue follow-up queries such as:
+
+- **Filter Refinement**: "Only show FCOM procedures"
+- **Summary Requests**: "Give me a summary of these procedures"
+- **Comparison Queries**: "What's the difference between these procedures?"
+- **Specific Questions**: "What are the memory items for this procedure?"
+
+The assistant responds based on currently selected documents in the active block.
+
+### 📄 Document Card Design
+
+Each document card provides comprehensive information and interaction options:
+
+**Card Layout:**
+```
+┌─────────────────────────────────────┐
+│ ☑ Title: FCOM 4.20.10 Engine Failure│
+│                                     │
+│ Snippet: Engine failure procedures...│
+│ Page 15, Section 3.2               │
+│                                     │
+│ [FCOM] [B737] [Rev 8] [Nov 2024]   │
+│                                     │
+│ [👁️ Preview] [📄 Open] [⬇️ Download] │
+└─────────────────────────────────────┘
+```
+
+**Card Elements:**
+- **Title**: Clear document identification
+- **Snippet**: Relevant text excerpt with page reference
+- **Tags**: Document type, aircraft, version, date (color-coded)
+- **Action Buttons**: Preview, Open, Download (icon-based)
+- **Selection Checkbox**: Top-right for bulk operations
+
+### 🆕 User Input Box
+
+The input box provides the primary interface for user interaction:
+
+**Components:**
+- **Text Input Field**: Placeholder "Ask a question..."
+- **Send Button**: Submit message to AI assistant
+- **Character Counter**: Optional character limit indicator
+
+**Behavior:**
+- **Sticky Positioning**: Anchored to bottom of chat panel
+- **Auto-scroll**: Scrolls with chat content
+- **Clean Styling**: System font, minimal design
+- **Keyboard Support**: Enter to send, Shift+Enter for new line
+
+## Example Chat Flow
+
+### Scenario: Engine Failure During Takeoff
+
+**User Query:**
+```
+"Engine failure during takeoff procedure"
+```
+
+**Assistant Response:**
+```
+I found 3 documents relevant to your query about engine failure during takeoff:
+
+[Document Cards Displayed]
+- FCOM 4.20.10 Engine Failure (FCOM • B737)
+- QRH CI.2.7 Engine Failure Memory Items (QRH • B737)
+- FCOM 4.20.11 Single Engine Go-Around (FCOM • B737)
+```
+
+**User Follow-up:**
+```
+"Only show QRH procedures"
+```
+
+**Assistant Response:**
+```
+Filtered down to 1 document matching your filters:
+
+[Filtered Document Cards]
+- QRH CI.2.7 Engine Failure Memory Items (QRH • B737)
+```
+
+**User Request:**
+```
+"Give me the memory items"
+```
+
+**Assistant Response:**
+```
+Here are the memory items based on 1 selected document:
+
+**QRH CI.2.7 Engine Failure Memory Items:**
+1. THROTTLE - CLOSE
+2. PROPELLER - FEATHER
+3. MIXTURE - IDLE CUT-OFF
+4. FUEL SELECTOR - OFF
+5. IGNITION - OFF
+6. FLAPS - AS REQUIRED
+7. LANDING GEAR - AS REQUIRED
+8. LANDING CHECKLIST - COMPLETE
+
+[Selected Document Card Displayed Again]
+```
+
+## Advanced Features
+
+### 🔍 Document Viewer Integration
+
+When users click "Open" on a document card, they're taken to a comprehensive PDF viewer with:
+
+**Key Features:**
+- **Smart Page Opening**: Automatically opens to the most relevant page based on search context
+- **High-Performance Rendering**: Optimized for large documents with lazy loading
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+- **Advanced Navigation**: Table of contents, search within document, and page jumping
+- **Document Metadata**: Shows document type, aircraft, version, and upload information
+
+*For detailed document viewer features, see our [Document Viewer Guide](/flynapse-platform/document-viewer)*
+
+### 💬 Collaboration & Comments
+
+**Page-Level Commenting:**
+- **Click-to-Comment**: Click anywhere on a document page to add comments at specific locations
+- **Public/Private Comments**: Choose visibility for team knowledge or personal notes
+- **Comment Threading**: Reply to comments to create discussion threads
+- **Real-Time Updates**: Comments appear immediately for all team members
+
+**Team Features:**
+- **Voting System**: Thumbs up/down to highlight valuable information
+- **Comment Search**: Find comments by content, author, or date
+- **Email Sharing**: Share documents and findings with team members
+- **Activity Tracking**: Monitor team document usage and collaboration
+
+### 📧 Sharing & Export
+
+**Email Integration:**
+- **Document Sharing**: Share documents via email with custom messages
+- **Response Sharing**: Share AI responses and summaries via email
+- **Team Updates**: Send updates about document changes or new findings
+
+**Export Features:**
+- **Copy to Clipboard**: Quick copying of AI responses and summaries
+- **PDF Export**: Download documents with comments and annotations
+- **Share Links**: Generate shareable links to specific document pages
+
+### 🔐 Security & Performance
+
+**Enterprise Security:**
+- **Role-Based Access**: Department-specific document access and permissions
+- **Multi-Tenant Architecture**: Complete data isolation between organizations
+- **Audit Logging**: Comprehensive tracking of all user actions
+- **Compliance Ready**: Built for regulatory compliance requirements
+
+**Optimized Performance:**
+- **Lazy Loading**: Documents load on-demand for faster performance
+- **Mobile Optimized**: Touch-friendly interfaces for field use
+- **Real-Time Collaboration**: Multiple users can work simultaneously
+- **Cloud-Native**: Built for scalability and reliability
+
+### 🤖 AI-Powered Intelligence
+
+**Advanced Search:**
+- **Semantic Understanding**: Deep comprehension of aviation terminology and procedures
+- **Context-Aware Responses**: AI maintains conversation context across multiple turns
+- **Intelligent Ranking**: Prioritizes most relevant documents based on query intent
+- **Multi-Document Analysis**: Cross-reference information across different document types
+
+**Document Intelligence:**
+- **Automatic Summarization**: Generate concise summaries of selected documents
+- **Procedure Extraction**: Extract step-by-step procedures with safety warnings
+- **Comparison Analysis**: Compare multiple documents to identify differences
+- **Safety Highlighting**: Automatically identify safety-critical information
+
+**Conversational AI:**
+- **Natural Language Processing**: Understand complex, multi-part questions
+- **Follow-up Handling**: Process refinements and clarifications seamlessly
+- **Technical Accuracy**: High accuracy for aviation-specific procedures and terminology
+
+## Real-World Use Cases
+
+### 1. 🚨 Emergency Procedures
+
+**Scenario**: Engine failure during takeoff requiring immediate action
+
+**Enhanced Workflow:**
+1. **Urgent Query**: "Engine failure during takeoff memory items"
+2. **AI Response**: Returns QRH memory items with specific page references
+3. **Document Selection**: Select QRH document for immediate reference
+4. **AI Summary**: Get consolidated memory items and procedures
+5. **Document Review**: Open QRH to specific page with intelligent highlighting
+6. **Crew Coordination**: Add comments for crew coordination points
+7. **Knowledge Sharing**: Share findings via email with operations team
+8. **Follow-up**: Ask specific questions about single-engine procedures
+
+### 2. 📋 Normal Operations
+
+**Scenario**: Captain needs to review normal takeoff procedures for training
+
+**Enhanced Workflow:**
+1. **Training Query**: "Normal takeoff procedures B737 MAX"
+2. **AI Response**: Returns relevant FCOM sections with specific page references
+3. **Document Selection**: Select multiple FCOM documents for comprehensive review
+4. **AI Summary**: Get consolidated summary of all takeoff procedures
+5. **Document Review**: Open documents to specific pages with intelligent highlighting
+6. **Training Notes**: Add training notes as comments for future reference
+7. **Knowledge Building**: Create comprehensive training guide from AI summaries
+8. **Team Sharing**: Share training materials with other pilots
+
+### 3. 🔍 Abnormal Procedures
+
+**Scenario**: First Officer needs to review abnormal procedures for specific system
+
+**Enhanced Workflow:**
+1. **System Query**: "Hydraulic system failure procedures B737"
+2. **Filtered Search**: Apply filters for FCOM and QRH documents only
+3. **Procedure Analysis**: AI identifies all related procedures across document types
+4. **Document Analysis**: Compare multiple sources for comprehensive procedures
+5. **Real-time Collaboration**: Add notes visible to all crew members
+6. **Procedure Validation**: Use AI to verify steps against latest procedures
+7. **Documentation**: Export procedures with comments for regulatory reporting
+8. **Team Notification**: Share critical findings via email with operations team
+
+### 4. 🎓 Training and Reference
+
+**Scenario**: New pilot needs comprehensive training on emergency procedures
+
+**Enhanced Workflow:**
+1. **Training Query**: "Complete emergency procedure training B737 MAX"
+2. **Progressive Learning**: AI provides step-by-step procedure with safety highlights
+3. **Interactive Learning**: Add training notes and questions as comments
+4. **Mentor Integration**: Senior pilots add guidance comments for complex procedures
+5. **Knowledge Building**: Create comprehensive training guide from AI summaries
+6. **Assessment**: Use AI to generate quiz questions based on procedures
+7. **Documentation**: Export training materials with all comments and notes
+8. **Continuous Learning**: Set up follow-up queries for advanced procedures
+
+### 5. 🔍 Regulatory Compliance
+
+**Scenario**: Chief Pilot reviewing procedures for regulatory compliance
+
+**Enhanced Workflow:**
+1. **Compliance Query**: "Review all emergency procedures for compliance"
+2. **Comprehensive Analysis**: AI identifies all related procedures across document types
+3. **Compliance Checking**: Cross-reference procedures with latest regulations
+4. **Quality Review**: Add compliance comments highlighting discrepancies or improvements
+5. **Team Feedback**: Use voting system to prioritize critical issues
+6. **Documentation**: Generate compliance report with all findings and recommendations
+7. **Follow-up Actions**: Create action items as comments for specific team members
+8. **Progress Monitoring**: Track resolution of identified issues through comment updates
+
+## Best Practices & Optimization
+
+### 1. 🎯 Effective Querying Strategies
+
+**Query Optimization:**
+- **Be Specific**: "B737 MAX engine failure procedures" vs "engine failure"
+- **Use Aviation Terminology**: Leverage standard aviation terms (FCOM, QRH, memory items)
+- **Include Context**: Mention aircraft type, system, and procedure type
+- **Progressive Refinement**: Start broad, then narrow down with follow-up questions
+- **Use Filters Early**: Apply document type and aircraft filters before asking questions
+
+**Advanced Query Techniques:**
+- **Multi-Part Questions**: "Compare B737 vs A320 engine failure procedures"
+- **Emergency Queries**: "Show me all QRH memory items for hydraulic failures"
+- **Troubleshooting**: "What are common causes of hydraulic system failures in B737?"
+- **Training Requirements**: "What procedures are needed for new pilot training?"
+
+### 2. 📚 Document Management Excellence
+
+**Selection Strategy:**
+- **Quality over Quantity**: Select the most relevant documents rather than all results
+- **Cross-Reference**: Always check multiple document types (FCOM + QRH)
+- **Version Control**: Verify you're using the latest document versions
+- **Relevance Assessment**: Use AI summaries to quickly evaluate document relevance
+
+**Organization Best Practices:**
+- **Use Filters Systematically**: Apply document type and aircraft filters consistently
+- **Document Your Process**: Add comments explaining your selection rationale
+- **Create Knowledge Bases**: Build collections of frequently used procedures
+- **Regular Updates**: Periodically review and update your document selections
+
+### 3. 🤝 Collaboration & Teamwork
+
+**Comment Best Practices:**
+- **Be Descriptive**: Write clear, actionable comments that help your team
+- **Use Visibility Wisely**: Choose public comments for team knowledge, private for personal notes
+- **Add Context**: Explain why a procedure is important or what to watch out for
+- **Tag Appropriately**: Use consistent tagging for easy searching and filtering
+
+**Knowledge Sharing:**
+- **Share Proactively**: Use email sharing for important discoveries and updates
+- **Vote Thoughtfully**: Help identify the most valuable information through voting
+- **Document Lessons Learned**: Add comments about what worked and what didn't
+- **Maintain Context**: Reference previous conversations and decisions
+
+### 4. 🔒 Security & Compliance
+
+**Data Protection:**
+- **Follow Company Policies**: Adhere to your organization's data handling procedures
+- **Use Appropriate Visibility**: Choose public/private comments based on sensitivity
+- **Regular Access Reviews**: Periodically review who has access to sensitive documents
+- **Audit Trail Maintenance**: Keep clear records of decisions and changes
+
+**Compliance Management:**
+- **Document Everything**: Ensure all compliance activities are properly documented
+- **Version Control**: Always work with the latest approved document versions
+- **Regulatory Updates**: Stay informed about new procedures and regulatory changes
+- **Cross-Department Coordination**: Use comments to coordinate with other departments
+
+### 5. ⚡ Performance Optimization
+
+**Efficiency Tips:**
+- **Use Keyboard Shortcuts**: Learn and use keyboard shortcuts for faster navigation
+- **Bookmark Frequently Used**: Save commonly accessed documents and procedures
+- **Batch Operations**: Group related queries and document reviews together
+- **Mobile Optimization**: Use mobile features for quick reference in the field
+
+**System Performance:**
+- **Close Unused Tabs**: Keep your browser clean for optimal performance
+- **Use Filters Effectively**: Apply filters to reduce data load and improve response times
+- **Regular Cleanup**: Periodically clean up old chat sessions and unused documents
+- **Network Optimization**: Use stable internet connections for best experience
+
+## Troubleshooting & Support
+
+### Common Issues & Solutions
+
+| Issue | Symptoms | Solution |
+|-------|----------|----------|
+| **No Search Results** | Empty document list, "No documents found" message | • Try different keywords or synonyms<br/>• Remove or adjust filters<br/>• Check spelling of aviation terms<br/>• Use broader search terms first |
+| **Irrelevant Documents** | Documents don't match query intent | • Apply more specific filters (document type, aircraft)<br/>• Refine query with more context<br/>• Use aviation-specific terminology<br/>• Try follow-up questions to narrow results |
+| **Slow Response Times** | Long loading times, timeout errors | • Check network connection stability<br/>• Close other browser tabs<br/>• Try refreshing the page<br/>• Contact IT if issue persists |
+| **Document Not Loading** | PDF viewer shows error, blank pages | • Verify document permissions<br/>• Check if document exists in system<br/>• Try refreshing the page<br/>• Contact administrator for access issues |
+| **Comments Not Saving** | Comments disappear, save errors | • Check internet connection<br/>• Verify comment permissions<br/>• Try refreshing and re-adding comment<br/>• Contact support if issue continues |
+| **Filter Issues** | Filters not applying, wrong results | • Clear all filters and reapply<br/>• Check filter combinations<br/>• Verify filter options are available<br/>• Try refreshing the page |
+
+### Performance Optimization
+
+**If experiencing slow performance:**
+- **Browser Optimization**: Use Chrome or Firefox for best performance
+- **Clear Cache**: Clear browser cache and cookies periodically
+- **Close Unused Tabs**: Keep only necessary tabs open
+- **Network Check**: Ensure stable internet connection
+- **Mobile Usage**: Use mobile app for better mobile performance
+
+**For large document libraries:**
+- **Use Filters**: Apply filters to reduce data load
+- **Batch Operations**: Group related queries together
+- **Progressive Loading**: Let documents load completely before interacting
+- **Regular Cleanup**: Archive old chat sessions periodically
+
+### Getting Help & Support
+
+**Self-Service Resources:**
+- **In-App Help**: Click the help icon (?) for contextual assistance
+- **Documentation**: Refer to this comprehensive guide for detailed information
+- **Video Tutorials**: Access step-by-step video guides in the help section
+- **FAQ Section**: Check frequently asked questions for quick answers
+
+**Direct Support:**
+- **Technical Support**: Contact support@flynapse.ai for technical issues
+- **Training Requests**: Request personalized training sessions for your team
+- **Feature Requests**: Submit enhancement ideas through the feedback system
+- **Emergency Support**: Use priority support for critical production issues
+
+- **In-App Help**: Click help icon for contextual assistance
+- **Documentation**: Refer to this guide for detailed information
+- **Support**: Contact support@flynapse.ai for technical issues
+- **Training**: Request training sessions for your team
+
+## Next Steps
+
+- Explore the [Document Viewer](/flynapse-platform/document-viewer) for detailed document interaction
+- Review [Authentication](/api-reference/authentication) for secure access
+- Contact our team for [Custom Training](/contact) and implementation support
+
+---
+
+*Transform your flight operations with AI-powered procedure intelligence*

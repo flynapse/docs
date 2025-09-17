@@ -26,6 +26,28 @@
               "flynapse-platform/mro-co-pilot",
               "flynapse-platform/document-viewer"
             ]
+          },
+          {
+            "group": "Pilot Co-Pilot",
+            "pages": [
+              "flynapse-platform/pilot-co-pilot"
+            ]
+          },
+          {
+            "group": "Settings & Administration",
+            "pages": [
+              "flynapse-platform/settings-role-management"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "flynapse-platform/authentication-onboarding",
+              "flynapse-platform/copilot-selection-access",
+              "flynapse-platform/account-profile-management",
+              "flynapse-platform/navigation-interface-guide",
+              "flynapse-platform/chat-user-guide"
+            ]
           }
         ]
       },

@@ -1,0 +1,497 @@
+---
+title: 'Settings & User Management - Administrator Guide'
+description: 'Complete guide to managing your Flynapse organization, departments, and users'
+---
+
+# Settings & User Management - Administrator Guide
+
+This guide helps administrators manage their Flynapse organization, set up departments, assign roles, and control user access. Whether you're setting up your airline for the first time or managing day-to-day operations, this guide covers everything you need to know.
+
+## Who Can Use These Settings?
+
+**Organization Administrators (Tenant Owners):**
+- Set up and manage your entire organization
+- Create departments and assign department heads
+- Create roles and control what users can access
+- View billing and usage information
+
+**Department Managers:**
+- Manage team members within your department
+- Assign roles to your team members
+- Create department-specific roles
+
+**Regular Users:**
+- View your account information and assigned roles
+- See what permissions you have
+
+## Getting Started
+
+When you log into Flynapse, you'll see different settings options based on your role:
+
+**If you're an Organization Administrator:**
+- You'll see tabs for Organization, Departments, Roles & Permissions, Billing, and Account
+- You can manage your entire organization from these settings
+
+**If you're a Department Manager:**
+- You'll see tabs for Team, Roles, and Account
+- You can manage your department team and create department-specific roles
+
+**If you're a Regular User:**
+- You'll only see the Account tab
+- You can view your personal information and assigned roles
+
+## Organization Settings
+
+### Setting Up Your Organization
+
+When you first set up Flynapse for your airline, you'll need to provide basic organization information:
+
+**Required Information:**
+- **Airline Name**: Your official company name
+- **IATA Code**: Your 3-letter airline code (e.g., "UAL" for United Airlines)
+- **ICAO Code**: Your 4-letter airline code (e.g., "UALA" for United Airlines)
+- **Country**: Where your company is headquartered
+- **Time Zone**: Your primary operational time zone
+
+**Contact Information:**
+- **Primary Contact**: Main contact person for your organization
+- **Secondary Contact**: Backup contact person
+
+**How to Update:**
+1. Go to Organization settings
+2. Fill in or update the information
+3. Click Save - changes are saved automatically
+4. Only organization administrators can make these changes
+
+### Managing Departments
+
+Departments help organize your airline's different teams (like MRO, Pilot Operations, etc.). You can create departments and assign department heads to manage each team.
+
+#### Creating a New Department
+
+**Step-by-Step:**
+1. Go to Departments settings
+2. Click "Add Department"
+3. Enter the department name (e.g., "MRO", "Pilot Operations", "Cabin Crew")
+4. Optionally add a description
+5. Select a department head from your existing users
+6. Click Save
+
+**Important Notes:**
+- Each department must have a unique name
+- The department head must already be a user in your organization
+- A person can only be head of one department at a time
+
+#### Changing Department Information
+
+**What You Can Change:**
+- **Department Name**: Update the department name
+- **Department Head**: Assign a new person to lead the department
+
+**Changing Department Head:**
+1. Click "Edit" next to the department
+2. Select a new department head from the dropdown
+3. You'll see a warning explaining what will happen:
+   - The current head will lose their manager privileges
+   - The new head will gain manager privileges
+   - Your team will be notified of the change
+4. Click "Confirm" to make the change or "Cancel" to keep the current head
+
+**Important:**
+- Make sure the new department head is already a user in your organization
+- The change takes effect immediately
+- Both the old and new department heads will be notified
+
+#### Deleting a Department
+
+**⚠️ Important Warning:**
+Deleting a department is permanent and affects all users in that department. Think carefully before proceeding.
+
+**What Happens When You Delete a Department:**
+1. **All users are removed** from the department
+2. **All department-specific roles are deleted** permanently
+3. **Users lose access** to department-specific features
+4. **This cannot be undone** - you'll need to recreate everything
+
+**Before You Delete:**
+The system will show you:
+- How many users are in the department
+- How many roles will be deleted
+- A final confirmation dialog
+
+**How to Delete:**
+1. Click "Delete" next to the department
+2. Read the warning carefully
+3. Confirm you understand the impact
+4. Click "Delete Department" to proceed
+
+**After Deletion:**
+- Users will need to be reassigned to other departments
+- Department-specific roles will need to be recreated
+- Users may lose access to certain features until reassigned
+
+### Managing Roles and Permissions
+
+Roles control what users can do in Flynapse. You can create custom roles for different job functions and assign specific permissions to each role.
+
+#### Understanding Permissions
+
+**What Users Can Do:**
+- **View Documents**: Access and read technical documents
+- **Chat with AI**: Use the AI copilots to ask questions
+- **Add Comments**: Leave comments on documents for team collaboration
+- **View Users**: See other users in the organization
+- **Manage Users**: Add, edit, or remove users
+- **Manage Roles**: Create, edit, or delete roles
+- **Manage Organization**: Change organization settings and billing
+
+**Permission Levels:**
+- **Basic User**: Can view documents and chat with AI
+- **Team Member**: Can view documents, chat, and add comments
+- **Department Manager**: Can manage team members and create department roles
+- **Organization Administrator**: Can manage everything in the organization
+
+#### Creating Custom Roles
+
+**Step-by-Step:**
+1. Go to Roles & Permissions settings
+2. Click "Add Role"
+3. Fill in the role details:
+   - **Role Name**: Give it a clear name (e.g., "Senior Engineer", "Training Coordinator")
+   - **Description**: Explain what this role is for
+   - **Department**: Choose which department this role belongs to
+   - **Permissions**: Check the boxes for what this role can do
+4. Click Save
+
+**Tips for Creating Roles:**
+- Use clear, descriptive names
+- Only give permissions that are needed for the job
+- Consider creating different roles for different experience levels
+- Test roles by assigning them to users and checking access
+
+#### Changing Role Settings
+
+**What You Can Change:**
+- **Role Name**: Update the role name
+- **Description**: Change what the role is for
+- **Department**: Move the role to a different department
+- **Permissions**: Add or remove what the role can do
+
+**How to Edit a Role:**
+1. Find the role in the list
+2. Click "Edit" next to the role
+3. Make your changes
+4. Click Save
+
+**Important Notes:**
+- When you change permissions, it affects all users with that role immediately
+- If you move a role to a different department, users in the old department will lose that role
+- Be careful when removing permissions - users might lose access to features they need
+
+#### Deleting Roles
+
+**⚠️ Important Warning:**
+Deleting a role affects all users who have that role. They will lose access to features that role provided.
+
+**What Happens When You Delete a Role:**
+1. **All users lose that role** immediately
+2. **Users may lose access** to features they were using
+3. **The role is permanently deleted** - you can't get it back
+
+**Before You Delete:**
+The system will show you:
+- How many users currently have this role
+- Which department the role belongs to
+- A final confirmation dialog
+
+**How to Delete:**
+1. Click "Delete" next to the role
+2. Read the warning carefully
+3. Confirm you understand the impact
+4. Click "Delete Role" to proceed
+
+**After Deletion:**
+- Users will need to be assigned different roles
+- You may need to create a new role if needed
+- Users might lose access to certain features until reassigned
+
+### Billing & Usage Information
+
+**What You Can See:**
+- **Department Statistics**: How many users are in each department
+- **Usage Information**: How your organization is using Flynapse
+- **Subscription Details**: Your current plan and billing information
+
+**How to Access:**
+1. Go to Billing settings
+2. View your organization's usage statistics
+3. See how many users are in each department
+4. Check your subscription and billing details
+
+## Department Team Management
+
+If you're a department manager, you can manage your team members and assign them roles within your department.
+
+### Adding Team Members
+
+**Step-by-Step:**
+1. Go to Team settings in your department
+2. Click "Add Team Member"
+3. Select a user from the list of available users
+4. Choose a role for that user from your department's roles
+5. Click Save
+
+**Who Can Be Added:**
+- Only users who aren't already in your department
+- Users must already exist in your organization
+- You can search for users by name or email
+
+**Role Assignment:**
+- You can only assign roles that belong to your department
+- The system will show you what permissions each role includes
+- Make sure the role matches the user's job responsibilities
+
+### Managing Team Members
+
+**What You Can Do:**
+- **Change Roles**: Assign a different role to a team member
+- **Remove from Team**: Remove someone from your department
+
+**Changing a Team Member's Role:**
+1. Find the team member in your list
+2. Click "Edit" next to their name
+3. Select a new role from the dropdown
+4. Click Save
+
+**What Happens When You Change a Role:**
+- The user immediately gets the new role
+- They lose the old role and its permissions
+- They gain the new role's permissions
+- The change takes effect right away
+
+**Removing a Team Member:**
+1. Click "Remove" next to the team member
+2. Confirm you want to remove them
+3. They will be removed from your department
+4. They will lose access to department-specific features
+
+### Creating Department-Specific Roles
+
+As a department manager, you can create roles that are specific to your department's needs.
+
+**Step-by-Step:**
+1. Go to Roles settings in your department
+2. Click "Add Role"
+3. Fill in the role details:
+   - **Role Name**: Give it a clear name
+   - **Description**: Explain what this role is for
+   - **Permissions**: Choose what this role can do
+4. Click Save
+
+**Available Permissions for Department Roles:**
+- **View Documents**: Access technical documents
+- **Chat with AI**: Use AI copilots
+- **Add Comments**: Leave comments on documents
+
+**Tips:**
+- Create roles that match your team's job functions
+- Use clear, descriptive names
+- Only give permissions that are needed
+- Test roles by assigning them to team members
+
+## Account Settings
+
+### Viewing Your Account Information
+
+**What You Can See:**
+- **Your Email**: Your login email address
+- **Your Name**: Your display name
+- **Your Roles**: All roles assigned to you
+- **Your Departments**: Which departments you belong to
+- **Your Permissions**: What you can do in Flynapse
+
+**How to Access:**
+1. Go to Account settings
+2. View your personal information
+3. See what roles and permissions you have
+4. Check which departments you belong to
+
+**Important Notes:**
+- You cannot change your account information yourself
+- Contact your administrator if you need changes
+- Your permissions are based on your assigned roles
+
+## Understanding Permissions
+
+### How Permissions Work
+
+**Permission Levels:**
+- **Organization Level**: Control organization-wide settings and user management
+- **Department Level**: Control team management and department-specific features
+- **User Level**: Control what individual users can do
+
+**How Users Get Permissions:**
+- Users get permissions from the roles assigned to them
+- If you have multiple roles, you get permissions from all of them
+- Department permissions are added to organization permissions
+
+**What Happens When Permissions Change:**
+- Changes take effect immediately
+- Users might gain or lose access to features
+- The system automatically updates what you can see and do
+
+## Common Scenarios
+
+### What Happens When...
+
+**You Assign Yourself as Department Head:**
+- You immediately gain manager privileges
+- You can now manage your department team
+- You'll see additional settings options
+
+**You Change Department Head:**
+- The old head loses manager privileges
+- The new head gains manager privileges
+- Both people are notified of the change
+- The change takes effect immediately
+
+**You Delete a Department:**
+- All users in that department are removed
+- All department-specific roles are deleted
+- Users lose access to department features
+- This cannot be undone
+
+**You Delete a Role:**
+- All users with that role lose it immediately
+- Users may lose access to features they were using
+- The role is permanently deleted
+- Users will need to be assigned different roles
+
+**You Change a User's Role:**
+- The user immediately gets the new role
+- They lose the old role and its permissions
+- They gain the new role's permissions
+- The change takes effect right away
+
+**You Move a Role to a Different Department:**
+- Users in the old department lose that role
+- Users in the new department can be assigned that role
+- The role now belongs to the new department
+
+**A User Has Multiple Roles:**
+- They get permissions from all their roles combined
+- They can access features from all their departments
+- The system automatically combines their permissions
+
+**You Remove a Permission from a Role:**
+- All users with that role lose that permission immediately
+- They may lose access to features they were using
+- The change takes effect right away
+
+## Best Practices
+
+### For Organization Administrators
+
+**Setting Up Your Organization:**
+- Plan your department structure before creating departments
+- Choose department heads carefully - they'll manage their teams
+- Create roles that match your organization's job functions
+- Use clear, descriptive names for departments and roles
+
+**Managing Users:**
+- Regularly review who has access to what
+- Remove access when people change roles or leave
+- Test new roles by assigning them to users
+- Keep your organization information up to date
+
+**Security:**
+- Only give people the permissions they need for their job
+- Regularly review and update roles and permissions
+- Remove unused roles and departments
+- Monitor who has administrative access
+
+### For Department Managers
+
+**Managing Your Team:**
+- Regularly review your team members and their roles
+- Make sure everyone has the right permissions for their job
+- Remove team members who no longer need access
+- Create department-specific roles as needed
+
+**Role Management:**
+- Create roles that match your team's responsibilities
+- Use clear names that everyone understands
+- Only give permissions that are actually needed
+- Test roles before assigning them to team members
+
+### For All Users
+
+**Understanding Your Access:**
+- Check your account settings to see what roles you have
+- Understand what permissions each role gives you
+- Contact your administrator if you need different access
+- Report any access issues immediately
+
+## Troubleshooting
+
+### Common Issues
+
+**"I can't see the settings I need"**
+- **Cause**: You don't have the right permissions
+- **Solution**: Contact your organization administrator
+- **Prevention**: Make sure you have the right role assigned
+
+**"I can't add someone to my team"**
+- **Cause**: The person might already be in your department or another department
+- **Solution**: Check if they're already assigned somewhere else
+- **Prevention**: Review your team list before adding new members
+
+**"A team member lost access to features"**
+- **Cause**: Their role or permissions were changed
+- **Solution**: Check their current role and permissions
+- **Prevention**: Communicate role changes to your team
+
+**"I can't delete a department/role"**
+- **Cause**: There might be users still assigned to it
+- **Solution**: Remove all users first, then delete
+- **Prevention**: Plan deletions carefully and warn users first
+
+### Getting Help
+
+**If You're Having Problems:**
+1. **Check your permissions**: Go to Account settings to see what you can do
+2. **Contact your administrator**: They can help with access issues
+3. **Check the warnings**: The system shows warnings before major changes
+4. **Read the help text**: Each setting page has helpful information
+
+**Who to Contact:**
+- **For organization issues**: Contact your organization administrator
+- **For team issues**: Contact your department manager
+- **For technical problems**: Contact Flynapse support
+- **For urgent access issues**: Contact your administrator immediately
+
+## Security and Privacy
+
+### Keeping Your Organization Secure
+
+**Access Control:**
+- Only give people the permissions they need for their job
+- Regularly review who has access to what
+- Remove access when people change roles or leave
+- Monitor who has administrative privileges
+
+**Data Protection:**
+- All changes to settings are logged and tracked
+- Sensitive information is protected
+- Access attempts are monitored
+- Regular security reviews are conducted
+
+**Best Practices:**
+- Use strong passwords for all accounts
+- Don't share login credentials
+- Report any suspicious activity immediately
+- Keep your organization information up to date
+
+---
+
+*Manage your Flynapse organization with confidence using these comprehensive settings and user management tools*
