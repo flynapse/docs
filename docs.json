@@ -17,9 +17,7 @@
             "group": "Getting Started",
             "pages": [
               "flynapse-platform/introduction",
-              "flynapse-platform/authentication-onboarding",
-              "flynapse-platform/copilot-selection-access",
-              "flynapse-platform/navigation-interface-guide"
+              "flynapse-platform/copilot-selection-access"
             ]
           },
           {
@@ -27,8 +25,7 @@
             "pages": [
               "flynapse-platform/chat-user-guide",
               "flynapse-platform/mro-co-pilot",
-              "flynapse-platform/pilot-co-pilot",
-              "flynapse-platform/document-viewer"
+              "flynapse-platform/pilot-co-pilot"
             ]
           },
           {
