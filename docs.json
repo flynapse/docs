@@ -16,13 +16,13 @@
           {
             "group": "Getting Started",
             "pages": [
-              "flynapse-platform/introduction",
-              "flynapse-platform/copilot-selection-access"
+              "flynapse-platform/introduction"
             ]
           },
           {
             "group": "AI Co-Pilots",
             "pages": [
+              "flynapse-platform/copilot-selection-access",
               "flynapse-platform/chat-user-guide",
               "flynapse-platform/mro-co-pilot",
               "flynapse-platform/pilot-co-pilot"
