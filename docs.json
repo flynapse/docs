@@ -22,8 +22,8 @@
           {
             "group": "AI Co-Pilots",
             "pages": [
-              "flynapse-platform/copilot-selection-access",
               "flynapse-platform/chat-user-guide",
+              "flynapse-platform/copilot-selection-access",
               "flynapse-platform/mro-co-pilot",
               "flynapse-platform/pilot-co-pilot"
             ]
