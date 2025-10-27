@@ -40,6 +40,17 @@
             "pages": [
               "flynapse-platform/components/overview"
             ]
+          },
+          {
+            "group": "Internal Resources",
+            "pages": [
+              "demo-script/demo-script",
+              "demo-script/introduction-section",
+              "demo-script/context-section",
+              "demo-script/product-in-action-section",
+              "demo-script/differentiators-section",
+              "demo-script/call-to-action-section"
+            ]
           }
         ]
       },
