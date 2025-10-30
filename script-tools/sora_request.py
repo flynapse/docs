@@ -6,6 +6,7 @@ import sys
 
 from dotenv import load_dotenv
 
+# Latest documentation: https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/video-generation?tabs=python-entra
 # Load environment variables from a .env file if present
 load_dotenv()
 
@@ -30,16 +31,54 @@ headers = {
     "api-key": API_KEY
 }
 
-body = {
-  "prompt": "A video of a cat on a motorcycle",
-  "n_variants": "1",
+image_path = "sample.png"
+if image_path and not os.path.exists(image_path):
+    print(f"❌ Image not found: {image_path}")
+    sys.exit()
+
+# Build multipart request to include a local image using inpaint_items
+data = {
+  "prompt": "Animate this image",
+  "height": "1080",
+  "width": "1920",
   "n_seconds": "4",
-  "height": "720",
-  "width": "1280",
+  "n_variants": "1",
   "model": deployment,
+  "inpaint_items": json.dumps([
+    {
+      "frame_index": 0,
+      "type": "image",
+      "file_name": os.path.basename(image_path),
+      "crop_bounds": {
+        "left_fraction": 0.0,
+        "top_fraction": 0.0,
+        "right_fraction": 1.0,
+        "bottom_fraction": 1.0
+      }
+    }
+  ])
 }
 
-job_response = requests.post(constructed_url, headers=headers, json=body)
+# Remove content-type for multipart; requests will set correct boundary
+multipart_headers = {k: v for k, v in headers.items() if k.lower() != "content-type"}
+
+if image_path:
+    print("🔍 Using image: ", image_path)
+    with open(image_path, "rb") as image_file:
+        files = [("files", (os.path.basename(image_path), image_file, "image/png"))]
+        job_response = requests.post(constructed_url, headers=multipart_headers, data=data, files=files)
+else:
+    print("No image provided, using prompt: ", data["prompt"])
+    fallback_body = {
+      "prompt": data["prompt"],
+      "n_variants": data["n_variants"],
+      "n_seconds": data["n_seconds"],
+      "height": data["height"],
+      "width": data["width"],
+      "model": deployment,
+    }
+    job_response = requests.post(constructed_url, headers=headers, json=fallback_body)
+
 if not job_response.ok:
     print("❌ Video generation failed.")
     print(json.dumps(job_response.json(), sort_keys=True, indent=4, separators=(',', ': ')))
