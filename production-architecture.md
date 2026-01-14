@@ -47,6 +47,7 @@ OTel -> OTel Collector -> Prometheus/Loki/Tempo -> Grafana
 - Private subnets (multi-AZ): ECS tasks, Weaviate nodes, observability stack.
 - ALB spans two public subnets (AWS requirement); ECS tasks can run in a single AZ for cost.
 - NAT gateway for outbound calls (Azure OpenAI); use fixed egress IPs for allowlisting.
+- Allow outbound to the license validation service hosted in our AWS account.
 - Security groups to restrict east-west traffic:
   - Only API tasks can reach DynamoDB, Redis, Weaviate.
   - Observability ports are private-only.
@@ -103,22 +104,26 @@ OTel -> OTel Collector -> Prometheus/Loki/Tempo -> Grafana
   - Prometheus Alertmanager + Grafana alerts, routed to email/Slack/MS Teams.
 
 ## CI/CD with approval gates
-- Build in our AWS account, then replicate/push images to client ECR using GitHub Actions with OIDC.
-- Sign images during build; verify signatures during deploy.
+- Build in our AWS account, then deliver images to the client via cross-account ECR pull or replication/push using GitHub Actions with OIDC.
 - Manual approval step before production deploy.
 - Deploy via ECS rolling updates (or CodeDeploy blue/green for zero-downtime).
 - Add smoke tests after deploy and automatic rollback on failure.
 
-## IaC delta (changes/additions only)
-- Update networking to reference an existing VPC/subnets (data sources or import) and wire them into the new ALB/ECS resources.
-- Add ALB (public) + target groups + listeners + security groups for API and dashboard.
-- Add ECS cluster, launch templates, ASGs, and capacity providers (app/observability/weaviate pools).
-- Add ECS task definitions and services for API, dashboard, OTel, Prometheus, Loki, Tempo, Grafana, Weaviate.
-- Add IAM task/execution roles, instance profiles, and CloudWatch log groups for ECS.
-- Add EBS data volumes via launch templates: shared gp3 500 GB for observability pool; dedicated gp3 500 GB per Weaviate node.
-- Enable NAT gateway (currently commented in `iac/networking.tf`) or equivalent egress for Azure OpenAI.
-- Add regional WAF for ALB (replace CloudFront/Amplify WAF patterns).
-- Add ECR cross-account replication or repo policies for image delivery; add image signing configuration and verification step in deploy pipeline.
+## IaC delta (changes/additions only, vs current repo)
+- Runtime stack (create in our AWS for testing; client will implement independently from this requirements list):
+  - Update networking to reference an existing VPC/subnets (data sources or import) and wire them into the new ALB/ECS resources.
+  - Add ALB (public) + target groups + listeners + security groups for API and dashboard.
+  - Add ECS cluster, launch templates, ASGs, and capacity providers (app/observability/weaviate pools).
+  - Add ECS task definitions and services for API, dashboard, OTel, Prometheus, Loki, Tempo, Grafana, Weaviate.
+  - Add IAM task/execution roles, instance profiles, and CloudWatch log groups for ECS.
+  - Add EBS data volumes via launch templates: shared gp3 500 GB for observability pool; dedicated gp3 500 GB per Weaviate node.
+  - Enable NAT gateway (currently commented in `iac/networking.tf`) or equivalent egress for Azure OpenAI and license validation service.
+  - Add regional WAF for ALB (replace CloudFront/Amplify WAF patterns).
+- Cross-account image delivery (used in production and prepared in our AWS):
+  - ECR repo policy in our AWS to allow client account pull.
+  - Optional: ECR replication/push to client ECR (if chosen) and client ECR repos.
+- Shared services in our AWS (used by test + production):
+  - License validation service (API Gateway + Lambda + DynamoDB) and DNS endpoint used by the client runtime.
 
 ## Security and compliance
 - Store all secrets in the client AWS account using Secrets Manager or SSM Parameter Store.
@@ -127,6 +132,12 @@ OTel -> OTel Collector -> Prometheus/Loki/Tempo -> Grafana
   - ACM on ALB
   - In-transit encryption for Redis and internal service calls where feasible.
 - WAF in front of ALB with rate limits and OWASP rules.
+
+## License enforcement (contract control)
+- Add a lightweight license check service hosted by us.
+- Issue time-limited tokens; API validates token on startup and periodically (cache locally for short outages).
+- If contract ends, revoke tokens to disable use without touching the client account.
+- This is the only reliable “kill switch” once images exist in the client account.
 
 ## Sizing baseline (ECS on EC2)
 - App pool (API + dashboard + OTel Collector):
