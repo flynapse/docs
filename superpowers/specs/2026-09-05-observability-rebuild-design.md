@@ -217,6 +217,14 @@ automations worker.
   un-instrumented — a test asserts one pooled query produces a `db.*` span).
 - Sub-app instrumentation as in §3.3: `instrument_app` on `core`, `copilot-mro`, `shift-optimizer` and the
   gateway, with the mount prefixes in the gateway's `excluded_urls`.
+- **Signal catalogue first.** Phase 1 opens with a backend signal catalogue (the server-side twin of the
+  frontend event catalogue in research 07): per service and subsystem, every span (name, kind, attributes,
+  parent) and every metric (name, kind, unit, attributes, cardinality bound), each mapped to the dashboard or
+  alert that consumes it, diffed against the current inventory in research 01 §2.1–2.2. Owner reviews it before
+  instrumentation lands, so "more metrics and traces" is a deliberate, enumerated list rather than ad-hoc
+  additions. Families already named by this spec: HTTP server/client, DB/Redis/Weaviate/S3 clients, agent turn
+  / tool / subagent, model usage and cost, document-hub processing, memory, automations worker, ledger writes,
+  ingest/telemetry pipeline health.
 - Parser/ingest entrypoints (nine today, G32) all use `service.name=ingest-parser` with a `parser.kind`
   resource attribute; the six dead `document_hub_qna_*` metric constants are deleted.
 - `utils/observability/{tracing,metrics}.py` shrink to thin helpers over the SDK: `get_tracer()`,
@@ -424,7 +432,12 @@ tabs when those tenants exist).
   fetch/XHR/document-load instrumentations, fetch/XHR spans head-sampled at 10%;
   `propagateTraceHeaderCorsUrls` restricted to the API origin. SSR `instrumentation.ts` deferred (§3.4).
 - A small OTLP/JSON exporter that posts through the existing authenticated fetch helper to the api telemetry
-  route with a bounded queue and a best-effort `visibilitychange`/`pagehide` flush. **Accepted loss**: the
+  route with a bounded queue and a best-effort `visibilitychange`/`pagehide` flush. **The re-queue wedge that
+  caused the 2026-02 shutdown (a permanently rejected batch re-queued to the front forever) is designed out,
+  not patched**: a 4xx response drops the batch and increments a `browser.telemetry.dropped` counter; 5xx and
+  network failures retry with backoff up to a fixed attempt count, then drop; the queue has a hard cap with
+  oldest-first eviction; a unit test replays the wedge scenario (one bad batch followed by good ones) and
+  asserts the good ones ship. The old `logger.ts` queue and both commented-out delivery calls are deleted. **Accepted loss**: the
   final flush on unload cannot refresh a Cognito token, `sendBeacon` cannot carry the auth header, and
   keepalive bodies cap at 64 KiB — events in the last few seconds of a closing tab may be lost; nothing
   product-critical rides that path (`document_closed` dwell is best-effort).
