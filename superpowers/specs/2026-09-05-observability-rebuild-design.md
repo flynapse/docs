@@ -1,7 +1,8 @@
 # Observability, telemetry and logging rebuild — design (2026-09-05)
 
-Status: **DRAFT for owner review.** Nothing in this document is implemented. Decisions the owner must
-make are collected in §11; everything else is a recommendation with the reasoning attached.
+Status: **RULED 2026-09-05 (revision 3).** Nothing in this document is implemented. The owner ruled on the
+§11 decisions the same day; §11 now records the rulings, and the sections below were updated to match.
+Open: the LLM content-capture policy (§6.5) is deferred by the owner and stays a placeholder.
 Revision 2 (same day): triaged an adversarial review — nine P1 findings fixed inline (Amplify SSR reach,
 botocore double-count, mounted sub-app routes, loguru bridge, CLI delta metrics in `oss`, CLI metric
 cardinality, RLS on reporting reads, operator-scope ruling, PromQL alarms in Terraform) and the P2 notes folded
@@ -191,12 +192,15 @@ does not depend on the answer), so a Next.js route handler cannot reach a privat
 has the VPC connector, the CORS allow-list for the dashboard origin, Cognito auth, tenant binding and a public
 rate-limited ingest route (`core/resources/logging`). A public collector with a bearer token is security
 theatre (the token is in the JS) and has no per-user rate limiting (there is no upstream rate-limit
-processor). So: `POST {api}/telemetry/v1/traces` and `/v1/logs` (authenticated; Cognito token as today's API
-calls) plus `POST {api}/telemetry/public/v1/logs` (anonymous, 64 KiB / 50 records / 60 rpm per IP, tenant
-sentinel) replace `core`'s `/logging/ingest` routes (and the test that pins "exactly three logging routes" is
-re-banked). The route is excluded from the api's own request metrics. Next.js SSR (route-handler) tracing is
-deferred: if the probe shows Amplify can reach the api privately, SSR exports to the same route with a service
-credential in a later phase; otherwise it stays out.
+processor). **Ruled:** the existing `core` ingest endpoints are **evolved, not replaced** — `POST
+/logging/ingest` (authenticated; Cognito token as today's API calls) and `POST /logging/public/ingest`
+(anonymous, 64 KiB / 50 records / 60 rpm per IP, tenant sentinel) keep their paths, auth, quarantine rules and
+rate limits, and change their body to standard OTLP (`/v1/logs` and `/v1/traces` sub-paths) passed through
+opaquely to the collector with the identity headers. The loguru re-logging path inside them is removed. The
+routes are excluded from the api's own request metrics; the test that pins "exactly three logging routes" is
+re-banked for the new sub-paths. Next.js SSR (route-handler) tracing is deferred: if the probe shows Amplify
+can reach the api privately, SSR exports to the same route with a service credential in a later phase;
+otherwise it stays out.
 
 ## 4. Backend telemetry foundation (Python)
 
@@ -317,7 +321,10 @@ tenant.id=…,enduser.id=…,agent.department=…`, short export intervals (the 
 `claude_code.tool_result`, subagent attribution. All `OTEL_LOG_*` content flags stay unset outside dev. A
 collector `transform` adds `gen_ai.*` aliases so GenAI-aware backends price these records.
 
-### 6.5 Content capture policy and the (optional) LLM tool
+### 6.5 Content capture policy and the (optional) LLM tool — **DEFERRED by the owner**
+The owner will return to this decision. Until then: the G18 fix (no prompt text in logs) and the "structure
+to telemetry, content to Postgres" principle stand; no `llm_turn_content` relation and no LLM tool are built;
+`debug_dumps/` stays the dev-only capture. The proposal below is the placeholder for that decision.
 - New tenant-scoped, RLS'd relation `llm_turn_content` keyed `(tenant_id, block_id[, call_id])`: redacted
   (`redact_sensitive`) prompt/completion/tool bodies or S3 object keys, `redaction_version`, `sha256`,
   `content_bytes`, `truncated`, `captured_at`; **off in production by default**, per-tenant opt-in, 30-day
@@ -329,13 +336,15 @@ collector `transform` adds `gen_ai.*` aliases so GenAI-aware backends price thes
   same write site — it is a consumer, never the record.
 - Bedrock model invocation logging stays off in production (account-wide, no tenant boundary).
 
-### 6.6 Ledger completeness gaps (G26 and its sibling)
-The `lang` runtime writes no `llm_usage` row today. This is a cost-ledger completeness defect, not just an
-observability one; it is fixed in this workstream by routing the lang runtime's turn summary through the same
-`record_turn_usage` sink (origin discriminators unchanged). The data-discovery SAD runner has the same shape
-(its usage goes to a caller-supplied sink and stdlib logging only, no ledger row): recommended fix is a new
-`origin='data_discovery'` in `llm_usage` written from the SAD runner's `record_usage`, so tenant spend is
-complete — owner question in §11 because it changes what "tenant total" means.
+### 6.6 Ledger completeness gaps (G26 and its sibling) — **DEFERRED by the owner**
+The `lang` runtime writes no `llm_usage` row today, and the data-discovery SAD runner's usage goes to a
+caller-supplied sink and stdlib logging only. Both are cost-ledger completeness defects; the owner ruled they
+are **out of scope for this workstream** (a separate ledger workstream). Consequences recorded here so the
+dashboards are honest: the spend views (§7.3) cover the Claude runtime, direct calls and automations; a
+`lang`-served turn contributes no `llm_usage` row, and data-discovery spend is absent. The lang runtime still
+gets spans and `RuntimeTelemetry` metrics through the ledger sink it already feeds (`llm_model_calls`), so its
+telemetry is complete even though its per-turn ledger row is not. `improvement_runs.llm_spend` is likewise
+treated as outside the tenant total until that workstream rules.
 
 ## 7. Product analytics (settings dashboard) rebuild
 
@@ -349,11 +358,10 @@ complete — owner question in §11 because it changes what "tenant total" means
 - The Loki client, `LOKI_BASE_URL` and the LogQL constants are deleted from `core`.
 - Money rule on every USD tile: `SUM(total_cost_usd)` always with `COUNT(*) FILTER (WHERE NOT cost_complete)`;
   never sum `automation_runs.cost_usd` and `llm_usage` together.
-- Operator-scoped relations (`document_hub_documents`, `memory_items`): two legitimate readings, decided in §11 —
-  (a) bind the tenant's full operator list for **tenant owners only** (as the automations announcements path
-  does), entitlement-scoped for `view_dashboard` capability holders; or (b) entitlement-scoped for everyone with
-  the tile labelled "for the operators you are entitled to". Counts are never cross-operator for a
-  capability-only viewer.
+- Operator-scoped relations (`document_hub_documents`, `memory_items`) — **ruled**: bind the tenant's full
+  operator list for **tenant owners only** (as the automations announcements path does); `view_dashboard`
+  capability holders read entitlement-scoped and the tile says "for the operators you are entitled to". Counts
+  are never cross-operator for a capability-only viewer.
 - The panel registry lives in `core` (the owner of the product surface and of comments/automations/invitations
   tables) and reads the copilot-mro-owned ledger/chat tables through the shared `PostgresService`, as the
   automations executor already does across the same boundary.
@@ -376,10 +384,12 @@ complete — owner question in §11 because it changes what "tenant total" means
   (`chat_citation` | `library` | `viewer`), `page_number`, `dwell_ms`, `route`. The browser POSTs each event
   **once** to `POST {api}/analytics/events` (authenticated, typed, 50/batch), which writes the row and
   re-emits it as an OTLP log record for ops. Retention 13 months.
-- **Reporting role.** The app role is `NOBYPASSRLS`, unbound sessions fail closed, and the ledgers are
-  append-only for it — so the Grafana Postgres datasource, the `chat_turn_facts` backfill and every purge job
-  (`product_events`, `llm_turn_content`) need a separate read-only `BYPASSRLS` reporting role plus an
-  owner-run maintenance role for purges. This is a deliberate cross-tenant read path and is a §11 decision.
+- **Reporting role — ruled: reuse `flynapse_readonly`.** The app role is `NOBYPASSRLS`, unbound sessions fail
+  closed, and the ledgers are append-only for it. The cluster already has `flynapse_readonly`
+  (`NOSUPERUSER BYPASSRLS`, SELECT only, no writes; today used only by the pytest corpus census, password in
+  `POSTGRES_READONLY_PASSWORD`). It is granted SELECT on the app database's analytics relations and becomes the
+  Grafana Postgres datasource and the `chat_turn_facts` backfill reader. Purges (`product_events`; content if
+  ever built) stay owner-run scripts under `postgres`, as every maintenance script is today. No new role.
 - Retention defaults for the ledgers stay "forever" (append-only by privilege); `llm_model_calls` gets a
   rollup-then-prune decision in the plan (owner question).
 
@@ -418,12 +428,20 @@ tabs when those tenants exist).
   final flush on unload cannot refresh a Cognito token, `sendBeacon` cannot carry the auth header, and
   keepalive bodies cap at 64 KiB — events in the last few seconds of a closing tab may be lost; nothing
   product-critical rides that path (`document_closed` dwell is best-effort).
-- Replace the 24-event / 32-custom-metric logger with a curated set: Web Vitals (5), `browser.error` (boundary,
-  window error, unhandled rejection, resource error), route timing (`route_change_ms`, `route_ready_ms`),
-  API timing (from fetch spans, not custom metrics), PDF open/page-switch timings, login-to-ready, and the
-  product events of §7.2 (`document_opened` from `DocumentCard`/viewer mount, `document_closed` with dwell,
-  session start/end). Click-level `user_interaction`, `window_resize`, scroll milestones, memory polling are
-  dropped. `session.id` = the `X-Session-ID` the API client already sends; `trace_id` from the active span.
+- Replace the 24-event / 32-custom-metric logger with a **curated event catalogue** — ruled, with the
+  owner's caveat that the dashboard has grown many pages and features since those events were written, so the
+  catalogue is **scoped from a fresh inventory of the current app, not from the old list**. Phase 4 therefore
+  starts with a page/feature inventory of `dashboard/app` and the feature components (chat per department,
+  document viewer, Document Hub, automations, data discovery, optimizer/rostering, settings, memory,
+  improvement) and produces an event catalogue (name, trigger, attributes, sampling, which product view or
+  ops panel consumes it) that the owner reviews before implementation. Baseline members: Web Vitals (5),
+  `browser.error` (boundary, window error, unhandled rejection, resource error), route timing
+  (`route_change_ms`, `route_ready_ms`), API timing (from fetch spans, not custom metrics), PDF
+  open/page-switch timings, login-to-ready, and the product events of §7.2 (`document_opened` from
+  `DocumentCard`/viewer mount, `document_closed` with dwell, session start/end). Click-level
+  `user_interaction`, `window_resize`, scroll milestones, memory polling are dropped. `session.id` = the
+  `X-Session-ID` the API client already sends; `trace_id` from the active span. Research file 07 carries the
+  inventory and the draft catalogue.
 - `ErrorBoundary` reports only what is actually delivered. `logger.*` free-text calls become structured OTel log
   records with the same API (thin wrapper), sampled at `info` in production.
 - The legacy `core` log-ingest routes and `LoggingProvider` delivery code are removed after cut-over.
@@ -478,9 +496,9 @@ are maintained by hand — there is no generator.
 ### 9.4 Alerts (as Prometheus rule YAML; translated to CloudWatch alarms)
 API 5xx ratio, p95 latency per route, agent turn failure ratio, `agent.model.unpriced_calls` > 0 sustained,
 tenant daily spend vs budget, `agent.ledger.write_failures`, doc-hub processing failures, automation
-late/failed runs, collector exporter failures/queue, browser error rate, Web Vitals p75 regressions. Routing
-targets (email/Slack, who is on call) are an owner decision (§11); SNS in `aws`, Alertmanager/Grafana contact
-point in `oss`.
+late/failed runs, collector exporter failures/queue, browser error rate, Web Vitals p75 regressions.
+**Ruled routing: Slack channel and email** — SNS → Slack webhook + SES/SNS email in `aws`; Alertmanager or
+Grafana contact points (Slack webhook + SMTP) in `oss`. Channel names and recipients are plan-time inputs.
 
 ## 10. Phasing (outline; the implementation plan follows approval)
 
@@ -489,44 +507,37 @@ point in `oss`.
 | 0 | Hygiene quick wins: drop prompt text from logs; collector debug off; pin images; Loki auth/retention; Tempo retention; metrics route gated/deleted | small, independent, ship first |
 | 1 | Backend telemetry foundation (§4) in `utils` + `api` + `copilot-mro` + `core` + worker | backend-agnostic; largest code change |
 | 2 | Collector profiles + IaC (§5): `oss` compose, `aws` Terraform, dev estate migrated, EC2 box de-scoped | can start in parallel with 1 |
-| 3 | LLM/agent observability (§6) incl. CLI telemetry, LangGraph ledger fix, content relation | depends on 1 |
-| 4 | Frontend telemetry rebuild (§7.4) + api telemetry ingress | depends on 1 for the ingress route; FE work independent |
+| 3 | LLM/agent observability (§6) incl. CLI telemetry and the `gen_ai.*` rename; ledger fixes and content capture excluded (deferred) | depends on 1 |
+| 4 | Frontend telemetry rebuild (§7.4): surface inventory + event catalogue (owner-reviewed) → OTel JS 2.x → OTLP ingest evolution on the existing `core` routes | depends on 1 for the ingress route; FE work independent |
 | 5 | Product analytics rebuild (§7.1–7.3): storage, read API, FE settings dashboard | independent of 1–4; parallel worktree |
 | 6 | Dashboards, alerts, runbooks for `oss` and `aws` (§9) | after 1–5 land |
 
 Later services (`telegram-bot`, `lambdas`, `shift-optimizer` standalone, `llm-platform` vLLM scrape via the
 collector's `prometheus` receiver) adopt the §3.1 contract when next touched. Azure profile on demand.
 
-## 11. Decisions required from the owner
+## 11. Rulings (owner, 2026-09-05)
 
-1. **Backends**: `aws` = CloudWatch-native for both Flynapse's own estate and client AWS production; `azure`
-   designed now, built when a client needs it; Grafana Cloud / New Relic not pursued. *(Recommended as written.)*
-2. **Grafana's role**: OSS profile only; CloudWatch dashboards in Terraform for `aws`; AMG optional per
-   client. *(Recommended.)*
-3. **Browser ingress**: through the api gateway (§3.4), retiring `core`'s log-ingest routes. *(Recommended;
-   the Next.js-proxy alternative fails on Amplify's lack of VPC access.)*
-4. **LLM content capture**: Postgres relation, prod-off default, per-tenant opt-in, 30-day retention; no LLM
-   platform in the base stack; Phoenix as the optional POC add-on. *(Recommended.)*
-5. **Product dashboard v1 scope**: the §7.3 tab set, the `chat_turn_facts` projection and the `product_events`
-   fact + `/analytics/events` endpoint. *(Recommended; trims are welcome.)*
-6. **Frontend event set**: curated set of §7.4 instead of restoring the 24-event stream. *(Recommended.)*
-7. **G26**: fix the LangGraph ledger gap inside this workstream. *(Recommended.)*
-8. **Retention defaults**: `aws` logs 30 d, spans 7 d (100% ingested, 1% indexed), metrics per backend
-   default; `oss` POC logs 14 d, spans 3 d, metrics 30 d on a dedicated ≥100 GB volume; `product_events`
-   13 mo, `llm_turn_content` 30 d, ledgers forever with a `llm_model_calls` rollup decision deferred to the plan.
-9. **Reporting role**: a read-only `BYPASSRLS` Postgres role for the Grafana datasource, the `chat_turn_facts`
-   backfill and purge jobs (§7.2) — a deliberate cross-tenant read path. *(Recommended, with the role's
-   credentials never handed to the app.)*
-10. **Operator scope of analytics** (§7.1): (a) full-roster bind for tenant owners only, entitlement-scoped for
-    capability holders; or (b) entitlement-scoped for everyone, labelled. *(Recommend (a).)*
-11. **Ledger completeness**: G26 (LangGraph) fixed here (§6.6); and whether data-discovery SAD spend joins the
-    tenant total via a new `origin='data_discovery'` *(recommend yes)*; where `improvement_runs.llm_spend`
-    sits relative to the tenant total; whether improvement findings are client-visible at all.
-12. **Collector hosting in Flynapse's own account**: keep the existing EC2 with only the collector (aws
-    overlay) *(recommended)* vs a new ECS/Fargate service; the client-facing Terraform module is ECS-based
-    either way.
-13. **Alert routing**: channels and on-call targets for the §9.4 rules.
-14. **Parallelism**: phases 1+2 and 5 in separate worktrees (different repos), one implementer per tree.
+| # | Decision | Ruling |
+|---|---|---|
+| 1 | Backends | **CloudWatch-native** for Flynapse's own estate and client AWS production; `azure` designed now, built when a client needs it; Grafana Cloud / New Relic not pursued. |
+| 2 | Grafana's role | **OSS profile only**; CloudWatch console + Terraform dashboards in `aws`; AMG optional per client. |
+| 3 | Browser ingress | **Evolve the existing `core` ingest endpoints to OTLP** (same paths, auth, quarantine, limits; opaque pass-through to the collector). See §3.4. |
+| 4 | LLM content capture | **Deferred** — owner will come back to it. §6.5 stays a placeholder; nothing content-related is built. |
+| 5 | Product dashboard v1 | **Full proposed set** (§7.3), including `chat_turn_facts` and `product_events` + `/analytics/events`. |
+| 6 | Frontend events | **Curated**, scoped from a fresh inventory of the current dashboard app (§7.4); catalogue reviewed by the owner before implementation. |
+| 7 | Ledger completeness (G26 LangGraph, data-discovery spend, `improvement_runs.llm_spend`) | **Deferred** to a separate ledger workstream (§6.6). |
+| 8 | Reporting role | **Reuse `flynapse_readonly`** (existing `BYPASSRLS`, SELECT-only); grant SELECT on the app DB; purges stay owner-run (§7.2). |
+| 9 | Operator scope of analytics | **Owners see the whole tenant; capability holders are entitlement-scoped and labelled** (§7.1). |
+| 10 | Alert routing | **Slack channel + email** (§9.4). |
+
+Defaults adopted without a separate ruling (say so if any should change):
+- **Retention**: `aws` logs 30 d, spans 7 d (100% ingested, 1% indexed), metrics per backend default; `oss` POC
+  logs 14 d, spans 3 d, metrics 30 d on a dedicated ≥100 GB volume; `product_events` 13 mo; ledgers forever
+  with a `llm_model_calls` rollup decision deferred to the plan.
+- **Collector hosting in Flynapse's own account**: the existing EC2 keeps only the collector (aws overlay);
+  the client-facing Terraform module is ECS-based.
+- **Improvement findings** are treated as internal-only (not client-visible) in the dashboard.
+- **Parallelism**: phases 1+2 and 5 in separate worktrees (different repos), one implementer per tree.
 
 ## 12. Probes to run before the plan is finalised (cheap; each names the fallback if it fails)
 - Live POC `.env`: confirm `LOKI_BASE_URL` is unset (G29) — decides whether Phase 0 needs a stop-gap for the
