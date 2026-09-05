@@ -339,9 +339,9 @@ Files under `dashboard/components/features/analytics/`: `analytics-panel-registr
 **Files:** create `core/scripts/review_improvement_findings.py`, `tests/unit/analytics/test_improvement_findings_review.py`.
 **Interfaces:** `flag_internal_references(body: str) -> list[str]` (patterns: file paths, module dotted names, `copilot_mro`, `agent_sdk`, `prompts/`, `skills/`, `SKILL.md`, internal hostnames, `localhost`, ticket-style ids), `run(args)` (`--database`, `--output <path>` markdown report: per finding id, title, flagged snippets; reads via `flynapse_readonly`).
 **Steps:**
-- [ ] Unit test the flagger on three bodies (clean, path-bearing, module-bearing); implement; commit script + test.
+- [x] Unit test the flagger on three bodies (clean, path-bearing, module-bearing); implement; commit script + test.
 - [ ] Owner action: run the script against the live database, review the report, rewrite flagged bodies (owner-run SQL), then set `ANALYTICS_IMPROVEMENT_TAB_ENABLED=true`. Until then the tab shows "Under review". Recorded as an open item in the implementer's report.
-- [ ] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
+- [x] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
 
 ### Task 5.10 — Phase close
 - [ ] Full suites: `core-obs` unit/api/db (pinned command, `tests/` root), copilot-mro `tests/registries` + `tests/unit/db`, dashboard `npm run test:unit`, `typecheck`, `lint`, `build`.
@@ -470,3 +470,6 @@ if the panel ever gains a cost series). The 42-panel count is confirmed correct;
 
 
 **5.9** — commits `8d1c6fa` (grep sweep in, `test_chat_quality_service.py` retired via `git rm`) + a follow-up committing docstring rewording of THIS stream's own files (`buckets`/`panel_service`/`panels/quality` mentioned "Loki" in prose and the sweep is case-insensitive over every string). Deleted (uncommitted, reported): `services/chat_quality_service.py`, `services/__init__.py`; `config.py` lost `loki_base_url`/`analytics_loki_query_limit`/`analytics_loki_timeout_seconds`; `fastapi_app.py` tag now "Analytics panels backed by Postgres." Whole unit+api: 1931 green.
+
+
+**5.8 (script + unit test)** — committed. `flag_internal_references` runs seven deliberately EAGER pattern families (paths, prompts/skills dirs, SKILL.md, repo names, dotted modules, internal hosts, ticket-style ids), each flag as `<label>: <snippet>`; `render_report` writes markdown with a summary line and per-finding sections, titles reviewed alongside bodies; reads via `flynapse_readonly` (BYPASSRLS — one pass over every tenant), writes nothing. **OWNER ACTION (open):** run `python core/scripts/review_improvement_findings.py --database copilot_mro --output <path>` against the live database, rewrite flagged bodies via owner SQL, then set `ANALYTICS_IMPROVEMENT_TAB_ENABLED=true`; until then the tab answers 403 `improvement_hidden` even to owners.
