@@ -446,7 +446,17 @@ Loki path is gone; `product_events` rows arrive from the frontend (with phase 4)
 _(empty until Gate M)_
 
 ## 15. Implementation notes / Learnings (per phase, filled as work lands)
-_(empty)_
+
+**2026-09-05 — execution kicked off (planning step).** Owner rulings: all four app-independent streams
+start now, subagent-driven, up to 8 agents this session, Opus or Fable 5 by complexity. Four planner agents
+are writing the detail plans (`observability-rebuild-phase-{0-2-infra,1-utils-api,5-analytics,4-frontend}.md`);
+none has landed yet. Mid-flight additions already sent to the planners: per-tab permission gating (spec
+§7.1), the §11a standing rules (latest stable images pinned + `VERSIONS.md`; logging coverage checkbox per
+task). Next: review each detail plan as it lands (spec coverage, placeholder scan, conflict-zone check),
+then dispatch one implementer per worktree; Stream F's 4.1 catalogue review is an owner gate (the owner has
+seen the event summary; no trims requested yet). Migration status at kickoff: batch 1 merged into
+`langgraph-merge`; batch 2 active in `copilot-mro-s41` (`s44-batch2-lang`) and `copilot-mro-s44b2`; Gate M
+not near.
 
 ## 16. Future Improvements
 _(empty)_
