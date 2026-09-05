@@ -458,6 +458,22 @@ seen the event summary; no trims requested yet). Migration status at kickoff: ba
 `langgraph-merge`; batch 2 active in `copilot-mro-s41` (`s44-batch2-lang`) and `copilot-mro-s44b2`; Gate M
 not near.
 
+- **2026-09-05 — detail plans landed, implementers dispatched.** The four planners ran as read-only agents and
+  returned their plans as text; the session lead wrote and committed them. Landed: phase 5 analytics (amended:
+  D3a per-panel capability gating on both sides per spec §7.1; a logging-coverage checkbox per task; the browser
+  ingest forward targets the collector's browser receiver on port 4319 via `OTEL_BROWSER_FORWARD_ENDPOINT`;
+  `sessions_over_time` reads the last `session_ended` row per session), phase 0–2 infra (amended:
+  `attributes/browser_identity` upserts; the 4319 contract), phase 4 frontend (amended: the 4.1 gate is cleared
+  by the owner's in-session review of the 25-event summary — MUST+SHOULD approved, the five LATER rows out of v1;
+  the product-events body follows phase 5 D5/D6 with no `session_id`/`tenant_id`/`user_id` in the body).
+  Implementers running in their worktrees: P backend (`core-obs`, Fable 5), P frontend
+  (`dashboard-obs-analytics`, Opus), I (`copilot-mro-obs-infra` + `iac-obs`, Fable 5), F
+  (`dashboard-obs-frontend`, F0–F9, Fable 5; F10 waits for 5.5 + the rebase). Phase 1 (utils/api) plan still
+  being written. Session-lead defaults taken while the owner was away are listed under each plan's "Open
+  questions" (chat_turn_facts gains `tool_usage`/tool-set `route`; authenticated ingest limits 256 KiB / 200
+  records / 120 rpm; no `llm_model_calls` rollup this phase; export-time deterministic 10% ratio drop for browser
+  fetch spans so the sampled flag always propagates).
+
 ## 16. Future Improvements
 _(empty)_
 
