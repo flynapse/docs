@@ -476,3 +476,13 @@ if the panel ever gains a cost series). The 42-panel count is confirmed correct;
 
 
 **5.10 (backend half)** — full `core-obs/tests` root: **2760 passed, 2 skipped, 2 xfailed** (the skips/xfails are pre-existing db-lane shapes); copilot-mro `tests/registries` + `tests/unit/db`: **488 passed + 1 pre-existing red** (`test_migration_snapshot.py::test_a_pg_dump_on_path_is_still_preferred_and_still_verified` — the script probes `pg_dump --version` before dumping and the test assumes `calls[0]` is the dump; drift that predates this stream, untouched). The copilot-mro state is saved for re-application: `scratchpad/stream-p-copilot-mro.patch` (351 lines — note it also carries a pre-existing dirty hunk in `docs/plans/open-items.md` that is NOT this stream's) plus verbatim copies of the two new files (`chat_turn_facts.py`, `test_readonly_role_grants.py`) beside it. Backend commits on `obs-analytics` (core-obs): `2b8d720..67dc965` (17). Uncommitted production edits in core-obs (owner's to take): `config.py`, `db/table_definitions.py`, `fastapi_app.py`, `analytics_endpoints.py`, `schemas.py`, `logging_endpoints.py`, plus the two `services/` deletions. Cross-stream hand-offs stand as tabled, with two refinements recorded during implementation: the gateway skip list must carry the four NEW sub-paths (the old `/logging/public/ingest` no longer exists — five routes total, two public), and the stat-tile `unit` vocabulary (`USD`/`ratio`/`seconds`) is now part of D2. The adversarial-review bullet of 5.10 is the session lead's (this implementer spawns no subagents).
+
+## Review triage — backend half (2026-09-05, adversarial review)
+Verdict MERGE-READY; suites re-run by the reviewer (core 2760 green; copilot-mro 488 + 1 pre-existing red).
+Panel reconciliation definitive: backend, dashboard and D2 are byte-identical at **42 ids**; the "44" was only
+ever the stale triage-table number. Fix pass dispatched for: P1 facts-constant duplication (backfill script
+re-declares `FACTS_COLUMNS`/`FACTS_VERSION` instead of mirroring-with-a-drift-pin-test; docstring claimed an
+import that does not happen — MUST land before Stream L task 3.7); P2s — `.env.example` still carried
+`LOKI_BASE_URL` (sweep test widened beyond `*.py`), cache outage turned panels into 500s (now degrades to
+uncached), purge cutoff used 30-day months (now calendar months), dead import, and the copilot-mro patch file
+regenerated without the foreign `open-items.md` hunk (never apply that hunk).
