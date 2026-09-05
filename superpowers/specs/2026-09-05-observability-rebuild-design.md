@@ -280,7 +280,10 @@ automations worker.
   trend metrics; it never becomes an invoice.
 - **One write site, three consumers.** The ledger sink (`record_turn_usage` / the `ModelUsage` sink) feeds
   Postgres, then the telemetry instruments, then (optionally) the content relation. No drift.
-- **Structure to the telemetry backend, content to Postgres.** Prompt/completion bodies never ride OTLP.
+- **Structure to the telemetry backend, content to Postgres.** Prompt/completion bodies never reach the
+  log, metric or trace backend. The one exception is the sampled, redacted copy for the Phoenix eval
+  workbench (§6.5), which travels on a dedicated collector `content` pipeline whose only exporter is Phoenix;
+  every other pipeline drops `gen_ai.input.messages` / `gen_ai.output.messages` in `base.yaml`.
 
 ### 6.2 Spans (both runtimes)
 - Root `invoke_agent <runtime>` (INTERNAL): `gen_ai.operation.name=invoke_agent`, `gen_ai.provider.name`,
@@ -357,6 +360,9 @@ bought, not built.
 - Fed two ways: (1) **offline harness runs** — the e2e/eval harness runs golden sets per department and
   pushes datasets, experiment runs and judge scores; (2) a **sampled, redacted copy** of production turns via
   OTLP from the ledger write site, honouring the opt-out. Phoenix is a consumer, never the record.
+- **Data residency**: the sampled copy from a deployment only ever goes to a Phoenix running in that same
+  account (our estate → our Phoenix; a client account → a Phoenix container there, if the client has one;
+  otherwise no copy leaves). Client production content never flows to Flynapse's Phoenix.
 - Our spans are `gen_ai.*`; Phoenix reads them through its OpenInference translation layer, so the attribute
   mapping is verified once in the plan (a small integration task, flagged in §12).
 - LangSmith stays banned; Langfuse Cloud is the named fallback only if prompt management proves more valuable
