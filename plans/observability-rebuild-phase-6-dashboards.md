@@ -257,10 +257,12 @@ Six provisioned dashboards load from a cold Grafana (smoke-proven), each panel n
 - `deployment/observability-local/grafana/provisioning/dashboards/dashboards.yml` — flynapse provider added (T2), legacy provider removed (T9)
 - `deployment/observability-local/grafana/provisioning/datasources/datasources.yml` — Tempo `uid: tempo`; `flynapse-postgres` datasource
 - `deployment/observability-local/README.md` — new-layout documentation (already dirty from Stream I)
-- `deployment/otel/VERSIONS.md` — `prom/alertmanager v0.34.0` row + changelog line
+- ~~`deployment/otel/VERSIONS.md`~~ — **COMMITTED in the fix pass** (`62792306`; session-lead ruling: the file was created by this branch's own A1 commit, so the never-commit-pre-existing-files rule does not apply to it)
 - **Deletions:** the eight `grafana/dashboards/*-dashboard.json` files, `deployment/observability-local/test-observability.py`
 
-**iac-obs:** `README.md` — "Phase 6 — dashboards and alert routing (owner steps)" section (already dirty from Stream I).
+**iac-obs:** `README.md` — "Phase 6 — dashboards and alert routing (owner steps)" section incl. the validate steps for `scripts/validate_dashboards.sh` and the merge note below (already dirty from Stream I).
+
+**MERGE HAND-CARRY (iac-obs):** the committed `cloudwatch.tf` (Stream I) and `alerting.tf` (T11) both reference `var.log_retention_days`, declared ONLY in the uncommitted `variables.tf` delta — that delta (and the rest of Stream I's uncommitted edits) MUST land together with the branch merge or `terraform validate` fails on the root. Stated in the iac README merge note as well.
 
 Stream I's inherited uncommitted edits (both worktrees) verified untouched: `deployment/demo/docker-compose.yml`, `otel-collector-config.yaml` deletion, and the iac `apprunner.tf`/`ec2.tf`/`lambda.tf`/`variables.tf`/`*_ec2_setup.sh` diffs are byte-identical to the inherited baseline.
 
@@ -305,6 +307,24 @@ which carries S3FullAccess). Logging coverage VERIFIED for `sns_to_slack.py`: st
 lines at received/webhook_loaded/posted/failed with alarm name + status, exceptions re-raised
 after logging (SNS retries apply), reason truncated to 500 chars, webhook URL and full payload
 never logged. Reported edit: `README.md` phase-6 owner-step section.
+
+### Fix pass after adversarial review (obs-infra `62792306`+`b147798a`, iac-obs `eeb2b2b`)
+Verdict was NOT MERGE-READY with one P1: the committed tree's `rules-validate` CI was
+deterministically red — `alertmanager.yml` committed while its VERSIONS.md pin row was an
+uncommitted edit, so `validate-rules.sh` died "no pin" on a `git archive HEAD` export.
+Session-lead RULING applied: VERSIONS.md is branch-created (Stream I's A1), not pre-existing —
+the row is now committed (`62792306`) and `git show HEAD:...VERSIONS.md` carries the pin; the
+script's missing-pin failure stays loud. P2s: the layout guard now reads the promtool pin from
+VERSIONS.md (`_versions_md_pin` — one drift seam with the amtool test and the script);
+`AutomationRunErrors` matches `(?i)(error|critical|fatal)` (alerts.md wording updated);
+`platform-health.json` gives the lines/s and spans/s targets `cps` via byName overrides (`Bps`
+stays for the bytes defaults); the six tftpl bodies gained a committed mechanical guard —
+`iac-obs/scripts/validate_dashboards.sh` (dummy-substitute + JSON-parse + widget-shape check,
+chosen over a sibling-repo pytest because `sibling_repo("iac")` under a worktree resolves to
+the MAIN checkout and would silently skip until merge), wired into the README validate steps;
+the `var.log_retention_days` hand-carry is recorded in §8 and the iac README merge note.
+Re-validation: guard lane 63 passed with `OTEL_RULES_CHECK=1`; `validate-rules.sh` all green;
+`validate_dashboards.sh` all six parse.
 
 ### T13 (phase close)
 Full lane 70 passed (both compose smokes + promtool/amtool env-gated checks); `terraform
@@ -454,3 +474,16 @@ scripts).
 ## 12. Lessons
 
 _(plan-scoped; append after any owner correction: what was tried, what was corrected, the rule for next time)_
+
+- **Commit-split coherence beats rule literalism.** I treated VERSIONS.md as "pre-existing →
+  never commit" while committing `alertmanager.yml` and the pin tests that depend on its row —
+  leaving the COMMITTED tree deterministically red in CI. Corrected by session-lead ruling: a
+  file CREATED by the same branch is not "pre-existing"; and before closing a task, check what a
+  `git archive HEAD` export would do — every committed artefact's hard dependencies must be
+  committed with it.
+- **One drift seam per pinned value.** I hard-coded the promtool image in one test while two
+  sibling checks read VERSIONS.md. When a pin has a single source of truth, every consumer reads
+  it — never re-spell it, even as a test constant.
+- **Hand-checks become guards before phase close.** The six tftpl bodies were only
+  human-verified JSON until the reviewer flagged it; anything that would otherwise fail only at
+  an owner-run apply deserves a committed mechanical check in the same phase.
