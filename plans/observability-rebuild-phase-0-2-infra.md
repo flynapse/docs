@@ -302,7 +302,7 @@ Each probe is a task with a recorded outcome; none of them changes state.
 - [x] Reduce the first (allowed-IP) `for_each` list to `[22]`; reduce the second (App Runner + Lambda SG) list to `[8080, 50051, 4318]`. Dropped: `3000, 9090, 3100, 3200, 9464, 13133, 1777, 14250, 14268, 8000, 9443, 7777`.
 - [x] Write the review checklist into the commit-adjacent report, one line per dropped port with the evidence that no app path uses it: `3000/9090/3100/3200` were Grafana/Prometheus/Loki/Tempo UIs — A13 removes those containers and `core` never learned `LOKI_BASE_URL` (research 02 §4.2 finding 1, spec §12 probe 1); `9464` was the collector's Prometheus exporter, replaced by the unpublished `8888` (A7); `13133`/`1777` were health/pprof — health stays inside the host, pprof is deleted (A1); `14250`/`14268` were Tempo's alternative OTLP ports, never used by any client; `8000`/`9443` were Portainer; `7777` was weaviate-ui, which the demo compose already binds to loopback. `4317` was never in the list to begin with for the allowed-IP block but is in the App Runner block — it goes too, because every client moves to 4318 `http/protobuf` (spec §3.1).
 - [x] `terraform fmt -check` and `terraform init -backend=false && terraform validate` — clean.
-- [x] **OWNER STEP:** `terraform plan` and review that the diff is SG-rule removals only. Note the de-synced-root caveat (§1.6).
+- [ ] **OWNER STEP:** `terraform plan` and review that the diff is SG-rule removals only. Note the de-synced-root caveat (§1.6).
 - [x] **Logging coverage:** n/a for HCL; the checklist is the artefact.
 - [x] Report the modified file (uncommitted).
 **Acceptance.** The box admits SSH from the allowed IP and, from the app SGs only, Weaviate's two ports and OTLP 4318.
@@ -314,7 +314,7 @@ Each probe is a task with a recorded outcome; none of them changes state.
 - [x] `otel_gateway.tf`: `aws_iam_role.otel_collector` with an EC2 trust policy; attach the AWS-managed `CloudWatchAgentServerPolicy` (this is exactly what the CloudWatch OTLP setup doc prescribes for an EC2 host, and it covers all three endpoints); add one small inline policy granting `logs:PutLogEvents` and `logs:CreateLogStream` scoped to the `arn:aws:logs:<region>:<account>:log-group:/flynapse/*` groups B4 creates (least privilege beside the managed policy); `aws_iam_instance_profile.otel_collector`. Attach the profile in `ec2.tf` — the instance has none today.
 - [x] `demo_ec2_setup.sh`: after the repo clone, write `/opt/otel/collector.env` (`AWS_REGION`, `CW_LOG_GROUP`, `CW_LOG_STREAM`, `PHOENIX_ENDPOINT` only when a value is supplied), then bring up `deployment/demo/docker-compose.yml`. Build the collector's `--config` argument list in shell so the Phoenix fragment is appended only when `PHOENIX_ENDPOINT` is non-empty — a collector config cannot itself be conditional, and this is the seam where a conditional belongs. Remove the four `mkdir -p $PERSIST_DIR/observability-data/*` lines and the Portainer `docker run` line's floating tag (pin `portainer/portainer-ce:2.45.0`), or drop Portainer entirely if the owner agrees (record as an open question, not a unilateral deletion). Add `set -euo pipefail` and one echo per stage.
 - [x] `terraform fmt -check`, `init -backend=false`, `validate` — clean. `bash -n demo_ec2_setup.sh` — clean.
-- [x] **OWNER STEPS:** (1) `terraform plan`/`apply`; (2) the box only picks up compose changes when it pulls `main` (`demo/restart-services.sh` does `git pull origin main`), so the `obs-infra` branch must be merged to `main` before `restart-services.sh` will run the new stack; (3) confirm the collector container starts and its log shows both config sources.
+- [ ] **OWNER STEPS:** (1) `terraform plan`/`apply`; (2) the box only picks up compose changes when it pulls `main` (`demo/restart-services.sh` does `git pull origin main`), so the `obs-infra` branch must be merged to `main` before `restart-services.sh` will run the new stack; (3) confirm the collector container starts and its log shows both config sources.
 - [x] **Logging coverage:** the script fails loudly on a missing env value rather than starting a collector that cannot sign; no secret is echoed.
 - [x] Commit `otel_gateway.tf`; report `ec2.tf` and `demo_ec2_setup.sh`.
 **Acceptance.** The demo EC2 has an instance profile with CloudWatch OTLP permissions and runs the collector under the `aws` overlay.
@@ -605,3 +605,48 @@ Standing pytest command additionally needs `POSTGRES_DB=copilot_mro_test` (the s
 - (2026-09-05) The standing pytest command from the brief lacked `POSTGRES_DB`; the shared env's
   db-guard refuses the run. Rule: every pytest invocation from the shared `api` env in this
   workspace carries `POSTGRES_DB=copilot_mro_test`.
+
+## Implementation notes — adversarial-review fix pass (Fable 5, 2026-09-05)
+
+- **P0 (poc_ec2_setup.sh)** — the script now generates `GRAFANA_ADMIN_PASSWORD`,
+  `PHOENIX_SECRET` (48 chars — Phoenix refuses < 32) and `PHOENIX_ADMIN_PASSWORD` from
+  `/dev/urandom` at setup time (never echoed), writes them into the generated POC `.env`
+  (chmod 600) together with `LOKI_TENANT_ID`/`LOKI_RETENTION_PERIOD`/`TEMPO_BLOCK_RETENTION`/
+  `PROM_RETENTION_TIME` per the §9 edge; `restart-services.sh` preserves existing `.env` values,
+  so they persist. `bash -n` clean.
+- **P1 (module healthCheck)** — REMOVED: the pinned contrib image ships no shell and no health
+  binary, so an ECS `CMD` probe can never pass. Liveness = the essential container process +
+  the `health_check` extension on :13133 for in-VPC probes; choice recorded in the module README.
+- **P1 (root Phoenix DB)** — root compose now points Phoenix at the always-existing `postgres`
+  database with `PHOENIX_SQL_DATABASE_SCHEMA=phoenix` (works on fresh AND pre-existing volumes,
+  where initdb.d never re-runs; the app DB is untouched). **Boot-proven**: throwaway project
+  (`phoenix-proof`, tmpfs postgres so the dev data dir is never double-mounted; the fixed
+  `container_name: postgres` needed an override) → `/healthz` 200, `\dn` shows the `phoenix`
+  schema, 65 migrated tables; torn down with `down -v`. Found en route: **Phoenix requires a
+  ≥32-char PHOENIX_SECRET** — the compose `:?` guard messages now say so.
+- **P1 (browser allow-list)** — `transform/browser_allowlist` in `base.yaml`
+  (`keep_matching_keys` on record AND resource attributes), wired into `traces/browser` +
+  `logs/browser` in all three overlays AFTER the identity upsert; record list = identity/envelope
+  keys + `http./url./network./error./exception./browser./user_agent./server.` families +
+  the named F5/F7/research-07 event keys; resource list = SDK/service identity only (a
+  client-authored resource `tenant.id` is pruned). Profile test asserts presence/ordering and
+  absence elsewhere; a new smoke case posts a spoofed body to 14319 and proves header-upsert
+  wins, both spoofs vanish, junk keys vanish, allow-listed keys survive.
+- **P2** — 4318 loopback-bound in `deployment/docker-compose.yml` + `observability-local`
+  (allow-list now poc/demo only); `LOKI_RETENTION_PERIOD`/`TEMPO_BLOCK_RETENTION` passed into
+  the container env in all three oss stacks (expand-env reads the CONTAINER env — a host
+  override never arrived before); Phoenix fragment header is `Bearer ${env:PHOENIX_API_KEY:-}`
+  with key-minting documented as an ordered owner step (otel README + iac README);
+  `PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD` added to the module's Phoenix container via a new
+  `phoenix_admin_password_ssm_arn` variable; iac README states the demo `env_file` ordering
+  dependency and that the Weaviate EBS volume survives the B3 instance replacement (blkid-guarded
+  mkfs); B2/B3 OWNER STEP checkboxes unchecked above; `demo_ec2_setup.sh` compose download pinned
+  to `v5.5.1` (recorded in VERSIONS.md). Root `terraform fmt -check` caveat: `amplify.tf` is
+  dirty PRE-EXISTING formatting this stream never touched — fmt was applied only to files this
+  stream created/edited.
+- **Stream U addition** — the redaction guard now also asserts no blocked pattern matches the
+  new code-attribute spellings `code.function.name` / `code.file.path` / `code.line.number`
+  (main logs pipeline; browser allow-list unaffected as ruled).
+- **Accepted as-is** — the email `blocked_values` mask hits email-VALUED attributes anywhere,
+  including an email-shaped `enduser.id`: documented in `base.yaml` and pinned by
+  `test_email_valued_attribute_is_masked_by_design`.
