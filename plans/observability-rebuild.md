@@ -523,6 +523,41 @@ master §12: the session brief forbade subagents, so the independent adversarial
 steps queued in the detail plan §10: alarm dialect ruling, threshold review, real alert targets,
 PromQL widget console export, Stream L counter hand-off.
 
+- **2026-09-05 — BUILD PHASE COMPLETE: all six streams closed MERGE-READY after adversarial review + fix
+  passes.** Verdicts: P dashboard (review clean, 42 panels), P backend (2768 green; facts drift-pin landed),
+  Stream I (5-test live smoke incl. the 4319 identity-upsert case), Stream U (tracer property restored; any-order
+  merge via the transitional skip entry), Stream F (session-attribution fix verified await-free on the code
+  path; 1747 green; F10 gated), Phase 6 (series names verified against live producers; suffixless `otelcol_*`
+  confirmed empirically; CI green from a `git archive` simulation). Every stream's detail plan carries its
+  Implementation notes, review triage, and uncommitted-edit ledger.
+
+  **Merge sequence (owner-driven; each merge must also land that worktree's LEDGERED UNCOMMITTED EDITS —
+  a rebase/merge carries only commits):**
+  1. utils `obs-utils` → `langgraph-merge`; api `obs-api` → `langgraph-merge` (any order vs core now; AFTER
+     core's routes are live, delete the transitional `/logging/public/ingest` skip entry + its test pin).
+  2. core `obs-analytics` → `master` (then the api transitional-entry deletion above becomes due).
+  3. copilot-mro `obs-infra` → `langgraph-merge` (demo box pulls `main` — it only picks the new stack up when
+     `main` receives it); apply the Stream P patch `stream-p-copilot-mro.patch` (foreign hunk already stripped)
+     to the same branch.
+  4. dashboard: `obs-analytics` → `agent_sdk` first (hand-carry its 7 uncommitted files incl. the typed-error
+     `fetch-utils.ts`), then `obs-frontend` REBASED onto it (zero file overlap verified), then task 4.9/F10
+     (cut-over) once core 5.5 is merged/deployed.
+  5. iac `obs-iac` → `main` (MUST include the uncommitted `variables.tf` delta or root validate fails); then
+     the Terraform owner sequence from `iac-obs/README.md`: B2 plan (SG removals only) → B3 plan/apply (demo
+     instance is REPLACED; Weaviate EBS survives) → B4 with 4 log-group imports → B5 Transaction Search toggle
+     → B6/B7/B8 → `scripts/otel_probe.sh`.
+  6. Post-merge tasks now un-gated: A14 (delete legacy `OTEL_ENDPOINT` lines) after obs-utils lands.
+
+  **Owner checklist (accumulated):** Weaviate pin from the live digest + Portainer keep/delete; Amplify AL2023
+  image + Node 22 pin; improvement-findings review script → then `ANALYTICS_IMPROVEMENT_TAB_ENABLED=true`;
+  chat_turn_facts backfill crontab (line in the phase-5 plan); alert-threshold review (phase-6 plan §10.2) +
+  real Slack/email targets via `ALERTMANAGER_*_FILE`/SSM; CloudWatch alarm-dialect ruling (provider raise vs
+  `awscc` vs defer); B1a/B1b/B1d live probes; PromQL widget console-export probe; POC acceptance run at F10.
+  **Owner rulings open:** hub-citation double-surface (one gesture = two `document_opened` rows); Gate M
+  declaration when LangGraph lands → Task R rescoping → Stream L (phase 0 app half, 1b-mro, phase 3, the
+  `chat_turn_facts` writer, content capture) + phase 7 eval harness; Stream L must also confirm the
+  `agent_outcome="error"` spelling + doc-hub/automation counters the dark phase-6 panels assume.
+
 ## 16. Future Improvements
 _(empty)_
 
