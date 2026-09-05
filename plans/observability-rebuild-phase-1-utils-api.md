@@ -310,6 +310,11 @@ Spec §3.4 (anonymous browser ingest through the gateway); phase 5 plan D7 and i
 
 ## Hand-offs to other streams
 - **Stream I (compose/iac):** replace `OTEL_ENDPOINT=…:4317` with `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` (`deployment/poc/docker-compose.yml:178`, `iac/apprunner.tf:42`, `iac/lambda.tf:109`); add `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=<env>`; App Runner health path `/health/live`; `base.yaml` redaction allow-list must include `tenant.id`, `enduser.id`, `session.id`, `request.id`, `automation_id`, `automation_run_id`, `chat_id`, `block_id`, `department`; health filter drops `http.route` matching `/health/(live|ready)`; the `job` label is `flynapse/<service.name>` with names `api` and `automation-worker`.
+- **Stream P / merge order (fix-pass ruling):** `obs-api` is now safe to merge in ANY order
+  relative to `obs-analytics` — the bare `.../logging/public/ingest` auth-skip entry is kept
+  TRANSITIONALLY beside the two v1 sub-paths; its deletion (and the matching test pins in
+  `test_public_ingest_skip_paths.py` / `test_skip_path_matching.py`) is owed at the merge that
+  lands core's v1 routes.
 - **Stream L (after Gate M):** copilot-mro `config.py:950-956` `otel_*` fields and `chat_management.py` three-argument `get_tracing_service(...)` calls keep working through the shims; retire `set_gauge` in `document_hub/operations.py`; `request_id.py:54` interpolated warning; `test-observability.py` generator.
 - **Phase 6 dashboards:** `http.server.request.duration` (seconds, new semconv) keyed by `http.route` = full mounted route; `http.server.active_requests`; `auth.rejections` `{request}`; DB spans use `db.system`.
 
@@ -555,3 +560,28 @@ api — `pyproject.toml`, `poetry.lock`, `flynapse_api/main.py`, `flynapse_api/c
   revisit at the next pin bump.
 - The `wt-obs-u` bundle recipe: sibling repos must be real directories of symlinked entries,
   never directory symlinks (Poetry canonicalises and transitive `../utils` escapes the bundle).
+
+## Fix pass (adversarial review, 2026-09-05) — all five findings closed
+1. **P0 tracer attribute**: `SdkTracingService.tracer` is now a PROPERTY returning the live
+   tracer at access time (never cached at init) — `loop_observability.py`'s
+   `getattr(tracing, "tracer", None)` probe works again; test drives a span through the
+   attribute into the exporter. (`tracing.py` uncommitted; test committed.)
+2. **P1 merge-order decoupling**: the bare `/logging/public/ingest` skip entry is RE-ADDED as
+   transitional beside the two v1 sub-paths (comment names the deletion owed at Stream P's
+   merge); U16 test flipped to pin the transitional skip; hand-off table updated — `obs-api`
+   merges in any order relative to `obs-analytics`.
+3. **P2 cursor-factory cache**: only the TRACED factory is ever cached — a pre-bootstrap dict
+   query resolves the plain `RealDictCursor` UNCACHED, so instrumentation landing later is
+   picked up by the next query; `bootstrap._reset_for_tests` drops the cache alongside the
+   registry's (module looked up via `sys.modules`, never imported as a side effect); the
+   missing-package branch warns once instead of `pass`. Subprocess tests pin pre/post-bootstrap
+   resolution and the reset.
+4. **P2 shim degrade-not-raise (D8 completed)**: all four legacy methods catch `RegistryError`
+   (kind conflict, bad name) and drop-with-one-WARNING per (metric, reason class); the NEW
+   `registry.*` API still raises (tested both ways).
+5. **P2 exclusion regexes**: health + ingest patterns tolerate an optional query string;
+   test extended with `?x=1` / `?tenant=t` cases.
+Suites after the pass: utils **1082 passed**, api **1081 passed / 3 pre-existing skips**
+(`-m "not postgres"`; the dashboard-sibling skip cured by a bundle symlink), postgres pool test
+**1 passed**. Fix-pass commits: utils `cbc9913`, api `bd086fa`. Ledger unchanged except
+`flynapse_api/middleware/auth.py` now also carries the transitional entry (still uncommitted).
