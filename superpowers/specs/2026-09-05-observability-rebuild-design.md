@@ -1,8 +1,9 @@
 # Observability, telemetry and logging rebuild — design (2026-09-05)
 
-Status: **RULED 2026-09-05 (revision 3).** Nothing in this document is implemented. The owner ruled on the
-§11 decisions the same day; §11 now records the rulings, and the sections below were updated to match.
-Open: the LLM content-capture policy (§6.5) is deferred by the owner and stays a placeholder.
+Status: **RULED 2026-09-05 (revision 4).** Nothing in this document is implemented. The owner ruled on the
+§11 decisions the same day; §11 records the rulings, and the sections below were updated to match. Revision 4
+adds the LLM content-capture ruling (on by default, tenant opt-out), Phoenix as the eval workbench, and an
+LLM-evals phase (§6.5, §10).
 Revision 2 (same day): triaged an adversarial review — nine P1 findings fixed inline (Amplify SSR reach,
 botocore double-count, mounted sub-app routes, loguru bridge, CLI delta metrics in `oss`, CLI metric
 cardinality, RLS on reporting reads, operator-scope ruling, PromQL alarms in Terraform) and the P2 notes folded
@@ -61,7 +62,8 @@ The owner's constraints:
 - Fix the security and hygiene defects found by the audit and research.
 
 **Non-goals**
-- Building an evaluation/annotation platform for prompts (an optional add-on, §6.5).
+- Building our own evaluation/annotation UI. Arize Phoenix is adopted as the workbench (§6.5); we build the
+  data (ledger, traces, content, eval results) and the harness, not the UI.
 - Billing tenants from telemetry (the ledger is the system of record; the bill reconciles in Cost Explorer).
 - Multi-region or HA for the telemetry backend (managed backends provide it; the POC box is single-node by design).
 - Rewriting `shift-optimizer`, `telegram-bot`, `lambdas`, `llm-platform` telemetry in the first pass (they get
@@ -329,20 +331,44 @@ tenant.id=…,enduser.id=…,agent.department=…`, short export intervals (the 
 `claude_code.tool_result`, subagent attribution. All `OTEL_LOG_*` content flags stay unset outside dev. A
 collector `transform` adds `gen_ai.*` aliases so GenAI-aware backends price these records.
 
-### 6.5 Content capture policy and the (optional) LLM tool — **DEFERRED by the owner**
-The owner will return to this decision. Until then: the G18 fix (no prompt text in logs) and the "structure
-to telemetry, content to Postgres" principle stand; no `llm_turn_content` relation and no LLM tool are built;
-`debug_dumps/` stays the dev-only capture. The proposal below is the placeholder for that decision.
+### 6.5 Content capture, evals and the LLM workbench — **RULED**
+Three needs, three answers. Cost/latency/model comparison is a data problem the ledger already solves (§6.3,
+§7.3). Traces come from our own emitters whatever tool sits on top (the SDK loop's model calls live inside
+the Node CLI, so no tool sees more than we emit). Evals and prompt improvement need a workbench, which is
+bought, not built.
+
+**Content capture — on by default, tenant opt-out.**
 - New tenant-scoped, RLS'd relation `llm_turn_content` keyed `(tenant_id, block_id[, call_id])`: redacted
-  (`redact_sensitive`) prompt/completion/tool bodies or S3 object keys, `redaction_version`, `sha256`,
-  `content_bytes`, `truncated`, `captured_at`; **off in production by default**, per-tenant opt-in, 30-day
-  retention purge keyed on the same day bucket as spend. Written at the ledger write site. Replaces
-  `debug_dumps/` for shared environments; developers use `OTEL_LOG_RAW_API_BODIES=file:<dir>` locally.
-- No LLM platform in the base stack. If transcript review / evals are wanted in the POC, **Arize Phoenix**
-  (one container, existing Postgres, ELv2) is the only one-box-friendly option; Langfuse needs ClickHouse and
-  a 16 GiB box; LangSmith is banned by policy. Any such tool receives a sampled, redacted copy via OTLP from the
-  same write site — it is a consumer, never the record.
-- Bedrock model invocation logging stays off in production (account-wide, no tenant boundary).
+  (`redact_sensitive`) prompt/completion/tool bodies or S3 object keys (KMS, per-tenant prefix) with only
+  metadata in Postgres, `redaction_version`, `sha256`, `content_bytes`, `truncated`, `captured_at`. Written at
+  the ledger write site (one snapshot, §6.1). Retention 30 days by default, purged by the owner-run job keyed
+  on the same day bucket as spend. Access under the same RBAC as `chat_blocks`.
+- Capture is **on** for every tenant unless the tenant's record carries `content_capture = off` (opt-out),
+  read at the ledger write site; the flag is also honoured for the sampled OTLP copy below. Contract language
+  covering capture and retention is a go-live prerequisite per client (owner-owned, outside this workstream).
+- Replaces `debug_dumps/` for shared environments; developers keep `OTEL_LOG_RAW_API_BODIES=file:<dir>`
+  locally. Bedrock model invocation logging stays off in production (account-wide, no tenant boundary).
+
+**Eval workbench — Arize Phoenix, self-hosted.**
+- One container (`arizephoenix/phoenix`, ELv2) on the existing Postgres, part of the `oss` profile and
+  deployable as a single extra container in a client account when a client wants it; never a SaaS in the
+  client data path. Auth on (`PHOENIX_ENABLE_AUTH`), retention set, one Phoenix project per tenant plus an
+  internal project for synthetic sets.
+- Fed two ways: (1) **offline harness runs** — the e2e/eval harness runs golden sets per department and
+  pushes datasets, experiment runs and judge scores; (2) a **sampled, redacted copy** of production turns via
+  OTLP from the ledger write site, honouring the opt-out. Phoenix is a consumer, never the record.
+- Our spans are `gen_ai.*`; Phoenix reads them through its OpenInference translation layer, so the attribute
+  mapping is verified once in the plan (a small integration task, flagged in §12).
+- LangSmith stays banned; Langfuse Cloud is the named fallback only if prompt management proves more valuable
+  than self-hosting, and only for internal synthetic sets.
+
+**Eval results are versioned by the ledger's keys.** Every eval run and judge score is stored keyed by
+`profile` (the prompt/model configuration) and `registry_revision` (its version), the same columns
+`llm_model_calls` stamps on every call, plus `department`, golden-set id and judge version. This is what makes
+"prompt v2 beat v1 on the MRO set" a query. Not done today: the harness writes JSON reports and the
+certification runs write files; the evals phase (§10, phase 7) adds the results store (Phoenix experiments
+mirrored into a Postgres `eval_results` table under the reporting role) and a per-tenant quality report
+(accuracy, answer rate, regressions across prompt/model versions) for client reviews.
 
 ### 6.6 Ledger completeness gaps (G26 and its sibling) — **DEFERRED by the owner**
 The `lang` runtime writes no `llm_usage` row today, and the data-discovery SAD runner's usage goes to a
@@ -520,10 +546,11 @@ Grafana contact points (Slack webhook + SMTP) in `oss`. Channel names and recipi
 | 0 | Hygiene quick wins: drop prompt text from logs; collector debug off; pin images; Loki auth/retention; Tempo retention; metrics route gated/deleted | small, independent, ship first |
 | 1 | Backend telemetry foundation (§4) in `utils` + `api` + `copilot-mro` + `core` + worker | backend-agnostic; largest code change |
 | 2 | Collector profiles + IaC (§5): `oss` compose, `aws` Terraform, dev estate migrated, EC2 box de-scoped | can start in parallel with 1 |
-| 3 | LLM/agent observability (§6) incl. CLI telemetry and the `gen_ai.*` rename; ledger fixes and content capture excluded (deferred) | depends on 1 |
+| 3 | LLM/agent observability (§6) incl. CLI telemetry, the `gen_ai.*` rename and the `llm_turn_content` capture (on by default, opt-out); ledger completeness fixes excluded (deferred) | depends on 1 |
 | 4 | Frontend telemetry rebuild (§7.4): surface inventory + event catalogue (owner-reviewed) → OTel JS 2.x → OTLP ingest evolution on the existing `core` routes | depends on 1 for the ingress route; FE work independent |
 | 5 | Product analytics rebuild (§7.1–7.3): storage, read API, FE settings dashboard | independent of 1–4; parallel worktree |
 | 6 | Dashboards, alerts, runbooks for `oss` and `aws` (§9) | after 1–5 land |
+| 7 | LLM evals workbench (§6.5): Phoenix in the `oss` profile + client-account module, harness → datasets/experiments, `eval_results` keyed by `profile` + `registry_revision`, sampled production copy honouring opt-out, per-tenant quality report | depends on 3; harness-side work can start earlier |
 
 Later services (`telegram-bot`, `lambdas`, `shift-optimizer` standalone, `llm-platform` vLLM scrape via the
 collector's `prometheus` receiver) adopt the §3.1 contract when next touched. Azure profile on demand.
@@ -535,13 +562,15 @@ collector's `prometheus` receiver) adopt the §3.1 contract when next touched. A
 | 1 | Backends | **CloudWatch-native** for Flynapse's own estate and client AWS production; `azure` designed now, built when a client needs it; Grafana Cloud / New Relic not pursued. |
 | 2 | Grafana's role | **OSS profile only**; CloudWatch console + Terraform dashboards in `aws`; AMG optional per client. |
 | 3 | Browser ingress | **Evolve the existing `core` ingest endpoints to OTLP** (same paths, auth, quarantine, limits; opaque pass-through to the collector). See §3.4. |
-| 4 | LLM content capture | **Deferred** — owner will come back to it. §6.5 stays a placeholder; nothing content-related is built. |
+| 4 | LLM content capture | **On by default, tenant opt-out** — redacted at write, tenant-scoped RLS table (bodies in S3 per tenant), 30-day retention; contract language per client is a go-live prerequisite (§6.5). |
 | 5 | Product dashboard v1 | **Full proposed set** (§7.3), including `chat_turn_facts` and `product_events` + `/analytics/events`. |
 | 6 | Frontend events | **Curated**, scoped from a fresh inventory of the current dashboard app (§7.4); catalogue reviewed by the owner before implementation. |
 | 7 | Ledger completeness (G26 LangGraph, data-discovery spend, `improvement_runs.llm_spend`) | **Deferred** to a separate ledger workstream (§6.6). |
 | 8 | Reporting role | **Reuse `flynapse_readonly`** (existing `BYPASSRLS`, SELECT-only); grant SELECT on the app DB; purges stay owner-run (§7.2). |
 | 9 | Operator scope of analytics | **Owners see the whole tenant; capability holders are entitlement-scoped and labelled** (§7.1). |
 | 10 | Alert routing | **Slack channel + email** (§9.4). |
+| 11 | Eval workbench | **Arize Phoenix, self-hosted** (one container on our Postgres; `oss` profile + optional client-account container); Langfuse Cloud named fallback for internal synthetic sets only (§6.5). |
+| 12 | Eval result versioning | **Keyed by the ledger's `profile` + `registry_revision`** (plus department, golden-set id, judge version); results store and quality report built in phase 7 (§6.5, §10). |
 
 Defaults adopted without a separate ruling (say so if any should change):
 - **Retention**: `aws` logs 30 d, spans 7 d (100% ingested, 1% indexed), metrics per backend default; `oss` POC
@@ -564,6 +593,9 @@ Defaults adopted without a separate ruling (say so if any should change):
 - Amplify WEB_COMPUTE → private api reachability (decides whether SSR telemetry can ever join) and Node
   version on the Amplify build image (OTel JS 2.x needs ≥ 18.19).
 - One pooled `psycopg2` query → `db.*` span with bootstrap ordered before pool creation.
+- Phoenix attribute mapping: send one `invoke_agent` trace with our `gen_ai.*` names and confirm model, tokens,
+  cost and tool calls render; list any attribute that needs the OpenInference alias added by the collector
+  `transform`.
 - CloudWatch PromQL API limits against the busiest planned panel (only matters if AMG is chosen).
 - Azure: one `otlphttp`+`azure_auth` send from a non-Azure host and the resulting metric names (only when the
   `azure` profile is built).
