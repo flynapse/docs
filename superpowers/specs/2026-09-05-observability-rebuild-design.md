@@ -419,7 +419,8 @@ treated as outside the tenant total until that workstream rules.
   `block_data` by an owner-run script under the reporting role. This is the "one jsonb accessor investment"
   that unlocks quality, tools, intents and citations without detoasting `chat_blocks`.
 - `product_events` table (tenant-scoped): `event_name` (allow-listed: `document_opened`, `document_closed`
-  (dwell), `session_started`, `session_ended`), `occurred_at`, `user_id`, `department`, `session_id`,
+  (dwell), `session_started`, `session_ended`, `clarification_answered`, `upload_finished` — the last two
+  ruled product facts so clarification rate and the upload funnel are dashboard tiles), `occurred_at`, `user_id`, `department`, `session_id`,
   `document_id`, `document_kind` (`catalog` | `document_hub` | `upload`), `source_surface`
   (`chat_citation` | `library` | `viewer`), `page_number`, `dwell_ms`, `route`. The browser POSTs each event
   **once** to `POST {api}/analytics/events` (authenticated, typed, 50/batch), which writes the row and
@@ -454,10 +455,11 @@ New client-admin views (from research 03, tranches T1/T2):
 | Operations | Document Hub processing: ready / needs-attention / failure codes, throughput, attempts | `document_hub_documents`, `automation_runs(kind=document_hub_process)` |
 | Operations | Automation runs: outcomes, late runs, spend vs `max_budget_usd`, tool usage mix and per-tool failures | `automation_runs`, `automations`, `chat_turn_facts` |
 
+| Improvement (tenant owners only) | Findings list with status (open / triaged / fixed / dismissed), recurrence, theme distribution, signals by source, run history with spend — **ruled visible to tenant owners in full**. Prerequisite task: review and, where needed, rewrite every existing finding body for internal references before the tab ships; findings are internal-only until that review is done. | `improvement_findings`, `improvement_signals`, `improvement_runs` |
+
 Deferred (designed, not in v1): an Admin tab (onboarding funnel from `tenant_invitations`, access-change audit
-feed from `authorization_events`, notification read-rate), memory growth/usefulness, improvement-loop
-transparency (product decision on client visibility), data-discovery and optimizer run health (per-product
-tabs when those tenants exist).
+feed from `authorization_events`, notification read-rate), memory growth/usefulness, data-discovery and
+optimizer run health (per-product tabs when those tenants exist).
 
 ### 7.4 Frontend telemetry rebuild
 - OTel JS 2.x upgrade (Node ≥ 18.19 on the Amplify build image — §12 probe); browser `WebTracerProvider` +
@@ -487,8 +489,15 @@ tabs when those tenants exist).
   `user_interaction`, `window_resize`, scroll milestones, memory polling are dropped. `session.id` = the
   `X-Session-ID` the API client already sends; `trace_id` from the active span. Research file 07 carries the
   inventory and the draft catalogue.
-- `ErrorBoundary` reports only what is actually delivered. `logger.*` free-text calls become structured OTel log
-  records with the same API (thin wrapper), sampled at `info` in production.
+- `ErrorBoundary` reports only what is actually delivered.
+- **Free-text `logger.*` calls (about 340 across 79 files) stop being a telemetry signal.** Ruled with the
+  owner's delegation: `warn`/`error`/`fatal` keep shipping through the thin wrapper as OTel log records (they
+  are the error signal); `info`/`debug` never ship in production (console only in dev, dropped in prod) and
+  are not sampled — 0%, not 10%. Reason: they are English sentences with arbitrary payloads, redacted by key
+  name only, with no naming discipline and no coverage guarantee across a codebase that has grown far past
+  them; everything they were meant to show (API timing, navigation, feature use) is now carried by fetch
+  spans and the curated catalogue, which is the **only** coverage contract and is reviewed by the owner.
+  Stale `info` calls are deleted as files are touched, not in a sweep.
 - The legacy `core` log-ingest routes and `LoggingProvider` delivery code are removed after cut-over.
 
 ## 8. Security and hygiene items folded in
@@ -577,15 +586,14 @@ collector's `prometheus` receiver) adopt the §3.1 contract when next touched. A
 | 10 | Alert routing | **Slack channel + email** (§9.4). |
 | 11 | Eval workbench | **Arize Phoenix, self-hosted** (one container on our Postgres; `oss` profile + optional client-account container); Langfuse Cloud named fallback for internal synthetic sets only (§6.5). |
 | 12 | Eval result versioning | **Keyed by the ledger's `profile` + `registry_revision`** (plus department, golden-set id, judge version); results store and quality report built in phase 7 (§6.5, §10). |
-
-Defaults adopted without a separate ruling (say so if any should change):
-- **Retention**: `aws` logs 30 d, spans 7 d (100% ingested, 1% indexed), metrics per backend default; `oss` POC
-  logs 14 d, spans 3 d, metrics 30 d on a dedicated ≥100 GB volume; `product_events` 13 mo; ledgers forever
-  with a `llm_model_calls` rollup decision deferred to the plan.
-- **Collector hosting in Flynapse's own account**: the existing EC2 keeps only the collector (aws overlay);
-  the client-facing Terraform module is ECS-based.
-- **Improvement findings** are treated as internal-only (not client-visible) in the dashboard.
-- **Parallelism**: phases 1+2 and 5 in separate worktrees (different repos), one implementer per tree.
+| 13 | Retention | **As proposed**: `aws` logs 30 d, spans 7 d (100% ingested, 1% indexed), metrics per backend default; `oss` POC logs 14 d, spans 3 d, metrics 30 d on a dedicated ≥100 GB volume; `product_events` 13 mo; ledgers forever (a `llm_model_calls` rollup decision is deferred to the plan). All env-driven. |
+| 14 | Collector hosting in Flynapse's own account | **Existing EC2 keeps only the collector** (aws overlay); client-facing Terraform module is ECS-based. |
+| 15 | `clarification_answered` / `upload_finished` | **Product facts** in `product_events`, 13 months (§7.2). |
+| 16 | Free-text frontend `info` logs | **Do not ship in production** (0%); `warn`/`error` ship; the curated catalogue is the sole coverage contract (§7.4). Decided by Claude under the owner's delegation. |
+| 17 | Improvement loop on the client dashboard | **Full findings visible to tenant owners** (§7.3), after a one-time review of every finding body for internal references. |
+| 18 | Parallelism | **As much as possible**: up to four streams in separate worktrees — backend (phases 1+2: utils/api/copilot-mro/core/iac), product analytics (phase 5: core + dashboard), frontend (phase 4: dashboard, with a merge order agreed against phase 5's dashboard files), evals harness prep (phase 7 harness side: copilot-mro). Phase 3 follows phase 1; the frontend ingress switch-over and the Phoenix wiring wait for their dependencies. One implementer per worktree; concurrent agents bounded by the session's stated cap. |
+| 19 | Alert targets | Owner provides the Slack channel and email recipients **when phase 6 starts**; rules are authored with placeholder contact points until then. |
+| 20 | Content-capture contract | **Claude drafts a standard plain-English clause** (capture, redaction, retention, opt-out) as a plan appendix for the owner's review; "clause in place" is a per-client go-live gate. |
 
 ## 12. Probes to run before the plan is finalised (cheap; each names the fallback if it fails)
 - Live POC `.env`: confirm `LOKI_BASE_URL` is unset (G29) — decides whether Phase 0 needs a stop-gap for the
