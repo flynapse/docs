@@ -305,10 +305,10 @@ Files under `dashboard/components/features/analytics/`: `analytics-panel-registr
 ### Task 5.9 — Delete the Loki path (ordered here so the dashboard is built on the final backend)
 **Files:** delete `services/chat_quality_service.py`, `services/__init__.py`, `tests/unit/analytics/test_chat_quality_service.py`; modify `config.py`, `fastapi_app.py` (tag text); create `tests/unit/analytics/test_no_loki_references.py`.
 **Steps:**
-- [ ] Write the grep test (via `repo_root(__file__, "core")`): no file under `core/core` contains `loki`, `LOKI_BASE_URL`, `LogQL`, `query_range`, `{service_name=` (case-insensitive), and `core/core/resources/analytics/services` does not exist. Run → fails.
-- [ ] Delete the files and settings; run the whole `core-obs` unit + api suites → green.
-- [ ] Commit the new test and the test deletion by pathspec (`git rm` of the old test file is a test edit).
-- [ ] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
+- [x] Write the grep test (via `repo_root(__file__, "core")`): no file under `core/core` contains `loki`, `LOKI_BASE_URL`, `LogQL`, `query_range`, `{service_name=` (case-insensitive), and `core/core/resources/analytics/services` does not exist. Run → fails.
+- [x] Delete the files and settings; run the whole `core-obs` unit + api suites → green.
+- [x] Commit the new test and the test deletion by pathspec (`git rm` of the old test file is a test edit).
+- [x] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
 **Acceptance:** no Loki reference in `core`; endpoint suite green.
 
 ### Task 5.7a — Dashboard: API client, registry, error state
@@ -467,3 +467,6 @@ if the panel ever gains a cost series). The 42-panel count is confirmed correct;
 
 
 **5.6** — commit `85a456c` (both scripts + 11 tests; unit lane 1086). The scripts live at the repo root `core/scripts/` (beside `run_db_lane.py`) — first draft landed under `core/core/scripts/` and `repo_root(__file__, "scripts", ...)` said so immediately. `facts_from_block_data` is the cross-stream reference implementation (unit tests assert its EXACT dicts — the 3.7 writer inherits them as a contract); vocabulary safety: an `answer_found` outside Yes/Unsure/No projects to NULL rather than failing the batch at the relation's CHECK. `upsert_facts` executes per row and SUMS rowcounts (psycopg2's `executemany` rowcount is not guaranteed to aggregate, and written-vs-skipped is the report's whole point); the version guard is proven in both directions (same-version rerun writes 0; a facts row with a HIGHER version is left untouched). The purge keeps `count_purgeable` for dry-run; cutoff = 13×30 days. Crontab line is in the backfill docstring and restated in the final report.
+
+
+**5.9** — commits `8d1c6fa` (grep sweep in, `test_chat_quality_service.py` retired via `git rm`) + a follow-up committing docstring rewording of THIS stream's own files (`buckets`/`panel_service`/`panels/quality` mentioned "Loki" in prose and the sweep is case-insensitive over every string). Deleted (uncommitted, reported): `services/chat_quality_service.py`, `services/__init__.py`; `config.py` lost `loki_base_url`/`analytics_loki_query_limit`/`analytics_loki_timeout_seconds`; `fastapi_app.py` tag now "Analytics panels backed by Postgres." Whole unit+api: 1931 green.
