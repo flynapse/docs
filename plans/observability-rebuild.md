@@ -102,8 +102,12 @@ Merge order for the dashboard repo: `obs-analytics` first (settings page + analy
 **Infra half (Stream I, now)**
 - [ ] 0.1 Pin every observability image in the four compose files (`observability-local/observe-docker-compose.yml`,
       `deployment/docker-compose.yml`, `deployment/poc/docker-compose.yml`, `deployment/demo/docker-compose.yml`)
-      to explicit versions; remove the `debug` exporter from all pipelines and set collector telemetry log level
-      to `info`. Test: `otelcol validate` on the config in CI (Task 2.1 supplies the CI job; until then a local
+      to explicit versions — **the latest stable release of each** (Grafana, Loki, Tempo, Prometheus,
+      `otel/opentelemetry-collector-contrib`, Phoenix), verified against the projects' release pages at task
+      time (owner request: latest images with the latest updates, never a floating `:latest` tag); record the
+      chosen versions and their release dates in `deployment/otel/VERSIONS.md` together with a bump policy
+      (re-check monthly; bump with a compose smoke run). Remove the `debug` exporter from all pipelines and set
+      collector telemetry log level to `info`. Test: `otelcol validate` on the config in CI (Task 2.1 supplies the CI job; until then a local
       `docker run … validate`). Commit (new/changed compose files are pre-existing → report the diff; new CI
       files commit).
 - [ ] 0.2 Loki: `auth_enabled: true` with a single tenant header from the collector; `limits_config.retention_period`
@@ -400,6 +404,20 @@ Loki path is gone; `product_events` rows arrive from the frontend (with phase 4)
       overlay validation.
 
 ---
+
+## 11a. Standing rules for every task (owner requests, 2026-09-05)
+- **Logging completeness along the way.** Whenever a task touches a module, the implementer checks that
+  module's logging and fixes what is incomplete in the same task: every failure path logs at the right
+  level with the bound context (`tenant_id`, `request_id`, ids of the entity involved), no silent
+  `except: pass`, no user content in log fields, structured kwargs instead of interpolated prose,
+  `logging.getLogger()` users covered by the intercept, and one log line per lifecycle boundary
+  (start/finish/fail) for background work. Each detail-plan task carries a "logging coverage" checkbox; the
+  phase-close review verifies it. Gaps too large for the task go to **Future Improvements** with a note.
+- **Latest stable images, pinned.** Every observability container (Grafana, Loki, Tempo, Prometheus, the
+  collector, Phoenix) runs the latest stable release at the time a task pins it; versions live in
+  `deployment/otel/VERSIONS.md` with a monthly bump check (task 0.1).
+- **Dashboards are in scope.** Phase 6 rebuilds the Grafana dashboard set (six views replacing the eight
+  legacy boards) and their CloudWatch equivalents; it is not a separate project.
 
 ## 12. Review protocol (every phase)
 1. Detail plan written at phase start (test-first tasks); owner reviews it.
