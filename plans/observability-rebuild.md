@@ -468,8 +468,13 @@ not near.
   the product-events body follows phase 5 D5/D6 with no `session_id`/`tenant_id`/`user_id` in the body).
   Implementers running in their worktrees: P backend (`core-obs`, Fable 5), P frontend
   (`dashboard-obs-analytics`, Opus), I (`copilot-mro-obs-infra` + `iac-obs`, Fable 5), F
-  (`dashboard-obs-frontend`, F0–F9, Fable 5; F10 waits for 5.5 + the rebase). Phase 1 (utils/api) plan still
-  being written. Session-lead defaults taken while the owner was away are listed under each plan's "Open
+  (`dashboard-obs-frontend`, F0–F9, Fable 5; F10 waits for 5.5 + the rebase). Phase 1 (utils/api) plan landed too (amended: the gateway
+  excludes the four browser-ingest routes from its own spans/metrics; task U16 adds the anonymous ingest
+  sub-paths to the auth skip list; master 0.6's gateway half — `/metrics` redirect, `metrics_scrape.py`,
+  `METRICS_SCRAPE_TOKEN`, `prometheus-client` in api — is folded into U11, the copilot-mro half stays with
+  Stream L; session-lead defaults D1 single mount-aware gateway instrumentation instead of per-sub-app
+  `instrument_app`, D6 semconv identity keys on the wire, D7 readiness = Postgres hard, D10 no `-fastapi`/
+  `-logging` packages) and its implementer runs in `utils-obs` + `wt-obs-u/api` (Fable 5). Session-lead defaults taken while the owner was away are listed under each plan's "Open
   questions" (chat_turn_facts gains `tool_usage`/tool-set `route`; authenticated ingest limits 256 KiB / 200
   records / 120 rpm; no `llm_model_calls` rollup this phase; export-time deterministic 10% ratio drop for browser
   fetch spans so the sampled flag always propagates).
