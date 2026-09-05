@@ -33,6 +33,7 @@
 | Collector identity headers | Stream I task 2.1 (task A4 of the infra plan; receiver `otlp/browser` on port 4319, setting `OTEL_BROWSER_FORWARD_ENDPOINT`) | `attributes/browser_identity` must `upsert` `tenant.id`/`enduser.id`/`session.id` from the `X-Tenant-Id`/`X-User-Id`/`X-Session-Id` context headers so a client-authored resource attribute in an opaque OTLP body can never win over the server stamp. |
 | Grafana Postgres datasource | Stream I task 2.2 / Stream D 6.2 | Datasource user `flynapse_readonly`, password from `POSTGRES_READONLY_PASSWORD`, database = the app DB; SELECT grants come from task 5.2. |
 | Product-events browser client | Stream F task 4.7 | `postProductEvents(batch)` is Stream F's; this stream owns the server contract (task 5.4) and adds no TS client. Merge order in `dashboard`: `obs-analytics` first, `obs-frontend` rebased on it. |
+| Uncommitted-edit hand-carry at merge | Session lead, at the dashboard merge | The rebase of `obs-frontend` onto `obs-analytics` carries only COMMITTED files; this stream's uncommitted edits (`lib/api/fetch-utils.ts` — the `describeApiError`/`apiError` typed `code`, `page.tsx`, `lib/api/analytics-api.ts`, the four component edits) must be applied to the merge target by hand or committed by the owner first, and Stream F's F10 line pins on `fetch-utils.ts` are stale against them. |
 | `chat_turn_facts` writer | Stream L task 3.7 | The projection function `facts_from_block_data` written in task 5.6 is the reference implementation the writer reuses (same `facts_version`). |
 
 ## Decisions (stated once; tasks reference them)
@@ -50,7 +51,7 @@
 - `services/chat_quality_service.py` and `services/__init__.py`: deleted in task 5.9.
 
 ### D2 — Panel ids, tabs, variants, row shapes
-Row shapes of the nine kept legacy ids are byte-compatible with `dashboard/lib/api/analytics-api.ts` (superset allowed for `llm_tokens_over_time`). Variants: `top-users`, `time-series`, `pie`, `histogram`, `ranked` (renamed from `ranked-pages`), `categories` (rows `label`, `value`, optional `unpriced_count`), `stat-tiles` (rows `metric`, `label`, `value`, `unit`, optional `unpriced_count`, optional `footnote`), `table` (rows as listed; no chart).
+Row shapes of the nine kept legacy ids are byte-compatible with `dashboard/lib/api/analytics-api.ts` (superset allowed for `llm_tokens_over_time`). Variants: `top-users`, `time-series`, `pie`, `histogram`, `ranked` (renamed from `ranked-pages`), `categories` (rows `label`, `value`, optional `unpriced_count`), `stat-tiles` (rows `metric`, `label`, `value`, `unit`, optional `unpriced_count`, optional `footnote`; `unit` vocabulary PINNED 2026-09-05 after review: `USD` renders as money, `ratio` as a percentage, `seconds` as a duration — never `s` — and any other string, e.g. `turns`, `tokens`, `users`, renders as a plain count), `table` (rows as listed; no chart).
 
 | Tab | Panel id | Variant | Source and SQL (prose) | Row keys |
 |---|---|---|---|---|
@@ -358,7 +359,7 @@ Every tab renders against the seeded two-tenant database with correct isolation 
 | Money rule | grep `panels/` for `total_cost_usd` without `cost_complete`; for `automation_runs` + `llm_usage` in one statement | none |
 | Quarantine | POST events/ingest with `tenant_id` in the body / OTLP resource | 400 / forwarded opaque with server headers |
 | Simplicity | count of variants and helpers on the frontend | 8 variants, builders shared; no per-panel components |
-| Plan completeness | D2 table vs registry vs `PANEL_REGISTRY` vs db tests | one row each, 44 ids |
+| Plan completeness | D2 table vs registry vs `PANEL_REGISTRY` vs db tests | one row each, 42 ids (corrected from 44 after independent recount at review) |
 
 ## Open questions for the owner
 Session-lead defaults (2026-09-05, owner not at the keyboard — the implementer proceeds on these unless the owner overrules): 1 accepted (`tool_usage` and the tool-set `route` are added; `tool_usage_mix` stays); 2 accepted (the limits become constants the owner can retune); 3 accepted (no rollup in this phase; recorded in master plan §16).
@@ -438,3 +439,13 @@ Implementer: Claude Opus 5 (`claude-opus-5[1m]`). Worktree `/home/aditya/Code/da
 
 
 **5.3e** — four reliability panels, 4 red -> green. The `loop_error` CASE uses LIKE prefixes/markers (never an IN-list a new subtype falls out of); `model_latency_percentiles` proves the NULL-latency success row is excluded without dropping its model (haiku calls=1); `turn_latency_over_time` counts the NULL-latency turn while giving it no percentile.
+
+## Review triage — dashboard half (2026-09-05, adversarial review)
+Verdict MERGE-READY. P1.1 stat-tile `unit` vocabulary was an invented cross-side contract — now PINNED in D2
+(`USD`/`ratio`/`seconds`, everything else = count); the backend's `s` spellings are being normalised to
+`seconds`. P1.2 uncommitted-edit hand-carry recorded in the hand-off table above. P2 items: the page's
+panel-load catch keeps no breadcrumb (typed error state is the user surface; F10 restores a `logger.error`
+through the new telemetry logger when it repoints imports — noted in the phase-4 plan); the drill-down table
+under money tiles shows USD without its own unpriced note (mitigated — the tiles above carry it; Future
+Improvement); `llm_tokens_over_time` declares `moneyKeys` it never renders (dead metadata, harmless — drop it
+if the panel ever gains a cost series). The 42-panel count is confirmed correct; the old "44" was the outlier.
