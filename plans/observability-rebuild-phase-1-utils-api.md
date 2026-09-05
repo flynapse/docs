@@ -49,11 +49,11 @@ Planner: Claude Fable 5.1 (`claude-fable-5-1`), 2026-09-05. Covers master plan �
 
 ## U0 — Worktrees and the bundle (no code)
 Covers brief rules 6–7; prerequisite for everything.
-- [ ] `git -C /home/aditya/Code/utils worktree add /home/aditya/Code/utils-obs -b obs-utils langgraph-merge` (the main utils checkout has uncommitted edits to `.env.sample` and `utils/dev/.claude/CLAUDE.md`; they are not carried over and must not be touched).
-- [ ] `mkdir -p /home/aditya/Code/wt-obs-u && git -C /home/aditya/Code/api worktree add /home/aditya/Code/wt-obs-u/api -b obs-api langgraph-merge`.
-- [ ] Symlinks so `../x` resolves from the bundle api: `ln -s /home/aditya/Code/utils-obs /home/aditya/Code/wt-obs-u/utils`, `ln -s /home/aditya/Code/core /home/aditya/Code/wt-obs-u/core`, `ln -s /home/aditya/Code/copilot-mro /home/aditya/Code/wt-obs-u/copilot-mro`, `ln -s /home/aditya/Code/shift-optimizer /home/aditya/Code/wt-obs-u/shift-optimizer`; `ln -s /home/aditya/Code/api/.env /home/aditya/Code/wt-obs-u/api/.env` (utils has no `.env`; its tests read the api one through the cwd).
-- [ ] The workspace root `/home/aditya/Code` is itself a git repo: append `utils-obs/` and `wt-obs-u/` to `/home/aditya/Code/.git/info/exclude`.
-- [ ] Verify: `git -C /home/aditya/Code/utils worktree list`, `git -C /home/aditya/Code/api worktree list`, `ls -la /home/aditya/Code/wt-obs-u`.
+- [x] `git -C /home/aditya/Code/utils worktree add /home/aditya/Code/utils-obs -b obs-utils langgraph-merge` (the main utils checkout has uncommitted edits to `.env.sample` and `utils/dev/.claude/CLAUDE.md`; they are not carried over and must not be touched).
+- [x] `mkdir -p /home/aditya/Code/wt-obs-u && git -C /home/aditya/Code/api worktree add /home/aditya/Code/wt-obs-u/api -b obs-api langgraph-merge`.
+- [x] Symlinks so `../x` resolves from the bundle api: `ln -s /home/aditya/Code/utils-obs /home/aditya/Code/wt-obs-u/utils`, `ln -s /home/aditya/Code/core /home/aditya/Code/wt-obs-u/core`, `ln -s /home/aditya/Code/copilot-mro /home/aditya/Code/wt-obs-u/copilot-mro`, `ln -s /home/aditya/Code/shift-optimizer /home/aditya/Code/wt-obs-u/shift-optimizer`; `ln -s /home/aditya/Code/api/.env /home/aditya/Code/wt-obs-u/api/.env` (utils has no `.env`; its tests read the api one through the cwd).
+- [x] The workspace root `/home/aditya/Code` is itself a git repo: append `utils-obs/` and `wt-obs-u/` to `/home/aditya/Code/.git/info/exclude`.
+- [x] Verify: `git -C /home/aditya/Code/utils worktree list`, `git -C /home/aditya/Code/api worktree list`, `ls -la /home/aditya/Code/wt-obs-u`.
 Acceptance: both worktrees on their branches at the base SHAs; `ls /home/aditya/Code/wt-obs-u/api/../utils/utils/observability` lists the utils worktree files.
 
 ## U1 (= 1a.6) — Pins, lock, install, dependency-drift tests
@@ -61,14 +61,14 @@ Spec §4 pins; master 1a.6; research 04 §5.1.
 **Files.** Modify `utils/pyproject.toml`, `utils/poetry.lock`, `api/pyproject.toml`, `api/poetry.lock` (all uncommitted). Create `utils/tests/unit/packaging/test_otel_pins_utils.py`, `api/tests/unit/infra/test_otel_pins_api.py`.
 **Interfaces.** utils `[tool.poetry.dependencies]`: `opentelemetry-api = "1.44.0"`, `opentelemetry-sdk = "1.44.0"`, `opentelemetry-exporter-otlp-proto-http = "1.44.0"`, `opentelemetry-instrumentation = "0.65b0"`, `opentelemetry-instrumentation-httpx`, `-requests`, `-urllib3`, `-psycopg2`, `-redis`, `-threading` all `"0.65b0"`; remove `opentelemetry-exporter-otlp-proto-grpc` and `prometheus-client` (no import of either anywhere in `utils/utils`). utils dev group: `opentelemetry-test-utils = "0.65b0"`, `fakeredis = "*"`. api dependencies: `opentelemetry-api = "1.44.0"`, `opentelemetry-sdk = "1.44.0"`, `opentelemetry-instrumentation-asgi = "0.65b0"`; remove `opentelemetry-instrumentation-fastapi`, `-logging`, `opentelemetry-exporter-otlp-proto-http`, `opentelemetry-exporter-otlp-proto-grpc` (utils supplies the exporter; D10). `prometheus-client` is removed from api as well (the 0.6 gateway half is folded into U11). api dev group: `opentelemetry-test-utils = "0.65b0"`, `fakeredis = "*"` (path dependencies' dev groups are not installed, so both repos declare them).
 **Steps.**
-- [ ] Write `test_otel_pins_utils.py`: `tomllib`-parse `repo_root(__file__, "pyproject.toml")` (pattern: `api/tests/unit/infra/test_no_langsmith_integration.py`); assert each pinned name maps to the exact version string; assert `opentelemetry-exporter-otlp-proto-grpc`, `prometheus-client`, `opentelemetry-instrumentation-botocore`, `opentelemetry-distro` are absent from every group; assert `importlib.metadata.version` of every pinned package equals the pin. Run it — fails on the old `"*"` lines.
-- [ ] Write `test_otel_pins_api.py` likewise for api (the three pins, the four removals plus `prometheus-client` absent, installed versions; if `opentelemetry-instrumentation-fastapi` is installed its version must be `0.65b0`).
-- [ ] Edit both pyprojects. Lock and install: `cd /home/aditya/Code/utils-obs && env -u VIRTUAL_ENV poetry lock`; `cd /home/aditya/Code/wt-obs-u/api && env -u VIRTUAL_ENV POETRY_VIRTUALENVS_IN_PROJECT=true poetry lock && env -u VIRTUAL_ENV POETRY_VIRTUALENVS_IN_PROJECT=true poetry install` (Poetry 2.3.2 keeps unrelated pins; expect 5–10 min). Confirm `git -C /home/aditya/Code/wt-obs-u/api status --short` does not list `.venv/`.
-- [ ] Verify `env -u VIRTUAL_ENV poetry run pip show opentelemetry-sdk opentelemetry-instrumentation-psycopg2 opentelemetry-test-utils` from the bundle reports 1.44.0 / 0.65b0 / 0.65b0.
-- [ ] Run both tests green: `… pytest /home/aditya/Code/utils-obs/tests/unit/packaging/test_otel_pins_utils.py` and `… pytest tests/unit/infra/test_otel_pins_api.py`.
-- [ ] Run the full utils suite once from the bundle (`… pytest /home/aditya/Code/utils-obs/tests -q`) to prove the SDK bump breaks nothing before new code lands.
-- [ ] Logging coverage: no module touched — nothing to check.
-- [ ] Commit (utils): `test_otel_pins_utils.py`; (api): `test_otel_pins_api.py`. Report the pyproject/lock diffs.
+- [x] Write `test_otel_pins_utils.py`: `tomllib`-parse `repo_root(__file__, "pyproject.toml")` (pattern: `api/tests/unit/infra/test_no_langsmith_integration.py`); assert each pinned name maps to the exact version string; assert `opentelemetry-exporter-otlp-proto-grpc`, `prometheus-client`, `opentelemetry-instrumentation-botocore`, `opentelemetry-distro` are absent from every group; assert `importlib.metadata.version` of every pinned package equals the pin. Run it — fails on the old `"*"` lines.
+- [x] Write `test_otel_pins_api.py` likewise for api (the three pins, the four removals plus `prometheus-client` absent, installed versions; if `opentelemetry-instrumentation-fastapi` is installed its version must be `0.65b0`).
+- [x] Edit both pyprojects. Lock and install: `cd /home/aditya/Code/utils-obs && env -u VIRTUAL_ENV poetry lock`; `cd /home/aditya/Code/wt-obs-u/api && env -u VIRTUAL_ENV POETRY_VIRTUALENVS_IN_PROJECT=true poetry lock && env -u VIRTUAL_ENV POETRY_VIRTUALENVS_IN_PROJECT=true poetry install` (Poetry 2.3.2 keeps unrelated pins; expect 5–10 min). Confirm `git -C /home/aditya/Code/wt-obs-u/api status --short` does not list `.venv/`.
+- [x] Verify `env -u VIRTUAL_ENV poetry run pip show opentelemetry-sdk opentelemetry-instrumentation-psycopg2 opentelemetry-test-utils` from the bundle reports 1.44.0 / 0.65b0 / 0.65b0.
+- [x] Run both tests green: `… pytest /home/aditya/Code/utils-obs/tests/unit/packaging/test_otel_pins_utils.py` and `… pytest tests/unit/infra/test_otel_pins_api.py`.
+- [x] Run the full utils suite once from the bundle (`… pytest /home/aditya/Code/utils-obs/tests -q`) to prove the SDK bump breaks nothing before new code lands.
+- [x] Logging coverage: no module touched — nothing to check.
+- [x] Commit (utils): `test_otel_pins_utils.py`; (api): `test_otel_pins_api.py`. Report the pyproject/lock diffs.
 **Acceptance.** Both pin tests green in the bundle env; existing suites green.
 | Likely finding | Triage |
 |---|---|
@@ -85,12 +85,12 @@ Spec §3.1, §4; master 1a.1; research 01 G13/G14/G27; 04 §5.2.
 - `bootstrap.bootstrap(service_name: str, *, version: str | None = None, environment: str | None = None, pipelines: Pipelines | None = None) -> BootstrapState`: idempotent via a module-level state guarded by a lock; first call: read `OTEL_SDK_DISABLED` (SDK parse: lower-cased equals `true`), validate `OTEL_EXPORTER_OTLP_PROTOCOL` (D2), `os.environ.setdefault("OTEL_SEMCONV_STABILITY_OPT_IN", "http")`, build the resource, `TracerProvider(resource)` + `BatchSpanProcessor(OTLPSpanExporter())` (http package) or the injected processor, `MeterProvider(resource, metric_readers=[PeriodicExportingMetricReader(OTLPMetricExporter())])` or the injected reader, `LoggerProvider(resource)` + `BatchLogRecordProcessor(OTLPLogExporter())` or the injected processor; set the three API globals; apply instrumentors (U9); disabled → set nothing, return `disabled=True`. Later calls return the stored state with `configured_by_this_call=False` and ignore arguments. `bootstrap.state() -> BootstrapState | None`; `bootstrap._reset_for_tests() -> None` (shutdown providers, uninstrument, reset API globals via `opentelemetry.test.globals_test`, clear state). Constants `DEFAULT_PROTOCOL = "http/protobuf"`, `SEMCONV_OPT_IN_DEFAULT = "http"`.
 - conftest (session, autouse): sets `OTEL_SDK_DISABLED=false` through a session `pytest.MonkeyPatch`, calls `_reset_for_tests()`, then `bootstrap("utils-tests", version="0.0.0", environment="test", pipelines=Pipelines(SimpleSpanProcessor(InMemorySpanExporter()), InMemoryMetricReader(), SimpleLogRecordProcessor(InMemoryLogExporter())))`, then (from U5/U6 on) `log_bridge.install("DEBUG", json_stdout=True, colors=False)` and `intercept.install("DEBUG")`; yields a `Captured` namedtuple (`spans`, `metrics`, `logs`). A function-scoped autouse fixture clears the span and log exporters. `_otel_capture_utils.py`: `metric_points(reader, name) -> list` (walks `get_metrics_data()`), `span_named(exporter, name)`, `log_records(exporter) -> list`.
 **Steps.**
-- [ ] Write `test_resource_identity.py`: `build("api")` → `service.namespace == "flynapse"`, `service.name == "api"`, `service.version == "unknown"`, `service.instance.id == instance_id()` and matches `<host>:<pid>`; with `OTEL_SERVICE_NAME=copilots` env → `service.name == "copilots"`; with `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=prod,service.namespace=other` → environment `prod`, namespace still `flynapse`; `environment="development"` argument used only when the env has no value. Run — fails (module absent).
-- [ ] Write `test_bootstrap_process_env.py` (subprocess per case; inherit `PYTHONPATH`): disabled → `disabled` true, tracer provider class is the API `ProxyTracerProvider`; default → SDK `TracerProvider`, `protocol == "http/protobuf"`, span processor's exporter class is the http `OTLPSpanExporter`, meter provider has one `PeriodicExportingMetricReader`, logger provider set; `OTEL_EXPORTER_OTLP_PROTOCOL=grpc` → non-zero exit with `RuntimeError` text containing the variable name; `OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318` → `state.endpoint` equals it; `OTEL_SEMCONV_STABILITY_OPT_IN` becomes `http` when unset and stays `http/dup` when preset; second call returns `configured_by_this_call False` and the same provider object; `OTEL_TRACES_SAMPLER=parentbased_traceidratio` + `_ARG=0.5` → the provider's sampler description mentions the ratio (SDK-native; proves the contract is not overridden). Run — fails.
-- [ ] Write `test_bootstrap_in_process.py` against the session fixture: a span started from `trace.get_tracer("t")` lands in the in-memory exporter with the resource attributes; `state().configured_by_this_call` is False on a repeat call; `state().disabled` is False.
-- [ ] Implement `resource.py`, `bootstrap.py`, conftest, helpers. Run the three files green.
-- [ ] Logging coverage: `bootstrap` logs nothing itself (the sinks do not exist yet when it runs; `setup_logging` emits the one "Telemetry configured" line in U7); the protocol refusal is an exception with the remedy in its message; exporter failures are the SDK's `opentelemetry.*` loggers (routed to stderr by U6).
-- [ ] Commit: the two modules, conftest, helper, three test files.
+- [x] Write `test_resource_identity.py`: `build("api")` → `service.namespace == "flynapse"`, `service.name == "api"`, `service.version == "unknown"`, `service.instance.id == instance_id()` and matches `<host>:<pid>`; with `OTEL_SERVICE_NAME=copilots` env → `service.name == "copilots"`; with `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=prod,service.namespace=other` → environment `prod`, namespace still `flynapse`; `environment="development"` argument used only when the env has no value. Run — fails (module absent).
+- [x] Write `test_bootstrap_process_env.py` (subprocess per case; inherit `PYTHONPATH`): disabled → `disabled` true, tracer provider class is the API `ProxyTracerProvider`; default → SDK `TracerProvider`, `protocol == "http/protobuf"`, span processor's exporter class is the http `OTLPSpanExporter`, meter provider has one `PeriodicExportingMetricReader`, logger provider set; `OTEL_EXPORTER_OTLP_PROTOCOL=grpc` → non-zero exit with `RuntimeError` text containing the variable name; `OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318` → `state.endpoint` equals it; `OTEL_SEMCONV_STABILITY_OPT_IN` becomes `http` when unset and stays `http/dup` when preset; second call returns `configured_by_this_call False` and the same provider object; `OTEL_TRACES_SAMPLER=parentbased_traceidratio` + `_ARG=0.5` → the provider's sampler description mentions the ratio (SDK-native; proves the contract is not overridden). Run — fails.
+- [x] Write `test_bootstrap_in_process.py` against the session fixture: a span started from `trace.get_tracer("t")` lands in the in-memory exporter with the resource attributes; `state().configured_by_this_call` is False on a repeat call; `state().disabled` is False.
+- [x] Implement `resource.py`, `bootstrap.py`, conftest, helpers. Run the three files green.
+- [x] Logging coverage: `bootstrap` logs nothing itself (the sinks do not exist yet when it runs; `setup_logging` emits the one "Telemetry configured" line in U7); the protocol refusal is an exception with the remedy in its message; exporter failures are the SDK's `opentelemetry.*` loggers (routed to stderr by U6).
+- [x] Commit: the two modules, conftest, helper, three test files.
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_resource_identity.py test_bootstrap_process_env.py test_bootstrap_in_process.py` (absolute paths).
 **Acceptance.** Second call no-op; disabled → no exporters; resource attributes present; protocol default http; sampler env honoured.
 | Likely finding | Triage |
@@ -328,3 +328,48 @@ Session-lead defaults (2026-09-05, owner not at the keyboard — the implementer
 
 1. Fold master 0.6's gateway half (`/metrics` redirect, `auth/metrics_scrape.py`, `prometheus-client` in `api/pyproject.toml`) into U11 now, or leave it to Stream L as assigned?
 2. Readiness verdict D7 (Postgres hard, other dependencies soft) — confirm or change before U14.
+
+## Implementation notes (Stream U implementer: Claude Fable 5.1, 2026-09-05)
+
+### U0 — worktrees and the bundle
+Done as specified, with one structural deviation forced by Poetry: the bundle's sibling entries
+`wt-obs-u/{copilot-mro,core,shift-optimizer}` are **real directories whose top-level entries are
+symlinks into the main checkouts** (everything except `.git`), not directory symlinks. Poetry
+canonicalises a directory symlink with `Path.resolve()`, so a dir-symlinked `copilot-mro` resolved
+to `/home/aditya/Code/copilot-mro`, whose own `../utils` then named the MAIN utils checkout while
+the api's `../utils` named `utils-obs` — two sources for `flynapse-utils`, and `poetry lock` failed
+on the conflict. With real directories the transitive `../utils` stays inside the bundle and every
+path dependency agrees on `utils-obs`. `utils` itself stays a plain symlink (no transitive path
+deps of its own are re-resolved through it). Both worktrees at their base SHAs; `utils-obs/` and
+`wt-obs-u/` appended to the workspace `.git/info/exclude`.
+
+### U1 — pins, lock, install, drift tests
+As planned. Both pyprojects edited (uncommitted); `poetry lock` in `utils-obs` (no install);
+`poetry lock` + `poetry install` in the bundle (fresh in-project `.venv`, ~9 min; `git status`
+clean of `.venv/`). Installed and verified: sdk 1.44.0, psycopg2/test-utils 0.65b0. Pin tests were
+run RED first from the shared env (worktree PYTHONPATH), then GREEN from the bundle. Full utils
+suite from the bundle: **981 passed** (includes the U2 files, which landed before the full-suite
+run). The api drift test tolerates an installed `-fastapi` at exactly 0.65b0 (it arrives through
+copilot-mro's pyproject until Stream L retires it) — D10 recorded. Note every pytest invocation
+needs `POSTGRES_DB=copilot_mro_test` beside `DEBUG=false`: the utils/api db_guard refuses a run
+that names no test database (the plan's standard commands omit it).
+Learning: at contrib 0.65b0 the api pip-index probes for `-psycopg2`/`-test-utils`/`-threading`
+printed nothing from `pip index versions` (only sdk did), but all resolved fine at lock time.
+
+### U2 — resource.py and bootstrap.py
+As planned. `resource.build` implements D3 by filling only the keys the env detector did not set,
+then merging a bare namespace-only Resource last (a `Resource.create` there would re-apply the
+`unknown_service` fallback over the real name). `bootstrap` checks `OTEL_SDK_DISABLED` BEFORE the
+protocol validation, so a disabled process never refuses to boot over a stray protocol value; the
+state records the env protocol unvalidated in that case. The instrumentation-application loop and
+its warning paths were written in U2 (inert while `INSTRUMENTATIONS` is empty); U9 fills the
+registry. One SDK 1.44 fact the plan predicted slightly differently: `InMemoryLogExporter` no
+longer lives in a `in_memory_log_exporter` submodule and is deprecated in favour of
+`InMemoryLogRecordExporter`, which the conftest uses. Subprocess cases cap
+`OTEL_EXPORTER_OTLP_TIMEOUT=1` so atexit flushes against no collector cannot stall a case.
+Logging coverage: bootstrap logs nothing itself (sinks do not exist yet); the protocol refusal
+names the variable and the remedy; instrumentor skips/failures are structured WARNINGs.
+
+Commits so far: utils `31f4a5e` (U1 test), `31aafed` (U2); api `c16eec1` (U1 test).
+Uncommitted pre-existing edits so far: utils `pyproject.toml`, `poetry.lock`; api `pyproject.toml`,
+`poetry.lock`.
