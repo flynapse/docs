@@ -235,7 +235,7 @@ Files under `dashboard/components/features/analytics/`: `analytics-panel-registr
 ### Task 5.3e — Reliability panels
 **Files:** `panels/reliability.py`; `tests/db/analytics/test_panels_reliability_db.py`.
 **Steps:** cycle for `turn_errors_over_time` (seed `loop_error` values `max_turns`, `max_budget`, `exec_outage`, `exception:ValueError`), `model_call_outcomes`, `model_latency_percentiles` (null latencies excluded), `turn_latency_over_time`.
-- [ ] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
+- [x] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
 **Acceptance:** four panels green.
 
 ### Task 5.3f — Operations panels and the operator binding rule
@@ -435,3 +435,6 @@ Implementer: Claude Opus 5 (`claude-opus-5[1m]`). Worktree `/home/aditya/Code/da
 
 
 **5.3d** — seven cost panels + the two lint tests (`test_no_usd_sum_ships_without_its_unpriced_co_metric` sweeps every REGISTERED statement including `available_filters_sql`, with a vacuity guard; `test_no_statement_mixes_the_run_ledger_with_the_turn_ledger`). The `llm_usage` bucket is spelled exactly as `llm_usage_tenant_spend_day_idx` (`COALESCE(started_at, created_at)`). `cache_savings` answers a NULL hit-rate honestly when the denominator is 0 (tenant B) and stamps the "lower bound: N hits unmeasured" footnote only when unmeasured > 0. Learnings: one seed-math slip caught by the failing test (l2's prompt tokens are input+cache_read+cache_creation = 2000, not input+output); the throttle limit test now pins `time.time` — 60 real hits can cross a wall-clock window boundary and reset the counter (rare flake, killed).
+
+
+**5.3e** — four reliability panels, 4 red -> green. The `loop_error` CASE uses LIKE prefixes/markers (never an IN-list a new subtype falls out of); `model_latency_percentiles` proves the NULL-latency success row is excluded without dropping its model (haiku calls=1); `turn_latency_over_time` counts the NULL-latency turn while giving it no percentile.
