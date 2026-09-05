@@ -254,7 +254,7 @@ Files under `dashboard/components/features/analytics/`: `analytics-panel-registr
 ### Task 5.3g — Improvement panels (owner-only, gated)
 **Files:** `panels/improvement.py`; `tests/db/analytics/test_panels_improvement_db.py`.
 **Steps:** test first: a capability holder requesting `improvement_findings` gets `PanelForbiddenError(code="forbidden")`; an owner with `analytics_improvement_tab_enabled = False` gets `PanelForbiddenError(code="improvement_hidden")`; with the flag on, the five panels return the seeded rows; tenant isolation. Implement with `requires=PanelRequirements(operator_scoped=False, owner_only=True)`.
-- [ ] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
+- [x] Logging coverage (master plan §11a): every module this task touches logs each failure path at the right level with bound `tenant_id` / `request_id` / entity ids as structured kwargs, no silent `except: pass`, no user content in log fields; gaps too large for the task go to master plan §16 with a note.
 **Acceptance:** five panels green; the flag defaults to off until task 5.8 is accepted.
 
 ### Task 5.3h — Endpoint contract and envelope compatibility
@@ -452,3 +452,6 @@ if the panel ever gains a cost series). The 42-panel count is confirmed correct;
 
 
 **5.3f** — binding + gating tests first (25 red), operations panels green on first implementation pass; commit `cea0d48`. `decide_binding`/`tenant_operator_ids`/the owner-wide re-bind were already built in 5.3a's repository — this task proved them both ways (owner bound to `()` sees 5 Document Hub rows with the owner sentence; a `document_hub` holder bound to `op-a1` sees 3 with the entitlement sentence; tenant-class panels answer no scope note to either; tenant B reads `[]` in both roles). `document_hub_processing_runs` reads `automation_runs` (tenant-class), so it carries the Document Hub CAPABILITY but not the operator scope. `automation_spend_vs_budget` joins `automations` via `automation_id::text` (uuid vs varchar) and never touches `llm_usage`.
+
+
+**5.3g** — five improvement panels, 19 red -> 56 green (with the unit sweep). Gate order proven by the tests: a capability holder gets plain `forbidden` even with the flag ON (never learns the tab is merely hidden); an owner behind the shipped default gets `improvement_hidden`; flag on serves whole finding bodies (ruling 17) and the runs table stamps the fixed ruling-7 footnote "not reconciled against the spend ledgers" on every row. `improvement_findings`/`_by_status` deliberately ignore the range (findings are stateful); signals/runs are windowed. **Amendment applied mid-task (cross-stream stat-tile unit vocabulary):** every stat-tile `unit` of `"s"` became `"seconds"` (`avg_duration_s`/`avg_queue_s` in operations — the only sites); the frontend formats exactly `USD`/`ratio`/`seconds` and counts otherwise; pinned in `test_document_hub_processing_runs_tiles`; follow-up commit `4dc38cb`.
