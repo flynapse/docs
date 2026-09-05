@@ -207,10 +207,10 @@ Spec §3.3 (one SERVER span, full route, health excluded), §4; master 1b.1; Fac
 **Files.** Create `flynapse_api/telemetry/__init__.py`, `flynapse_api/telemetry/http_server.py`; tests `tests/integration/otel/conftest.py`, `_otel_capture_api.py`, `test_gateway_http_instrumentation.py`; edit `tests/conftest.py` (add `os.environ.setdefault("OTEL_SDK_DISABLED", "true")` at the top, before the repo-root install, so any test that reaches `setup_logging` in-process configures nothing).
 **Interfaces.** `http_server.HEALTH_EXCLUDED_URLS = ("^https?://[^/]+/health/(live|ready)$",)`; `http_server.INGEST_EXCLUDED_URLS = ("/logging/(public/)?ingest/v1/(logs|traces)$",)` (Stream P hand-off: browser telemetry posts must not inflate the gateway's own spans and request metrics; `parse_excluded_urls` patterns are regex-searched against the full URL); `http_server.DEFAULT_EXCLUDED_URLS = HEALTH_EXCLUDED_URLS + INGEST_EXCLUDED_URLS`; `http_server.resolve_route(app, scope) -> str | None`: iterate `app.routes` (via `fastapi.routing.iter_route_contexts` when that public helper exists, else the list), `route.matches(scope)`; on `Match.FULL` for a `Mount` whose `app` has `routes`, recurse with the scope merged with the child scope and return `mount.path + sub_route` (or `mount.path` alone when the sub-app matches nothing); on `Match.FULL` otherwise return `route.path`; remember the last `Match.PARTIAL` path as fallback; `None` when nothing matches. `http_server.span_details(scope) -> tuple[str, dict]`: `"<METHOD> <route>"` and `{"http.route": route}` when a route resolved, else the sanitised method alone and no route attribute (mirrors upstream). `http_server.instrument_gateway(app, *, excluded_urls: Sequence[str] = (), tracer_provider=None, meter_provider=None) -> None`: refuses (`RuntimeError`) if `app.middleware_stack` is already built; idempotent via `app._flynapse_gateway_instrumented`; excluded list = given patterns plus the comma-separated `OTEL_PYTHON_EXCLUDED_URLS` value, through `opentelemetry.util.http.parse_excluded_urls`; wraps `app.build_middleware_stack` as upstream does — original stack → `OpenTelemetryMiddleware(..., default_span_details=span_details, excluded_urls=…, exclude_spans=["receive", "send"], tracer_provider, meter_provider)` → outer bare `ServerErrorMiddleware`. `http_server.uninstrument_gateway(app) -> None` (tests). The api conftest mirrors utils' (session `MonkeyPatch` sets `OTEL_SDK_DISABLED=false`, `bootstrap._reset_for_tests()`, `bootstrap("api-tests", pipelines=in-memory)`, `log_bridge.install("DEBUG", json_stdout=True)`, `intercept.install("DEBUG")`; function fixture clears exporters).
 **Steps.**
-- [ ] Write `test_gateway_http_instrumentation.py` with a fixture building a fresh gateway `FastAPI` (route `GET /api/v1/health`, route `GET /health/live`, route `GET /api/v1/boom` raising `RuntimeError`), a sub-app `FastAPI` with `GET /v1/chats/{chat_id}` mounted at `/api/v1/mro`, `instrument_gateway(gateway, excluded_urls=HEALTH_EXCLUDED_URLS)`, `TestClient(raise_server_exceptions=False)`. Cases: mounted GET → exactly one finished span, kind SERVER, name `GET /api/v1/mro/v1/chats/{chat_id}`, `http.route` identical, `http.request.method == "GET"`, `http.response.status_code == 200`, `url.path == "/api/v1/mro/v1/chats/abc"`; the `http.server.request.duration` point carries the same `http.route` and status; `http.server.active_requests` exists; `/health/live` → zero new spans and no new duration point; a POST to a stub route `/api/v1/core/logging/public/ingest/v1/logs` on a gateway instrumented with `DEFAULT_EXCLUDED_URLS` → zero spans and no duration point; `/api/v1/health` → route `/api/v1/health`; `/nope` → one span named `GET` without `http.route`, status 404; `/api/v1/boom` → span status ERROR with an `exception` event **and** `http.response.status_code == 500` on the span and on the duration point (the reason for the stack wrapping); `OTEL_PYTHON_EXCLUDED_URLS=/api/v1/health$` (monkeypatch before instrumenting a fresh app) excludes that route; `instrument_gateway` twice → still one span per request; a mounted sub-app that also has `OpenTelemetryMiddleware` is **not** part of this design (no test). Run — fails.
-- [ ] Implement `http_server.py`; write conftest/helper; edit `tests/conftest.py`. Run green.
-- [ ] Logging coverage: `instrument_gateway` logs one INFO line `Gateway HTTP instrumentation installed` with `excluded_urls=` (count) via loguru; the refusal is an exception.
-- [ ] Commit: the two package files, conftest, helper, test, and the `tests/conftest.py` edit.
+- [x] Write `test_gateway_http_instrumentation.py` with a fixture building a fresh gateway `FastAPI` (route `GET /api/v1/health`, route `GET /health/live`, route `GET /api/v1/boom` raising `RuntimeError`), a sub-app `FastAPI` with `GET /v1/chats/{chat_id}` mounted at `/api/v1/mro`, `instrument_gateway(gateway, excluded_urls=HEALTH_EXCLUDED_URLS)`, `TestClient(raise_server_exceptions=False)`. Cases: mounted GET → exactly one finished span, kind SERVER, name `GET /api/v1/mro/v1/chats/{chat_id}`, `http.route` identical, `http.request.method == "GET"`, `http.response.status_code == 200`, `url.path == "/api/v1/mro/v1/chats/abc"`; the `http.server.request.duration` point carries the same `http.route` and status; `http.server.active_requests` exists; `/health/live` → zero new spans and no new duration point; a POST to a stub route `/api/v1/core/logging/public/ingest/v1/logs` on a gateway instrumented with `DEFAULT_EXCLUDED_URLS` → zero spans and no duration point; `/api/v1/health` → route `/api/v1/health`; `/nope` → one span named `GET` without `http.route`, status 404; `/api/v1/boom` → span status ERROR with an `exception` event **and** `http.response.status_code == 500` on the span and on the duration point (the reason for the stack wrapping); `OTEL_PYTHON_EXCLUDED_URLS=/api/v1/health$` (monkeypatch before instrumenting a fresh app) excludes that route; `instrument_gateway` twice → still one span per request; a mounted sub-app that also has `OpenTelemetryMiddleware` is **not** part of this design (no test). Run — fails.
+- [x] Implement `http_server.py`; write conftest/helper; edit `tests/conftest.py`. Run green.
+- [x] Logging coverage: `instrument_gateway` logs one INFO line `Gateway HTTP instrumentation installed` with `excluded_urls=` (count) via loguru; the refusal is an exception.
+- [x] Commit: the two package files, conftest, helper, test, and the `tests/conftest.py` edit.
 **Test command.** `… pytest tests/integration/otel/test_gateway_http_instrumentation.py`.
 | Likely finding | Triage |
 |---|---|
@@ -222,12 +222,12 @@ Spec §3.1, §4 (bootstrap before the pool); master 1b.1, probe row; research 01
 **Files.** Modify `flynapse_api/main.py`, `flynapse_api/config/config.py`, `flynapse_api/automations/worker.py` (`_configure_logging` only), `api/Dockerfile` (uncommitted); tests `tests/unit/telemetry/test_gateway_bootstrap_order.py`, `test_no_legacy_otel_config_api.py`, `tests/integration/otel/test_pool_instrumented.py`.
 **Interfaces / edits.** `main.py` line 7 becomes `setup_logging("api", "development" if settings.debug else "production")`, still before every sibling import; immediately after the `FastAPI(...)` constructor: `instrument_gateway(app, excluded_urls=DEFAULT_EXCLUDED_URLS)` (import from `flynapse_api.telemetry.http_server`); the `print_routes`/"Final App Route" loop logs `logger.info("Gateway route", path=route.path)` (the current call passes `route.path` as a positional format argument and drops it). `config/config.py`: delete `otel_endpoint`, `otel_service_name`, `otel_env`, `otel_version`, `otel_enabled` (readers: only `main.py:7`, `middleware/observability.py:51-54` (deleted in U12), `worker.py:469`). `worker._configure_logging`: `setup_logging(SERVICE_NAME, "development" if api_settings.debug else "production")` (the `OTEL_SERVICE_NAME` env still wins through `resource.build`). `Dockerfile`: delete `ENV OTEL_SERVICE_NAME="copilots"` and `ENV LOG_DIR` (dead), HEALTHCHECK later (U14). Fold-in of master 0.6's gateway half (session-lead ruling): delete the `/metrics` redirect route in `main.py`, `flynapse_api/auth/metrics_scrape.py` and every reader of `METRICS_SCRAPE_TOKEN` in `api` (the `rg` sweep lists them; each deleted file/edit is reported), and `prometheus-client` from `api/pyproject.toml` (already removed in U1); the copilot-mro `/metrics` route and its `prometheus_client` import stay for Stream L.
 **Steps.**
-- [ ] Write `test_gateway_bootstrap_order.py` (AST over `repo_root(__file__, "flynapse_api", "main.py")`, pattern of `tests/startup/surface/test_gateway_root_surface.py`): the first module-level expression statement is a call to `setup_logging` whose first argument is the literal `"api"`, and it precedes every `Import`/`ImportFrom` of `utils.postgres_service`, `copilot_mro`, `core`, `shift_optimizer`, `routers`, `middleware`; a module-level `instrument_gateway(app, ...)` call exists and precedes every `app.mount(...)`, `app.add_middleware(...)`, `app.include_router(...)` and `setup_*_middleware(app)` call; no attribute access `settings.otel_service_name`/`otel_env`/`otel_version`. Run — fails.
-- [ ] Write `test_no_legacy_otel_config_api.py`: scan `repo_root(__file__, "flynapse_api")` for `OTEL_ENDPOINT|OTEL_ENABLED|OTEL_ENV\b|OTEL_VERSION|otel_endpoint|otel_enabled|otel_env\b|otel_version|otel_service_name|prometheus_client` — no allow-list (the 0.6 gateway half is folded into this task). Run — fails.
-- [ ] Write `test_pool_instrumented.py` marked `@pytest.mark.postgres`: after the session bootstrap, `get_postgres_service().fetch_one("SELECT 1 AS one")` returns `{"one": 1}` and the exporter holds one CLIENT span with `db.system == "postgresql"`, `db.statement` starting with `SELECT`, `net.peer.name`/`server.address` equal to `settings.postgres_host`; the pool must not have been opened before (assert `postgres._pool is None` at test start, else `pytest.skip` with the reason "pool opened before bootstrap in this process"). Run with `-m postgres` against the dev database named by `api/.env` (a read-only `SELECT 1`).
-- [ ] Apply the edits. Run the three tests green; run `tests/startup`, `tests/unit`, `tests/middleware` green (`-m "not postgres"`).
-- [ ] Logging coverage (`main.py`): fix the two positional-arg log calls; the mount `except ImportError` branches keep their WARNING but gain `error=` kwargs instead of f-string interpolation; `_startup_event`/`_shutdown_event` lines already structured. (`worker.py` covered in U15.)
-- [ ] Commit: the three tests.
+- [x] Write `test_gateway_bootstrap_order.py` (AST over `repo_root(__file__, "flynapse_api", "main.py")`, pattern of `tests/startup/surface/test_gateway_root_surface.py`): the first module-level expression statement is a call to `setup_logging` whose first argument is the literal `"api"`, and it precedes every `Import`/`ImportFrom` of `utils.postgres_service`, `copilot_mro`, `core`, `shift_optimizer`, `routers`, `middleware`; a module-level `instrument_gateway(app, ...)` call exists and precedes every `app.mount(...)`, `app.add_middleware(...)`, `app.include_router(...)` and `setup_*_middleware(app)` call; no attribute access `settings.otel_service_name`/`otel_env`/`otel_version`. Run — fails.
+- [x] Write `test_no_legacy_otel_config_api.py`: scan `repo_root(__file__, "flynapse_api")` for `OTEL_ENDPOINT|OTEL_ENABLED|OTEL_ENV\b|OTEL_VERSION|otel_endpoint|otel_enabled|otel_env\b|otel_version|otel_service_name|prometheus_client` — no allow-list (the 0.6 gateway half is folded into this task). Run — fails.
+- [x] Write `test_pool_instrumented.py` marked `@pytest.mark.postgres`: after the session bootstrap, `get_postgres_service().fetch_one("SELECT 1 AS one")` returns `{"one": 1}` and the exporter holds one CLIENT span with `db.system == "postgresql"`, `db.statement` starting with `SELECT`, `net.peer.name`/`server.address` equal to `settings.postgres_host`; the pool must not have been opened before (assert `postgres._pool is None` at test start, else `pytest.skip` with the reason "pool opened before bootstrap in this process"). Run with `-m postgres` against the dev database named by `api/.env` (a read-only `SELECT 1`).
+- [x] Apply the edits. Run the three tests green; run `tests/startup`, `tests/unit`, `tests/middleware` green (`-m "not postgres"`).
+- [x] Logging coverage (`main.py`): fix the two positional-arg log calls; the mount `except ImportError` branches keep their WARNING but gain `error=` kwargs instead of f-string interpolation; `_startup_event`/`_shutdown_event` lines already structured. (`worker.py` covered in U15.)
+- [x] Commit: the three tests.
 **Test command.** `… pytest tests/unit/telemetry/test_gateway_bootstrap_order.py tests/unit/telemetry/test_no_legacy_otel_config_api.py` and `… pytest tests/integration/otel/test_pool_instrumented.py -m postgres`.
 | Likely finding | Triage |
 |---|---|
@@ -239,11 +239,11 @@ Spec §3.3 (counter for gateway rejections, `X-Trace-Id` kept), §8 G20/G19; mas
 **Files.** Create `flynapse_api/middleware/telemetry.py`; delete `flynapse_api/middleware/observability.py`; modify `middleware/__init__.py`, `main.py` (uncommitted); tests `tests/middleware/telemetry/test_trace_id_header.py`, `test_auth_rejection_metric.py`; edit `tests/middleware/skip_paths/test_anonymous_skip_path_stack.py` (replace the `ObservabilityMiddleware.dispatch` hop with `TraceIdHeaderMiddleware` driven as ASGI, or drop the hop and keep the auth→endpoint assertion — the test's subject is the skip path, not observability; choose the latter and say so in its docstring).
 **Interfaces.** `middleware.telemetry.TRACE_ID_HEADER = "X-Trace-Id"`; `TraceIdHeaderMiddleware` (pure ASGI): on `http.response.start`, when `trace.get_current_span().get_span_context().is_valid`, append the 32-hex trace id header; never raises. `REJECTION_STATUSES = frozenset({401, 403})`; `AuthRejectionMetricMiddleware` (pure ASGI): on `http.response.start` with a status in the set and `"endpoint" not in scope`, `auth_rejections.add(1, {"http.response.status_code": status, "http.request.method": method})` where `auth_rejections = registry.counter("auth.rejections", "{request}", "Requests refused by gateway middleware before routing")` at module level. `setup_trace_id_header(app)` and `setup_auth_rejection_metric(app)`. `middleware/__init__.py` exports them and drops `ObservabilityMiddleware`/`setup_observability_middleware`. `main.py` add-order becomes: Security → TraceIdHeader (where Observability was) → Logging → [Auth] → AuthRejectionMetric (added right after Auth so it executes before it) → RateLimit → RequestID → CORS → ProxyHeaders; execution order therefore Proxy → CORS → RequestID → RateLimit → AuthRejectionMetric → Auth → Logging → TraceIdHeader → Security → routes, all inside the OTel middleware.
 **Steps.**
-- [ ] Write `test_trace_id_header.py`: mini gateway from U10's helper plus `setup_trace_id_header` → response `x-trace-id` equals the exported span's trace id in hex; with `uninstrument_gateway` (no span) → header absent, 200 still served. Run — fails.
-- [ ] Write `test_auth_rejection_metric.py`: mini gateway with a pure-ASGI stub "auth" middleware that returns 401 for `Authorization`-less requests before routing, one route returning 403, `setup_auth_rejection_metric` outside the stub → after one anonymous request the `auth.rejections` point has value 1 with `{http.response.status_code: 401, http.request.method: "GET"}`; after the route-level 403 the value is unchanged; the in-memory reader contains none of `http_requests_total`, `http_request_duration_seconds`, `active_sessions`, `active_users` after both requests. Run — fails.
-- [ ] Implement, delete `observability.py`, update `__init__.py`, `main.py`, and the skip-path test. Run the two tests plus `tests/middleware` green.
-- [ ] Logging coverage: the deleted module had five silent `except Exception: pass` blocks — gone; the two new middlewares have no failure path that should log (a missing span is normal).
-- [ ] Commit: `middleware/telemetry.py`, two tests, the skip-path test edit.
+- [x] Write `test_trace_id_header.py`: mini gateway from U10's helper plus `setup_trace_id_header` → response `x-trace-id` equals the exported span's trace id in hex; with `uninstrument_gateway` (no span) → header absent, 200 still served. Run — fails.
+- [x] Write `test_auth_rejection_metric.py`: mini gateway with a pure-ASGI stub "auth" middleware that returns 401 for `Authorization`-less requests before routing, one route returning 403, `setup_auth_rejection_metric` outside the stub → after one anonymous request the `auth.rejections` point has value 1 with `{http.response.status_code: 401, http.request.method: "GET"}`; after the route-level 403 the value is unchanged; the in-memory reader contains none of `http_requests_total`, `http_request_duration_seconds`, `active_sessions`, `active_users` after both requests. Run — fails.
+- [x] Implement, delete `observability.py`, update `__init__.py`, `main.py`, and the skip-path test. Run the two tests plus `tests/middleware` green.
+- [x] Logging coverage: the deleted module had five silent `except Exception: pass` blocks — gone; the two new middlewares have no failure path that should log (a missing span is normal).
+- [x] Commit: `middleware/telemetry.py`, two tests, the skip-path test edit.
 **Test command.** `… pytest tests/middleware/telemetry/test_trace_id_header.py tests/middleware/telemetry/test_auth_rejection_metric.py tests/middleware/skip_paths/test_anonymous_skip_path_stack.py`.
 | Likely finding | Triage |
 |---|---|
@@ -255,10 +255,10 @@ Spec §3.1 (`request.id`, `tenant.id`, `enduser.id`, `session.id`), §3.3 bound 
 **Files.** Create `flynapse_api/telemetry/request_identity.py`; modify `middleware/logging.py` (uncommitted: import + one call inside the `contextualize` block, plus the logging-coverage fix); test `tests/middleware/telemetry/test_request_identity_span_attributes.py`.
 **Interfaces.** `request_identity.UNKNOWN = "unknown"`; `request_identity.bind_request_identity_to_span(*, request_id, tenant_id, user_id, session_id) -> None`: sets `request.id`, `tenant.id`, `enduser.id`, `session.id` on `trace.get_current_span()` for each value that is truthy and not `UNKNOWN`; no-op when the span is not recording. Called from `LoggingContextMiddleware.__call__` with the values it already extracts (why not a `server_request_hook`: with D1 the hook runs before Auth/RequestID populate `scope["state"]`; recorded deviation from master 1b.4 wording).
 **Steps.**
-- [ ] Write the test: mini instrumented gateway with a stub pure-ASGI middleware that writes `scope["state"]["request_id"]`, `["session_id"]` and `["auth_context"] = {"tenant_id": …, "user_id": …}`, then `LoggingContextMiddleware`, then a route → the SERVER span has the four attributes; with `auth_context` `None` and no session → only `request.id`; `"unknown"` values are not set; the in-memory log record for "Request received" carries `tenant.id`/`request.id` (bridge) and the span's trace id. Run — fails.
-- [ ] Implement; edit `logging.py`. Run green plus `tests/middleware`.
-- [ ] Logging coverage (`middleware/logging.py`): the completion line logs at WARNING when `status_code >= 500`, INFO otherwise, keeping `status_code`/`duration` kwargs; the failure line keeps `error=`/`traceback=`; `request_id.py` (touched? no — its interpolated warning is listed under Future Improvements for L/owner, not edited here).
-- [ ] Commit: `request_identity.py`, the test.
+- [x] Write the test: mini instrumented gateway with a stub pure-ASGI middleware that writes `scope["state"]["request_id"]`, `["session_id"]` and `["auth_context"] = {"tenant_id": …, "user_id": …}`, then `LoggingContextMiddleware`, then a route → the SERVER span has the four attributes; with `auth_context` `None` and no session → only `request.id`; `"unknown"` values are not set; the in-memory log record for "Request received" carries `tenant.id`/`request.id` (bridge) and the span's trace id. Run — fails.
+- [x] Implement; edit `logging.py`. Run green plus `tests/middleware`.
+- [x] Logging coverage (`middleware/logging.py`): the completion line logs at WARNING when `status_code >= 500`, INFO otherwise, keeping `status_code`/`duration` kwargs; the failure line keeps `error=`/`traceback=`; `request_id.py` (touched? no — its interpolated warning is listed under Future Improvements for L/owner, not edited here).
+- [x] Commit: `request_identity.py`, the test.
 **Test command.** `… pytest tests/middleware/telemetry/test_request_identity_span_attributes.py`.
 
 ## U14 (= 1b.5) — `/health/live` and `/health/ready`
@@ -266,10 +266,10 @@ Spec §4 (health), §8 G28; master 1b.5; D7.
 **Files.** Create `flynapse_api/routers/health.py`; modify `main.py` (include the router with no prefix), `api/Dockerfile` HEALTHCHECK → `/health/live` (uncommitted); test `tests/api/health/test_health_probes.py`; edit `tests/startup/surface/test_gateway_root_surface.py` (`ROOT_LEVEL_ALLOWLIST` gains `/health/live` and `/health/ready` with the reason: orchestrator probes hold no token, so they must live outside `api_prefix`; the auth middleware already skips `/health` at the root).
 **Interfaces.** `health.LIVE_PATH = "/health/live"`, `health.READY_PATH = "/health/ready"`, `health.router` (`APIRouter(tags=["Platform"])`); `GET /health/live` → 200 `{"status": "alive", "service": "api"}` touching nothing; `health._aggregate_probe()` returns `copilot_mro.app.api.health_check.health_check` (imported inside the function so tests monkeypatch the seam and the module stays import-light); `health.readiness_verdict(body: dict) -> bool` (D7); `GET /health/ready` → awaits the probe, returns its body verbatim with status 200 or 503; if the probe raises, 503 with `{"status": "unhealthy", "error": "<type name>"}` and one `logger.error("Readiness probe failed", error=traceback)`; the body never contains a `debug` key (asserted).
 **Steps.**
-- [ ] Write `test_health_probes.py`: a `FastAPI` with `health.router` included; `/health/live` → 200 and the exact body, with `health._aggregate_probe` monkeypatched to raise (proving live never calls it); `/health/ready` with a fake probe returning `status=healthy` and per-dependency verdicts → 200, body passthrough, `"debug" not in body`; `degraded` with postgres healthy → 200; `degraded` with postgres unhealthy → 503; `unhealthy` → 503; probe raising → 503 with the error shape; the surface test's allowlist contains both paths. Run — fails.
-- [ ] Implement; include the router in `main.py` after the gateway routers; update the surface allowlist and Dockerfile. Run green plus `tests/startup`.
-- [ ] Logging coverage: the readiness failure log with `error=`; live logs nothing (probe noise).
-- [ ] Commit: `routers/health.py`, the test, the surface-test edit.
+- [x] Write `test_health_probes.py`: a `FastAPI` with `health.router` included; `/health/live` → 200 and the exact body, with `health._aggregate_probe` monkeypatched to raise (proving live never calls it); `/health/ready` with a fake probe returning `status=healthy` and per-dependency verdicts → 200, body passthrough, `"debug" not in body`; `degraded` with postgres healthy → 200; `degraded` with postgres unhealthy → 503; `unhealthy` → 503; probe raising → 503 with the error shape; the surface test's allowlist contains both paths. Run — fails.
+- [x] Implement; include the router in `main.py` after the gateway routers; update the surface allowlist and Dockerfile. Run green plus `tests/startup`.
+- [x] Logging coverage: the readiness failure log with `error=`; live logs nothing (probe noise).
+- [x] Commit: `routers/health.py`, the test, the surface-test edit.
 **Test command.** `… pytest tests/api/health/test_health_probes.py tests/startup/surface/test_gateway_root_surface.py`.
 | Likely finding | Triage |
 |---|---|
@@ -281,11 +281,11 @@ Spec §3.3 (background roots with `tenant.id`, links), §4; master 1b.6; researc
 **Files.** Create `flynapse_api/telemetry/run_span.py`; modify `automations/executor.py` (wrap the body of `execute_automation_run`), `automations/worker.py` (docstring "Structured logging" paragraph, `_configure_logging` already edited in U11) (uncommitted); tests `tests/integration/otel/test_automation_run_span.py`, `tests/unit/telemetry/test_worker_service_name.py`.
 **Interfaces.** `run_span.SPAN_NAME = "automation.run"`; `run_span.automation_run_span(automation: Automation, run_id: str, scheduled_for: datetime) -> ContextManager[Span]`: `get_tracer("flynapse_api.automations").start_as_current_span(SPAN_NAME, kind=INTERNAL, links=())` with attributes `tenant.id`, `enduser.id` (= `automation.user_id`), `automation.id`, `automation.run_id`, `automation.kind`, `automation.department` (when set), `automation.scheduled_for` (ISO), combined through `contextlib.ExitStack` with `logger.contextualize(tenant_id=…, user_id=…, session_id=f"automation:{run_id}", automation_id=…, automation_run_id=run_id, department=…)`. `execute_automation_run` wraps its existing try/except in the context manager and sets `automation.run.status` to the terminal status on both the normal and the containment path (the containment path also records the exception via the span). A new trace root: the worker has no current span; embedded mode's scheduler task likewise.
 **Steps.**
-- [ ] Write `test_automation_run_span.py`: build a real `Automation` (fields as in `tests/integration/automations/test_execute_automation_run.py:_automation`), monkeypatch `executor_module._run` with an async fake that emits one `logger.info("fake run")` and returns `"completed"`, and `executor_module._recorder` with a stub returning a recording callable; `await execute_automation_run(automation, RUN_ID, SLOT)` → exactly one span, name `automation.run`, `parent is None`, kind INTERNAL, the attribute set above, `automation.run.status == "completed"`; the fake's log record in the in-memory exporter carries `tenant.id`, `enduser.id`, `session.id == "automation:<RUN_ID>"`, `automation_id`, `automation_run_id` and the span's trace id; second case: the fake raises → status `"failed"` returned, `automation.run.status == "failed"`, one exception event, the recorder stub called once with `STATUS_FAILED`. Run — fails.
-- [ ] Write `test_worker_service_name.py`: AST over `automations/worker.py` asserts `SERVICE_NAME == "automation-worker"` and that `_configure_logging` calls `setup_logging` with `SERVICE_NAME` as its first argument and no `os.getenv` wrapper; runtime: `bootstrap`'s resource for `"automation-worker"` yields `service.name == "automation-worker"` when `OTEL_SERVICE_NAME` is unset (monkeypatch). Run — fails.
-- [ ] Implement; edit executor/worker. Run green plus `tests/integration/automations -m "not postgres"` (the lane's conftest patches the ledger; the span wrapper must not change any outcome there).
-- [ ] Logging coverage (executor lifecycle boundaries): the "starting run" line (`executor.py:981`) and the containment error (`:964`) become structured (`automation_id=`, `run_id=`, `slot=`, `department=` kwargs; the ids are also in the bound context now); `worker.py:435` "Automation worker running" and `:372/:397` warnings become kwargs (`tick_seconds=`, `concurrency=`, `pid=`, `error=`). The remaining f-string logs in `executor.py` (dozens) go to Future Improvements with the note "convert as the module is next touched by Stream L".
-- [ ] Commit: `run_span.py`, the two tests.
+- [x] Write `test_automation_run_span.py`: build a real `Automation` (fields as in `tests/integration/automations/test_execute_automation_run.py:_automation`), monkeypatch `executor_module._run` with an async fake that emits one `logger.info("fake run")` and returns `"completed"`, and `executor_module._recorder` with a stub returning a recording callable; `await execute_automation_run(automation, RUN_ID, SLOT)` → exactly one span, name `automation.run`, `parent is None`, kind INTERNAL, the attribute set above, `automation.run.status == "completed"`; the fake's log record in the in-memory exporter carries `tenant.id`, `enduser.id`, `session.id == "automation:<RUN_ID>"`, `automation_id`, `automation_run_id` and the span's trace id; second case: the fake raises → status `"failed"` returned, `automation.run.status == "failed"`, one exception event, the recorder stub called once with `STATUS_FAILED`. Run — fails.
+- [x] Write `test_worker_service_name.py`: AST over `automations/worker.py` asserts `SERVICE_NAME == "automation-worker"` and that `_configure_logging` calls `setup_logging` with `SERVICE_NAME` as its first argument and no `os.getenv` wrapper; runtime: `bootstrap`'s resource for `"automation-worker"` yields `service.name == "automation-worker"` when `OTEL_SERVICE_NAME` is unset (monkeypatch). Run — fails.
+- [x] Implement; edit executor/worker. Run green plus `tests/integration/automations -m "not postgres"` (the lane's conftest patches the ledger; the span wrapper must not change any outcome there).
+- [x] Logging coverage (executor lifecycle boundaries): the "starting run" line (`executor.py:981`) and the containment error (`:964`) become structured (`automation_id=`, `run_id=`, `slot=`, `department=` kwargs; the ids are also in the bound context now); `worker.py:435` "Automation worker running" and `:372/:397` warnings become kwargs (`tick_seconds=`, `concurrency=`, `pid=`, `error=`). The remaining f-string logs in `executor.py` (dozens) go to Future Improvements with the note "convert as the module is next touched by Stream L".
+- [x] Commit: `run_span.py`, the two tests.
 **Test command.** `… pytest tests/integration/otel/test_automation_run_span.py tests/unit/telemetry/test_worker_service_name.py`.
 | Likely finding | Triage |
 |---|---|
@@ -297,16 +297,16 @@ Spec §3.4 (anonymous browser ingest through the gateway); phase 5 plan D7 and i
 **Files.** Modify `flynapse_api/middleware/auth.py` (`_should_skip_auth` `skip_exact`; uncommitted); test `tests/middleware/skip_paths/test_public_ingest_skip_paths.py`.
 **Interfaces.** `skip_exact` gains exactly two entries, `{api_prefix}/core{core_prefix}/logging/public/ingest/v1/logs` and `{api_prefix}/core{core_prefix}/logging/public/ingest/v1/traces` (spelled with the same prefix helpers the existing `.../logging/public/ingest` entry uses), and the old `.../logging/public/ingest` entry is removed in the same edit; the authenticated `.../logging/ingest/v1/*` routes are NOT skipped. `/health/live` and `/health/ready` are also asserted skipped (U14 relies on the root `/health` rule — if that rule is exact-match, add the two paths here and say so).
 **Steps.**
-- [ ] Write the test in the pattern of `tests/middleware/skip_paths/test_anonymous_skip_path_stack.py`: the two public sub-paths reach the endpoint without a token; the two authenticated sub-paths return 401 without a token; the retired `.../logging/public/ingest` path is no longer skipped; `/health/live` and `/health/ready` reach their endpoints without a token. Run — fails.
-- [ ] Edit `auth.py`; run the test and the whole `tests/middleware` lane green.
-- [ ] Logging coverage: the skip path emits no log line per request (unchanged); the auth refusal path keeps its structured WARNING.
-- [ ] Commit: the test only.
+- [x] Write the test in the pattern of `tests/middleware/skip_paths/test_anonymous_skip_path_stack.py`: the two public sub-paths reach the endpoint without a token; the two authenticated sub-paths return 401 without a token; the retired `.../logging/public/ingest` path is no longer skipped; `/health/live` and `/health/ready` reach their endpoints without a token. Run — fails.
+- [x] Edit `auth.py`; run the test and the whole `tests/middleware` lane green.
+- [x] Logging coverage: the skip path emits no log line per request (unchanged); the auth refusal path keeps its structured WARNING.
+- [x] Commit: the test only.
 **Test command.** `… pytest tests/middleware/skip_paths/test_public_ingest_skip_paths.py`.
 
 ## Phase close (Stream U)
-- [ ] Full suites: `… pytest /home/aditya/Code/utils-obs/tests -q` and `… pytest tests -q -m "not postgres"` from the bundle; `-m postgres` for `test_pool_instrumented.py` against the dev database.
+- [x] Full suites: `… pytest /home/aditya/Code/utils-obs/tests -q` and `… pytest tests -q -m "not postgres"` from the bundle; `-m postgres` for `test_pool_instrumented.py` against the dev database.
 - [ ] Adversarial review per master §12 with this plan and both diffs; triage into Future Improvements / fixes.
-- [ ] Implementation notes into master §15: D1 deviation, D6 renaming, pool laziness correction, `-fastapi`/`-logging` not added.
+- [x] Implementation notes into master §15: D1 deviation, D6 renaming, pool laziness correction, `-fastapi`/`-logging` not added.
 
 ## Hand-offs to other streams
 - **Stream I (compose/iac):** replace `OTEL_ENDPOINT=…:4317` with `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` (`deployment/poc/docker-compose.yml:178`, `iac/apprunner.tf:42`, `iac/lambda.tf:109`); add `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=<env>`; App Runner health path `/health/live`; `base.yaml` redaction allow-list must include `tenant.id`, `enduser.id`, `session.id`, `request.id`, `automation_id`, `automation_run_id`, `chat_id`, `block_id`, `department`; health filter drops `http.route` matching `/health/(live|ready)`; the `job` label is `flynapse/<service.name>` with names `api` and `automation-worker`.
@@ -437,3 +437,121 @@ U6 `8052c39`, U7 `14d0c41`, U8 `9ec1aac`, U9 `5b114a3`.
 Uncommitted utils edits so far: `pyproject.toml`, `poetry.lock`, `.env.sample`, `utils/config.py`,
 `utils/logging_config.py`, `utils/observability/__init__.py`, `utils/observability/metrics.py`,
 `utils/observability/tracing.py`.
+
+### U10 — gateway HTTP instrumentation (D1)
+As planned; all 11 cases green on the first run. Layout deviation, recorded: the shared capture
+helpers live at `tests/_otel_capture_api.py` (tests root) and the session + per-test `captured`
+fixtures in the repo-level `tests/conftest.py` (session-scoped, NOT autouse — only tests that
+request `captured` pay for the bootstrap), because three lanes consume them and only the tests
+root is reliably importable from all three; `tests/integration/otel/conftest.py` was therefore
+not created. `instrument_gateway` refuses an already-built middleware stack, is idempotent per
+app, and composes exclusions from arguments + `OTEL_PYTHON_EXCLUDED_URLS`. `resolve_route`
+descends `Mount`s by re-matching with the child scope merged (Starlette 0.48 semantics
+verified); FastAPI in the bundle is 0.118.2, so the `iter_route_contexts` branch is the
+future-proofing fallback only.
+
+### U11 — main.py wiring, config deletion, pooled-query span, 0.6 fold-in
+Two findings beyond the plan. (1) The plan's no-allow-list scan test could only go green after
+U12's deletion of `middleware/observability.py` (a plan-order inconsistency); U12 was executed
+immediately after the U11 edits and both suites ran together. (2) **The pooled-query span
+needed a production fix in `utils/postgres_service.py`** (uncommitted, added to the ledger):
+the psycopg2 instrumentor traces via a cursor FACTORY installed on the connection at connect
+time, and every service query passed `cursor_factory=RealDictCursor` per cursor — silently
+bypassing tracing for the entire service. Fix: a lazily-cached `_dict_cursor_factory()` that
+wraps `RealDictCursor` in the instrumentor's traced factory when instrumentation is active; no
+row shape changes anywhere (raw `conn.cursor()` consumers keep traced tuple cursors from the
+connect-time factory). Limitation, pinned in the test: spans from the per-cursor factory carry
+`db.system`/`db.statement` but no host attributes at contrib 0.65b0 (the factory's integration
+never sees the connection); Future Improvements. The `/metrics` fold-in deleted
+`auth/metrics_scrape.py`, the redirect route, the config field, `tests/unit/auth/
+test_metrics_scrape_gate.py` (deletion, uncommitted) and the surface-test allowlist entry; the
+top-level `mro_settings` import (used only by the redirect) went with it. `Depends` left the
+fastapi import as unused. Root-surface census: `/metrics` removed left the allowlist EMPTY
+until U14, so its vacuity asserts were relaxed in U11 and restored in U14.
+
+### U12 — X-Trace-Id + auth.rejections
+As planned. The middleware-lane failure this exposed forced a REAL registry improvement
+(utils `62b99ff`): `middleware/telemetry.py` registers `auth.rejections` at import, which in a
+test process happens before the session bootstrap; resetting the API globals then orphaned the
+module-level handle. Registry handles now hold the metric NAME over a process instrument cache
+that `_reset_for_tests` clears and that lazily re-creates from the stored spec — module-level
+handles survive a globals reset by construction (observable gauges stay eager-create at
+registration, since nothing "emits" them). Skip-path stack test re-banked: the observability
+hop dropped with the deleted middleware (docstring says why).
+
+### U13 — request identity on the server span
+As planned; bound from `LoggingContextMiddleware` (one extraction, two sinks), not a
+`server_request_hook` (under D1 the hook fires pre-Auth). Logging coverage: the completion line
+now logs WARNING for status >= 500 and the message is "Request processed" (no more
+"successfully" on a 500); no test coupled to the old string.
+
+### U14 — health probes
+As planned with one structural choice, recorded: the router mounts with
+`include_router(..., prefix="/health")` and routes `/live`, `/ready` — an include with no
+prefix would census as `/` in the root-surface test and destroy the allowlist's meaning; the
+allowlist gains `/health` (not the two leaf paths). `ready` strips a `debug` key defensively
+(G28) and encodes the body with `jsonable_encoder` so a probe body with datetimes cannot 500;
+a raising probe yields 503 with the exception TYPE only (the detail goes to the log). The
+`{api_prefix}/health` stub is kept (Dockerfile compatibility note in the plan's triage);
+HEALTHCHECK now probes `/health/live`.
+
+### U15 — automation run root span
+As planned. `execute_automation_run` wraps its body in `automation_run_span` (ExitStack of
+span + `logger.contextualize`); the containment path records the exception on the span and
+both paths stamp `automation.run.status`. Verified against the real `Automation` model
+(`kind` defaults to `chat`). The full automations lane (337) is unchanged by the wrapper.
+Executor "starting run" + containment lines and the three worker lifecycle lines are
+structured now; the executor's remaining f-string logs go to Future Improvements ("convert as
+the module is next touched by Stream L").
+
+### U16 — anonymous ingest skip paths
+As planned: `skip_exact` swaps the retired bare `/logging/public/ingest` for exactly the two
+OTLP sub-paths; the authenticated twins are asserted 401. `/health/live`/`/health/ready` are
+anonymous via the dispatch's outside-prefix early return plus the `/health` subtree skip — no
+auth.py addition needed for them. One additional pre-existing pin re-banked (spec §3.4 said it
+would be): `test_skip_path_matching.py`'s public list gains the two sub-paths, its
+never-public list gains the retired path and the authenticated twins.
+
+## Phase close — results (2026-09-05)
+- utils full suite (bundle env): **1076 passed, 0 failed**.
+- api `tests -m "not postgres"`: **1079 passed, 4 skipped, 1 deselected, 0 failed**. The four
+  skips are pre-existing/environmental: three live-data-sparsity skips in
+  `tests/smoke/automations/test_executor_real_adapter.py` (identical on the main checkout;
+  in a FULL-suite run their reason shifts to "live Postgres is unreachable" because an earlier
+  worker-entrypoint test closes the process-wide pool — pre-existing ordering artifact, file
+  alone matches baseline), and one `test_root_anchoring` dashboard-sibling skip now cured by a
+  `wt-obs-u/dashboard` symlink.
+- `-m postgres` pool test: **1 passed** (SELECT 1 → CLIENT span `db.system=postgresql`).
+- Layout/basename/depth guards green in both repos (inside the full suites).
+- Adversarial review: NOT run here — the session lead dispatches it (per the brief).
+
+Commits — utils `obs-utils`: `31f4a5e` U1, `31aafed` U2, `ee0c42f` U3, `3c81e4c` U4,
+`1ec6442` U5, `8052c39` U6, `14d0c41` U7, `9ec1aac` U8, `5b114a3` U9, `62b99ff` registry
+rework. api `obs-api`: `c16eec1` U1, `14516dd` U10, `c0dd255` U11, `398188c` U12, `081dbdf`
+U13, `4b4e955` U14, `96225b3` U15, `2a00a58` U16.
+
+Final uncommitted-edit ledger (pre-existing production files; reported, not committed):
+utils — `pyproject.toml`, `poetry.lock`, `.env.sample`, `utils/config.py`,
+`utils/logging_config.py`, `utils/observability/__init__.py`, `utils/observability/metrics.py`,
+`utils/observability/tracing.py`, **`utils/postgres_service.py`** (added: traced dict-cursor
+factory — not in the original ledger).
+api — `pyproject.toml`, `poetry.lock`, `flynapse_api/main.py`, `flynapse_api/config/config.py`,
+`flynapse_api/middleware/__init__.py`, `flynapse_api/middleware/logging.py`,
+`flynapse_api/middleware/auth.py`, `flynapse_api/automations/worker.py`,
+`flynapse_api/automations/executor.py`, `Dockerfile`. Deletions (uncommitted, reported):
+`flynapse_api/middleware/observability.py`, `flynapse_api/auth/metrics_scrape.py`,
+`tests/unit/auth/test_metrics_scrape_gate.py`.
+
+## Future Improvements (Stream U)
+- Postgres client spans from the service's dict cursors lack host attributes (`net.peer.name`)
+  at contrib 0.65b0 — the per-cursor traced factory's integration never sees the connection.
+  Elegant fix: pass `cursor_factory` at connect (one factory per pool) once every raw-cursor
+  consumer of the pool is audited for row-shape assumptions, or an upstream contrib fix.
+- `set_gauge` in the legacy shim stays an up-down counter (G19 semantics preserved) until
+  Stream L retires the one caller (`document_hub/operations.py`).
+- The executor's remaining f-string log lines (dozens) — convert as Stream L next touches it.
+- Root `LOG_LEVEL=DEBUG` floods botocore through the intercept; per-logger level caps.
+- SDK 1.44 deprecates its own `LoggingHandler` in favour of `-logging`'s (excluded by D10);
+  revisit at the next pin bump.
+- The `wt-obs-u` bundle recipe: sibling repos must be real directories of symlinked entries,
+  never directory symlinks (Poetry canonicalises and transitive `../utils` escapes the bundle).
