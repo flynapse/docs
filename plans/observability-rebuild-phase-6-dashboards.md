@@ -76,9 +76,9 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 **Files.** Create `deployment/otel/dashboards/CATALOGUE.md`.
 **Interfaces produced.** One section per view — exact name, uid, the operator question it answers, its signals (series/LogQL selectors/TraceQL/SQL sources from §2 of this plan, with per-panel dark markers), and per-backend query notes: `oss` = PromQL/LogQL/TraceQL/SQL as authored in T2/T3; `aws` = the CloudWatch translation (Logs Insights query text against the expected `resource.attributes.*` paths flagged "re-verify after B1b", Query Studio PromQL with `@resource.service.name` labels and dotted metric names, Transaction Search in place of TraceQL, exact-spend panels marked "Postgres — reachable only where the app DB is; not a CloudWatch surface"). Ends with the alarm translation table consumed by T12: each T5/T6/T7 alert → its CloudWatch expression intent and which gate (PromQL-alarm ruling, B1b, B1d) blocks it.
 **Steps.**
-- [ ] Write the catalogue covering exactly the six §9.2 views; cross-check every §9.2 sentence has a panel row and every §9.4 alert appears in the translation table.
-- [ ] Logging coverage: no scripts touched — n/a, recorded.
-- [ ] Commit `deployment/otel/dashboards/CATALOGUE.md` by pathspec.
+- [x] Write the catalogue covering exactly the six §9.2 views; cross-check every §9.2 sentence has a panel row and every §9.4 alert appears in the translation table.
+- [x] Logging coverage: no scripts touched — n/a, recorded.
+- [x] Commit `deployment/otel/dashboards/CATALOGUE.md` by pathspec.
 **Acceptance.** Catalogue names all six views with no view lacking signals or backend notes; the T2 guard test (next task) will pin JSON↔catalogue agreement.
 **Review triage.** "Catalogue duplicates the plan" → intended: the plan is process, the catalogue is the maintained artefact both dialects are edited against (spec §9.3 "the shared spec").
 
@@ -88,10 +88,10 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 **Interfaces.** Guard test module constants: `DASHBOARD_DIR`, `EXPECTED_UIDS = ("fn-service-overview", "fn-dependencies", "fn-llm-agents", "fn-agent-turn-explorer", "fn-frontend", "fn-platform-health")`, `ALLOWED_DATASOURCE_UIDS = ("prometheus", "loki", "tempo", "flynapse-postgres")`. Checks per JSON: parses; `uid`/`title` present, unique, uid in `EXPECTED_UIDS`; every panel's datasource uid allowed and declared in `datasources.yml`; every target has a non-empty `expr`/`rawSql`/TraceQL `query`; D6 dark-note lint (`agent_`/`gen_ai_`/`claude_code_` ⇒ "DARK until Stream L" in the panel description; `browser.` ⇒ Stream F note); every uid has a catalogue section and vice versa; refuses any legacy-board uid. Until T3 lands the remaining five files, the test asserts only over files present plus "at least `fn-service-overview` exists" (flipped to all-six in T3).
 **Service-overview panels** (all Prometheus, live at deploy; template variable `job` over `label_values` of `http_server_request_duration_seconds_count`): request rate by `job` (5m `rate` of the `_count` series summed by `job`); 5xx ratio by `job` (`http_response_status_code` matching 5xx over total, guarded against zero traffic); p50/p95/p99 (`histogram_quantile` over `_bucket` summed by `le`,`job`); top-10 slow routes table (p95 by `http_route`); 5xx by route (top-10 rate filtered 5xx, by `http_route`); in-flight (`http_server_active_requests` by `job`); auth rejection rate (`auth_rejections_total` rate by `job` — the authorization board's replacement signal).
 **Steps.**
-- [ ] Write the failing guard test; run (red: no directory, no JSON).
-- [ ] Add the provider + datasource edits and author `service-overview.json` (Grafana 13.2.1 schema; panels above; description strings name their series).
-- [ ] Run the guard test (green). Logging coverage: n/a, recorded.
-- [ ] Commit `tests/integration/otel/test_grafana_dashboards.py` and `grafana/provisioning/dashboards/flynapse/service-overview.json`; report the YAML/compose edits.
+- [x] Write the failing guard test; run (red: no directory, no JSON).
+- [x] Add the provider + datasource edits and author `service-overview.json` (Grafana 13.2.1 schema; panels above; description strings name their series).
+- [x] Run the guard test (green). Logging coverage: n/a, recorded.
+- [x] Commit `tests/integration/otel/test_grafana_dashboards.py` and `grafana/provisioning/dashboards/flynapse/service-overview.json`; report the YAML/compose edits.
 **Test command.** §1.4 standing command with `test_grafana_dashboards.py`.
 **Acceptance.** Guard green; `docker compose config` on each edited stack still parses (compose interpolation unbroken).
 **Review triage.** "Datasource secrets in YAML" → no: password is env-interpolated at Grafana boot, never committed. "Postgres datasource unhealthy in the standalone stack" → D2, accepted + documented.
@@ -106,10 +106,10 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 - `fn-frontend` — dark until Stream F cut-over: Web Vitals p75 by `route_pattern`×`metric` (LogQL `quantile_over_time` 0.75 unwrapping `value` over `service_name="dashboard"` records with `event_name="browser.web_vital"`); rating distribution (`count_over_time` by `rating`); browser errors by `error_kind` + top `fingerprint` table; route-change timings (p75 of unwrapped `change_ms`/`ready_ms` by `route_pattern_to`); browser-seen API latency (p95 `traces_spanmetrics_latency_bucket` for `service="dashboard"` client spans). LIVE at Phase 5: document opens from `product_events` (`event_name='document_opened'` daily count + top `document_id`×`document_kind`) on `flynapse-postgres`.
 - `fn-platform-health` — collector exporter failures/queue fill/receiver refusals and per-signal ingest rates from the `otelcol_*` series (live; exact spellings verified against a live `:8888` scrape during this task and pinned in the JSON); `agent_ledger_write_failures_total` (dark until L); worker heartbeat (seconds since the newest `target_info` sample for `job="flynapse/automation-worker"`, plus an absent-series stat); doc-hub processing and automations panels on `flynapse-postgres` (`automation_runs` failed/late over time split on `kind='document_hub_process'`; `document_hub_documents` `needs_attention` by `failure_code`); Loki/Tempo/Prometheus health from the new scrape jobs (`prometheus_tsdb_head_series`, Loki distributor ingest-bytes rate, Tempo ingester received-bytes rate — exact series confirmed from each `/metrics` at task time and named in the JSON).
 **Steps.**
-- [ ] Flip the guard test to require all six uids (run: red with one file).
-- [ ] Author the five JSONs; make the `tempo.yaml` + `prometheus.yml` edits; re-run the guard (green).
-- [ ] Boot the local `observe-docker-compose.yml` stack once and verify the two new scrape targets are up and the span-metrics dimension labels appear; record actual `otelcol_*`/Loki/Tempo series spellings in the JSON and the catalogue.
-- [ ] Logging coverage: n/a, recorded. Commit the five JSONs (pathspec); report edits.
+- [x] Flip the guard test to require all six uids (run: red with one file).
+- [x] Author the five JSONs; make the `tempo.yaml` + `prometheus.yml` edits; re-run the guard (green).
+- [x] Boot the local `observe-docker-compose.yml` stack once and verify the two new scrape targets are up and the span-metrics dimension labels appear; record actual `otelcol_*`/Loki/Tempo series spellings in the JSON and the catalogue.
+- [x] Logging coverage: n/a, recorded. Commit the five JSONs (pathspec); report edits.
 **Test command.** As T2.
 **Acceptance.** Guard green over six files; every §9.2 bullet maps to a panel (checked against the catalogue); dark-note lint passes.
 **Review triage.** "Panels on series that don't exist" → D6: deliberate, spec-ordered, mechanically labelled. "`server_address` cardinality" → bounded host set (RDS/Redis/Weaviate/S3/Bedrock endpoints), reviewed at scrape.
@@ -119,8 +119,8 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 **Files.** Create `tests/integration/otel/test_grafana_provisioning_smoke.py` and `deployment/otel/smoke/docker-compose.grafana-smoke.yml`.
 **Interfaces.** Marker `compose_stack`, env gate `OTEL_COMPOSE_SMOKE=1` (registered pattern). The override runs ONLY the `grafana` service from `observe-docker-compose.yml` (`--no-deps`), project name `flynapse-grafana-smoke`, tmpfs data dir, loopback remap of 3000 to a smoke port, dummy `GRAFANA_ADMIN_PASSWORD`/`LOKI_TENANT_ID`/`POSTGRES_READONLY_PASSWORD`. The test polls `/api/health` with a bounded loop (conftest pattern), then asserts via basic-auth API: `/api/dashboards/uid/<uid>` returns each of the six with its expected title, and `/api/datasources` lists the four uids. Teardown always `down -v`.
 **Steps.**
-- [ ] Write the failing test (red while it asserts against a stack not yet running / before provisioning fix-ups); implement the override; run with `OTEL_COMPOSE_SMOKE=1` (green).
-- [ ] Logging coverage: n/a (test-only). Commit both files by pathspec.
+- [x] Write the failing test (red while it asserts against a stack not yet running / before provisioning fix-ups); implement the override; run with `OTEL_COMPOSE_SMOKE=1` (green).
+- [x] Logging coverage: n/a (test-only). Commit both files by pathspec.
 **Test command.** §5 Grafana smoke line.
 **Acceptance.** Six dashboards load via the API from a cold container; datasource provisioning parses with env interpolation.
 **Review triage.** "Smoke doesn't query panels" → datasource-backed query smoke needs the full stack + emitters; the compose smoke of A8 covers pipeline flow; panel-query verification is the phase-close manual step in the runbook.
@@ -267,6 +267,60 @@ Expected: `deployment/observability-local/{observe-docker-compose.yml,prometheus
 4. **PromQL metric-widget schema probe:** export one Query Studio PromQL widget's JSON from the CloudWatch console so T10's bodies can be upgraded from text-widget pointers to live widgets (pairs with owner-owed B1b/B1d).
 5. **Stream L hand-off to ratify:** doc-hub processing failures and automation late/failed runs need counters at their write sites (naming via R.2) before their §9.4 alerts can be authored portably.
 
-## 11. Lessons
+## 11. Implementation notes
+
+### T4 (commit `b704c68c`)
+Override boots ONLY grafana (project `flynapse-grafana-smoke`, loopback 13000, tmpfs
+`/var/lib/grafana` mode 0777 for uid 472, `depends_on` cleared, project-scoped network — the A8
+override's posture). The legacy `/var/lib/grafana/dashboards` mount is deliberately absent from
+the override (the legacy provider logs a missing path and carries on; T9 removes it). Smoke went
+GREEN on the first full boot (2 passed, 53s) — no provisioning fix-ups were needed, so the
+planned red phase never materialised; the test asserts titles read from the provisioned JSONs
+(rename-following) and the four datasource uids (proving env interpolation parsed cold).
+Logging coverage: n/a.
+
+### T3 (commit `0e0c0666`)
+Five views authored; guard flipped to all-six (red with one file first, then 9 passed). The boot
+probe ran against `deployment/docker-compose.yml` + the A8 smoke override rather than the bare
+observe stack — the observe stack's host bind-mount data dirs are created root-owned and all three
+non-root backends crash-loop on `permission denied` (pre-existing property; the smoke override's
+tmpfs exists for exactly this). Probe findings, all pinned in the JSON and catalogue:
+- All four scrape targets up (`prometheus`, `otel-collector`, `loki`, `tempo`).
+- A client span with `db.system`/`server.address` produced `traces_spanmetrics_calls_total{db_system="postgresql", server_address="postgres", span_kind="SPAN_KIND_CLIENT"}` — the T3 `tempo.yaml` dimensions work.
+- **DEVIATION from §2.1 ground truth:** collector 0.160.0's internal Prometheus reader exports
+  self-telemetry WITHOUT the `_total` suffix: `otelcol_receiver_accepted_{spans,metric_points,log_records}`,
+  `otelcol_receiver_refused_*`, `otelcol_receiver_failed_*`, `otelcol_exporter_sent_*` — all
+  verified live. `otelcol_exporter_send_failed_*` was absent (lazily created on first failure);
+  its suffixless spelling is taken from the verified family pattern, noted in the panel
+  description. T5's rules use the suffixless spellings.
+- Loki ingest: `loki_distributor_bytes_received_total` + `loki_distributor_lines_received_total`
+  (lazily created — appeared only after the probe pushed a log). Tempo ingest:
+  `tempo_distributor_bytes_received_total` + `tempo_distributor_spans_received_total`.
+  `prometheus_tsdb_head_series` confirmed. `target_info{job="flynapse/api"}` shape confirmed.
+- `traces_service_graph_request_failed_total` (named in §2.1) was NOT present on the live probe
+  (also lazily created); no panel uses it.
+Test edit in the same commit: `_target_query_text` treats a Tempo `queryType: serviceMap` target
+as non-empty (its filter is `serviceMapQuery`). Logging coverage: n/a. Reported edits:
+`tempo.yaml` (span_metrics dimensions), `prometheus.yml` (loki/tempo scrape jobs).
+
+### T2 (commit `661a0dea`)
+Guard test red first (3 failures: no dir, undeclared datasource uids, no provider), then green (8
+passed) after the D1 provider block, the Tempo `uid: tempo` + `flynapse-postgres` datasource, the
+three stacks' env passthrough and `service-overview.json` (7 panels per plan). The all-six-uids
+check is deliberately absent until T3, per the plan. Deviation of note: the POC stack has NO
+postgres service (the api uses an external DB) — the compose comment there says the box env must
+set `POSTGRES_DATASOURCE_HOST`; same accepted-unhealthy posture as the standalone stack. The
+pytest command additionally needs `POSTGRES_DB=copilot_mro_test` (repo-wide db_guard, pre-dating
+this phase). All three stacks re-parse under `docker compose config`. Logging coverage: n/a.
+Reported edits: `dashboards.yml`, `datasources.yml`, three compose files.
+
+### T1 (commit `1ec25b9c`)
+Catalogue written with the six views, per-panel dark markers, oss/aws query notes and the alarm
+translation table (11 §9.4 items + a receiver-refusals extra row + the B1d SLO row). Alertmanager
+latest stable re-verified at task time: still `v0.34.0` (GitHub release 2026-08-16, prerelease
+false; Docker Hub tag present) — the plan's pin stands. No deviations. Logging coverage: n/a (no
+scripts).
+
+## 12. Lessons
 
 _(plan-scoped; append after any owner correction: what was tried, what was corrected, the rule for next time)_
