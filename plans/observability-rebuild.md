@@ -499,6 +499,30 @@ readers, `prometheus-client` all gone from api; the copilot-mro half stays with 
 Local dev without a collector: `OTEL_SDK_DISABLED=true` (`OTEL_ENABLED` is no longer read
 anywhere in utils/api).
 
+**2026-09-05 — Phase 6 (Stream D, dashboards/alerts/runbooks) COMPLETE, both worktrees.**
+Detail plan `observability-rebuild-phase-6-dashboards.md` (per-task notes in its §11). obs-infra
+`1ec25b9c..394e0d89` (9 commits, T1–T9), iac-obs `0acbf10`+`44fc0db` (T10–T11); T12 verification
+clean (no alarm resources anywhere). Full otel lane **70 passed** with both compose smokes and
+docker-gated promtool/amtool; `terraform validate` green. Landed: the six-view catalogue + alarm
+translation table (`deployment/otel/dashboards/CATALOGUE.md`); six provisioned Grafana views
+(`fn-*`, folder `Flynapse`, legacy provider + eight boards + `test-observability.py` deleted in
+the working tree); 10 Prometheus alerts + 5 Loki-ruler alerts (Alertmanager v0.34.0, loopback,
+`_file` placeholder secrets per ruling 19); `validate-rules.sh` + `rules-validate` workflow;
+three runbooks with guard-enforced per-alert anchors; six CloudWatch dashboard bodies + the
+SNS/email/Slack-forwarder seam. **Learnings for other streams:** (1) collector 0.160.0's `:8888`
+internal telemetry exports WITHOUT `_total` (`otelcol_receiver_accepted_spans`,
+`otelcol_exporter_sent_spans`, …) — verified live; Stream L must not assume `_total` on otelcol
+series, and the send_failed family is lazily created (absent until the first failure). (2) The
+error outcome in the `agent_turn_calls_total` rules is assumed spelled `agent_outcome="error"` —
+Stream L must confirm or the AgentTurnFailureRatioHigh expression needs a one-line retune.
+(3) Loki ingest counters (`loki_distributor_bytes_received_total`) are also lazily created.
+(4) The observe stack's host bind data dirs are root-owned on a fresh checkout and crash-loop
+all non-root backends — the tmpfs smoke overrides are the reliable boot path. Deviation from
+master §12: the session brief forbade subagents, so the independent adversarial review of phase
+6 is still OWED (owner or a fresh agent; brief it with the detail plan + both diffs). Owner
+steps queued in the detail plan §10: alarm dialect ruling, threshold review, real alert targets,
+PromQL widget console export, Stream L counter hand-off.
+
 ## 16. Future Improvements
 _(empty)_
 

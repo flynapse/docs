@@ -143,10 +143,10 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 | `TenantDailySpendHigh` (agent, DARK-L) | 24h increase of `agent_model_cost_usd_total` summed by `tenant_id` | >$50 (default — owner ruling pending) for 30m | warning |
 **Guard test** checks: YAML parses into groups/rules; every alert carries `severity` ∈ {`warning`,`critical`}, `summary`, `description`, `runbook` whose file exists under `repo_root` (anchor check lands with T8 and is asserted from T8 on); the `prometheus.yml` glob covers exactly these files; each of the three stacks mounts the directory; D6 dark-note lint on `agent_*` expressions; env-gated (`OTEL_RULES_CHECK=1` + docker) subprocess run of `promtool check rules` via `prom/prometheus:v3.14.0`.
 **Steps.**
-- [ ] Write the failing guard test; run (red).
-- [ ] Author the three rule files, `validate-rules.sh` (set-strict shell; echoes one line per file checked and a fail line naming the file — that is its logging coverage), the workflow (runs the script on PRs touching `deployment/observability-local/rules/**` or `alertmanager.yml`), and the `prometheus.yml`/compose edits.
-- [ ] Run the guard; run `validate-rules.sh` (promtool green). Logging coverage checkbox: `validate-rules.sh` reviewed — [ ].
-- [ ] Commit the three rule files + script + workflow + test by pathspec; report edits.
+- [x] Write the failing guard test; run (red).
+- [x] Author the three rule files, `validate-rules.sh` (set-strict shell; echoes one line per file checked and a fail line naming the file — that is its logging coverage), the workflow (runs the script on PRs touching `deployment/observability-local/rules/**` or `alertmanager.yml`), and the `prometheus.yml`/compose edits.
+- [x] Run the guard; run `validate-rules.sh` (promtool green). Logging coverage checkbox: `validate-rules.sh` reviewed — [x].
+- [x] Commit the three rule files + script + workflow + test by pathspec; report edits.
 **Test command.** §1.4 with `test_alert_rules_layout.py`; plus the §5 rules-check line.
 **Acceptance.** `promtool check rules` exits 0 on all three files; guard green; a booted local stack shows the rules on the Prometheus rules page.
 **Review triage.** "Doc-hub failures and automation late/failed-run alerts missing" → deliberate: no metric emitter exists (Postgres-only signals today); Loki proxy in T7, real counters are a Stream L / R.2 hand-off recorded in Open questions — not authorable here without inventing metric names.
@@ -157,10 +157,10 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 **Interfaces.** `alertmanager.yml`: root route → receiver `flynapse-obs`, `group_by` alertname+severity, child route matching `severity="critical"` with a shorter `repeat_interval`; receiver `flynapse-obs` with `slack_configs` (`api_url_file` `/etc/alertmanager/secrets/slack_webhook_url`, `send_resolved` true) and `email_configs` (`to` placeholder `ops-placeholder@flynapse.ai`, smarthost placeholder `smtp.placeholder.invalid:587`, `auth_password_file` `/etc/alertmanager/secrets/smtp_password`); no inhibit rules.
 **Guard test:** config YAML shape (route/receivers agree with what T5 rules target), `_file` fields only (asserts no inline `api_url`/`auth_password` keys anywhere), placeholder files exist and contain no `hooks.slack.com/services/T`-shaped real webhook, all three stacks pin the image to the `VERSIONS.md` value and mount the secrets, port loopback; env-gated `amtool check-config` via the pinned image.
 **Steps.**
-- [ ] Write the failing guard test; run (red).
-- [ ] Verify the current latest stable Alertmanager release; pin it (update this plan's implementation notes if it moved past `v0.34.0`); author config + placeholders; wire the three stacks; add the `VERSIONS.md` row.
-- [ ] Run guard + `validate-rules.sh` (now also amtool). Boot the local stack: Prometheus `/api/v1/alertmanagers` shows the target; fire a synthetic alert (amtool against loopback 9093) and see it in the Alertmanager UI. Logging coverage: n/a beyond the script already covered.
-- [ ] Commit config, placeholders, test file, and the two test edits by pathspec; report compose/`VERSIONS.md` edits.
+- [x] Write the failing guard test; run (red).
+- [x] Verify the current latest stable Alertmanager release; pin it (update this plan's implementation notes if it moved past `v0.34.0`); author config + placeholders; wire the three stacks; add the `VERSIONS.md` row.
+- [x] Run guard + `validate-rules.sh` (now also amtool). Boot the local stack: Prometheus `/api/v1/alertmanagers` shows the target; fire a synthetic alert (amtool against loopback 9093) and see it in the Alertmanager UI. Logging coverage: n/a beyond the script already covered.
+- [x] Commit config, placeholders, test file, and the two test edits by pathspec; report compose/`VERSIONS.md` edits.
 **Test command.** §1.4 with `test_alertmanager_config.py`.
 **Acceptance.** `amtool check-config` exits 0; synthetic alert visible; nothing blocks on real targets (ruling 19).
 **Review triage.** "Placeholder email will bounce" → intended until rollout; the runbook rollout checklist is the owner's cue. "Why not env expansion" → Alertmanager has none; `_file` fields are its supported secret path.
@@ -177,9 +177,9 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 | `WebVitalClsP75Poor` | same for `CLS` | >0.25 for 30m | warning |
 | `AutomationRunErrors` | count of worker error-severity log records (`service_name` of the worker) over 15m — the authorable proxy for failed runs until Stream L emits a counter | >0 for 15m | warning |
 **Steps.**
-- [ ] Extend the guard (red), author the rule file + ruler/mount edits, re-run (green).
-- [ ] Boot the local stack; assert the ruler loaded the group via Loki's Prometheus-compatible rules API (bounded poll).
-- [ ] Logging coverage: n/a. Commit the rule file + test edit by pathspec; report edits.
+- [x] Extend the guard (red), author the rule file + ruler/mount edits, re-run (green).
+- [x] Boot the local stack; assert the ruler loaded the group via Loki's Prometheus-compatible rules API (bounded poll).
+- [x] Logging coverage: n/a. Commit the rule file + test edit by pathspec; report edits.
 **Test command.** As T5.
 **Acceptance.** Ruler lists the group; no Loki boot error; guard green.
 **Review triage.** "Log-derived alerts are non-portable" (research 04 §7 rule) → acknowledged: browser signals exist only as logs by design (spec §7.4); the CloudWatch translation via Logs Insights/metric filters is catalogued and gated on B1b; `AutomationRunErrors` is explicitly transitional.
@@ -189,8 +189,8 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 **Files.** Create `docs/runbooks/observability/{oss-profile.md,aws-profile.md,alerts.md}`. Test edit (committed): `test_alert_rules_layout.py` gains the anchor check — every alert name across `rules/**` has a matching heading in `alerts.md`.
 **Content.** `oss-profile.md`: switching profile (base+overlay flags, the README's port contract), rotating secrets (`GRAFANA_ADMIN_PASSWORD`, `LOKI_TENANT_ID` scope, `POSTGRES_READONLY_PASSWORD`, Phoenix keys), reading a trace end-to-end (Grafana → Tempo → span attributes), answering "what did tenant X spend" (the exact-spend SQL over `llm_usage` with the `cost_complete` and §6.6 lang/data-discovery caveats), and the **alert-target rollout checklist** (set the two `ALERTMANAGER_*_FILE` env vars, replace the email/SMTP placeholders, re-run `validate-rules.sh`). `aws-profile.md`: the same operator questions on CloudWatch surfaces (Logs Insights, Query Studio PromQL, Transaction Search), the owner-owed steps B1b/B1d/Transaction-Search toggle with their exact commands from the phase-0-2 plan §11, SSM webhook parameter for T11, and the PromQL-alarm gate status. `alerts.md`: one section per alert (all fifteen from T5/T6/T7): meaning, first checks, which dashboard panel to open, known causes, escalation; DARK alerts state their arming condition.
 **Steps.**
-- [ ] Extend the guard with the anchor check (red — no runbooks); write the three files; re-run (green).
-- [ ] Logging coverage: n/a. Commit the three runbooks + test edit by pathspec.
+- [x] Extend the guard with the anchor check (red — no runbooks); write the three files; re-run (green).
+- [x] Logging coverage: n/a. Commit the three runbooks + test edit by pathspec.
 **Test command.** As T5.
 **Acceptance.** Anchor check green; every §9.4-derived alert has a stub; no "TBD" text (guard greps for it).
 **Review triage.** "Stubs are thin" → stubs are the 6.5 deliverable; operational depth accrues with incidents.
@@ -199,9 +199,9 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 
 **Files.** Delete (working tree, reported — not committed per D8): the eight JSONs under `grafana/dashboards/`, `test-observability.py`. Modify (reported): `dashboards.yml` (drop the legacy provider), the three stacks' Grafana service (drop the `grafana/dashboards` mount), `observability-local/README.md` (already-dirty file: document the new layout).
 **Steps.**
-- [ ] Grep the repo for references to the deleted paths (`rg -n "test-observability|grafana/dashboards"`) — the A-stream guards iterate compose files, not dashboards; fix any hit found (expected: README only).
-- [ ] Delete + edit; re-run the whole otel lane (T2 guard must not regress; smoke re-run proves Grafana boots with only the `flynapse` provider).
-- [ ] Logging coverage: n/a. Nothing to commit; record every deletion in the uncommitted-edit ledger.
+- [x] Grep the repo for references to the deleted paths (`rg -n "test-observability|grafana/dashboards"`) — the A-stream guards iterate compose files, not dashboards; fix any hit found (expected: README only).
+- [x] Delete + edit; re-run the whole otel lane (T2 guard must not regress; smoke re-run proves Grafana boots with only the `flynapse` provider).
+- [x] Logging coverage: n/a. Nothing to commit; record every deletion in the uncommitted-edit ledger.
 **Test command.** §1.4 with the whole `tests/integration/otel/` directory.
 **Acceptance.** Lane green; smoke green; Grafana shows only the `Flynapse` folder's six boards.
 **Review triage.** "Deletions uncommitted feels unfinished" → D8/brief rule: pre-existing files are the owner's to commit; the ledger makes it one `git add` for him.
@@ -211,8 +211,8 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 **Files.** Create `cloudwatch_dashboards.tf` + the six `dashboards/*.json.tftpl` templates (variables: region, the `aws_cloudwatch_log_group` names already defined in `iac/cloudwatch.tf`, referenced by resource — no hard-coded group strings).
 **Interfaces.** Six `aws_cloudwatch_dashboard` resources named `flynapse-<view>`. Per D7 each body carries: Logs Insights `log` widgets (service RED from the OTLP log groups against expected `resource.attributes.service.name` paths, browser/worker error counts, marked re-verify-after-B1b in a comment field of the query text) and `text` widgets holding the canonical Query Studio PromQL (dotted names + `@resource.` labels, from the T1 catalogue) and Transaction Search / Application Signals console pointers. Every variable used by a template is declared in `cloudwatch_dashboards.tf` itself (no `variables.tf` edit). Note in the resource comments: $3/dashboard-month.
 **Steps.**
-- [ ] Author templates + resources; run `terraform fmt -check -recursive`, `terraform init -backend=false`, `terraform validate` (red → green as usual; validate is the test here — there is no pytest in iac).
-- [ ] Logging coverage: n/a (no runtime scripts). Commit `cloudwatch_dashboards.tf` + `dashboards/` by pathspec.
+- [x] Author templates + resources; run `terraform fmt -check -recursive`, `terraform init -backend=false`, `terraform validate` (red → green as usual; validate is the test here — there is no pytest in iac).
+- [x] Logging coverage: n/a (no runtime scripts). Commit `cloudwatch_dashboards.tf` + `dashboards/` by pathspec.
 **Acceptance.** `terraform validate` exits 0; each template renders (validate exercises `templatefile`); six views mirror the T1 catalogue's aws column.
 **Review triage.** "No PromQL metric widgets" → D7: widget schema undocumented; gated on the one-console-export probe (Open questions), not guessed.
 
@@ -221,9 +221,9 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 **Files.** Create `alerting.tf`, `lambda_src/sns_to_slack.py`.
 **Interfaces.** `aws_sns_topic` `observability_alerts`; `aws_sns_topic_subscription` email per entry of `var.alert_email_addresses` (list, default empty — placeholder-safe, ruling 19); a Python 3.12 `aws_lambda_function` `sns_to_slack` (archive_file of `lambda_src/`, its own log group with retention per the `cloudwatch.tf` pattern, role limited to logs + `ssm:GetParameter` on the webhook parameter) subscribed to the topic, created only when `var.alert_slack_webhook_ssm_parameter` (default empty) is set; `aws_lambda_permission` for SNS. The handler reads the webhook URL from SSM once per cold start, posts a compact Slack message (alarm name, state, reason, region link), and logs one structured line per lifecycle boundary (received/posted/failed with alarm name and status code, never the full SNS payload body) — that is this task's logging-coverage item.
 **Steps.**
-- [ ] Author both files; `terraform fmt`/`init -backend=false`/`validate` green; a local `python3 -m py_compile` of the handler.
-- [ ] Logging coverage checkbox for `sns_to_slack.py`: [ ] verified per §11a (bound context, no silent except, no payload dump).
-- [ ] Commit `alerting.tf` + `lambda_src/sns_to_slack.py` by pathspec; report the `README.md` owner-step addition (create the SSM SecureString, confirm email subscriptions).
+- [x] Author both files; `terraform fmt`/`init -backend=false`/`validate` green; a local `python3 -m py_compile` of the handler.
+- [x] Logging coverage checkbox for `sns_to_slack.py`: [x] verified per §11a (bound context, no silent except, no payload dump).
+- [x] Commit `alerting.tf` + `lambda_src/sns_to_slack.py` by pathspec; report the `README.md` owner-step addition (create the SSM SecureString, confirm email subscriptions).
 **Acceptance.** Validate green; with both vars at defaults the plan surface adds only the topic (checked by reading the graph, not by running `plan` — owner step).
 **Review triage.** "Alarms → topic wiring absent" → nothing can target the topic until the alarm dialect is ruled (T12); the topic ships first so the ruling lands into a ready seam.
 
@@ -231,23 +231,38 @@ Browser records ride `logs/browser` with gateway-verified `tenant_id` / `enduser
 
 **Files.** None in Terraform. The T1 catalogue's alarm translation table + `aws-profile.md` (T8) carry, per §9.4 alert: the CloudWatch expression intent, and which gate blocks authoring — PromQL alarms need an owner ruling (raise `hashicorp/aws` past 5.100.0, add `awscc`, or defer; B1c evidence in the phase-0-2 plan §11), Logs-Insights-derived alarms need B1b's stored field paths, SLO objects need B1d.
 **Steps.**
-- [ ] Verify the table covers all §9.4 alerts and names each gate; record the three-way ruling request in Open questions.
+- [x] Verify the table covers all §9.4 alerts and names each gate; record the three-way ruling request in Open questions.
 **Acceptance.** No invented dialect anywhere in `iac-obs`; grep for `aws_cloudwatch_metric_alarm` returns nothing new.
 **Review triage.** "Phase 6 ships without aws alerts" → correct and deliberate: B1c ruled the provider can't express them; the ruling is the owner's blast-radius call (phase-0-2 plan, same conclusion).
 
 ### T13 — Phase close
 
-- [ ] Full lane: §1.4 command over `tests/integration/otel/` (plus `OTEL_COMPOSE_SMOKE=1` smokes and `OTEL_RULES_CHECK=1`); `terraform validate` in `iac-obs`.
-- [ ] Adversarial review subagent per master §12, briefed with this plan + both diffs; triage findings (fix now vs master §16 Future Improvements — candidates already known: node-exporter/disk panels, Grafana unified alerting as a second lane, per-tenant budget series).
-- [ ] Implementation notes + learnings into master §15; uncommitted-edit ledger finalised below; owner review before any merge.
+- [x] Full lane: §1.4 command over `tests/integration/otel/` (plus `OTEL_COMPOSE_SMOKE=1` smokes and `OTEL_RULES_CHECK=1`); `terraform validate` in `iac-obs`. **70 passed** (92s, both smokes booted real containers); validate green; all six tftpl bodies JSON-parse after variable substitution.
+- [ ] Adversarial review subagent per master §12 — **NOT RUN: the session brief forbids this implementer from spawning subagents.** Owed to the owner / a fresh agent; brief it with this plan + `git -C copilot-mro-obs-infra diff a9daa317..394e0d89` and the uncommitted working-tree diff, plus the two iac-obs commits. A self-review pass ran instead (JSON parse of all bodies, full lane, boot checks per task) — it is not a substitute.
+- [x] Implementation notes + learnings into master §15; uncommitted-edit ledger finalised below; owner review before any merge.
 
 ## 7. Acceptance for Phase 6 (master §10)
 
 Six provisioned dashboards load from a cold Grafana (smoke-proven), each panel naming a real or explicitly-dark source; `promtool check rules` and `amtool check-config` exit 0; the Loki ruler loads the browser rules; Alertmanager runs loopback-only with placeholder Slack/email targets; runbook stubs exist for every alert (guard-enforced anchors); legacy boards and `test-observability.py` are gone from the working tree; `iac-obs` validates with six dashboard bodies + the SNS/Slack/email seam; nothing was committed outside created files + test edits.
 
-## 8. Uncommitted-edit ledger (finalised at T13)
+## 8. Uncommitted-edit ledger (FINAL, 2026-09-05 — everything below sits in the working tree on top of Stream I's own uncommitted edits, which are untouched)
 
-Expected: `deployment/observability-local/{observe-docker-compose.yml,prometheus.yml,loki-config.yaml,tempo.yaml,README.md}`, `deployment/{docker-compose.yml,poc/docker-compose.yml}`, `grafana/provisioning/dashboards/dashboards.yml`, `grafana/provisioning/datasources/datasources.yml`, `deployment/otel/VERSIONS.md`, eight legacy dashboard JSON deletions, `test-observability.py` deletion; iac-obs: `README.md`.
+**copilot-mro-obs-infra, phase-6 edits to pre-existing files:**
+- `deployment/observability-local/observe-docker-compose.yml` — Grafana Postgres env passthrough; alertmanager service; prometheus + loki rules mounts; legacy dashboards mount dropped
+- `deployment/docker-compose.yml` — same four changes, `./observability-local/` paths
+- `deployment/poc/docker-compose.yml` — same four changes, `../observability-local/` paths (comment notes the POC has no postgres service)
+- `deployment/observability-local/prometheus.yml` — `rule_files` glob + `alerting.alertmanagers`; `loki`/`tempo` scrape jobs
+- `deployment/observability-local/loki-config.yaml` — D4 ruler block (`rule_path: /loki/rules-temp`)
+- `deployment/observability-local/tempo.yaml` — span-metrics dimensions (`db.system`, `peer.service`, `server.address`, `rpc.service`)
+- `deployment/observability-local/grafana/provisioning/dashboards/dashboards.yml` — flynapse provider added (T2), legacy provider removed (T9)
+- `deployment/observability-local/grafana/provisioning/datasources/datasources.yml` — Tempo `uid: tempo`; `flynapse-postgres` datasource
+- `deployment/observability-local/README.md` — new-layout documentation (already dirty from Stream I)
+- `deployment/otel/VERSIONS.md` — `prom/alertmanager v0.34.0` row + changelog line
+- **Deletions:** the eight `grafana/dashboards/*-dashboard.json` files, `deployment/observability-local/test-observability.py`
+
+**iac-obs:** `README.md` — "Phase 6 — dashboards and alert routing (owner steps)" section (already dirty from Stream I).
+
+Stream I's inherited uncommitted edits (both worktrees) verified untouched: `deployment/demo/docker-compose.yml`, `otel-collector-config.yaml` deletion, and the iac `apprunner.tf`/`ec2.tf`/`lambda.tf`/`variables.tf`/`*_ec2_setup.sh` diffs are byte-identical to the inherited baseline.
 
 ## 9. Review triage (phase-level)
 
@@ -268,6 +283,121 @@ Expected: `deployment/observability-local/{observe-docker-compose.yml,prometheus
 5. **Stream L hand-off to ratify:** doc-hub processing failures and automation late/failed runs need counters at their write sites (naming via R.2) before their §9.4 alerts can be authored portably.
 
 ## 11. Implementation notes
+
+### T12 (no files — verification only)
+The catalogue's alarm translation table covers every §9.4 item: API 5xx / p95 / turn-failure /
+unpriced / tenant-spend / ledger-failures / collector exporter+queue (+ a receiver-refusals extra
+row) / doc-hub processing failures (no-emitter row) / automation late-failed (proxy + counter
+gate) / browser errors / three Web Vitals rows, plus the B1d SLO row — each naming its gate
+(PromQL-alarm ruling / B1b / B1d / No emitter). `rg "aws_cloudwatch_metric_alarm|aws_applicationsignals"`
+over `iac-obs/*.tf` returns nothing. The three-way ruling request was already §10.1 from
+planning; nothing new to add. `aws-profile.md` (T8) carries the gate status prose.
+
+### T11 (iac-obs commit `44fc0db`)
+Both files authored; fmt/`init -backend=false`/validate green (`hashicorp/archive` v2.8.0
+resolved implicitly at init — no `main.tf` edit needed; the lock file is gitignored) and
+`py_compile` clean. Both variables declared in `alerting.tf` itself. Graph reading with defaults:
+every Slack-path resource shares the one `count` gate, the email subscription iterates the empty
+list → only `aws_sns_topic.observability_alerts` materialises, as the acceptance requires. The
+role is hand-rolled least-privilege (logs:CreateLogStream/PutLogEvents on the pre-created group +
+`ssm:GetParameter` on the one parameter — deliberately NOT the repo's shared `lambda_exec` role,
+which carries S3FullAccess). Logging coverage VERIFIED for `sns_to_slack.py`: structured JSON
+lines at received/webhook_loaded/posted/failed with alarm name + status, exceptions re-raised
+after logging (SNS retries apply), reason truncated to 500 chars, webhook URL and full payload
+never logged. Reported edit: `README.md` phase-6 owner-step section.
+
+### T13 (phase close)
+Full lane 70 passed (both compose smokes + promtool/amtool env-gated checks); `terraform
+validate` green; all six CloudWatch bodies JSON-parse after variable substitution (T13
+self-check). Dark-panel census — service-overview 0/7, dependencies 0/5, llm-agents 10/12
+(the two Postgres exact-spend panels are live), agent-turn-explorer 3/3, frontend 6/8 (the two
+product_events panels are live), platform-health 1/11; dark rules 4/10 Prometheus + 4/5 Loki
+(AutomationRunErrors is a transitional proxy, not dark). Master §15 entry written. DEVIATION:
+the master §12 adversarial-review subagent could not be spawned (session brief forbids
+subagents) — recorded as owed in T13's checkbox; the known Future-Improvement candidates
+(node-exporter/disk panels, Grafana unified alerting second lane, per-tenant budget series)
+stand untriaged for that review. `product_events`/`automation_runs.late_run|queue_seconds`
+columns could not be re-verified in this worktree (they land with Stream P/the automations
+substrate in `core`) — used exactly as §2.3 contracts them; `automation_runs` core columns and
+`llm_usage`/`llm_model_calls`/`document_hub_documents` were re-verified from table definitions.
+
+### T10 (iac-obs commit `0acbf10`)
+Six bodies authored per the catalogue's aws column; `terraform fmt -check` clean on the new
+file, `init -backend=false` + `validate` green (validate renders all six `templatefile` calls).
+Log groups by resource (`aws_cloudwatch_log_group.otel` / `.apprunner_application`); no new
+input variables were needed (`var.aws_region` pre-exists), so nothing beyond
+`cloudwatch_dashboards.tf` declares anything. Every Logs Insights query carries the
+`# RE-VERIFY after probe B1b` flag inline. One deliberate D7 extension, recorded: the
+Bedrock-throttle panel is a CLASSIC `metric` widget on the native `AWS/Bedrock` namespace —
+classic metric widgets have a documented stable schema; only the PromQL metric-widget schema is
+unprobed (open question 4), and the T1 catalogue already committed this panel to the classic
+form. Logging coverage: n/a.
+
+### T9 (commit `394e0d89` — test edit only; deletions uncommitted per D8)
+Grep found references only in the files T9 itself edits (three compose mounts, the legacy
+provider) plus a comment in the T4 smoke override (refreshed). Eight legacy JSONs +
+`test-observability.py` deleted in the working tree; legacy provider block and the three
+`grafana/dashboards` mounts dropped; README rewritten for the new layout (services list gains
+Alertmanager, config-file list gains the rules/alertmanager/CATALOGUE pieces, port list gains
+9093). One regression the lane re-run caught, fixed as a committed test edit: the A-stream guard
+`test_prometheus_scrapes_self_and_collector_telemetry_only` pinned the scrape set to exactly
+self+collector, which T3's loki/tempo jobs legitimately extend — renamed to
+`test_prometheus_scrape_set_is_the_observability_plane_only` with the four-target set (still a
+closed set, so a stray app-scrape still fails). Lane 61 passed / 2 skipped; Grafana smoke 2
+passed against the single-provider layout. Logging coverage: n/a.
+
+### T8 (commit `3b9e1069`)
+Anchor + no-TBD checks red first (2 failed), then 11 passed. All fifteen alerts have stubs
+(meaning / first checks / dashboard panel / known causes / escalation; DARK alerts name their
+arming condition; `AutomationRunErrors` documented as the transitional proxy with its Stream L /
+R.2 replacement). `oss-profile.md` carries the rollout checklist with the two
+`ALERTMANAGER_*_FILE` env vars and the amtool re-check; `aws-profile.md` carries the owner-owed
+B1b/B1d/Transaction-Search/SSM steps with the exact commands (cross-checked against the
+iac-obs README's Observability section) and the B1c gate status. Logging coverage: n/a.
+
+### T7 (commit `f12d3c0b`)
+Guard extended (4 new tests red first), then 9 passed. Rule file authored with the five alerts;
+`loki-config.yaml` gained the D4 ruler block with `rule_path: /loki/rules-temp` (the ruler's
+WRITABLE scratch dir — the guard asserts it differs from the read-only mount, a detail D4 left
+implicit); three stacks mount `rules/loki` at `/loki/rules:ro`. Boot check: Loki 3.7.7 came up
+clean and `/prometheus/api/v1/rules` (with `X-Scope-OrgID: flynapse`) listed `flynapse-browser`
+with all five alerts. Two shading decisions recorded: `AutomationRunErrors` carries a
+TRANSITIONAL-proxy description, not a Stream F dark note (worker logs are live at deploy; only
+the four `browser.*` rules are DARK-F — the T7 table's "all DARK" header over-generalised), and
+its severity filter matches OTLP structured metadata `severity_text` case-insensitively.
+Logging coverage: n/a. Reported edits: `loki-config.yaml`, three compose stacks (loki rules
+mount).
+
+### T6 (commit `bee5fbbd`)
+Pin re-verified at task time: `v0.34.0` is STILL the latest stable (GitHub latest release,
+2026-08-16, prerelease false; Docker Hub tag pulled by the amtool run) — the plan's value stands.
+Guard red (4 failed) → 5 passed with `OTEL_RULES_CHECK=1` (amtool exit 0, placeholders mounted
+exactly as compose mounts them). One correction against my first draft, caught by the guard's red
+run: `auth_password_file` (and smarthost/from/username placeholders) belong INSIDE
+`email_configs`, not in `global` — the interface table's shape is enforced verbatim. Boot check:
+Prometheus `/api/v1/alertmanagers` shows `http://alertmanager:9093/api/v2/alerts` active, all 10
+rules load (flynapse-agent 4 / api 2 / platform 4), and an amtool-fired `SyntheticT6Check`
+reads back `active` from `/api/v2/alerts`. Test edits: pin table + 9093 added to `ADMIN_PORTS`.
+Logging coverage: n/a beyond `validate-rules.sh`. Reported edits: three compose stacks
+(alertmanager service), `VERSIONS.md` (row + changelog).
+
+### T5 (commit `2808d536`)
+Guard red first (5 failed), then 6 passed WITH `OTEL_RULES_CHECK=1` — promtool (pinned image)
+accepted all three files. `validate-rules.sh` green (promtool OK ×3; loud SKIP lines for
+`alertmanager.yml`/Loki rules, which land at T6/T7 — the script resolves the alertmanager pin
+lazily so it cannot die before T6 adds the VERSIONS.md row). Deviations/decisions:
+- The otelcol expressions use the T3-verified SUFFIXLESS spellings (`otelcol_exporter_send_failed_spans`
+  etc.), not §2.1's `_total` forms.
+- `AgentTurnFailureRatioHigh` assumes the error outcome is spelled `agent_outcome="error"` — the
+  §6.3 label vocabulary lands with Stream L; noted for the Stream L hand-off to confirm.
+- The T5 guard checks the runbook annotation FORMAT only (`docs/runbooks/observability/alerts.md#<lowercase-name>`);
+  file-existence + anchor checks land with T8, else T5 could never be green (the plan's
+  "file exists" phrasing is unsatisfiable before T8 creates the file).
+- The script reads image pins out of `VERSIONS.md` (awk over the table) instead of hardcoding —
+  drift-free against the pin guard.
+Logging coverage: `validate-rules.sh` reviewed — `set -euo pipefail`, one OK line per file, FAIL
+lines name the file, explicit loud SKIPs, no `|| true`. Reported edits: `prometheus.yml`
+(rule_files glob + alerting block), three compose stacks (rules mount, ro).
 
 ### T4 (commit `b704c68c`)
 Override boots ONLY grafana (project `flynapse-grafana-smoke`, loopback 13000, tmpfs
