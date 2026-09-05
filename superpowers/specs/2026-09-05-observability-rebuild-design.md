@@ -405,6 +405,14 @@ treated as outside the tenant total until that workstream rules.
 - The panel registry lives in `core` (the owner of the product surface and of comments/automations/invitations
   tables) and reads the copilot-mro-owned ledger/chat tables through the shared `PostgresService`, as the
   automations executor already does across the same boundary.
+- **Every tab and panel is permission-gated, on both sides.** Each `PanelSpec` declares `requires`: a
+  capability from the existing catalogue (`core/core/authz/catalog.py`) and/or `tenant_owner`. The backend
+  returns 403 for a panel the caller lacks; the frontend hides the tab (and its panels) with the same
+  `PERMISSION_NAMES` check, never by omission alone. Default mapping (owner request 2026-09-05): every tab
+  requires `view_dashboard`; Operations → Document Hub additionally `document_hub`; Operations → Automations
+  additionally `view_all_automations`; Improvement = `tenant_owner` only; Cost = `view_dashboard` (owner may
+  tighten to `tenant_owner` per client); deferred product tabs inherit their product capability (`optimizer`,
+  `data_discovery`, `ad_review`). New capabilities are not minted for v1.
 
 ### 7.2 Storage changes
 - Indexes: `chat_blocks (tenant_id, block_timestamp)`, `chat_feedback (tenant_id, created_at)`,
