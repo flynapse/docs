@@ -479,6 +479,26 @@ not near.
   records / 120 rpm; no `llm_model_calls` rollup this phase; export-time deterministic 10% ratio drop for browser
   fetch spans so the sampled flag always propagates).
 
+**2026-09-05 — Phase 1 (Stream U, utils + api) COMPLETE.** U0–U16 landed in `utils-obs`
+(`obs-utils`, 10 commits to `62b99ff`) and `wt-obs-u/api` (`obs-api`, 8 commits to `2a00a58`);
+utils suite 1076 green, api 1079 green (`-m "not postgres"`; 4 pre-existing/environmental
+skips), the `-m postgres` pooled-query span probe PASSES. Deviations recorded for the owner
+(details in the phase plan): **D1** one mount-aware gateway `OpenTelemetryMiddleware` instead
+of per-sub-app `instrument_app` — full `http.route` on span AND duration metric, 401/403s do
+carry a span (counter still emitted); **D6** identity log keys renamed on the wire
+(`tenant.id`/`enduser.id`/`session.id`/`request.id`); **D10** `-fastapi`/`-logging` not
+added; 1b.4 attributes bound from `LoggingContextMiddleware`, not a `server_request_hook`;
+the pool is LAZY (`_ensure_pool` on first query) — the enforced invariant is "bootstrap before
+the first pooled query", and making it hold required a real fix in `utils/postgres_service.py`
+(per-cursor `RealDictCursor` bypassed the instrumentor's traced factory; now wrapped).
+SDK-1.44 facts for other streams: log code attributes are the NEW spellings
+(`code.function.name`/`code.file.path`/`code.line.number`) — Stream I's redaction allow-list
+and Phase 6 dashboards must use them; `InMemoryLogRecordExporter` replaces the deprecated
+`InMemoryLogExporter`. Master 0.6's gateway half is DONE (route, `metrics_scrape.py`, token
+readers, `prometheus-client` all gone from api; the copilot-mro half stays with Stream L).
+Local dev without a collector: `OTEL_SDK_DISABLED=true` (`OTEL_ENABLED` is no longer read
+anywhere in utils/api).
+
 ## 16. Future Improvements
 _(empty)_
 
