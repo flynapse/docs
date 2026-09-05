@@ -105,11 +105,11 @@ Spec §3.3 "Metrics", §4; master 1a.2; research 01 §1.3, G19/G20/G27.
 **Interfaces produced.** `registry.UNITS = frozenset({"1", "s", "ms", "By", "{USD}", "{token}", "{request}"})` (Phase 3 extends by editing the constant and its test); `registry.FORBIDDEN_ATTRIBUTE_KEYS = frozenset({"session_id", "session.id", "user_id", "user.id", "enduser.id", "path", "url", "url.path", "url.full", "http.target"})`; `RegistryError(ValueError)`, `AttributeKeyError(RegistryError)`; `registry.meter() -> Meter` (`metrics.get_meter("utils.observability", <utils version>)`, resolved at call time so proxies re-bind after bootstrap); `counter(name, unit, description) -> CounterHandle`, `up_down_counter(name, unit, description) -> UpDownCounterHandle`, `histogram(name, unit, description, *, boundaries: Sequence[float] | None = None) -> HistogramHandle`, `observable_gauge(name, unit, description, callback) -> None` (callback wrapped so each `Observation`'s attributes are linted); handles expose `add(value, attributes=None)` / `record(value, attributes=None)`; `registered() -> Mapping[str, str]` (name → kind); `_reset_for_tests()`. Rules: name must match the OTel instrument-name grammar (else `RegistryError`); unit not in `UNITS` → `RegistryError`; same name registered again with the same kind returns the same handle, with another kind → `RegistryError`; on every emission `None`-valued attributes are dropped and a key in `FORBIDDEN_ATTRIBUTE_KEYS` raises `AttributeKeyError` before the SDK is touched.
 `metrics.py` keeps `MetricsService` (ABC, four abstract methods) and `get_metrics_service(name: str = "", env: str = "", version: str = "") -> MetricsService` (arguments accepted and ignored — G27 documented in the docstring; process singleton) returning `LegacyMetricsService`: `increment_counter` → `registry.counter(name, "1", "legacy auto-registered counter")`, `record_histogram`/`observe_summary` → `registry.histogram(name, "1", …)`, `set_gauge` → `registry.up_down_counter(name, "1", …).add(value, …)` (behaviour preserved for the one remaining caller `document_hub/operations.py:97`, retired by Stream L); `tenant_id` becomes the `tenant_id` attribute as today; forbidden keys are dropped with one `logger.warning("Dropped a forbidden metric attribute", metric=…, key=…)` per (metric, key) (D8). Delete `OpenTelemetryMetricsService`, `NoOpMetricsService`, all `register_*`, the try/except import guard and the module docstring's usage examples.
 **Steps.**
-- [ ] Write `test_registry_rules.py`: unit allow-list (`{USD}` accepted, `USD` and `seconds` refused); name grammar; duplicate-name/different-kind refusal and same-kind identity; `None` attribute dropped (assert on the in-memory reader's point attributes); each forbidden key raises `AttributeKeyError` (parametrised over the set) and no point is recorded; `observable_gauge` callback observations reach the reader and a forbidden key in an observation raises at collection; `histogram(..., boundaries=…)` produces the given bucket boundaries. Run — fails.
-- [ ] Write `test_legacy_metrics_service_compat.py`: `get_metrics_service("a") is get_metrics_service("b")`; `increment_counter("llm_requests_total", tenant_id="t1", model="m", user_id="u")` → one point with attributes exactly `{tenant_id: t1, model: m}` and exactly one WARN log record in the in-memory log exporter (severity ≥ WARN, message contains the key) even after a second call; `record_histogram("llm_request_duration", 0.5, tenant_id=None, department=None)` → point with no attributes; `set_gauge("x", 1, tenant_id="t")` → an up-down-counter point; `observe_summary` → histogram point; `MetricsService` still importable from `utils` (lazy export unchanged). Run — fails.
-- [ ] Implement `registry.py`, rewrite `metrics.py`. Run both files green; run `utils/tests/unit/packaging/test_lazy_exports.py` and `utils/tests/unit/metering/` green (they stub `_get_metrics_service_safe`).
-- [ ] Logging coverage (`metrics.py`): the old module logged INFO on every registration and swallowed `.add` failures at DEBUG — gone; the shim's only log is the forbidden-key WARNING with `metric=`/`key=` kwargs; no `except: pass`.
-- [ ] Commit: `registry.py`, the two test files. `metrics.py` stays uncommitted (pre-existing).
+- [x] Write `test_registry_rules.py`: unit allow-list (`{USD}` accepted, `USD` and `seconds` refused); name grammar; duplicate-name/different-kind refusal and same-kind identity; `None` attribute dropped (assert on the in-memory reader's point attributes); each forbidden key raises `AttributeKeyError` (parametrised over the set) and no point is recorded; `observable_gauge` callback observations reach the reader and a forbidden key in an observation raises at collection; `histogram(..., boundaries=…)` produces the given bucket boundaries. Run — fails.
+- [x] Write `test_legacy_metrics_service_compat.py`: `get_metrics_service("a") is get_metrics_service("b")`; `increment_counter("llm_requests_total", tenant_id="t1", model="m", user_id="u")` → one point with attributes exactly `{tenant_id: t1, model: m}` and exactly one WARN log record in the in-memory log exporter (severity ≥ WARN, message contains the key) even after a second call; `record_histogram("llm_request_duration", 0.5, tenant_id=None, department=None)` → point with no attributes; `set_gauge("x", 1, tenant_id="t")` → an up-down-counter point; `observe_summary` → histogram point; `MetricsService` still importable from `utils` (lazy export unchanged). Run — fails.
+- [x] Implement `registry.py`, rewrite `metrics.py`. Run both files green; run `utils/tests/unit/packaging/test_lazy_exports.py` and `utils/tests/unit/metering/` green (they stub `_get_metrics_service_safe`).
+- [x] Logging coverage (`metrics.py`): the old module logged INFO on every registration and swallowed `.add` failures at DEBUG — gone; the shim's only log is the forbidden-key WARNING with `metric=`/`key=` kwargs; no `except: pass`.
+- [x] Commit: `registry.py`, the two test files. `metrics.py` stays uncommitted (pre-existing).
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_registry_rules.py test_legacy_metrics_service_compat.py`.
 **Acceptance.** All rules tested; legacy callers' call shapes (verified list in Facts 4) still type-check against the shim's signatures.
 | Likely finding | Triage |
@@ -122,10 +122,10 @@ Spec §4 ("`get_tracer()`, `get_meter()`, `span(name, **attrs)`"); master 1a fil
 **Files.** Rewrite `utils/utils/observability/tracing.py` and `__init__.py` (uncommitted); test `test_tracing_helpers.py`.
 **Interfaces produced.** `tracing.get_tracer(name: str = "utils.observability") -> Tracer` (via `trace.get_tracer` at call time); `tracing.span(name: str, **attributes) -> ContextManager[Span]` (`start_as_current_span`, INTERNAL, `None` attributes dropped); `TracingService` ABC unchanged; `SdkTracingService(TracingService)`: `as_current_server_span(name, attributes=None, parent_headers=None)` extracts W3C context with `opentelemetry.propagate.extract` and starts a SERVER span, `as_current_span(name, attributes=None)`, async `start_span`/`end_span` as before (status/exception recording kept); `get_tracing_service(name: str = "", env: str = "", version: str = "") -> TracingService` singleton, arguments ignored. Delete `OpenTelemetryTracingService`, `NoOpTracingService`, `_noop_context`, `OTEL_TRACING_AVAILABLE`. `__init__.py` exports: `bootstrap`, `BootstrapState`, `Pipelines`, `get_tracer`, `span`, `registry` (module), `get_metrics_service`, `get_tracing_service`, `MetricsService`, `TracingService`; `__all__` lists them. `utils/utils/__init__.py` `_EXPORTS` is untouched (its names still resolve).
 **Steps.**
-- [ ] Write `test_tracing_helpers.py`: `span("work", tenant_id="t", nothing=None)` → one finished span, INTERNAL, attribute `tenant_id` present, `nothing` absent; `as_current_server_span("GET /x", parent_headers={"traceparent": "00-…-…-01"})` → kind SERVER, trace id equal to the header's, parent span id equal; `get_tracing_service("a") is get_tracing_service("b")`; `start_span`/`end_span(status="error", error=ValueError("x"))` → status ERROR and one exception event; `from utils.observability import bootstrap, span, registry` resolves. Run — fails.
-- [ ] Implement. Run green; run `test_lazy_exports.py` green.
-- [ ] Logging coverage (`tracing.py`): the old `logger.debug("Failed to start span…")` swallowers are gone; the shim has no failure path that needs a log (the SDK never raises on span operations).
-- [ ] Commit: `test_tracing_helpers.py` only (both modules pre-existing).
+- [x] Write `test_tracing_helpers.py`: `span("work", tenant_id="t", nothing=None)` → one finished span, INTERNAL, attribute `tenant_id` present, `nothing` absent; `as_current_server_span("GET /x", parent_headers={"traceparent": "00-…-…-01"})` → kind SERVER, trace id equal to the header's, parent span id equal; `get_tracing_service("a") is get_tracing_service("b")`; `start_span`/`end_span(status="error", error=ValueError("x"))` → status ERROR and one exception event; `from utils.observability import bootstrap, span, registry` resolves. Run — fails.
+- [x] Implement. Run green; run `test_lazy_exports.py` green.
+- [x] Logging coverage (`tracing.py`): the old `logger.debug("Failed to start span…")` swallowers are gone; the shim has no failure path that needs a log (the SDK never raises on span operations).
+- [x] Commit: `test_tracing_helpers.py` only (both modules pre-existing).
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_tracing_helpers.py /home/aditya/Code/utils-obs/tests/unit/packaging/test_lazy_exports.py`.
 | Likely finding | Triage |
 |---|---|
@@ -136,11 +136,11 @@ Spec §3.3 "Logs" (sinks 1–2, adversarial fact: the stock handler nests `extra
 **Files.** Create `utils/utils/observability/log_bridge.py`; tests `test_log_bridge_flattening.py`, `test_log_bridge_correlation.py`; conftest gains the `log_bridge.install` call.
 **Interfaces produced.** `log_bridge.IDENTITY_KEYS = {"tenant_id": "tenant.id", "user_id": "enduser.id", "session_id": "session.id", "request_id": "request.id"}` (D6); `log_bridge.flatten(record: Mapping[str, Any]) -> dict[str, Any]` — from a loguru record's `extra`: identity keys renamed; `str`/`bool`/`int`/`float` kept as-is; `None` dropped; homogeneous sequences of primitives kept; every other value (dict, `Decimal`, `datetime`, `UUID`, objects, mixed lists) → `str(value)`; a key colliding with a stdlib `LogRecord` reserved attribute (`name`, `msg`, `args`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `exc_info`, `exc_text`, `stack_info`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `process`, `processName`, `message`, `asctime`, `taskName`) is emitted as `extra.<key>`. `log_bridge.install(level: str = "INFO", *, json_stdout: bool = True, colors: bool = False) -> tuple[int, int]` — idempotent by module flag (returns the cached sink ids on repeat); first call `logger.remove()`s existing handlers (no "skip if any handler exists" branch — G23), then adds (1) the stdout sink: JSON line sink when `json_stdout` (a callable that writes `json.dumps` of `time` ISO-8601 with offset from `record["time"]`, `level` name, `logger` (`record["name"]`), `function`, `line`, `message`, `trace_id`/`span_id` hex when a span is current, `exception` text when present, plus `flatten(record)` at top level, to `sys.stdout` looked up at call time), else the current human format with `colorize=colors`; (2) the OTLP sink: a callable building a stdlib `LogRecord` (`name`, `levelno = record["level"].no`, `levelname = record["level"].name`, `pathname`/`lineno`/`funcName` from the record, `msg = record["message"]`, empty `args`, `exc_info` from `record["exception"]`), setting `created = record["time"].timestamp()` (event time; `msecs`/`relativeCreated` derived — G24 fix without the monotonic bump), `setattr`-ing every flattened key, and calling `LoggingHandler(level=<level>, logger_provider=get_logger_provider()).emit(...)`; no file sinks (G25); no `enqueue`. `log_bridge._reset_for_tests()` removes the two sinks and clears the flag.
 **Steps.**
-- [ ] Write `test_log_bridge_flattening.py`: `flatten` unit cases per rule above (parametrised); through the real sink: `logger.bind(tenant_id="t1", chat_id="c", count=3, ratio=0.5, flag=True, empty=None, meta={"a": 1}).info("m")` → the exported `LogRecord.attributes` has `tenant.id == "t1"` (and no `tenant_id`, no `extra.tenant_id`), `chat_id == "c"`, `count == 3` (int, not `"3"`), `ratio == 0.5`, `flag is True`, no `empty`, `meta == "{'a': 1}"`; `logger.bind(name="x").info("m")` → attribute `extra.name`; the JSON stdout line (capsys) parses and carries the same keys, `level == "INFO"`, `logger` set; the `exception` key and `exception.type`/`exception.stacktrace` attributes appear for `logger.exception` inside an `except`. Run — fails.
-- [ ] Write `test_log_bridge_correlation.py`: timestamp equals `int(record_time.timestamp() * 1e9)` computed from a `loguru` patcher-captured `record["time"]` (compare identically); inside `get_tracer("t").start_as_current_span("s")` the exported record's `trace_id`/`span_id` equal the span's and the JSON line's `trace_id` is the 32-hex form; outside a span both are 0/absent; severity: INFO → `SeverityNumber.INFO`, WARNING → `WARN`, ERROR → `ERROR`, SUCCESS (25) → a number strictly between INFO and WARN with `severity_text == "SUCCESS"`; `install()` twice returns identical ids and the handler count is unchanged; after `_reset_for_tests()` the sinks are gone. Run — fails.
-- [ ] Implement; wire the conftest. Run green.
-- [ ] Logging coverage: the bridge itself must never log through loguru from inside a sink (recursion); a sink failure is written once to `sys.stderr` with the exception type and then suppressed for that record (replacing the old `print(f"OTEL logging failed…")`).
-- [ ] Commit: `log_bridge.py`, two tests, conftest.
+- [x] Write `test_log_bridge_flattening.py`: `flatten` unit cases per rule above (parametrised); through the real sink: `logger.bind(tenant_id="t1", chat_id="c", count=3, ratio=0.5, flag=True, empty=None, meta={"a": 1}).info("m")` → the exported `LogRecord.attributes` has `tenant.id == "t1"` (and no `tenant_id`, no `extra.tenant_id`), `chat_id == "c"`, `count == 3` (int, not `"3"`), `ratio == 0.5`, `flag is True`, no `empty`, `meta == "{'a': 1}"`; `logger.bind(name="x").info("m")` → attribute `extra.name`; the JSON stdout line (capsys) parses and carries the same keys, `level == "INFO"`, `logger` set; the `exception` key and `exception.type`/`exception.stacktrace` attributes appear for `logger.exception` inside an `except`. Run — fails.
+- [x] Write `test_log_bridge_correlation.py`: timestamp equals `int(record_time.timestamp() * 1e9)` computed from a `loguru` patcher-captured `record["time"]` (compare identically); inside `get_tracer("t").start_as_current_span("s")` the exported record's `trace_id`/`span_id` equal the span's and the JSON line's `trace_id` is the 32-hex form; outside a span both are 0/absent; severity: INFO → `SeverityNumber.INFO`, WARNING → `WARN`, ERROR → `ERROR`, SUCCESS (25) → a number strictly between INFO and WARN with `severity_text == "SUCCESS"`; `install()` twice returns identical ids and the handler count is unchanged; after `_reset_for_tests()` the sinks are gone. Run — fails.
+- [x] Implement; wire the conftest. Run green.
+- [x] Logging coverage: the bridge itself must never log through loguru from inside a sink (recursion); a sink failure is written once to `sys.stderr` with the exception type and then suppressed for that record (replacing the old `print(f"OTEL logging failed…")`).
+- [x] Commit: `log_bridge.py`, two tests, conftest.
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_log_bridge_flattening.py test_log_bridge_correlation.py`.
 | Likely finding | Triage |
 |---|---|
@@ -152,10 +152,10 @@ Spec §3.3 sink (3); master 1a.4; research 01 G22.
 **Files.** Create `utils/utils/observability/intercept.py`; test `test_stdlib_intercept.py`; conftest gains `intercept.install("DEBUG")`.
 **Interfaces produced.** `intercept.InterceptHandler(logging.Handler)` (`emit` maps `record.levelname` to the loguru level when it exists else `record.levelno`, finds the caller depth by walking frames out of the `logging` module, forwards `record.getMessage()` with `exception=record.exc_info`); `intercept.EXPLICIT_LOGGERS = ("uvicorn", "uvicorn.access", "uvicorn.error", "botocore", "httpx")`; `intercept.EXCLUDED_LOGGER = "opentelemetry"`; `intercept.install(level: str = "INFO") -> None` — idempotent: root logger handlers replaced by one `InterceptHandler` (`logging.basicConfig(force=True, …)`) at `level`; each explicit logger gets its handlers replaced by an `InterceptHandler` and `propagate=False` (uvicorn's dictConfig sets `propagate=False` on `uvicorn`/`uvicorn.access` before the app is imported, so this runs after it and wins); the `opentelemetry` logger gets `propagate=False` and one `StreamHandler(sys.stderr)` at WARNING so exporter failures are visible but never re-enter the OTLP sink. `_reset_for_tests()` restores the previous handler/propagate state it recorded.
 **Steps.**
-- [ ] Write `test_stdlib_intercept.py`: `logging.getLogger("x.y").warning("hello %s", "w")` → in-memory log record with body `hello w`, severity WARN, `attributes["code.function"]`/`code.filepath` pointing at the test file (depth correct); pre-configure `uvicorn.access` with `propagate=False` and a `NullHandler`, then `install()`, then `.info("GET / 200")` → record present; `logging.getLogger("opentelemetry.sdk.trace").warning("boom")` → no record in the exporter and the text appears on captured stderr; `install()` twice → root has exactly one `InterceptHandler`; a stdlib record with `exc_info` yields `exception.type`. Run — fails.
-- [ ] Implement; wire conftest. Run green.
-- [ ] Logging coverage: none beyond the module's purpose; `install` logs nothing (it runs before sinks may exist).
-- [ ] Commit: `intercept.py`, test, conftest.
+- [x] Write `test_stdlib_intercept.py`: `logging.getLogger("x.y").warning("hello %s", "w")` → in-memory log record with body `hello w`, severity WARN, `attributes["code.function"]`/`code.filepath` pointing at the test file (depth correct); pre-configure `uvicorn.access` with `propagate=False` and a `NullHandler`, then `install()`, then `.info("GET / 200")` → record present; `logging.getLogger("opentelemetry.sdk.trace").warning("boom")` → no record in the exporter and the text appears on captured stderr; `install()` twice → root has exactly one `InterceptHandler`; a stdlib record with `exc_info` yields `exception.type`. Run — fails.
+- [x] Implement; wire conftest. Run green.
+- [x] Logging coverage: none beyond the module's purpose; `install` logs nothing (it runs before sinks may exist).
+- [x] Commit: `intercept.py`, test, conftest.
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_stdlib_intercept.py`.
 | Likely finding | Triage |
 |---|---|
@@ -166,10 +166,10 @@ Spec §3.3 (idempotent, explicit); master 1a.5; research 01 §2.3.1, G23.
 **Files.** Rewrite `utils/utils/logging_config.py` (uncommitted); test `test_setup_logging_delegation.py`.
 **Interfaces.** `logging_config.DEV_ENVIRONMENTS = frozenset({"development", "dev", "local"})`; `logging_config.is_dev(env: str) -> bool`; `setup_logging(name: str = "", env: str = "production") -> None`: `service = name or "flynapse-service"`; `state = bootstrap(service, version=settings.app_version, environment=env)`; `dev = is_dev(env)`; `log_bridge.install(settings.log_level, json_stdout=not dev, colors=dev and settings.log_colors and not os.getenv("NO_COLOR"))`; `intercept.install(settings.log_level)`; when `state.configured_by_this_call`, one `logger.info("Telemetry configured", service_name=…, environment=…, endpoint=…, protocol=…, disabled=…, instrumentations=…, json_stdout=…)`. Delete `setup_loguru`, `has_loguru_handlers`, `_setup_otel_integration`, `_unique_ns_from_seconds`, `_last_ts_ns`, the `Path`/`random`/`time` imports. `settings.log_dir` no longer read.
 **Steps.**
-- [ ] Write `test_setup_logging_delegation.py` (uses `log_bridge._reset_for_tests()`/`intercept._reset_for_tests()` between cases; bootstrap stays the session one): `setup_logging("svc", "development")` twice → loguru handler count identical after the second call and `bootstrap.state().configured_by_this_call` False; `env="development"` + `settings.log_colors=True` (monkeypatch) → a captured stdout line that is not JSON and contains the human separators; `env="production"` with `log_colors=True` → stdout line parses as JSON (colors ignored outside dev); `NO_COLOR=1` in dev → no ANSI escapes; the "Telemetry configured" record reaches the in-memory log exporter with `service_name`, `protocol`, `disabled` attributes (first call only); `setup_loguru`/`has_loguru_handlers` no longer exist on the module. Run — fails.
-- [ ] Implement. Run green; run the whole `utils/tests` suite green.
-- [ ] Logging coverage (`logging_config.py`): the "Loguru handlers already exist" warning and the two "Loguru configured…" INFO lines are replaced by the single structured line; no `print`.
-- [ ] Commit: the test only.
+- [x] Write `test_setup_logging_delegation.py` (uses `log_bridge._reset_for_tests()`/`intercept._reset_for_tests()` between cases; bootstrap stays the session one): `setup_logging("svc", "development")` twice → loguru handler count identical after the second call and `bootstrap.state().configured_by_this_call` False; `env="development"` + `settings.log_colors=True` (monkeypatch) → a captured stdout line that is not JSON and contains the human separators; `env="production"` with `log_colors=True` → stdout line parses as JSON (colors ignored outside dev); `NO_COLOR=1` in dev → no ANSI escapes; the "Telemetry configured" record reaches the in-memory log exporter with `service_name`, `protocol`, `disabled` attributes (first call only); `setup_loguru`/`has_loguru_handlers` no longer exist on the module. Run — fails.
+- [x] Implement. Run green; run the whole `utils/tests` suite green.
+- [x] Logging coverage (`logging_config.py`): the "Loguru handlers already exist" warning and the two "Loguru configured…" INFO lines are replaced by the single structured line; no `print`.
+- [x] Commit: the test only.
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_setup_logging_delegation.py`.
 | Likely finding | Triage |
 |---|---|
@@ -179,12 +179,12 @@ Spec §3.3 (idempotent, explicit); master 1a.5; research 01 §2.3.1, G23.
 Spec §3.1, §8; master 1a.7; research 01 §2.7.1.
 **Files.** Modify `utils/utils/config.py`, `utils/.env.sample` (uncommitted); test `test_no_legacy_otel_env_readers.py`.
 **Steps.**
-- [ ] Write the test: scan `repo_root(__file__, "utils")` recursively for `*.py` and fail on any match of `OTEL_ENDPOINT`, `OTEL_ENABLED`, `otel_endpoint`, `otel_enabled`, `otel_service_name`, `METRICS_ENABLED`, `METRICS_EXPORT_INTERVAL`, `TRACING_ENABLED`, `TRACING_SAMPLING_RATE`, `exporter.otlp.proto.grpc`, `prometheus_client`; assert `utils.config.Settings.model_fields` lacks `otel_endpoint`, `otel_service_name`, `otel_enabled`, `log_dir`, `metrics_enabled`, `metrics_export_interval`, `tracing_enabled`, `tracing_sampling_rate` and still has `log_level`, `log_colors`, `app_version`, `debug`. Run — fails.
-- [ ] Before deleting each field, `rg` its attribute name across the main checkouts (`utils/utils`, `api/flynapse_api`, `core/core`, `copilot-mro/copilot_mro`, `shift-optimizer/shift_optimizer`): verified today that none of the eight has a reader outside `utils/utils/logging_config.py` (already rewritten) and the `config.py` declarations themselves (`settings.app_version` readers in copilot-mro are unaffected). Delete the fields and their comments.
-- [ ] `utils/.env.sample`: remove `OTEL_ENABLED=True`, `OTEL_ENDPOINT=…`, `OTEL_SERVICE_NAME=copilots`; add commented guidance lines for `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`, `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development`, `OTEL_SDK_DISABLED=true` (no collector locally).
-- [ ] Run the test green; run the full utils suite.
-- [ ] Logging coverage (`config.py`): the two import-time `print(...)` calls in `find_env_file` become `loguru.logger.debug(...)` with `path=` kwargs (the default stderr handler shows them before `setup_logging`; they are not failures).
-- [ ] Commit: the test.
+- [x] Write the test: scan `repo_root(__file__, "utils")` recursively for `*.py` and fail on any match of `OTEL_ENDPOINT`, `OTEL_ENABLED`, `otel_endpoint`, `otel_enabled`, `otel_service_name`, `METRICS_ENABLED`, `METRICS_EXPORT_INTERVAL`, `TRACING_ENABLED`, `TRACING_SAMPLING_RATE`, `exporter.otlp.proto.grpc`, `prometheus_client`; assert `utils.config.Settings.model_fields` lacks `otel_endpoint`, `otel_service_name`, `otel_enabled`, `log_dir`, `metrics_enabled`, `metrics_export_interval`, `tracing_enabled`, `tracing_sampling_rate` and still has `log_level`, `log_colors`, `app_version`, `debug`. Run — fails.
+- [x] Before deleting each field, `rg` its attribute name across the main checkouts (`utils/utils`, `api/flynapse_api`, `core/core`, `copilot-mro/copilot_mro`, `shift-optimizer/shift_optimizer`): verified today that none of the eight has a reader outside `utils/utils/logging_config.py` (already rewritten) and the `config.py` declarations themselves (`settings.app_version` readers in copilot-mro are unaffected). Delete the fields and their comments.
+- [x] `utils/.env.sample`: remove `OTEL_ENABLED=True`, `OTEL_ENDPOINT=…`, `OTEL_SERVICE_NAME=copilots`; add commented guidance lines for `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`, `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=development`, `OTEL_SDK_DISABLED=true` (no collector locally).
+- [x] Run the test green; run the full utils suite.
+- [x] Logging coverage (`config.py`): the two import-time `print(...)` calls in `find_env_file` become `loguru.logger.debug(...)` with `path=` kwargs (the default stderr handler shows them before `setup_logging`; they are not failures).
+- [x] Commit: the test.
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_no_legacy_otel_env_readers.py`.
 
 ## U9 (= 1b.2, utils side) — Client instrumentors in `bootstrap`
@@ -192,10 +192,10 @@ Spec §3.3 (client spans, no botocore), §4 (before the pool); master 1b.2, prob
 **Files.** Modify `bootstrap.py` (created in U2, committable); test `test_client_instrumentors.py`; conftest unchanged.
 **Interfaces.** `bootstrap.INSTRUMENTATIONS: tuple[tuple[str, str, str], ...]` = `("psycopg2", "opentelemetry.instrumentation.psycopg2", "Psycopg2Instrumentor")`, `("httpx", …, "HTTPXClientInstrumentor")`, `("requests", …, "RequestsInstrumentor")`, `("urllib3", …, "URLLib3Instrumentor")`, `("redis", …, "RedisInstrumentor")`, `("threading", …, "ThreadingInstrumentor")`; applied inside `bootstrap()` after the providers are set: names listed in `OTEL_PYTHON_DISABLED_INSTRUMENTATIONS` (comma-separated) skipped; missing package → skipped with `logger.warning("Instrumentation package missing", instrumentation=name)`; `.instrument(tracer_provider=…, meter_provider=…)` failures logged at WARNING with `instrumentation=`, `error=` and never raise; applied names recorded in `BootstrapState.instrumentations`; `_reset_for_tests` calls `.uninstrument()` on each. No `-botocore`, no `-fastapi`/`-asgi` here (api-side, U10).
 **Steps.**
-- [ ] Write `test_client_instrumentors.py`: `bootstrap.state().instrumentations` equals the six names (fakeredis-independent); `psycopg2.connect` is wrapped (`Psycopg2Instrumentor().is_instrumented_by_opentelemetry` true); a stdlib `ThreadingHTTPServer` on `127.0.0.1:0` recording request headers: `httpx.get(url)` inside `span("outer")` → the server saw a `traceparent` whose trace id equals the outer span's and one CLIENT span with `http.request.method == "GET"` was exported; the same with `requests.get(url)` (exactly one CLIENT span — the urllib3 instrumentor is suppressed under requests); `pytest.importorskip("fakeredis")`: `fakeredis.FakeRedis().set("k", "v")` → a CLIENT span with `db.system == "redis"`; subprocess case: `OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=redis,threading` → those two absent from `instrumentations`. Run — fails.
-- [ ] Implement. Run green. Re-run `test_bootstrap_process_env.py` (its "default" case now asserts six instrumentations).
-- [ ] Logging coverage: instrumentation skips and failures are WARNINGs with kwargs; the boot line (U7) lists what was applied.
-- [ ] Commit: `bootstrap.py` (created by U2 in this branch — commit the edit), the test.
+- [x] Write `test_client_instrumentors.py`: `bootstrap.state().instrumentations` equals the six names (fakeredis-independent); `psycopg2.connect` is wrapped (`Psycopg2Instrumentor().is_instrumented_by_opentelemetry` true); a stdlib `ThreadingHTTPServer` on `127.0.0.1:0` recording request headers: `httpx.get(url)` inside `span("outer")` → the server saw a `traceparent` whose trace id equals the outer span's and one CLIENT span with `http.request.method == "GET"` was exported; the same with `requests.get(url)` (exactly one CLIENT span — the urllib3 instrumentor is suppressed under requests); `pytest.importorskip("fakeredis")`: `fakeredis.FakeRedis().set("k", "v")` → a CLIENT span with `db.system == "redis"`; subprocess case: `OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=redis,threading` → those two absent from `instrumentations`. Run — fails.
+- [x] Implement. Run green. Re-run `test_bootstrap_process_env.py` (its "default" case now asserts six instrumentations).
+- [x] Logging coverage: instrumentation skips and failures are WARNINGs with kwargs; the boot line (U7) lists what was applied.
+- [x] Commit: `bootstrap.py` (created by U2 in this branch — commit the edit), the test.
 **Test command.** `… pytest /home/aditya/Code/utils-obs/tests/unit/observability/test_client_instrumentors.py test_bootstrap_process_env.py`.
 | Likely finding | Triage |
 |---|---|
@@ -373,3 +373,67 @@ names the variable and the remedy; instrumentor skips/failures are structured WA
 Commits so far: utils `31f4a5e` (U1 test), `31aafed` (U2); api `c16eec1` (U1 test).
 Uncommitted pre-existing edits so far: utils `pyproject.toml`, `poetry.lock`; api `pyproject.toml`,
 `poetry.lock`.
+
+### U3 — registry.py and the legacy shim
+As planned, with two recorded adjustments. (1) The compat test's warning assertions capture
+loguru directly through a test sink: the plan sequenced the in-memory-log-exporter assertion
+ahead of its own dependency (the bridge lands in U5). (2) The observable-gauge forbidden-key
+"raises at collection" is real but contained: the wrapped callback raises `AttributeKeyError`,
+and the SDK's callback guard converts that into a logged error and a dropped batch — the test
+pins the observable outcome (no point recorded). `set_gauge` stays the up-down-counter mimicry
+deliberately (G19 semantics preserved for the one Stream-L-owned caller; Future Improvements).
+
+### U4 — tracing helpers and package exports
+As planned. One structural fact worth knowing estate-wide: exporting the `bootstrap` FUNCTION
+from `utils/observability/__init__` shadows the `bootstrap` SUBMODULE as a package attribute
+(`import utils.observability.bootstrap as m` binds the function on Python 3.7+). Consumers that
+need module attributes import from the submodule (`from utils.observability.bootstrap import
+bootstrap, state`); the test conftest binds the module via `importlib.import_module`.
+
+### U5 — log_bridge.py
+As planned (custom serializer, not `serialize=True` — the stock one nests `extra`). SDK 1.44
+facts: `InMemoryLogExporter` is deprecated/renamed (`InMemoryLogRecordExporter`, no longer in a
+private submodule), and the SDK's own `LoggingHandler` is deprecated in favour of the
+`-logging` package that D10 excludes — inert at the exact pins, but the next SDK bump must
+revisit D10. Subprocess cases cap `OTEL_EXPORTER_OTLP_TIMEOUT=1`.
+
+### U6 — intercept.py
+As planned, two corrections against the plan's predicted spellings: SDK 1.44 emits the NEW
+code-attribute names — `code.function.name`, `code.file.path`, `code.line.number` (not
+`code.function`/`code.filepath`) — which Stream I's redaction allow-list and Phase 6 dashboards
+must use; and the opentelemetry stderr wall uses a late-binding handler (looks up `sys.stderr`
+at emit time) so capture/redirection is honoured. The frame walk uses the canonical loguru
+recipe; the idempotence test counts InterceptHandlers only (pytest's own LogCaptureHandlers
+ride the root at test time).
+
+### U7 — setup_logging delegation
+As planned, except the "Telemetry configured" assertion runs in a fresh subprocess (in this
+session the conftest owns the first bootstrap, so no in-process call can see
+`configured_by_this_call=True`; the plan's in-memory-exporter wording could not hold). The
+full-suite run exposed a REAL defect this task fixed: `bootstrap._reset_for_tests()` replaced
+the API proxy globals but left the registry's cached instrument handles bound to the dead
+proxy, so metrics emitted after a reset silently vanished (surfaced as order-dependent
+failures when `tests/unit/metering` preceded the observability lane) — the registry cache is
+now cleared with the globals. Learning: every pytest command needs `POSTGRES_DB=copilot_mro_test`.
+
+### U8 — utils.config deletion
+As planned. The three `print(...)` calls in `find_env_file` became loguru debug/warning with
+`path=` kwargs; `log_dir` deleted with the telemetry fields; `.env.sample` rewritten to the
+standard contract (commented `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_RESOURCE_ATTRIBUTES` /
+`OTEL_SDK_DISABLED=true` guidance). The scan test is text-level (comments and docstrings count),
+so two of this branch's own module docstrings were reworded to stop naming the dead spellings.
+
+### U9 — client instrumentors
+As planned: the six instrumentors applied inside `bootstrap` after the providers, skips and
+failures as structured WARNINGs, `OTEL_PYTHON_DISABLED_INSTRUMENTATIONS` honoured (subprocess
+case), `_reset_for_tests` uninstruments. Verified live in-process: httpx propagates
+`traceparent` matching the outer span; requests emits exactly ONE client span (nested urllib3
+suppressed); fakeredis commands carry `db.system=redis` (old DB semconv — opt-in is `http`
+only, as designed).
+
+**Phase 1a closed 2026-09-05: full utils suite from the bundle env = 1076 passed, 0 failed.**
+Commits (utils obs-utils): U1 `31f4a5e`, U2 `31aafed`, U3 `ee0c42f`, U4 `3c81e4c`, U5 `1ec6442`,
+U6 `8052c39`, U7 `14d0c41`, U8 `9ec1aac`, U9 `5b114a3`.
+Uncommitted utils edits so far: `pyproject.toml`, `poetry.lock`, `.env.sample`, `utils/config.py`,
+`utils/logging_config.py`, `utils/observability/__init__.py`, `utils/observability/metrics.py`,
+`utils/observability/tracing.py`.
