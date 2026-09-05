@@ -650,3 +650,9 @@ Standing pytest command additionally needs `POSTGRES_DB=copilot_mro_test` (the s
 - **Accepted as-is** — the email `blocked_values` mask hits email-VALUED attributes anywhere,
   including an email-shaped `enduser.id`: documented in `base.yaml` and pinned by
   `test_email_valued_attribute_is_masked_by_design`.
+
+- **Merge-ready nits (2026-09-05)** — `poc_ec2_setup.sh:13` compose download pinned to `v5.5.1`
+  (was `releases/latest`; `bash -n` clean); `modules/otel-gateway` gains a plan-time `lifecycle`
+  precondition on the task definition — `phoenix_enabled` requires both Phoenix SSM secret ARNs
+  (a cross-variable `validation` block would need TF >= 1.9; the precondition works on >= 1.2) —
+  example root re-validated clean.
