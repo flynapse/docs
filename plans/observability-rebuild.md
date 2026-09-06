@@ -581,6 +581,17 @@ PromQL widget console export, Stream L counter hand-off.
   session is idle — until then utils/api suites must run from the `wt-obs-u` bundle env as above. Worktrees
   and stream branches left in place for the owner to prune.
 
+- **2026-09-05 — pruning + testing-scope ruling (owner).** Five merged worktrees removed with their stream
+  branches (`utils-obs`, `core-obs`, `dashboard-obs-analytics`, `copilot-mro-obs-infra`, `iac-obs`). Kept
+  deliberately: `dashboard-obs-frontend` (F10 under adversarial review; pruned after the merge) and
+  `wt-obs-u` (`obs-api` branch pinned by its worktree — this bundle env is the only environment with the new
+  OTel pins until the shared `api/.venv` refresh, so it stays as the utils/api test runner). Owner ruling:
+  **AWS deployment work is DEFERRED until everything is implemented** — the Terraform apply chain, demo-box
+  switch, Transaction Search, Amplify pin all wait. For now the three collector profiles are exercised FROM
+  THE LAPTOP only: `oss` via the local compose stack (already live-smoked), `aws` and `azure` as
+  config-validation plus, when the owner supplies credentials/workspace values in a local env file, a
+  laptop-run collector shipping a test signal to CloudWatch / Azure Monitor (the B1a/B1b field-path probes can
+  ride that same laptop send). No IaC apply until the deferral lifts.
 ## 16. Future Improvements
 _(empty)_
 
