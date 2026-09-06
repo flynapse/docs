@@ -558,6 +558,29 @@ PromQL widget console export, Stream L counter hand-off.
   `chat_turn_facts` writer, content capture) + phase 7 eval harness; Stream L must also confirm the
   `agent_outcome="error"` spelling + doc-hub/automation counters the dark phase-6 panels assume.
 
+- **2026-09-05 — MERGES EXECUTED (session lead).** All six repos merged with their ledgered uncommitted edits
+  landed as explicit commits on each stream branch first: utils `obs-utils` → `langgraph-merge` (the main
+  checkout's two unrelated dirty files protected via tagged stash, applied by SHA, auto-merged clean); api
+  `obs-api` → `langgraph-merge`; core `obs-analytics` → `master` (the core ledger was initially missed — the
+  first merge went out without the uncommitted endpoint/schema/definition edits and the suite caught it with
+  ImportErrors; ledger landed and merged in a follow-up, plus stale `__pycache__` dirs from the deleted Loki
+  service removed); dashboard `obs-analytics` → `agent_sdk`, then `obs-frontend` rebased (11 commits, zero
+  conflicts) and fast-forwarded; copilot-mro Stream P edits committed on `langgraph-merge` then `obs-infra`
+  merged; iac `obs-iac` → `main` (unrelated dirty `apprunner_iam.tf` untouched, verified against the merge
+  file list). Post-merge owed commits landed: the transitional bare public-ingest skip entry retired (auth +
+  two test files, incl. one stale legacy public-path parameter the old contract test still pinned) and A14
+  (legacy `OTEL_ENDPOINT` removed from the POC compose, `apprunner.tf`, `lambda.tf`, with a new
+  no-legacy-env assertion over every compose file).
+  **Post-merge verification, all green:** utils 1082; api 1080 + 3 skips (253 middleware); core 2768 + 2
+  skips + 2 xfail; copilot-mro otel lane 62 + 9 env-gated skips, registries/db 488 + the 1 pre-existing
+  migration-snapshot red; dashboard npm ci + typecheck + full unit suite exit 0, zero failures; iac terraform
+  validate + all six dashboard templates parse + both setup scripts `bash -n`.
+  **Now unblocked:** task 4.9/F10 (frontend cut-over — core's ingest routes are merged and `obs-frontend` sits
+  on top of `obs-analytics`). **Consistency step owed:** the shared `/home/aditya/Code/api/.venv` still holds
+  the old lock (SDK 1.37); run `env -u VIRTUAL_ENV poetry install` in `api/` when the parallel LangGraph
+  session is idle — until then utils/api suites must run from the `wt-obs-u` bundle env as above. Worktrees
+  and stream branches left in place for the owner to prune.
+
 ## 16. Future Improvements
 _(empty)_
 
