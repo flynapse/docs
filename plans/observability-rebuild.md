@@ -592,6 +592,21 @@ PromQL widget console export, Stream L counter hand-off.
   config-validation plus, when the owner supplies credentials/workspace values in a local env file, a
   laptop-run collector shipping a test signal to CloudWatch / Azure Monitor (the B1a/B1b field-path probes can
   ride that same laptop send). No IaC apply until the deferral lifts.
+- **2026-09-05 — F10 merged + LIVE PROBE PASSED (phase 4 acceptance).** F10 reviewed MERGE-READY (all gates
+  re-run; the pre-existing lint fix verified as a pure rename) and fast-forwarded into `agent_sdk`; the last
+  two worktrees pruned (`dashboard-obs-frontend`; `wt-obs-u` retained as the pinned-deps test env). Live probe
+  (owner-chosen, session-lead-run) against the isolated smoke-overlay stack (collector+Loki+Tempo+Prometheus
+  on loopback remaps) + the merged backend (bundle env, OTel to 14318/14319) + the production-built dashboard
+  + a CDP-driven session (owner logged in): **Loki** carries `browser.web_vital` ×10, `browser.app.boot` ×2,
+  `browser.auth.login` ×2, `browser.route.change` ×2, `browser.error` ×1 (synthetic), every stream labelled
+  with the REAL `tenant_id` upserted from the gateway headers; **product_events** holds `session_started` +
+  `document_opened` rows under RLS on the dev DB; **Tempo** holds one trace spanning BOTH services — the
+  browser CLIENT span parenting the api SERVER span named with the full mounted route
+  (`GET /api/v1/mro/v1/document-hub/capabilities`) and the api's own httpx/redis/postgres CLIENT spans
+  beneath it; the core forwarder POSTed the collector's 4319 with 200s (59 ingest requests). To make the dev
+  DB serve the new tables the owner migration + provision ran against `copilot_mro` (snapshot banked in
+  `.dev_runs/obs-probe-20260905/`; 1447 stmts; readonly grants applied=20). Stack torn down after. Phase 4
+  acceptance (master §8) is met.
 ## 16. Future Improvements
 _(empty)_
 
