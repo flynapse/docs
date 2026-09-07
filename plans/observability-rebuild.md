@@ -613,6 +613,31 @@ _(empty)_
 ## 17. Lessons
 _(plan-scoped; append after any owner correction: what was tried, what was corrected, the rule for next time)_
 
+## 18. Resume brief (as of 2026-09-05, end of build day)
+
+Nothing is running — all implementers and reviewers completed. Every stream (I infra, U utils/api, P backend
++ dashboard analytics, F frontend, D phase-6 dashboards) was adversarially reviewed MERGE-READY, merged
+estate-wide with green verification, and every worktree's ledgered uncommitted edits landed as explicit
+commits. §15 above is the authoritative dated ledger (merge note, probe note, owner checklist, deferral
+rulings). F10 cut-over is merged into dashboard `agent_sdk`; the live probe PASSED: Loki carries all five
+browser event types with tenant_id upserted from gateway headers, `product_events` holds rows under RLS, and
+one Tempo trace spans dashboard CLIENT → api SERVER (full mounted route) → db CLIENT spans. Dev DB
+`copilot_mro` was migrated + provisioned for `product_events`/`chat_turn_facts` (snapshot banked in
+`.dev_runs/obs-probe-20260905/`). Worktrees pruned except `/home/aditya/Code/wt-obs-u` — its bundle env is
+the ONLY env with the new OTel pins until the owner runs the shared-venv refresh (`env -u VIRTUAL_ENV poetry
+install` in `api/`, only when the parallel LangGraph session is idle); until then run utils/api tests from
+the bundle with PYTHONPATH pinned to the MAIN checkouts. Everything is local/unpushed per workspace norm.
+
+Next work, in order: (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
+alarm-dialect ruling, Amplify AL2023 + Node 22, improvement-findings review → tab flag, backfill crontab,
+Weaviate pin, Portainer, B1a/B1b/B1d probes); (2) AWS deployment DEFERRED by owner ruling until all
+implementation is done — laptop-only profile testing until then; (3) Gate M when the owner declares the
+LangGraph migration landed → Task R rescoping → Stream L (phase 0 app half, 1b-mro, phase 3 LLM/agent
+telemetry, `chat_turn_facts` writer 3.7, content capture) — the dark phase-6 panels light up here and Stream
+L must confirm the `agent_outcome="error"` spelling + doc-hub/automation counters; (4) phase 7 eval harness
+(Phoenix container done). Per-stream detail: `docs/plans/observability-rebuild-phase-*.md` (implementation
+notes, review triage, Lessons in each).
+
 ---
 
 ## Appendix A — Draft contract clause: conversation content capture (for legal review; ruling 20)
