@@ -123,7 +123,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] F9 — built, reviewed, fixed, re-verified
 - [ ] E9 — built, reviewed, fixed, re-verified
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass running
-- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass running
+- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verification running
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
@@ -623,7 +623,7 @@ warn with an email in its body, a render error, and a root-layout throw. Checks,
 6. The first auth/bootstrap request of a cold load has a span (F9.5, for what it proved).
 7. A chat turn with an image attachment (with Bedrock unavailable the turn ends as `error` — the upload spans'
    parentage is what is checked): both upload spans are children of `browser.chat.turn`.
-8. Prometheus has span metrics with `url_template` for `service="dashboard"`.
+8. Prometheus has span metrics with `url_template` for `service="dashboard"`, and Tempo's active-series demand stays well under the 100000 `max_active_series` cap (M9's 20–35k baseline is an estimate — read the generator's demand metric to confirm the headroom).
 9. `fn-frontend` renders every panel; then M9.6 flips what was seen.
 Teardown by port and `compose down -v`; results and any fix passes recorded in §11.
 
