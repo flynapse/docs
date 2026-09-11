@@ -708,8 +708,37 @@ merged mainlines.
 | D9-18 | M9's branches are stacked on the phase-8 D8 branches (merges `9976fa7c`, `9231863`) | branch from the mainlines and rebase after R5 | M9 edits the same catalogue, guard and runbook files and extends their fixture lists; stacking removes the conflict and R10 already follows R5 |
 | D9-19 | Server log lines go through `process.stdout/stderr.write` via a sink and a request-context store on `globalThis`, registered by the server-only modules; `logger.ts` never imports a server module | import a server-log module from `logger.ts`'s server branch; `console` output | `logger.ts` is in ~71 client modules (a server import breaks or bloats the client bundle); separate server bundles would each get their own module singleton; production builds strip `console.*` |
 
-### 8b. Phase A close — gate agenda
-_(filled at Phase-A close: branch tips, suite evidence, merge mechanics per chunk)_
+### 8b. Phase A close — gate agenda (drafted 2026-09-11; the R10 and R11 tips are filled when M9.6 and C9 land)
+
+Branch tips the Fable chunks review — each chunk's reviewer starts from its §10 brief plus this table:
+
+| Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
+|---|---|---|---|
+| R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
+| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` (+ its core branch), reviewed from its own plan | `agent_sdk` `b87ced0` | its own |
+| R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `af9f307`; `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1841/1841, `tsc`, eslint; api middleware + infra 322 |
+| R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
+| R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
+| R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ (M9.6 tip; `deployment/**` only, stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ (M9.6 tip; stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | otel lane 83 (both smokes + rules) before M9.6 |
+| R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ (C9 tip) | core `master` `988571b` | (C9 lane) |
+
+The three dashboard branches were merged together once already, on P9's throwaway tree: 0 conflicts, and the shared-file and
+guard tests passed 46/46 there.
+
+**Merge mechanics per chunk (session lead, after each Fable verdict):**
+- **RC first.** The owner's conversion merges into `agent_sdk` (its core branch into core `master`). Each obs9 dashboard
+  branch then merges the post-RC `agent_sdk` and re-runs its full lane and `tsc` before its own chunk, applying the §1b
+  merge rules. In `useOptimizer.ts` the two `meta` edits are combined. The settings-api department blocks come from RC.
+  The `ReviewStep` and `CanvasHeader` call-site wrappers give way to the hook path. E9's coverage sweep will list the
+  converted mutations that lack `meta.telemetry`, and they get `browser.feature.mutation` meta. `withSettingsMutation` is
+  deleted if it is dead, and the guard's pin is updated. `useAppMutation`'s inner `useMutation` gets its exemption.
+- **R7, R8, R9.** `obs9-browser`, then `obs9-events`, then `obs9-server` merge `--no-ff` into `agent_sdk`, with the full unit
+  lane and `tsc` after each. `obs9-api` merges into api `langgraph-merge`.
+- **R10, after phase-8 R5 has merged D8.** `obs9-deploy` merges into `langgraph-merge` (`deployment/**` only) and `obs9-iac`
+  into `main`. If Fable changed D8 at R5, merge the new D8 tips into the obs9 branches first. Then run the otel lane and
+  `terraform validate`.
+- **R11.** `obs9-core` merges into core `master`, then the core logging lane runs.
+- **After R11.** Re-run P9 checks 2, 4 and 5 on the merged mainlines, as a short re-probe.
 
 ## 9. Future Improvements
 - **SSR OTLP export (G9-18).** Missing: route-handler spans and server logs in Tempo/Loki. Deferred by spec §3.4 until

@@ -685,6 +685,23 @@ PromQL widget console export, Stream L counter hand-off.
   loki tempo` in `copilot-mro/deployment` recreates them with `-config.expand-env=true`; a leftover
   `flynapse-otel-probe` collector holds 14318/14319/14313. Session-scratchpad notes, briefs and the P9 runbook are copied
   to `copilot-mro/.dev_runs/obs9-phaseA/`. Nothing merged, nothing pushed.
+- **2026-09-11 — Phase 9 P9 live probe PASSED; Phase A closing.** F9 (`af9f307` + api `72df51a`), E9 (`08b7650`) and N9
+  (`c52f034`) were re-verified MERGE-READY. M9 is MERGE-READY; its M9.6 DARK flip is running. P9 ran on a throwaway
+  integration tree of the three dashboard branches, merged with 0 conflicts. Checks 1–9 passed; the gaps are named in the
+  phase-9 plan §7 "P9 results": the S3 half of check 2 is blocked by an expired AWS SSO token, optimizer run triggers were
+  not exercised because they would solve the owner's pinned jobs, and Data Discovery is not open to this account.
+  New from P9: stream C9 — core's ingest route now answers a client disconnect with 499 and one INFO line, not a 500 with
+  an ERROR traceback — as Fable chunk R11. Gate agenda: phase-9 plan §8b.
+  **Owner items added:**
+  - The local `api/.env` sets `OTEL_SERVICE_NAME=copilots`, plus the dead `OTEL_ENABLED` / `OTEL_ENDPOINT` keys. Change it to
+    `api` (App Runner already sets `api`).
+  - `NewPasswordView` always calls `confirmResetPassword`, so a user sent there by the login NEW_PASSWORD_REQUIRED
+    challenge cannot finish. This is a product bug outside phase 9.
+  - The automations failed-run panel shows no reference (phase-9 plan §9).
+
+  Still open from earlier: Amplify `ENV=production`, the alarm-dialect ruling (the browser alarms are documented only),
+  the §2.1 catalogue look, the crash-looping local `deployment` Loki and Tempo, and the leftover `flynapse-otel-probe`
+  collector.
 
 ## 16. Future Improvements
 _(empty)_
@@ -714,15 +731,19 @@ the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewe
 → R3 → R4 → R5 with a merge after each; agenda, tips and mechanics in the phase-8 plan §8b, briefs in §11. The shared
 `api/.venv` refresh happens at the R1 merge (`poetry lock` + `poetry install` in `api/`).
 
-**Phase 9 (added 2026-09-11):** dashboard telemetry completion — every gap from the 2026-09-11 dashboard audit except
-Rostering (demo-only). Plan v2 after an independent Opus plan review; four parallel Opus streams in six worktrees (F9
-`dashboard-obs9` + `api-obs9`, E9 `dashboard-obs9e`, N9 `dashboard-obs9n`, M9 `copilot-mro-obs9` + `iac-obs9`, the M9 pair
-stacked on phase-8 D8). Phase A in flight: M9 MERGE-READY, N9 in its fix pass, F9 in review, E9 building. The shared
-implementer and reviewer briefs, per-stream notes and the P9 runbook live in the session scratchpad, with a copy in
-`copilot-mro/.dev_runs/obs9-phaseA/`; the phase-9 plan §10/§11 hold the folded state. Then P9 (a live probe on a throwaway
-integration tree, prefix-3 ports, sampling pinned to 1) → M9.6 DARK flip → Phase-A close (§8b agenda). Merges HELD:
-after phase 8's R0–R5, Fable runs R6 (phase-9 design) → **RC (the owner's TanStack conversion, session code-26, Fable-gated
-too)** → R7 F9 → R8 E9 → R9 N9 → R10 M9, merging after each (split and merge rules in the phase-9 plan §1b).
+**Phase 9 (added 2026-09-11):** dashboard telemetry completion covers every gap from the 2026-09-11 dashboard audit
+except Rostering, which is demo-only. The plan got an independent Opus review before the build. Four parallel Opus
+streams run in six worktrees: F9 in `dashboard-obs9` + `api-obs9`, E9 in `dashboard-obs9e`, N9 in `dashboard-obs9n`, and M9
+in `copilot-mro-obs9` + `iac-obs9`, the M9 pair stacked on phase-8 D8. Where Phase A stands:
+- F9, E9 and N9 are done (re-verified MERGE-READY).
+- M9 is done except the M9.6 DARK flip, which is running.
+- The P9 live probe PASSED (§7 "P9 results"; evidence in `copilot-mro/.dev_runs/obs9-probe-20260911/`).
+- C9, the one P9 finding (a core ingest client disconnect), is running in `core-obs9`.
+
+Then comes Phase-A close with the §8b gate agenda. Merges are HELD: after phase 8's R0–R5, Fable runs R6 (phase-9 design),
+then **RC** (the owner's TanStack conversion, session code-26, Fable-gated too), then R7 F9, R8 E9, R9 N9, R10 M9 and R11
+C9, merging after each (§8b). The session scratchpad notes, briefs, audits and runbook are copied to
+`copilot-mro/.dev_runs/obs9-phaseA/`.
 
 Next work, in order: (0) finish phase 9 Phase A (fix passes, reviews, P9, the DARK flip, the §8b agenda); the Sunday Fable gate for phase 8 (R0–R5), then its §10 live probe, then phase 9's chunks R6 → RC → R7–R10; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
 alarm-dialect ruling, Amplify AL2023 + Node 22, improvement-findings review → tab flag, backfill crontab,
