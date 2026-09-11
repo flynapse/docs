@@ -341,7 +341,7 @@ _(one subsection per stream, written by each Opus reviewer, with the session lea
 
 
 ### Stream O — review brief (reviewer Opus 5, 2026-09-10; verdict **MERGE-READY** for chunk R1)
-**Scope.** `flynapse-otel` `main` f058771 → 78e6d77 (+ the P2-7 follow-up commit); `utils-obs8` `obs8-utils` 4602211 → c8efbe3
+**Scope.** `flynapse-otel` `main` f058771 → f0c6432 (P2-7 parallel per-provider shutdown landed, 160 tests); `utils-obs8` `obs8-utils` 4602211 → c8efbe3
 off `langgraph-merge`.
 **Checked.** Both suites before/after the fix pass (154 → 160 / 1023); bundle api unit suite against the shim (406) and
 the boot check (six instrumentors); line diffs of the four moved modules vs `langgraph-merge`; AST import-surface +
