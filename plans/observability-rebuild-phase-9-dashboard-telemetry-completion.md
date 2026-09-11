@@ -121,7 +121,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [x] Plan v1 (`e1845fd`) + master §11c
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
 - [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review running
-- [ ] E9 — built, reviewed, fixed, re-verified
+- [ ] E9 — in progress (E9.1–E9.3 committed `f697919` → `972d532`; E9.4 withdrawn to the TanStack conversion; E9.5 uncommitted; E9.6–E9.8 to follow)
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass running
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title in a final mini pass; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass)
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
@@ -698,7 +698,40 @@ _(filled at Phase-A close: branch tips, suite evidence, merge mechanics per chun
   audit's checklist when it is executed).
 
 ## 10. Review briefs (Phase A output; input to Phase B)
-_(one per stream, written by its reviewer)_
+### Stream M9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY** after one fix pass and re-verification; four P3 nits in a final mini pass)
+Scope: copilot-mro-obs9 `9976fa7c..6984d47b` (11 commits, only `deployment/**`, `tests/integration/otel/**`,
+`docs/runbooks/observability/**`) and iac-obs9 `9231863..ad4e431` (only `dashboards/frontend.json.tftpl`). Checked:
+every §6 task; the claim that the pinned `redaction` masks string log bodies (v0.160.0 `processLogBody` source, and a
+mutation removing `redaction` from the oss log pipelines left email, bearer, JWT and AKIA text verbatim in the smoke);
+no log path bypasses it (every profile's log pipelines end `redaction` → `batch`; `content-phoenix.yaml` is
+traces-only; no debug exporter); allow-list parity by word-diff; every board query accepted by the smoke's Loki 3.7.7
+(malformed controls rejected); the parity guard (regex selector, comma chain, stream-selector label, `and`, `on()` and
+`unwrap` mutations all caught); no alarm or metric-filter resource; `terraform validate`; all bodies parse. Findings
+→ rulings: P1 drop-report keys + panel 18 as a per-session max (fixed); P2 `url.template` is only id-collapsed (wording
+fixed, Tempo `max_active_series` 100000; the source bound rides F9's fix pass; an API template table is §9); P2 panel 9
+network-failure wording (fixed; the fetch fix rides F9); P3 parity-guard breadth, dotted-key RE-VERIFY list,
+`status_message`, a runtime-built fake key (fixed); re-verification P3s — LogQL's `__error__` labels, a cap alert and
+a test ceiling, the iac drops-widget title (mini pass). Lanes: static 73 passed / 10 skipped; full with both compose
+smokes + rules 83 passed; `validate.sh` ok for oss, aws, azure. Residual: panels on real records (P9 check 9),
+`url_template` emission (P9 check 8), CloudWatch syntax and dotted keys (B1b), the series-cap baseline is an estimate.
+
+### Stream N9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY AFTER FIXES**; fix pass running)
+Scope: dashboard-obs9n `b87ced0..f3d7d21` (6 commits). Checked: unit 1851/1851, `tsc`, eslint on 28 files; three
+mutations (trace headers removed from the work-orders fetch; `Authorization` dropped by the traced helper; a dynamic
+server import in `logger.ts`) each caught; two canary probes against the real route handlers; the build output (no
+server-only marker in any client chunk; the edge bundles carry no N9 code); the `removeConsole` finding; a 3-way merge
+of `logger.ts` against F9's tip with no conflict. Findings → rulings: P1 the api's error text reaches route log lines
+in 14 of 19 cases (→ `routeFailure`: status + bounded code, never the message; the canary sweep gains a failing-api
+mode); P1 5xx bodies carry upstream text in 16 of 19 cases, plus network-error messages, work-orders `details` and
+content-stream's 502 (→ `routeErrorResponse`: a 4xx reason is kept, 5xx gets a constant); P1 the JSON format keys on
+`NODE_ENV`, levels stay on `ENV` (the Amplify default is `ENV=development`), tests set and restore both; P3 internal
+api URL kwargs, sweep bypasses (import resolution, `*.fetch(`), the "4 KiB" read claim, commented-out logger lines.
+Residual: a minted `traceparent` names a parent that is never exported (until G9-18); no real `next start` run yet
+(P9 check 5); non-status errors still ride scrubbed messages under the phase-4 rule.
+
+### Streams F9 and E9
+F9's reviewer is running; E9 is still building. Their briefs land here when written.
+
 
 ### 10a. Plan review — 2026-09-11 (reviewer Opus 5; verdict READY AFTER CHANGES) — triage
 
@@ -722,7 +755,90 @@ _(one per stream, written by its reviewer)_
 | 16 | P3 | Rostering console count 7; no `tests/unit/infra`; dedupe-suppressed references; discovery settle via an effect; 401 retry escapes `runInContext`; minted span id for trace linkage | ACCEPTED — all folded into G9-12/G9-28, F9.2, F9.4, E9.6, F9.7, F9.3 |
 
 ## 11. Implementation notes / Learnings (per stream, as work lands)
-_(folded in by the session lead from each stream's notes file)_
+### Stream F9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9 `ee68a7a` → `b9ba515`, 11 commits; api-obs9 `46a86fc`)
+F9.1 `81c1e9c`: the exporter serializes scrubbed copies (span attributes, event and link attributes, status message,
+log attributes and body) — first-party URLs lose query and fragment, third-party URLs keep scheme and host;
+`scrubMessage` applies the same rule inside free text; the provider registers the api origin (2 lines). F9.2 `3c729af`:
+`emitLog` scrubs bodies; the 14 settings-api messages are constant; `.eslintrc.json` gains `no-console` (Rostering
+exempt) and the constant-first-argument rule; the AST guard (string literal, expression-free template, or `+` of
+literals only) runs in the unit lane; the masking rules moved to `lib/telemetry/scrub.ts` to break an import cycle.
+F9.3 `13ec1dd`: every failed request's error carries `traceId`, `requestId` and `urlTemplate`; `handleApiError` logs one
+constant message with the template, status and `request_id`; the dedupe key adds endpoint and status; the record is
+emitted inside the failed request's trace through `context.with` (no `emitRecord` signature change); the two `client.ts`
+URL lines are gone. F9.4 `bbf2d04` + api `46a86fc`: the reference is the trace id of the `traceparent` the instrumentation
+injected (fallback `X-Trace-Id`), shown with a Copy button in both fallbacks and in server / network / unknown toasts;
+a deduped repeat returns the id of the record that shipped; api: CORS exposes `X-Request-ID` and `X-Trace-Id`, the
+trace-id middleware sits just inside CORS, and a test on the real app shows auth's 500 and 401 leaving without the
+header on `a19a931`. F9.5 `cd4758b`: the first test PROVED both gaps on the real `AppProviders` tree (a page's first
+query went out untraced; a first-render error was lost); `lib/telemetry/boot.ts` starts the stack at module load. F9.6
+`e2cc258`: `app/global-error.tsx`. F9.7 `e0262a7`: `uploadInTurn` in the three stream hooks, `attachment_count` and
+`attachment_upload_ms`, and `fetchWithAuth` / `fetchStreamWithAuth` re-enter the caller's context for the post-refresh
+retry. F9.8 `ee68a7a`, `db880b6`, `b9ba515`: the stale env line, the dead traceparent generator, and the dead
+`sendMessage`, `rawApiRequest` and `handleApiResponse` (a hand-off from the TanStack conversion). Logging coverage
+`f60bc35`: a failed token refresh and its sign-out failure now warn. Lanes: unit 1815/1815, `tsc`, eslint (39 files and
+`app components lib`), api middleware + infra 322 passed. Deviations accepted: the legacy guard bans the generator's
+declarations, not its names (the SDK's `RandomIdGenerator` reuses them); `test_auth_rejection_metric.py` now measures
+per-attribute-set deltas (its reader accumulates across the session); the api lane needs `POSTGRES_DB=copilot_mro_test`.
+Queued for the fix pass with the review's findings: id-collapsing `url.template` at the source, fetch network failures
+marked ERROR (not aborts), the `authenticatedApiRequest` header spread, `no-console` scope for test fixtures, no api
+error text in status-bearing browser records, camelCase identity keys in `SENSITIVE_KEY`.
+
+### Stream N9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9n `81b1ea9` → `f3d7d21`; fix pass running, `3784b13` → `49a3c68` so far)
+N9.1 `81b1ea9`: the request context lives on `globalThis` under `Symbol.for` keys (a module-level store fails the
+two-bundle test). N9.3 `c0b323a` + `f3d7d21`: the sink writes through `process.stdout/stderr.write`; `logger.ts` only looks
+it up (import-graph guard). N9.4 `c2d324e`: `instrumentation.ts` — `register()` registers the sink under
+`NEXT_RUNTIME === 'nodejs'`, `onRequestError` writes one line. N9.2 `26124e7`: `withRoute` on all 17 exported methods of
+the 12 routes; `tracedApi*` helpers carry the full header set (because `authenticatedApiRequest` spreads
+`{ headers, ...options }`); trace headers on every api call and none on the S3 hop; three sweep guards. N9.5
+`a71907c`: upstream bodies, the token `sub`, organization contact, comment text and names are out of the logs (a
+canary sweep), and two silent failure paths now warn. Lanes: unit 1851/1851, typecheck, eslint, `next build` clean, no
+server-only marker in the client chunks. Finding: `removeConsole` strips literal `console.x` calls from server chunks
+too while computed calls survive, so the base's route logs did reach production — unstructured and without trace ids.
+Fix pass so far: fix-1 `8954733` route failures log status + code, not text; fix-2 `ab79ba1` 4xx reasons kept, constants
+for everything else; fix-3 `6ca7fda` JSON lines follow `NODE_ENV`, levels follow `ENV`; fix-4 `ab723ec` no internal api
+URL kwargs; fix-6 `49a3c68` upstream error bodies read to 4 KiB and the rest cancelled; fix-7 `3784b13` dead commented
+logger lines deleted; fix-5 (tighter sweeps) in progress.
+
+### Stream M9 — landed 2026-09-11 (implementer Opus 5; copilot-mro-obs9 `07f22475` → `6984d47b` on the stacked base `9976fa7c`; iac-obs9 `1eb8c6c` → `ad4e431` on `9231863`; final mini pass running)
+M9.1 `07f22475`: the five §2.1 keys in both allow-list statements. **Deviation, accepted:** no body-masking transform —
+the pinned `redaction` already masks string bodies (a probe on the pinned image plus the processor source), so the
+property is test-pinned instead (G9-03 disproved). M9.2: static pins plus a compose smoke through the real collector
+into Loki; `OTEL_SMOKE_PORT_PREFIX` (default 1 = today's ports) because the leftover `flynapse-otel-probe` collector
+holds 14318/14319/14313. M9.3 `44dcae10`: Tempo gains the `url.template` dimension only; panel 6 gains a per-template
+p95 and a "Browser API failures by endpoint" panel is new. M9.4 `54ff6a19`: nine new `fn-frontend` panels (10–18) with
+DARK markers, CATALOGUE §5, and guards that every §2.1 log event is charted and every label a browser LogQL panel or
+Loki rule reads is delivered by the collector. M9.5 iac `1eb8c6c` + copilot-mro `c3faabf1`: nine Logs Insights widgets
+(RE-VERIFY) and the browser alarms documented only (metric-filter patterns, `Flynapse/Browser` metrics, the Loki
+thresholds, the SNS target; blocked on the alarm-dialect ruling, B1b and the cut-over). Fix pass: `661b3000` (+ iac
+`dfe3d13`) drop-report keys and panel 18 as a per-session max; `eedfeb25` id-collapsed wording and a
+`max_active_series` cap of 100000 (baseline 20–35k series, estimated — the dev Prometheus has no span metrics to measure);
+`10f539fa` parity-guard breadth; `a9bc04d1` the dotted-key RE-VERIFY list; `2676be63` `status_message` dropped and the
+fake key built at runtime; `6984d47b` (+ iac `ad4e431`) failure and sampling wording. Lanes: full otel lane 83 passed
+(both smokes + rules), static 73 / 10 skipped, `validate.sh` for all three profiles, `terraform validate`, all 8 bodies
+parse, 29 LogQL queries accepted by the pinned Loki. Pre-existing, left alone: `terraform fmt -check` flags `amplify.tf`
+(main `02bb5cb`). Learnings: the otel lane needs `POSTGRES_DB=copilot_mro_test`; the browser's drop counts are
+cumulative per tab and its reason keys count batches; Tempo 3 counts a series as active only if touched in the last
+15 minutes.
+
+### Stream E9 — in progress 2026-09-11 (implementer Opus 5; dashboard-obs9e `f697919` → `972d532`, 3 commits + uncommitted work)
+E9.1 `f697919`: the seven §2.1 names, allow-lists and typed emitters; `withFeatureMutation`, `startAuthFlowTiming`,
+`withExportRequested`, `withOptimizerRunTriggered`; closed `FEATURE_ACTIONS` and `AUTH_FLOW_STEPS` maps (a pair outside
+them is a compile error); `errorTypeOf` (names only); a REPO-WIDE coverage sweep (every `useMutation` declares
+`meta.telemetry` or is exempt with a reason) and a TypeScript-checker double-emission guard (transitive and
+alias-aware; the derived self-emitting methods are compared to a pinned list; a self-test fixture). E9.2 `ba0ba33`: all
+22 optimizer hooks, the wizard chain at the call site, CanvasHeader's export and re-run preflight (no `row_count_bucket`
+— the xlsx response carries no row count). E9.3 `972d532`: AD dispositions and corpus actions. Withdrawn 2026-09-11 to
+the owner's TanStack conversion (§1b): E9.4 (settings) and the notifications and Document Hub writes. In progress,
+uncommitted: E9.5's existing mutations (automations, comments, improvement, chat share, the data-discovery pages) and
+the deletion of the three uncalled optimizer hooks; E9.6–E9.8 follow. Learning: `fetchWithAuth` throws a plain `Error`
+carrying `status`, so hook failures record `error_type=Error`.
+
 
 ## 12. Lessons
-_(plan-scoped; append after any owner correction)_
+- **Adjacent owner work that shares the effort's files is Fable-gated too (2026-09-11).** Tried: telling the owner's
+  parallel TanStack conversion session it could land on `agent_sdk` first because it "is not Fable-gated", with phase 9
+  absorbing it later. Owner corrected: "i will want to fable review that work too eventually." Rule: under a
+  stronger-model gate, treat any parallel work that shares the effort's files as gated too unless the owner says
+  otherwise — give it its own gate chunk (here RC), fix its merge order against the effort's chunks, and say so in the
+  first coordination message.
+

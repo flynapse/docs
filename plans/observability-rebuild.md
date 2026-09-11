@@ -661,6 +661,30 @@ PromQL widget console export, Stream L counter hand-off.
   endpoint tests red since 2026-09-08 (seed clock aged out); found and deferred to the R1 merge: api's committed
   `poetry.lock` still points at the deleted `../../utils-obs` worktree path. Nothing merged, nothing pushed; the
   Sunday-night agenda, branch tips and merge mechanics are in the phase-8 plan §8b.
+- **2026-09-11 — Phase 9 OPENED (§11c); Phase A building.** Trigger: the dashboard telemetry audit (two read-only agents
+  at `agent_sdk` `b87ced0`) answered "not complete". Plan v1 `e1845fd` → an independent Opus plan review (READY AFTER
+  CHANGES, 6 P1) → v2 `087da6f` (triage in the phase-9 plan §10a). Four Opus streams in six worktrees: F9
+  `dashboard-obs9`/`obs9-browser` + `api-obs9`/`obs9-api`; E9 `dashboard-obs9e`/`obs9-events`; N9
+  `dashboard-obs9n`/`obs9-server`; M9 `copilot-mro-obs9`/`obs9-deploy` + `iac-obs9`/`obs9-iac`, stacked on the phase-8 D8
+  branches by merges `9976fa7c` / `9231863`. Status at this entry: M9 MERGE-READY (a final P3 mini pass); N9 MERGE-READY
+  AFTER FIXES (fix pass running); F9 built (unit 1815/1815, api 322) and in review; E9 building (E9.1–E9.3 committed).
+  Findings worth keeping: the api's trace-id middleware sat inside auth, so auth-converted 500s and 401s left without
+  `X-Trace-Id` (fixed in F9); production `next build` strips literal `console.x` calls on the server too while computed
+  calls survive (server lines now go through `process.stdout`); the pinned collector's `redaction` already masks STRING
+  log bodies (G9-03 disproved and test-pinned); Tempo span metrics gain `url.template` only, under a 100000-series cap.
+  **Coordination:** the owner launched a separate TanStack useMutation conversion (session code-26,
+  `/home/aditya/Code/dashboard-tanstack`, plan `dashboard/docs/plans/tanstack-mutation-conversion.md`). Split in the
+  phase-9 plan §1b: it owns the 34 direct writes, their reads and the settings telemetry (plus one core change —
+  department-delete auth-cache invalidation); phase 9 owns the event catalogue and existing mutations. Owner ruling: that
+  work is **Fable-gated too** — chunk RC after R6, merged before phase 9's code chunks, with fixed merge rules
+  (`useOptimizer` `meta` combined; the settings-api department blocks taken from RC). **Owner items from this phase:**
+  confirm the production Amplify branch sets `ENV=production` (`iac/amplify.tf:71` defaults `dashboard_env` to
+  `development`, which keeps info/debug server lines on); the aws browser alarms join the pending alarm-dialect ruling
+  (documented only); a non-blocking look at the §2.1 catalogue delta; FYI the local `deployment` Loki and Tempo
+  containers (created 2026-03-10) crash-loop (~1,880 restarts) on the phase-6 `${…}` configs — `docker compose up -d
+  loki tempo` in `copilot-mro/deployment` recreates them with `-config.expand-env=true`; a leftover
+  `flynapse-otel-probe` collector holds 14318/14319/14313. Session-scratchpad notes, briefs and the P9 runbook are copied
+  to `copilot-mro/.dev_runs/obs9-phaseA/`. Nothing merged, nothing pushed.
 
 ## 16. Future Improvements
 _(empty)_
@@ -668,7 +692,7 @@ _(empty)_
 ## 17. Lessons
 _(plan-scoped; append after any owner correction: what was tried, what was corrected, the rule for next time)_
 
-## 18. Resume brief (as of 2026-09-05, end of build day)
+## 18. Resume brief (first written 2026-09-05; phase-8 and phase-9 paragraphs updated 2026-09-11)
 
 Nothing is running — all implementers and reviewers completed. Every stream (I infra, U utils/api, P backend
 + dashboard analytics, F frontend, D phase-6 dashboards) was adversarially reviewed MERGE-READY, merged
@@ -690,13 +714,17 @@ the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewe
 → R3 → R4 → R5 with a merge after each; agenda, tips and mechanics in the phase-8 plan §8b, briefs in §11. The shared
 `api/.venv` refresh happens at the R1 merge (`poetry lock` + `poetry install` in `api/`).
 
-**Phase 9 (added 2026-09-11):** dashboard telemetry completion — the gaps from the 2026-09-11 dashboard audit except
-Rostering, as four parallel Opus streams (F9 browser correctness + correlation with the api CORS change, E9 event
-coverage, N9 Next.js server side, M9 collector/boards/alarms) plus the P9 live probe; plan reviewed by an independent
-agent before the build; merges HELD for Fable chunks R6–R10 after phase 8's. Detail plan:
-`observability-rebuild-phase-9-dashboard-telemetry-completion.md`.
+**Phase 9 (added 2026-09-11):** dashboard telemetry completion — every gap from the 2026-09-11 dashboard audit except
+Rostering (demo-only). Plan v2 after an independent Opus plan review; four parallel Opus streams in six worktrees (F9
+`dashboard-obs9` + `api-obs9`, E9 `dashboard-obs9e`, N9 `dashboard-obs9n`, M9 `copilot-mro-obs9` + `iac-obs9`, the M9 pair
+stacked on phase-8 D8). Phase A in flight: M9 MERGE-READY, N9 in its fix pass, F9 in review, E9 building. The shared
+implementer and reviewer briefs, per-stream notes and the P9 runbook live in the session scratchpad, with a copy in
+`copilot-mro/.dev_runs/obs9-phaseA/`; the phase-9 plan §10/§11 hold the folded state. Then P9 (a live probe on a throwaway
+integration tree, prefix-3 ports, sampling pinned to 1) → M9.6 DARK flip → Phase-A close (§8b agenda). Merges HELD:
+after phase 8's R0–R5, Fable runs R6 (phase-9 design) → **RC (the owner's TanStack conversion, session code-26, Fable-gated
+too)** → R7 F9 → R8 E9 → R9 N9 → R10 M9, merging after each (split and merge rules in the phase-9 plan §1b).
 
-Next work, in order: (0) the Sunday Fable gate for phase 8, then its §10 live probe; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
+Next work, in order: (0) finish phase 9 Phase A (fix passes, reviews, P9, the DARK flip, the §8b agenda); the Sunday Fable gate for phase 8 (R0–R5), then its §10 live probe, then phase 9's chunks R6 → RC → R7–R10; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
 alarm-dialect ruling, Amplify AL2023 + Node 22, improvement-findings review → tab flag, backfill crontab,
 Weaviate pin, Portainer, B1a/B1b/B1d probes); (2) AWS deployment DEFERRED by owner ruling until all
 implementation is done — laptop-only profile testing until then; (3) Gate M when the owner declares the
