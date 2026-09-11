@@ -447,6 +447,35 @@ optimizer pair although `READONLY_SELECT_RELATIONS` omits them; it is not the pa
 **Residual.** Live `copilot_mro` RLS state re-probed by the implementer only (the reviewer had no psql client; the
 DB MCP is manual-invoke only); no browser render of the tab — the live probe (§10) covers it.
 
+### Stream T — review brief (reviewer Opus 5, 2026-09-10/11, re-verified after the fix pass; verdict **MERGE-READY AFTER FIXES → final small fix pass in flight** for chunk R4)
+**Scope.** `telegram-bot-obs8` `obs8-telegram` 6443d89 → 56cddc5 (+ the R1/R2/R3 follow-up commit) off `main` 1961778; path
+dep on `flynapse-otel`; `api/compose.yaml` `additional_contexts` hand-carried at merge.
+**Checked.** Suites before/after the fix pass (2267 → 2279 / 1 skipped), ruff, mypy (4 pre-existing); lock additivity;
+Dockerfile stages/pins (build not re-run by the reviewer — stack busy; the implementer's build succeeded); contrib 0.65b0 httpx
+attribute timing (URL attributes are set at span creation, so an `on_start` rewrite is sufficient; contrib's own `redact_url`
+covers `Signature`/`sig`/`X-Goog-Signature` but NOT `X-Amz-Signature`, so the processor is necessary) + excluded-URL read timing;
+PTB 22.8 exception messages and INFO+ log sites; flynapse_client error builders; in-memory probes for token/presigned leaks on
+attributes, events, status, log bodies/attributes, resource; filter recursion/refusal/malformed-args/None-traceback;
+concurrency (two overlapping updates → two roots), active gauge, kind vocabulary; `count()`-site label audit vs
+`COUNT_DIMENSIONS` and D8's catalogue (`user`, `age_seconds`, `citations`, `cost_usd`, `*_ms` never become labels);
+job-context inheritance before/after; bootstrap order (psycopg instrumentor wraps `Connection.connect`, so pooled
+connections are covered regardless of pool timing).
+**Findings → rulings.** P1-1 a rejected-token boot shipped the token in `exception.stacktrace` over OTLP (PTB `Bot.initialize`
++ networkloop `_LOGGER.exception`) → FIXED d1ee421 (`redact_text` + a scrubbed-copy filter on the OTLP handler; stdout
+unchanged by ruling) + pin 56cddc5. P2-1 a stale, ended update span was marked on job failures scheduled from handlers →
+FIXED (`job is None and is_recording()`; `job_span` clears the variable) + mutation-checked test. P2-2 unredacted exception
+events/status descriptions (safe today only because dochub raises `from None`) → FIXED (`record_failure`) + dochub 403/
+transport pins. P2-3 telemetry tests read the developer's `.env` → FIXED (`IsolatedSettings`, `env_file=None`). P2-4
+`getUpdates` long-polls (~8.6k valueless root traces/day, skewing the Telegram-API latency panel) → FIXED
+(`OTEL_PYTHON_HTTPX_EXCLUDED_URLS` set-default `.*/getUpdates`, operator value wins). P2-5 PTB CRITICAL `Update` repr on
+context-build failure → §9. Re-verification: P1-R1 the scrub filter could RAISE at the logging call site on a `%`-args
+mismatch (`Handler.handle` guards `emit` only; production-only) → FIX (never-raising filter + malformed-call test);
+P2-R2 `_scrubbed_for_otlp` shipped as a log attribute → FIX (class-marked copy); P2-R3 sequence extras unscrubbed → FIX.
+**Residual risks (live probe).** Docker build under the pinned poetry 2.4.1 / export 1.10.0 (`-e` rendering) re-verified
+by the implementer only; pooled psycopg `db.*` spans against a real DB; the `telegram.turn.backend` → api SERVER join;
+exporter-failure log feedback with the collector down; a Loki raw-stream grep after a deliberate bad-token boot (P1-1
+proof); confirmation that no `getUpdates` CLIENT span reaches Tempo.
+
 ## 12. Implementation notes / Learnings (per stream, as work lands)
 
 ### Stream O — landed 2026-09-10 (implementer Opus 5; commits flynapse-otel f058771→c1102db, utils-obs8 4602211, 0cb4afd)
