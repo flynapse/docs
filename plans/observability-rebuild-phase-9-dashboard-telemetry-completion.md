@@ -127,7 +127,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
-- [ ] Fable R6 (design) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
+- [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
 ### 1b. Files more than one stream touches (each stream owns one hunk)
 
@@ -169,7 +169,7 @@ sessions off the same lines:
   automations CRUD, comments, improvement, chat share, the data-discovery page mutations), the settles, auth flows and
   exports. E9.4 is therefore withdrawn from E9 (G9-19, G9-38 move to the conversion session), and E9.5 drops the
   notifications and Document Hub writes.
-- **At the merge:** the conversion lands on `agent_sdk` first (it is not Fable-gated), so before R7 each obs9 dashboard
+- **At the merge:** the conversion is Fable-gated too (owner, 2026-09-11): it builds on its own branch off `agent_sdk`, and its Fable chunk (RC, after R6) is reviewed and merged into `agent_sdk` BEFORE phase 9's code chunks — so before R7 each obs9 dashboard
   branch merges the then-current `agent_sdk` and re-runs its lanes. E9's repo-wide coverage sweep then lists every
   converted mutation still without `meta.telemetry`; the follow-up adds `browser.feature.mutation` meta to those, and
   its double-emission guard rejects any mutation that declares meta while calling a still-wrapped primitive. E9's
@@ -621,7 +621,7 @@ stream's section + §0 + §2 + §8a + the diff, running the suites itself and tr
 not guard presence; every test must fail without its fix. Triage, fix pass, re-verification, brief into §10.
 
 **Phase B (Fable, when the limit returns; after the phase-8 chunks R0–R5):** five bounded chunks, one fresh Fable agent
-each, in merge order — R6 **design** (§0, §2, §8a, the stream split and file ownership) → R7 F9 (dashboard + api) → R8
+each, in merge order — R6 **design** (§0, §2, §8a, the stream split and file ownership) → RC the owner's TanStack conversion (design + code, from its own plan; merged into `agent_sdk` first, after which each obs9 dashboard branch merges `agent_sdk` and re-runs its lanes) → R7 F9 (dashboard + api) → R8
 E9 → R9 N9 → R10 M9 (copilot-mro `deployment/**` + iac). A chunk's merge follows its verdict: dashboard branches
 `--no-ff` into `agent_sdk` (F9, E9, N9 in that order, full unit lane + `tsc` after each), api into `langgraph-merge`,
 copilot-mro `deployment/**` into `langgraph-merge`, iac into `main` — M9's two branches after phase-8 R5 has merged
