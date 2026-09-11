@@ -287,18 +287,36 @@ reviewed **one at a time** with a fresh Fable agent each, in this order — the 
 
 | Chunk | Scope | Why its own review |
 |---|---|---|
+| **R0** | **The design itself** (this plan: §2 package split, §3 catalogue, §6 tab, §7 boards, the review/merge design) — against the spec and the surveyed facts, before any code is looked at | owner ruling 2026-09-10: "Fable will have to review not just the code implemented, but also the design"; the design was written and built on Opus, so Fable rules on it first — a design correction rescopes the code chunks below before they are reviewed |
 | R1 | Stream O (package + utils shim) | estate-wide import surface; the only change that can break every process |
 | R2 | Stream S + the api health exclusion | small; merge-sensitive (api on `langgraph-merge`) |
 | R3 | Stream PA8 | RLS + capability gating on a new product surface |
 | R4 | Stream T | the standalone service; secret-redaction is the P0 |
 | R5 | Stream D8 | cross-stream name check against the landed T/S code; two dialects |
 
-Each chunk: reviewer reads the brief → re-runs the suites → tries to break it → verdict; fix pass on Fable if
+R0 is a read-only design review with a written verdict per decision in §8a (keep / change / reject, with the
+reason); every "change" becomes a fix task on the affected stream before that stream's code chunk runs.
+Each code chunk: reviewer reads the brief → re-runs the suites → tries to break it → verdict; fix pass on Fable if
 needed → **merge that chunk** before starting the next. R1's merge is followed by the shared-env refresh and an
 api boot check before R2 starts. If Fable's limit falls mid-gate, the remaining chunks wait; nothing is merged on
 an Opus-only verdict.
 
 ---
+
+### 8a. Design decisions for R0 (what Fable rules on, with the alternatives that were considered)
+
+| # | Decision (as built) | Alternatives considered | Why this one |
+|---|---|---|---|
+| D-1 | Shared implementation extracted into a new sibling repo `flynapse-otel` consumed by path dependency; `utils.observability` stays as a re-export shim | (a) in-repo copy of the bootstrap in the bot; (b) bot depends on full `flynapse-utils`; (c) sub-package inside the utils repo | owner chose extraction; a repo (not a utils sub-directory) because every workspace package is a repo consumed via `../x` and the bot image is built from its own repo with an additional build context |
+| D-2 | Package API changes limited to five: caller-declared `instrumentations` names against a catalogue; stdlib logging inside the package; `shutdown()`; `attach_stdlib_logging()`; scope name `flynapse_otel` | keep the fixed six-instrumentor list; keep loguru; no shutdown API | the bot has psycopg 3 and no loguru; a standalone process must flush on SIGTERM; a package used by the bot cannot label its scope `utils` |
+| D-3 | Telegram root span per **update** (CONSUMER) via the PTB application class, turn/phase children from the existing `TurnTiming` boundaries, job spans for scheduled work | per-handler spans; per-turn only; a `TypeHandler` in a negative group (cannot close the span after later groups run) | one span per unit of work the bot receives; the phases are already measured |
+| D-4 | Existing `count()`/`TurnTiming` log lines stay byte-identical; OTel metrics emitted beside them | replace the lines with metrics | tests + README §11 pin the grammar; log lines remain the offline story |
+| D-5 | httpx auto-instrumentation kept for the Telegram API (latency is real signal) with a `url_filter` redacting the bot token and stripping every query string | exclude `api.telegram.org` entirely via `OTEL_PYTHON_HTTPX_EXCLUDED_URLS` | keep the signal, remove the secret; a test asserts no token/`X-Amz-` in any exported attribute |
+| D-6 | Optimizer run = its own root span with a **Link** to the request span (which has already ended when the `BackgroundTask` runs) | parent the run to the server span (would parent to an ended span); make the endpoint synchronous | matches OTel guidance for work that outlives its trigger; the estate's `run_span.py` pattern |
+| D-7 | Optimizer metrics emitted from the api process under `service.name=api` with `optimizer.*` names (no separate service name) | a distinct `service.name=shift-optimizer` resource for the sub-app | one process = one resource; the route prefix and metric names identify the product |
+| D-8 | Optimizer product tab = 5 Postgres panels under the existing panel registry, gated `view_dashboard` + `optimizer`, no new FE events | FE events for run triggered/exported (research-07 #22/#23) | the facts already exist in `optimizer_runs`; FE-only gestures stay deferred |
+| D-9 | Dashboards in both dialects now (Grafana JSON + CloudWatch bodies), AWS deployment itself still deferred | oss only until AWS deploy | owner: the bot will run on AWS; the catalogue invariant is "edit both dialects" |
+| D-10 | Two-phase review: Opus adversarial now → Fable gate in chunks R0–R5, merge per chunk, nothing merged on an Opus-only verdict; shared-env refresh after R1 | merge after Opus review; one big Fable review | owner: Fable limit returns Sunday; one review per bounded chunk keeps each within a session |
 
 ## 9. Future Improvements
 _(filled at triage)_
@@ -315,7 +333,22 @@ presigned URL anywhere (grep the raw stream). Teardown by port + `compose down -
 _(one subsection per stream, written by each Opus reviewer)_
 
 ## 12. Implementation notes / Learnings (per stream, as work lands)
-_(empty)_
+
+### Stream O — landed 2026-09-10 (implementer Opus 5; commits flynapse-otel f058771→c1102db, utils-obs8 4602211, 0cb4afd)
+Package: `flynapse_otel/{bootstrap,resource,registry,tracing,logging}.py`, `SDK_VERSION`/`CONTRIB_VERSION`,
+154 tests (47 infra guards + 63 moved + 44 new) in its own env. utils: path dep + SDK pins dropped (five client
+instrumentor pins kept), lock regenerated with zero version churn, shims + wrapper (`_reset_for_tests` also resets
+the utils postgres cursor factory — that hook cannot live in the package), six tests moved, smoke + drift-pin
+tests added; 1082 → 1023 (−63 moved, +4 new). Boot check green with the six instrumentors. Deviations accepted at
+triage: instrumentation scope renamed `utils.observability` → `flynapse_otel` (nothing keyed on it; the reviewer
+re-greps dashboards/collector configs); `attach_stdlib_logging(level, *, pinned_loggers)` also walls off the
+`opentelemetry` logger tree (the G22 export-failure loop guard `utils.intercept` has); `instrumentations`
+defaults to `()` and unknown names raise before the singleton check; `shutdown()` leaves `state()` set; the dev
+group carries the five client instrumentors so the instrumentor tests run against real packages.
+Learnings: `import flynapse_otel.bootstrap as b` gives the FUNCTION (the `__init__` re-export shadows the module)
+— use `importlib.import_module`; under the bundle env run poetry with `env -u VIRTUAL_ENV` (the shell's
+`VIRTUAL_ENV` silently points poetry at the 1.37 env); the SDK `LoggingHandler` is deprecated in 1.44 (kept, same
+as `log_bridge`); Poetry 2.3.2 has no `lock --no-update` — plain `lock` is the no-update mode.
 
 ## 13. Lessons
 _(plan-scoped; append after any owner correction)_
