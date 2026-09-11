@@ -521,5 +521,32 @@ the seed's fixed `NOW = 2026-09-01` aged out of the endpoint's real-clock `1w` w
 endpoint seed to the real clock. Counts: core analytics lanes 186 → 220 passed (+ the 9 after the fix); dashboard
 46 → 51.
 
+### Stream T — landed 2026-09-10 (implementer Opus 5; telegram-bot-obs8 `obs8-telegram`, 6 commits off `main` 1961778)
+`telegram_bot/telemetry.py` (bootstrap via `flynapse_otel` with `("httpx","psycopg","threading")`, `TracedApplication`
+opening the root `telegram.update` span in `process_update` with `process_error` marking it, turn/phase/job span
+helpers, all §3.1 instruments with the ruled explicit buckets, `shutdown_telemetry`), `observability.py` (`count()`
+emits the OTel twin beside the unchanged log line; `TurnTiming.traced()`), `app.py` (bootstrap after settings and
+before the DB pool; flush last in `_close`), `handlers/chat.py` (turn span, phase children + a `telegram.turn.photos`
+child, `telegram.refusal=<reason>`, identity from the production tier read), digest + document-watch job spans,
+Dockerfile (additional build context `otel` → `/flynapse-otel`; the export plugin renders the path dep as
+`-e file:///flynapse-otel`, a grep-pinned `sed` makes it a plain path requirement), `.env.sample`, README §5/§11.
+Tests: 2206 → 2267 passed (61 new) in the worktree env; ruff clean; mypy = 4 pre-existing; `docker build` with the
+additional context succeeded and the image applies the three instrumentors. Deviations accepted at triage:
+contrib 0.65b0 has no httpx `url_filter` → redaction is a `SpanProcessor.on_start` rewrite of every URL attribute
+(token segment by shape `bot\d+:[\w-]+`, query strings dropped whole) — the reviewer attacks event/log leak paths
+the processor cannot see; no manuals-poll job exists (`telegram.job.name ∈ {digest, document_watch}`);
+`telegram.refund` is the refund word (`given|declined|failed`), not a bool; `configure_telemetry` adopts only the
+`OTEL_*` lines of `.env` into the environment (set-default) so bare `poetry run` honours the documented local
+default; voice/payment updates classify as `other`. Label divergences vs the D8 boards (code keys kept, boards
+adjust at R5 if needed): `telegram.refusals` carries `carrier`/`chat_type` and NO `lane` on stale/maintenance/
+group/invite refusals; `telegram.provisionings` also `created`; `telegram.turn.duration` and `telegram.updates`
+also `outcome`; `telegram.jobs.outcome ∈ ok|error|cancelled`. Hand-carry at merge (api repo): `api/compose.yaml`
+`telegram-bot.build.additional_contexts: {otel: ../flynapse-otel}`. Package gaps to feed R1: no `py.typed` (mypy
+override in the bot), no per-instrumentor hook pass-through in `bootstrap`, SDK `LoggingHandler` deprecation.
+Learnings: PTB 22 `process_update` never raises for handler errors — override `process_error`; `httpx.MockTransport`
+is not instrumented (only `AsyncHTTPTransport`) → redaction proven over a loopback server; `main()`-driving tests
+bootstrap real exporters unless the root conftest defaults the SDK off; `service.version` is `unknown` in the image
+unless `OTEL_RESOURCE_ATTRIBUTES` sets it.
+
 ## 13. Lessons
 _(plan-scoped; append after any owner correction)_
