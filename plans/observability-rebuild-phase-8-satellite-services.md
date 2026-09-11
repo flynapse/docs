@@ -390,5 +390,24 @@ plan §3.1 "USD" means `{USD}`. Learnings: the otel lane needs `POSTGRES_DB=copi
 JSON does not prove PromQL syntax — promtool over synthetic recording rules does; the SDK default histogram
 buckets are useless for 10–120 s turns/runs → explicit boundaries ruled for S and T.
 
+### Stream PA8 — landed 2026-09-10 (implementer Opus 5; core-obs8 ed22e1f + follow-up; dashboard-obs8 0dc631b)
+Tenancy gate PASSED before registering anything: `optimizer_runs`/`optimizer_jobs` are `tenancy="tenant"` in the
+shift-optimizer table definitions, their `<table>_isolation` FOR ALL policies (`tenant_id =
+current_setting('app.tenant_id', true)`) are live on both `copilot_mro_test` and `copilot_mro` with
+`relforcerowsecurity=t`. core: `panels/optimizer.py` (five specs), `registry.py` (`optimizer` tab,
+`OPTIMIZER_REQUIRES`), two-tenant seed, 30 db tests, registry/gate tests, endpoint contract tests (403 without
+`optimizer`, 200 with); dashboard: five `PANEL_REGISTRY` entries, tab/label/types, 51 analytics tests, `tsc` clean;
+the settings page is registry-driven and unchanged. Drift fixture `EXPECTED_PANELS` = 47 on both sides (phase-5
+approach: transcribed, core compares per-tab sets, dashboard keeps order). Deviations accepted: bucketed rows use
+`bucket_start` (the FE time-series variant reads it); run moment = `COALESCE(started_at, finished_at)` (a run that
+fails before inputs resolve has no `started_at` and would vanish from the failure ratio); `optimizer_top_jobs`
+renders as `table` (the `ranked` builder is document-shaped — same choice as `automation_spend_vs_budget`), LEFT JOIN
+so a deleted job's runs still rank; `failure_ratio = failed/(completed+failed)` over terminal runs, `median_duration`
++ histogram over completed runs only; summary tiles answer `[]` on an empty window. Pre-existing defect found and
+ruled FIX in this stream: 9 `tests/api/analytics` endpoint-contract tests red on `master` since 2026-09-08 because
+the seed's fixed `NOW = 2026-09-01` aged out of the endpoint's real-clock `1w` window — fixed by anchoring the
+endpoint seed to the real clock. Counts: core analytics lanes 186 → 220 passed (+ the 9 after the fix); dashboard
+46 → 51.
+
 ## 13. Lessons
 _(plan-scoped; append after any owner correction)_
