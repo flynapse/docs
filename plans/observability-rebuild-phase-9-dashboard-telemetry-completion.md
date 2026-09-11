@@ -177,6 +177,19 @@ sessions off the same lines:
   `jobId` to `usePreflightJob` to keep `job_id`). Conflict-prone files between the two efforts: `settings-api.ts`,
   `lib/api/utils.ts`, `lib/api/client.ts`, `useOptimizer.ts`, `RunsPanel.tsx`, `ReviewStep.tsx`, `CanvasHeader.tsx`,
   `useComments.ts`, `useShare.ts`, `useAutomations.ts`, the data-discovery pages, `InviteAcceptView.tsx`.
+- **Refinements agreed with the conversion session (code-26, 2026-09-11).** It builds on `/home/aditya/Code/dashboard-tanstack`
+  off `agent_sdk` `b87ced0`. It also owns the read side of the pages it converts: `hooks/chat/useDepartmentChatHistory.ts`,
+  the post-turn list refresh in `useDepartmentMessageStream.ts`, the throwaway list refresh in `useCopilotDockChat.ts`,
+  `TenantAllChatsPanel.tsx`, the chat caches in `lib/api/client.ts` (~:114-145, ~:655-725, ~:1118-1124), the
+  `NotificationBell` poll, the Document Hub list/navigation reads, the tenant settings pages' reads and new key families
+  in `lib/query/query-keys.ts`; it leaves `useMro/Pilot/CrewMessageStream`, `fetch-utils`, `error-handler` and
+  `lib/telemetry/**` alone. It deletes `lib/api/api-client.ts`, the `lib/api/index.ts` barrel and `markNotificationRead`
+  (no phase-9 code imports the barrel). F9.8 deletes the dead `sendMessage` (`client.ts`), `rawApiRequest` and
+  `handleApiResponse` (`utils.ts`); E9 deletes the uncalled `useCreateSchedule`, `useUpdateSchedule`, `useDeleteJob`. In
+  `InviteAcceptView.tsx` the conversion owns only the signed-in "Finish joining" retry (left without `meta.telemetry`;
+  phase 9 adds its record at the merge), E9.7 the preview/accept flow. The conversion moves the phase-4 proof
+  `tests/unit/telemetry/settings-mutation-sites.test.ts` to its new hooks; after RC merges, E9 deletes the then-dead
+  `withSettingsMutation` export and updates its guard's pinned list.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
