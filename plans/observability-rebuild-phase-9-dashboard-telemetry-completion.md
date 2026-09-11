@@ -135,7 +135,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 
   Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
-- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`; running)
+- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review running
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
@@ -1005,6 +1005,48 @@ never run in production), and the recipient email leaves `useShare.ts`'s dev-onl
 tests): a failing test must unmount in `afterEach` and clear the app query client, or its 5-minute timers keep the file
 alive; jsdom lacks `FormData`-from-form and `createObjectURL`; typing must run inside `act`.
 Fix pass (after review, 2026-09-11): `a708d49` outcome words live on the EVENT — `EVENT_OUTCOME_WORDS` in `mutation-meta.ts`, typed over every meta-declarable event and read by `onMutationSettled` (both run triggers `accepted`/`rejected`, everything else `success`/`error`; the per-meta field is gone), and `useShare`'s info line carries `block_id` only (the site test captures console output for typed content); `33713a6` the airworthiness page mounted behind its real `RouteGuard` and `PermissionProvider` pins `source` and `had_prior_disposition`; `ac77de8` a RunsPanel Run press records `job_id` on preflight and solve; `e99acc3` both guards count any reference to an emitter (callback, `.bind`, alias), resolve destructured aliases and literal element access, and recognise the hook through the file's own imports (alias, namespace, `useAppMutation`, local hooks) — the derived self-emitting list gained `useTenantAPI`; `ff9bf27` three files clear the query client (5–7 s instead of a 5-minute idle); `08b7650` React 19.1 dev double-runs mount effects only on client-side mounts, so `useInvitationPreview` records once per token per view and the discovery tracker once per completed fetch. Lanes: unit 1845/1845 (606 s, was ~20 min), typecheck, eslint on 17 files. Open guard limits (none present in the app): a function created by a call and passed on uncalled, a non-literal element key, values computed from an emitting call (deliberately unflagged).
+
+### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; review running)
+**C9.1 `88bbca5` — the fix.** `_pass_through` in `core/resources/logging/logging_endpoints.py` gains one clause for
+starlette's `ClientDisconnect`, placed between the `HTTPException` passthrough and the 500 funnel.
+- It answers 499 with no body and forwards nothing.
+- It logs one constant INFO line, bound with `signal`, `public` and `tenant_id`.
+- The module docstring's list of client answers gains the 499.
+- All four ingest routes share this helper.
+
+**Deviations (accepted pending review):**
+- The fix is a clause on the existing try, not a nested try around the read. Only the body read touches the receive
+  channel in this pipe.
+- `public` is derived from the anonymous-tenant sentinel, not passed as a new parameter.
+- Two lines that black would already reformat before this change are left alone.
+
+**Why INFO:** in this module, WARNING marks events an operator can act on. A cancelled fetch is ordinary browser
+behaviour — 23% of ingest posts in the probe. The rate limit runs before the read, so the line's volume is bounded.
+
+**Test — new `tests/api/logging/test_ingest_client_abort.py`.** It drives the real router over raw ASGI, across all four
+routes, with a receive channel that yields half a body and then a disconnect. It asserts:
+- a 499 with an empty body, and nothing forwarded;
+- no ERROR record or traceback from any module;
+- exactly one INFO record, carrying the three bound keys.
+
+Two controls: a complete body still answers 200 and forwards the exact bytes; any other failure still answers 500 with
+one ERROR.
+
+**Results.**
+- Fail-before on `988571b`: 4 failed (500 instead of 499), and the probe's traceback reproduced.
+- After the fix: 9 of 9 passed.
+- Lanes: `tests/api/logging`, the router error-disclosure sweep and `tests/unit/infra` — 203 passed.
+- Side effect: the gateway's server span now records a 499, which is not a span error under semconv, instead of an
+  error 500.
+
+**Left for review:**
+- The 413, 415 and 400 refusals log nothing.
+- The shared 500 funnel in `core/resources/http_errors.py` interpolates values into its message.
+
+**Learnings:**
+- Core's pytest `addopts` already has `-q`, so an extra `-q` hides the stats line. Read the counts from junit.
+- A disconnect only reproduces through a real request over a receive channel. The module's fakes always return a body,
+  which is why no earlier test reached this path.
 
 ## 12. Lessons
 - **Adjacent owner work that shares the effort's files is Fable-gated too (2026-09-11).** Tried: telling the owner's
