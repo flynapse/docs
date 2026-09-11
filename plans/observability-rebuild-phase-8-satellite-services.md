@@ -167,7 +167,7 @@ on both sides, added to the existing byte-identity drift test:
 | `optimizer_run_summary` | stat tiles | `runs`, `completed`, `failed`, `failure_ratio` (unit `ratio`), `median_duration` (unit `seconds`) |
 | `optimizer_run_duration_histogram` | histogram (same 12-bucket rule as `chat_time_duration_histogram`) | `bucket_start`, `bucket_end`, `bucket_label`, `count` |
 | `optimizer_top_jobs` | ranked, limit 10 | `job_id`, `job_name`, `runs`, `last_status`, `last_run_at` |
-| `optimizer_active_planners` | bucketed | `bucket`, `planner_count` (distinct `launched_by`) |
+| ~~`optimizer_active_planners`~~ | ~~bucketed~~ | DROPPED at PA8 review — `launched_by` carries no identity until D-12 is ruled; the tab ships four panels (46 total) |
 
 Empty-bucket and time-column conventions follow the phase-5 plan verbatim. The tab is hidden when the caller
 lacks `optimizer`; the backend 403 stands on its own.
@@ -317,6 +317,7 @@ an Opus-only verdict.
 | D-8 | Optimizer product tab = 5 Postgres panels under the existing panel registry, gated `view_dashboard` + `optimizer`, no new FE events | FE events for run triggered/exported (research-07 #22/#23) | the facts already exist in `optimizer_runs`; FE-only gestures stay deferred |
 | D-9 | Dashboards in both dialects now (Grafana JSON + CloudWatch bodies), AWS deployment itself still deferred | oss only until AWS deploy | owner: the bot will run on AWS; the catalogue invariant is "edit both dialects" |
 | D-11 | **Found at D8 review, needs an R0 ruling:** the gateway's ASGI middleware records `http.server.request.duration` AFTER a Starlette `BackgroundTask` finishes (upstream `finally` after `self.app`), so the optimizer run route's HTTP latency includes the whole solve. Phase-8 mitigation as built: the run route is excluded from the optimizer HTTP p95 panel and from phase 6's `ApiP95LatencyHigh`; panel/catalogue text says to read solve time from `optimizer_solve_duration_seconds` | (a) gateway records the duration at response end (custom hook/span processor — affects every background-task route estate-wide); (b) the run endpoint schedules the solve outside the request lifecycle (`asyncio.create_task`/threadpool) so the response is the end of the request; (c) accept the exclusion | plan §3.2's "HTTP RED needs nothing new" was wrong at design level; (a) is the principled fix but touches the shared gateway; (b) changes optimizer run semantics — Fable rules |
+| D-12 | **Found at PA8 review, needs an R0 ruling:** optimizer run attribution (`optimizer_runs.launched_by`) comes from a client-supplied `X-User` header that nothing sends (always `system`) — so `optimizer_active_planners` was DROPPED from the tab (46 panels) rather than shipped always-wrong | (a) the api gateway's optimizer shim (`routers/optimizer.py`, which already resolves the authenticated user for its permission middleware) strips any client `X-User` and injects the authenticated user id for the sub-app — also closes the spoofable-attribution gap; (b) the optimizer reads the identity from the gateway's auth context directly; (c) leave attribution as `system` | (a) is small, lives in the api repo, and fixes attribution for every optimizer write; the panel returns once identity is real |
 | D-10 | Two-phase review: Opus adversarial now → Fable gate in chunks R0–R5, merge per chunk, nothing merged on an Opus-only verdict; shared-env refresh after R1 | merge after Opus review; one big Fable review | owner: Fable limit returns Sunday; one review per bounded chunk keeps each within a session |
 
 ## 9. Future Improvements
@@ -325,6 +326,10 @@ an Opus-only verdict.
   hook that closes the request duration at the final response send, with a test on a background-task route.
 - **CloudWatch `attributes.tenant.id` path.** The log bridge renames `tenant_id → tenant.id`; Logs Insights parses
   dots as nesting, so the D8 queries' `attributes.tenant_id` is probably wrong — already RE-VERIFY-flagged for B1b.
+- **Optimizer run attribution is spoofable / empty** (D-12): `X-User` is client-supplied and unsent; the gateway
+  should inject the authenticated identity. `optimizer_active_planners` re-enters the tab after that.
+- **`panels/optimizer.py` imports private helpers from sibling panel modules** (`_stamp_times` from `quality`,
+  `_float` from `usage`); the elegant home is a `panels/_shared.py` — deferred to keep the PA8 diff minimal.
 - **Telegram `lane` is single-valued today** (`copilot` is the only `count(TURNS…)` call site); the by-lane panels
   become useful when other lanes emit.
 
