@@ -337,7 +337,33 @@ the §3 metrics **and** `http_client_request_duration_seconds{server_address="ap
 presigned URL anywhere (grep the raw stream). Teardown by port + `compose down -v`.
 
 ## 11. Review briefs (Phase A output; input to Phase B)
-_(one subsection per stream, written by each Opus reviewer)_
+_(one subsection per stream, written by each Opus reviewer, with the session lead's rulings folded in)_
+
+
+### Stream O — review brief (reviewer Opus 5, 2026-09-10; verdict **MERGE-READY** for chunk R1)
+**Scope.** `flynapse-otel` `main` f058771 → 78e6d77 (+ the P2-7 follow-up commit); `utils-obs8` `obs8-utils` 4602211 → c8efbe3
+off `langgraph-merge`.
+**Checked.** Both suites before/after the fix pass (154 → 160 / 1023); bundle api unit suite against the shim (406) and
+the boot check (six instrumentors); line diffs of the four moved modules vs `langgraph-merge`; AST import-surface +
+consumer grep; wheel build/METADATA; utils lock diffs (one `[[package]]` block, then content-hash only); nested
+path-dep resolution + a dry-run install against api's committed lock; scope-name grep over dashboards/collector/iac;
+logging-handler probes (levels, no-bootstrap, disabled, `basicConfig(force=True)`, exporter-failure visibility);
+concurrency, shutdown-under-load, drain, reset-after-timeout, interpreter-exit probes; layout guards; workflow copy.
+**Findings → rulings.** P1-1 `shutdown` bound not honoured → FIXED fa9c623 (no `force_flush`; provider shutdowns on
+a daemon thread joined with the bound; blocking-exporter test). P1-2 api `poetry install` from the committed lock
+never installs `flynapse-otel`, and that lock's utils url is the stale `../../utils-obs` (pre-existing from the
+obs-api merge) → **merge precondition: `poetry lock` then `poetry install` in `api/`** (session lead, R1 merge).
+P1-3 utils wheel would carry a `file://` requirement its own workflow refuses; new repo had no publish workflow →
+FIXED 78e6d77 + c8efbe3 (estate triple-form dependency + explicit `codeartifact` source in utils; `package.yml` copied
+to the new repo); remaining owner steps: GitHub secrets on the new repo, first CodeArtifact publish, source flip at
+publish time. P2-1/P2-2 attach semantics → FIXED dbffeb7 (repeat call lowers, never raises; re-adds after
+`basicConfig(force=True)`). P2-6 catalogue entries unexercised → FIXED 01f9756. P2-4 name shadowing → README.
+P2-7 (re-verification): sequential provider shutdown left SDK atexit hooks armed past the bound (~15 s exit delay
+measured) → ruled FIX (one thread per provider, shared deadline). P2-3 (boot-time degradation WARNINGs reach stderr
+via `lastResort` before the intercept installs — same visibility as before) and P2-5 (`INSTRUMENTATIONS` shape, no
+consumer) → recorded only.
+**Residual risks.** GitHub secrets + first publish; T's use of `shutdown`/`attach` ordering; `psycopg`/`logging`
+entries against a real DB/logging setup; the shared `api/.venv` once actually re-locked and refreshed.
 
 ## 12. Implementation notes / Learnings (per stream, as work lands)
 
