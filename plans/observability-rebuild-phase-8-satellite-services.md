@@ -365,6 +365,31 @@ consumer) → recorded only.
 **Residual risks.** GitHub secrets + first publish; T's use of `shutdown`/`attach` ordering; `psycopg`/`logging`
 entries against a real DB/logging setup; the shared `api/.venv` once actually re-locked and refreshed.
 
+### Stream D8 — review brief (reviewer Opus 5, 2026-09-10, re-verified after the fix pass; verdict **MERGE-READY** for chunk R5)
+**Scope.** copilot-mro-obs8 `obs8-dashboards` 4bab848e..ba14daa3 off `langgraph-merge` 07c2d4ee; iac-obs8 `obs8-iac`
+01f3644..094869d off `main`. Read-only review; nothing edited by the reviewer.
+**Checked.** Suites re-run after the fix pass (otel lane 64 passed / 7 skipped with `OTEL_RULES_CHECK=1` incl. promtool;
+`validate-rules.sh`; `terraform validate` + `fmt -check`; 8 CloudWatch bodies parse; JSON structure, unique ids, no
+grid overlap, no `"type": "metric"`; scope = 10 files under `deployment/**`, `tests/integration/otel/**`,
+`docs/runbooks/observability/alerts.md`). Every optimizer series/attribute diffed against the landed S code; Telegram
+assumptions checked against the bot's `count()` sites and enums (T not landed at review time); collector job/Loki/Tempo
+label paths, bridge flattening, httpx 0.65b0 + ASGI middleware source, Tempo metrics-generator dimensions, estate
+route grep for the D-11 exclusion, phase-6 D6/D7 conventions, alert hygiene, CloudWatch subset.
+**Findings → rulings.** P1-1 the optimizer "run failed" line is WARNING by design (S) and the ERROR-only log queries
+excluded it → FIXED both dialects. P1-2 `http.server.request.duration` is recorded after the BackgroundTask so the
+run route's p95 is the solve → FIXED on the board + phase 6's `ApiP95LatencyHigh` (exclusion verified to hit only the
+optimizer route: the other `/run` routes have no `/jobs/` segment); gateway-side fix = design item **D-11 for R0**.
+P1-3 httpx records no duration sample on transport exceptions → the backend-error panel was blind to a down backend
+→ FIXED (turn-outcome share + Tempo span-metrics client-error share per `server_address`). P2 text/guard items FIXED
+(explicit buckets, `solve_status` semantics, guards `> 5` turns / `>= 3` runs aligned rule↔panel↔catalogue↔runbook,
+single-valued lane note). Open: panel-14 B ratio unguarded (nit — no row = no errors); CloudWatch widget reads
+`attributes.tenant_id` while the bridge emits `tenant.id` (B1b-gated RE-VERIFY); the free-text VERIFY marker is not a
+guarded DARK marker (the httpx series is now listed in §10).
+**Residual risks (live probe / later gates).** `http_client_request_duration_seconds{server_address}` presence;
+`job="flynapse/telegram-bot"`, Loki `service_name="telegram-bot"`, the `telegram.*` names/keys once T lands (refusal
+`age_seconds` must not become a metric attribute); `severity_text`/`run_id` as Loki structured metadata; span-metrics
+`server_address` populated for the bot's client spans; CloudWatch field paths (B1b).
+
 ## 12. Implementation notes / Learnings (per stream, as work lands)
 
 ### Stream O — landed 2026-09-10 (implementer Opus 5; commits flynapse-otel f058771→c1102db, utils-obs8 4602211, 0cb4afd)
