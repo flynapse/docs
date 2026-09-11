@@ -187,7 +187,7 @@ sessions off the same lines:
   (no phase-9 code imports the barrel). F9.8 deletes the dead `sendMessage` (`client.ts`), `rawApiRequest` and
   `handleApiResponse` (`utils.ts`); E9 deletes the uncalled `useCreateSchedule`, `useUpdateSchedule`, `useDeleteJob`. In
   `InviteAcceptView.tsx` the conversion owns only the signed-in "Finish joining" retry (left without `meta.telemetry`;
-  phase 9 adds its record at the merge), E9.7 the preview/accept flow. The conversion moves the phase-4 proof
+  phase 9 adds its record at the merge), E9.7 the preview/accept flow. RC also carries a small core change on its own core branch (the department-delete endpoint declares its members' and role holders' auth-cache invalidations, since the dashboard's cascade collapses into the single DELETE); no phase-9 stream touches core. The conversion moves the phase-4 proof
   `tests/unit/telemetry/settings-mutation-sites.test.ts` to its new hooks; after RC merges, E9 deletes the then-dead
   `withSettingsMutation` export and updates its guard's pinned list.
 
@@ -221,7 +221,7 @@ Signal: **L** = OTel log record through the existing `emitRecord` envelope; **S*
 | `browser.export.requested` (#22) | LATER → built | L | optimizer run export, work-order export (roster export excluded) | `export_kind` ∈ {`optimizer_run`, `work_orders`}, `format`, `row_count_bucket`, `duration_ms`, `outcome` | "Exports" |
 | `browser.optimizer.run_triggered` (#23) | LATER → built | L | preflight and run through the hooks and the wizard's direct call | `job_id`, `phase` ∈ {`preflight`, `solve`}, `outcome` ∈ {`accepted`, `rejected`}, `preflight_warning_kind`, `duration_ms`, `error_type` | "Optimizer runs triggered" |
 | `browser.ad_review.disposition_set` (#24) | LATER → built | L | disposition write and clear | `disposition` ∈ {`confirmed_applicable`, `ruled_not_applicable`, `cleared`}, `had_prior_disposition`, `source` ∈ {`table`, `dialog`}, `outcome`, `duration_ms`, `error_type` | "AD dispositions" |
-| `browser.settings.mutation` (extended) | SHOULD | L | new entities `invitation`, `operator`, `operator_grant`, `operator_registry`, `organization`, `department` (delete) | unchanged | existing + "Settings changes by entity" |
+| `browser.settings.mutation` (extended) | SHOULD | L | new entities (agreed with the conversion session, which now builds them): `invitation` (create / revoke / resend), `operator` (create / update / delete — the operator identities the operator-registry page edits), `operator_grant` (grant / revoke), `organization` (update), `department` (create / update / delete); `member` and `role` unchanged | unchanged | existing + "Settings changes by entity" |
 | `browser.chat.turn` (extended) | MUST | S | uploads run inside the turn (F9.7) | + `attachment_count`, `attachment_upload_ms` | Tempo trace view |
 | `browser.error` (extended) | MUST | L | `app/global-error.tsx` (F9.6) | `error_kind` gains the value `global` (no new key) | existing error panels |
 | `browser.telemetry.dropped` (catalogued) | baseline | L | the exporter's drop counter (already shipping) | unchanged | "Telemetry drops" (M9.4) |
