@@ -122,7 +122,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
 - [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review running
 - [ ] E9 — in progress (E9.1–E9.3 committed `f697919` → `972d532`; E9.4 withdrawn to the TanStack conversion; E9.5 uncommitted; E9.6–E9.8 to follow)
-- [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass running
+- [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass done (`3784b13` → `00c9763`, 7 items; unit 1874/1874, typecheck, eslint); re-verification running
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 waits for P9
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
@@ -783,7 +783,7 @@ Queued for the fix pass with the review's findings: id-collapsing `url.template`
 marked ERROR (not aborts), the `authenticatedApiRequest` header spread, `no-console` scope for test fixtures, no api
 error text in status-bearing browser records, camelCase identity keys in `SENSITIVE_KEY`.
 
-### Stream N9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9n `81b1ea9` → `f3d7d21`; fix pass running, `3784b13` → `49a3c68` so far)
+### Stream N9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9n `81b1ea9` → `f3d7d21`; fix pass `3784b13` → `00c9763` done)
 N9.1 `81b1ea9`: the request context lives on `globalThis` under `Symbol.for` keys (a module-level store fails the
 two-bundle test). N9.3 `c0b323a` + `f3d7d21`: the sink writes through `process.stdout/stderr.write`; `logger.ts` only looks
 it up (import-graph guard). N9.4 `c2d324e`: `instrumentation.ts` — `register()` registers the sink under
@@ -797,7 +797,7 @@ too while computed calls survive, so the base's route logs did reach production 
 Fix pass so far: fix-1 `8954733` route failures log status + code, not text; fix-2 `ab79ba1` 4xx reasons kept, constants
 for everything else; fix-3 `6ca7fda` JSON lines follow `NODE_ENV`, levels follow `ENV`; fix-4 `ab723ec` no internal api
 URL kwargs; fix-6 `49a3c68` upstream error bodies read to 4 KiB and the rest cancelled; fix-7 `3784b13` dead commented
-logger lines deleted; fix-5 (tighter sweeps) in progress.
+logger lines deleted (and a static rule against them); fix-5 `00c9763` the route sweeps resolve import specifiers, allow only `ApiError` and types from `lib/api/**`, flag any `*.fetch(` and require `traceHeaders()` as the headers argument (print and stream moved to a `tracedStreamRequest` helper). Final lanes: unit 1874/1874, typecheck, eslint on 23 files. Behaviour changes to note for the gate: print, stream, signed-url and `documents/[id]` answer an api 4xx as `{ error: <api reason> }` (the reason used to ride in `details`); an upstream 5xx answers 502; with `ENV` unset, info/debug server lines ship as JSON.
 
 ### Stream M9 — landed 2026-09-11 (implementer Opus 5; copilot-mro-obs9 `07f22475` → `6984d47b` on the stacked base `9976fa7c`; iac-obs9 `1eb8c6c` → `ad4e431` on `9231863`; final mini pass landed — tips `31526d64` / `bd7992a`)
 M9.1 `07f22475`: the five §2.1 keys in both allow-list statements. **Deviation, accepted:** no body-masking transform —
