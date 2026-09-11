@@ -431,6 +431,21 @@ in five bounded chunks (Sunday night 2026-09-13) — **no merge before that gate
 refresh becomes a merge-time precondition. Detail plan: `observability-rebuild-phase-8-satellite-services.md`
 (streams O / S / PA8 / D8 / T, pinned signal catalogue, review design, live probe).
 
+## 11c. Phase 9 — Dashboard telemetry completion (opened 2026-09-11)
+
+Owner request after the 2026-09-11 dashboard audit ("is the dashboard repo complete from a metrics, tracing, and
+logging perspective?" — no: the browser pipeline is sound, but URL/email leaks, dead correlation, a dark Next.js
+server hop and uncovered product areas remain): address every gap **except Rostering** (a demo prototype); an
+independent agent reviews the plan before the build; **Fable reviews the design and all code when its limit
+returns — no merge before that gate** (the phase-8 rule). Four parallel Opus streams off the current mainlines —
+**F9** browser correctness + correlation (dashboard + the api CORS headers), **E9** event coverage (seven catalogue
+events incl. the five phase-4 LATER rows, #19 completion), **N9** Next.js server side (trace forwarding, structured
+server log lines, `onRequestError`), **M9** collector allow-list + log-body masking, Tempo endpoint dimensions and
+`fn-frontend` panels in both dialects (aws browser alarms as a gated-off seam) — then **P9**, one live probe on a
+local integration tree that also retires the frontend board's DARK labels. Fable chunks R6 (design) → R7–R10 follow
+the phase-8 chunks. Detail plan: `observability-rebuild-phase-9-dashboard-telemetry-completion.md` (gap register §0,
+pinned catalogue §2, decisions D9-1…D9-16 in §8a).
+
 ## 12. Review protocol (every phase)
 1. Detail plan written at phase start (test-first tasks); owner reviews it.
 2. Implementer agent per worktree (Opus for mechanical/enumerated work, Fable for design-heavy or merge-sensitive
@@ -454,6 +469,7 @@ refresh becomes a merge-time precondition. Detail plan: `observability-rebuild-p
 | Phoenix `gen_ai.*` rendering | 7.2 | collector aliases |
 | Azure OTLP send + metric naming | only when `azure` is built | — |
 | Phase 8 satellites: bot trace continues into the api SERVER span; optimizer run trace links to its request; `telegram-bot`/`shift-optimizer` boards render; `http_client_request_duration_seconds{server_address="api.telegram.org"}` present; no token/presigned URL in the Loki raw stream after a deliberate bad-token boot; no `getUpdates` CLIENT span in Tempo | after the phase-8 R5 merge (phase-8 plan §10) | fix per finding before calling phase 8 done |
+| Phase 9 dashboard completion: no query/token in any browser span or record; masked email in browser + backend log bodies; toast/fallback Reference opens its trace; Next route hop keeps the browser → api trace; first-load request traced; the seven new events in Loki; span metrics carry `url_template` | P9 on the integration tree (phase-9 plan §7), before the Fable gate; checks 2/4/5 again after the R10 merge | fix per finding before calling phase 9 done |
 
 ## 14. Rescoping notes (filled at Task R)
 _(empty until Gate M)_
@@ -673,6 +689,12 @@ the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewe
 `telegram-bot-obs8`) — **merges HELD for the Fable gate Sunday night 2026-09-13**, run as chunks R0 (design) → R1 → R2
 → R3 → R4 → R5 with a merge after each; agenda, tips and mechanics in the phase-8 plan §8b, briefs in §11. The shared
 `api/.venv` refresh happens at the R1 merge (`poetry lock` + `poetry install` in `api/`).
+
+**Phase 9 (added 2026-09-11):** dashboard telemetry completion — the gaps from the 2026-09-11 dashboard audit except
+Rostering, as four parallel Opus streams (F9 browser correctness + correlation with the api CORS change, E9 event
+coverage, N9 Next.js server side, M9 collector/boards/alarms) plus the P9 live probe; plan reviewed by an independent
+agent before the build; merges HELD for Fable chunks R6–R10 after phase 8's. Detail plan:
+`observability-rebuild-phase-9-dashboard-telemetry-completion.md`.
 
 Next work, in order: (0) the Sunday Fable gate for phase 8, then its §10 live probe; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
 alarm-dialect ruling, Amplify AL2023 + Node 22, improvement-findings review → tab flag, backfill crontab,
