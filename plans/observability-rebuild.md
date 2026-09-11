@@ -566,7 +566,8 @@ PromQL widget console export, Stream L counter hand-off.
   chat_turn_facts backfill crontab (line in the phase-5 plan); alert-threshold review (phase-6 plan §10.2) +
   real Slack/email targets via `ALERTMANAGER_*_FILE`/SSM; CloudWatch alarm-dialect ruling (provider raise vs
   `awscc` vs defer); B1a/B1b/B1d live probes; PromQL widget console-export probe; POC acceptance run at F10.
-  Phase 8 (2026-09-11): create the `flynapse-otel` GitHub repo + its CI secrets, first CodeArtifact publish, flip
+  Phase 8 (2026-09-11): `flynapse-otel` GitHub repo CREATED + pushed (private, `main` @ ed5f739); still owed: its CI
+  secrets, first CodeArtifact publish, flip
   the utils dependency to the `codeartifact` source at publish time; re-run `provision_rls.py` against the local
   `shift_optimizer_test` DB (utils' `rls_boot_check` fails on stale memory-item policies → 62 optimizer `tests/api`
   setup errors, pre-existing).

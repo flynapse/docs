@@ -65,7 +65,12 @@ the gate).
 - [ ] Fable R4 → merge T (bot `main`; hand-carry `api/compose.yaml` `additional_contexts`)
 - [ ] Fable R5 → merge D8 (copilot-mro `langgraph-merge` `deployment/**`, iac `main`)
 - [ ] §10 live probe (session lead; one Telegram turn from the owner's phone)
-- [ ] Owner: `flynapse-otel` GitHub repo + CI secrets, first CodeArtifact publish, utils source flip at publish time
+- [x] `flynapse-otel` pushed to GitHub 2026-09-11 — `github.com/flynapse/flynapse-otel` (private, repo created by the
+      owner); `main` @ ed5f739 = a merge of GitHub's one-line README stub (e70f089) on top of the reviewed f0c6432, tree
+      identical to f0c6432 (local SHAs preserved for the briefs); the push did not publish (the workflow publishes only
+      on dispatch / `v*` tag / `[publish]` in the head commit)
+- [ ] Owner: CI secrets on `flynapse/flynapse-otel` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ROLE_ARN`),
+      first CodeArtifact publish, utils source flip at publish time
 
 Worktree mechanics (memory: plain `git worktree` at sibling depth, `.env` symlinked, `env -u VIRTUAL_ENV
 POETRY_VIRTUALENVS_IN_PROJECT=true` for any in-worktree install). Test environments: O's new repo gets its own
@@ -349,7 +354,7 @@ nothing is pushed. Branch tips the gate reviews (a chunk's reviewer starts from 
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
 |---|---|---|---|
 | R0 | this plan §8a (D-1…D-12) | spec §3/§4/§7/§9/§10 | — (design review) |
-| R1 | `/home/aditya/Code/flynapse-otel` `main` @ f0c6432; `/home/aditya/Code/utils-obs8` `obs8-utils` @ c8efbe3 | new repo; utils `langgraph-merge` 9f74a11 | package 160; utils 1023 (bundle env) |
+| R1 | `/home/aditya/Code/flynapse-otel` `main` @ f0c6432 (pushed as ed5f739 — GitHub README stub merged, tree unchanged); `/home/aditya/Code/utils-obs8` `obs8-utils` @ c8efbe3 | new repo; utils `langgraph-merge` 9f74a11 | package 160; utils 1023 (bundle env) |
 | R2 | `/home/aditya/Code/shift-optimizer-obs8` `obs8-optimizer` @ f2591ef; `/home/aditya/Code/api-obs8` `obs8-api` @ f8ff271 | `main` 6a70135; api `langgraph-merge` a19a931 | optimizer telemetry lane 23 (+ 683/1/62 pre-existing RLS setup errors); api middleware 260 |
 | R3 | `/home/aditya/Code/core-obs8` `obs8-core` @ 6c97af7; `/home/aditya/Code/dashboard-obs8` `obs8-dashboard` @ bb78344 | core `master` 988571b; dashboard `agent_sdk` b87ced0 | core analytics + infra 275/0; dashboard 51/51, `tsc` clean |
 | R4 | `/home/aditya/Code/telegram-bot-obs8` `obs8-telegram` @ 0c55122 | `main` 1961778 | 2282 passed / 1 skipped (own env); ruff clean; docker build OK |
