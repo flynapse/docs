@@ -123,7 +123,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review running
 - [ ] E9 — in progress (E9.1–E9.3 committed `f697919` → `972d532`; E9.4 withdrawn to the TanStack conversion; E9.5 uncommitted; E9.6–E9.8 to follow)
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass running
-- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title in a final mini pass; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass)
+- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 waits for P9
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
@@ -799,7 +799,7 @@ for everything else; fix-3 `6ca7fda` JSON lines follow `NODE_ENV`, levels follow
 URL kwargs; fix-6 `49a3c68` upstream error bodies read to 4 KiB and the rest cancelled; fix-7 `3784b13` dead commented
 logger lines deleted; fix-5 (tighter sweeps) in progress.
 
-### Stream M9 — landed 2026-09-11 (implementer Opus 5; copilot-mro-obs9 `07f22475` → `6984d47b` on the stacked base `9976fa7c`; iac-obs9 `1eb8c6c` → `ad4e431` on `9231863`; final mini pass running)
+### Stream M9 — landed 2026-09-11 (implementer Opus 5; copilot-mro-obs9 `07f22475` → `6984d47b` on the stacked base `9976fa7c`; iac-obs9 `1eb8c6c` → `ad4e431` on `9231863`; final mini pass landed — tips `31526d64` / `bd7992a`)
 M9.1 `07f22475`: the five §2.1 keys in both allow-list statements. **Deviation, accepted:** no body-masking transform —
 the pinned `redaction` already masks string bodies (a probe on the pinned image plus the processor source), so the
 property is test-pinned instead (G9-03 disproved). M9.2: static pins plus a compose smoke through the real collector
@@ -819,6 +819,7 @@ parse, 29 LogQL queries accepted by the pinned Loki. Pre-existing, left alone: `
 (main `02bb5cb`). Learnings: the otel lane needs `POSTGRES_DB=copilot_mro_test`; the browser's drop counts are
 cumulative per tab and its reason keys count batches; Tempo 3 counts a series as active only if touched in the last
 15 minutes.
+Mini pass (after re-verification): `28973020` LogQL's `__error__` / `__error_details__` accepted by the parity guard (m4 now passes, m1 still fails); `7d453a6d` the oss-only alert `TempoGeneratorSeriesNearCap` (`max by (tenant)` of `tempo_metrics_generator_registry_active_series_demand_estimate` > 80000 for 15m, warning — the metric name read from a live Tempo 3.0.3, which also exported 19 series per label set; a plan-default threshold for the owner's alert review), its runbook section and catalogue lines, and a cap test bounded to [50000, 1000000); `31526d64` + iac `bd7992a` the drops widget retitled "top 50 tabs". Lanes: static + rules 76 passed / 8 skipped, `validate-rules.sh` (5 platform rules), `terraform validate`, bodies parse.
 
 ### Stream E9 — in progress 2026-09-11 (implementer Opus 5; dashboard-obs9e `f697919` → `972d532`, 3 commits + uncommitted work)
 E9.1 `f697919`: the seven §2.1 names, allow-lists and typed emitters; `withFeatureMutation`, `startAuthFlowTiming`,
