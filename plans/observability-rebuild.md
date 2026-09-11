@@ -419,6 +419,18 @@ Loki path is gone; `product_events` rows arrive from the frontend (with phase 4)
 - **Dashboards are in scope.** Phase 6 rebuilds the Grafana dashboard set (six views replacing the eight
   legacy boards) and their CloudWatch equivalents; it is not a separate project.
 
+## 11b. Phase 8 — Satellite services + shared OTel package (opened 2026-09-10)
+
+Owner request while Gate M is still closed: bring `telegram-bot` and `shift-optimizer` (spec §10 "later
+services") onto the §3.1 contract now — traces, metrics, logs, Grafana **and** CloudWatch dashboards for both,
+plus the spec §7.3 deferred **optimizer** product tab. Owner rulings: the shared implementation is **extracted
+into a lean `flynapse-otel` package** (new sibling repo; `utils.observability` becomes a re-export shim) so the
+bot never depends on `utils`; Telegram = plumbing + existing counters as OTel metrics + dashboards (no frontend);
+optimizer = backend signals + product tab; streams in parallel on Opus, with a **second review phase on Fable**
+in five bounded chunks (Sunday night 2026-09-13) — **no merge before that gate**. The shared `api/.venv`
+refresh becomes a merge-time precondition. Detail plan: `observability-rebuild-phase-8-satellite-services.md`
+(streams O / S / PA8 / D8 / T, pinned signal catalogue, review design, live probe).
+
 ## 12. Review protocol (every phase)
 1. Detail plan written at phase start (test-first tasks); owner reviews it.
 2. Implementer agent per worktree (Opus for mechanical/enumerated work, Fable for design-heavy or merge-sensitive
@@ -607,6 +619,12 @@ PromQL widget console export, Stream L counter hand-off.
   DB serve the new tables the owner migration + provision ran against `copilot_mro` (snapshot banked in
   `.dev_runs/obs-probe-20260905/`; 1447 stmts; readonly grants applied=20). Stack torn down after. Phase 4
   acceptance (master §8) is met.
+- **2026-09-10 — Phase 8 OPENED (§11b).** Surveys: the bot is a standalone long-polling PTB 22 process with its
+  own Poetry env, stdlib logging, psycopg 3, home-grown `count()`/`TurnTiming` log lines and **no `utils`
+  dependency**; the optimizer is mounted at `/api/v1/optimizer` and already inherits HTTP spans/metrics/logs and
+  psycopg2 spans from Stream U — only the solver run (a `BackgroundTask` that outlives the server span) lacks
+  signal. Build on Opus in five worktree streams, ≤3 agents concurrent; merges held for the Fable gate.
+
 ## 16. Future Improvements
 _(empty)_
 
