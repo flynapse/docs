@@ -123,7 +123,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] F9 — built, reviewed, fixed, re-verified
 - [ ] E9 — built, reviewed, fixed, re-verified
 - [ ] N9 — built, reviewed, fixed, re-verified
-- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review running
+- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass running
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
@@ -624,7 +624,7 @@ merged mainlines.
 | D9-12 | Rostering excluded; its console calls exempted by an ESLint override | fix them anyway | owner ruling 1: demo code, not instrumented |
 | D9-13 | The §2.3 areas get no new event | an event per UI gesture | spec §7.4 drops click-level interaction; each area's question is already answered by route changes, fetch spans, a feature action or server-side truth |
 | D9-14 | Chat attachment uploads run inside the turn span; the turn records `attachment_count` and `attachment_upload_ms`; no separate upload event | emit `browser.upload.started` + `upload_finished` for attachments | the `upload_finished` product fact means Document Hub uploads in the product views; mixing chat attachments would change its meaning, and the turn is where attachment time matters |
-| D9-15 | Tempo span metrics gain the `url.template` dimension only; failures use the intrinsic span status | (a) also `http.response.status_code`; (b) a browser metrics pipeline (MeterProvider + exporter) | (a) multiplies every backend series (the backend sets it on every span under new semconv); (b) is a new browser dependency; `url.template` is browser-only and bounded by the route table |
+| D9-15 | Tempo span metrics gain the `url.template` dimension only; failures use the intrinsic span status | (a) also `http.response.status_code`; (b) a browser metrics pipeline (MeterProvider + exporter) | (a) multiplies every backend series (the backend sets it on every span under new semconv); (b) is a new browser dependency; `url.template` is browser-only and — after the M9 review found it only id-collapsed (`lib/telemetry/route-pattern.ts` collapses uuid/hex/digit/session segments; AD numbers and table ids pass through) — bounded by F9's fix pass (a stricter id rule with tests) plus a Tempo `max_active_series` cap; an explicit API template table is the complete solution (§9) |
 | D9-16 | Three dashboard streams in parallel on separate branches with per-hunk file ownership (§1b), merged in a fixed order | one sequential dashboard stream | reviewable per concern and about three times faster; conflicts are confined to named hunk boundaries and rehearsed by P9's integration tree |
 | D9-17 | One emission per user action: TanStack mutations via `meta.telemetry`; a direct write once — in the API-layer method when every caller is direct, else at the call site; an AST guard proves no `meta.telemetry` mutation calls a self-emitting method; E9 converts no direct write to `useMutation` | (a) E9 converts the TanStack audit's 34 writes itself; (b) call-site wrappers everywhere | (a) brings pending-state, invalidation and cascade behaviour changes that are that audit's scope and the owner's call; (b) leaves every later conversion to remember to remove a wrapper; the rule keeps counts right whichever way each site ends up |
 | D9-18 | M9's branches are stacked on the phase-8 D8 branches (merges `9976fa7c`, `9231863`) | branch from the mainlines and rebase after R5 | M9 edits the same catalogue, guard and runbook files and extends their fixture lists; stacking removes the conflict and R10 already follows R5 |
@@ -651,6 +651,8 @@ _(filled at Phase-A close: branch tips, suite evidence, merge mechanics per chun
   Deferred: cross-repo test plumbing across worktrees; P9 check 1 is this phase's proof.
 - **Span-metric success counts are sampled.** 2xx browser spans are kept at 10%, so per-endpoint success rates from span
   metrics are biased; exact server-side rates already exist from the api's `http.server.request.duration`.
+- **Exact telemetry-drop counts.** The exporter sends cumulative per-tab totals (`resetDropped` has no caller), the reason keys count batches not items, and the trace and log exporters share one event with no signal key — so the drops panel reads a per-session max (a lower bound). Complete solution: send deltas plus an allow-listed `signal` key, then sum per report.
+- **An explicit API template table for `url.template`.** Id-collapsing (F9 fix pass) plus the Tempo series cap bound the dimension; a table built from the api's route catalogue, with an `/unmatched` fallback like the page table, would make it exact.
 - **aws browser alarms (D9-11)** — author the documented filters and alarms once the owner rules on the alarm dialect
   and B1b verifies the stored field paths.
 - **Call-site wrappers inside a future `useMutation`.** D9-17's AST guard covers API-layer emitters; a later conversion
@@ -678,7 +680,7 @@ _(one per stream, written by its reviewer)_
 | 11 | P2 | Overlap with the unmerged phase-8 D8 branches | ACCEPTED differently — M9 stacked on the D8 branches (D9-18) instead of rebasing later |
 | 12 | P2 | D9-11 pre-empts the owner's open alarm-dialect ruling | ACCEPTED — documentation only; Terraform after the ruling and B1b |
 | 13 | P2 | D9-15's "backend series unchanged" is false | ACCEPTED — `url.template` only; failures via the intrinsic span status |
-| 14 | P2 | The pinned `redaction` processor handles map bodies only | ACCEPTED — M9.1 uses `transform` + `replace_pattern` |
+| 14 | P2 | The pinned `redaction` processor handles map bodies only | ACCEPTED at plan time, SUPERSEDED at build — M9 proved the pinned `redaction` masks string bodies (G9-03); no `transform` added, the property is test-pinned |
 | 15 | P2 | The catalogue delta needs an owner look before E9 builds; `browser.telemetry.dropped` needs a real consumer | PARTLY — the owner said "then let's implement": the delta goes to the owner non-blocking (merges are held anyway); the "Telemetry drops" panel is now required (M9.4) |
 | 16 | P3 | Rostering console count 7; no `tests/unit/infra`; dedupe-suppressed references; discovery settle via an effect; 401 retry escapes `runInContext`; minted span id for trace linkage | ACCEPTED — all folded into G9-12/G9-28, F9.2, F9.4, E9.6, F9.7, F9.3 |
 
