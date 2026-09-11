@@ -961,6 +961,15 @@ meta and the guard's pin derives to empty — the planned follow-up.
      core `master` since then.
    - A tests-only fix is running as C9.2.
 
+**C9.2 re-verification (`bd18984..7264e2e`) — MERGE-READY.**
+- The pin reaches the route: the route imports the service module and looks the function up at call time.
+- The pin replaces only the clock input. No analytics SQL reads the database clock, so queries, windows and row shapes
+  still run for real.
+- The reviewer repeated the proof with the scratch plugin at +30 days: the old file failed 9 of 20, the new file passed
+  20 of 20. `tests/api/analytics` passed 32 of 32 at the real clock.
+- New P3 (N3): after the pin, no test covered the service's real-clock default. A unit test pinning that default is
+  being folded into C9.2.
+
 ### 10a. Plan review — 2026-09-11 (reviewer Opus 5; verdict READY AFTER CHANGES) — triage
 
 | # | Sev | Finding | Ruling |
