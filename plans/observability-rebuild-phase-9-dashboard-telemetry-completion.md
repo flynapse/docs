@@ -121,7 +121,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [x] Plan v1 (`e1845fd`) + master §11c
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
 - [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review MERGE-READY AFTER FIXES (1 P1 — api error text in browser.log and browser.error; 6 P2; 6 P3 — incl. the six queued cross-stream items, several widened); fix pass done (dashboard `af9f307`, 10 commits on `b9ba515`; api `72df51a`; unit 1841/1841, tsc, eslint, api 322); re-verification running
-- [ ] E9 — built 2026-09-11 (`f697919` → `3a2610a`, 9 commits: E9.1–E9.3, the `useAppMutation` follow-up `0b236a5`, E9.5 `286f5a3`, E9.8 `0a85834`, E9.6 `65929a0`, E9.7 `c2d05c6`, close `3a2610a` — no pending exemptions left; E9.4 withdrawn to the TanStack conversion); final lane running, then review
+- [ ] E9 — built 2026-09-11 (`f697919` → `3a2610a`, 9 commits: E9.1–E9.3, the `useAppMutation` follow-up `0b236a5`, E9.5 `286f5a3`, E9.8 `0a85834`, E9.6 `65929a0`, E9.7 `c2d05c6`, close `3a2610a` — no pending exemptions left; E9.4 withdrawn to the TanStack conversion; unit 1838/1838, typecheck, eslint); review running
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass done (`3784b13` → `00c9763`, 7 items; unit 1874/1874, typecheck, eslint); re-verified MERGE-READY (2 new P3 — a list-`detail` 422 relayed as "[object Object]", the literal-body rule's scope — landed in the mini pass `cc193eb` + `c52f034`; unit 1877/1877). **N9 Phase A done** (tip `c52f034`)
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 waits for P9
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
@@ -844,19 +844,35 @@ cumulative per tab and its reason keys count batches; Tempo 3 counts a series as
 15 minutes.
 Mini pass (after re-verification): `28973020` LogQL's `__error__` / `__error_details__` accepted by the parity guard (m4 now passes, m1 still fails); `7d453a6d` the oss-only alert `TempoGeneratorSeriesNearCap` (`max by (tenant)` of `tempo_metrics_generator_registry_active_series_demand_estimate` > 80000 for 15m, warning — the metric name read from a live Tempo 3.0.3, which also exported 19 series per label set; a plan-default threshold for the owner's alert review), its runbook section and catalogue lines, and a cap test bounded to [50000, 1000000); `31526d64` + iac `bd7992a` the drops widget retitled "top 50 tabs". Lanes: static + rules 76 passed / 8 skipped, `validate-rules.sh` (5 platform rules), `terraform validate`, bodies parse.
 
-### Stream E9 — in progress 2026-09-11 (implementer Opus 5; dashboard-obs9e `f697919` → `972d532`, 3 commits + uncommitted work)
-E9.1 `f697919`: the seven §2.1 names, allow-lists and typed emitters; `withFeatureMutation`, `startAuthFlowTiming`,
-`withExportRequested`, `withOptimizerRunTriggered`; closed `FEATURE_ACTIONS` and `AUTH_FLOW_STEPS` maps (a pair outside
-them is a compile error); `errorTypeOf` (names only); a REPO-WIDE coverage sweep (every `useMutation` declares
-`meta.telemetry` or is exempt with a reason) and a TypeScript-checker double-emission guard (transitive and
-alias-aware; the derived self-emitting methods are compared to a pinned list; a self-test fixture). E9.2 `ba0ba33`: all
-22 optimizer hooks, the wizard chain at the call site, CanvasHeader's export and re-run preflight (no `row_count_bucket`
-— the xlsx response carries no row count). E9.3 `972d532`: AD dispositions and corpus actions. Withdrawn 2026-09-11 to
-the owner's TanStack conversion (§1b): E9.4 (settings) and the notifications and Document Hub writes. In progress,
-uncommitted: E9.5's existing mutations (automations, comments, improvement, chat share, the data-discovery pages) and
-the deletion of the three uncalled optimizer hooks; E9.6–E9.8 follow. Learning: `fetchWithAuth` throws a plain `Error`
-carrying `status`, so hook failures record `error_type=Error`.
-
+### Stream E9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9e `f697919` → `3a2610a`, 9 commits; review running)
+E9.1 `f697919` (+ `0b236a5`): the seven §2.1 names, allow-lists and typed emitters; `withFeatureMutation`,
+`startAuthFlowTiming`, `withExportRequested`, `withOptimizerRunTriggered`; closed `FEATURE_ACTIONS` and
+`AUTH_FLOW_STEPS` maps (a pair outside them is a compile error); `errorTypeOf` (names only); a REPO-WIDE coverage sweep
+(every mutation declares `meta.telemetry` or is exempt with a reason — zero exemptions at close) and a TypeScript-checker
+double-emission guard (transitive and alias-aware; derived self-emitting methods compared to a pinned list — the 14
+existing `SettingsAPI` methods plus `useDepartmentAPI`; E9 adds none); both read one `MUTATION_HOOKS` list
+(`useMutation`, `useAppMutation`). E9.2 `ba0ba33`: optimizer hooks (19 after the three dead ones went in `286f5a3`), the
+wizard chain and CanvasHeader's export and re-run preflight wrapped at the call site (`usePreflightJob`'s telemetry-only
+`jobId` is stripped before the request). E9.3 `972d532`: AD dispositions (verb, prior ruling, surface) and corpus
+actions. E9.4: WITHDRAWN to the TanStack conversion — the uncommitted work is saved as `phase9-E9.4-withdrawn.patch`
+(in `copilot-mro/.dev_runs/obs9-phaseA/`), including nine site tests that document today's defects (a department
+delete emits three records and never `department/delete`; a member role change two; a create-with-head three). E9.5
+`286f5a3`: automations (Run now now carries `department`, G9-37), comments, improvement, chat share and both
+data-discovery pages — meta only. E9.8 `0a85834`: the work-order "Download all" emits one export request (and the
+upstream error body left that function's log attribute). E9.6 `65929a0`: automation runs settle only when this session
+triggered them, once; discovery jobs from a per-job effect. E9.7 `c2d05c6`: register, signup confirm and resend,
+forgot-password, new-password and the invitation preview (the "Finish joining" retry untouched). Close `3a2610a`.
+Final `FEATURE_ACTIONS` (full table in the notes): optimizer — schedule, expansion, activity, activity_rule, duration,
+role, settings, job, job_config_snapshot; ad_review — applicability, corpus; automations — automation; comments —
+comment; improvement — improvement_run, finding; chat — chat; data_discovery — source, job, level1_batch; kept for the
+post-RC follow-up with no emitter yet — notifications/notification/mark_read, document_hub/document
+{update, retry, delete}, document_hub/document_sharing/update. Lanes: unit 1838/1838 (~20 min), typecheck, eslint on 38
+files. Recorded, not defects: outcome `challenge` and `invite_accept/accept` are not emitted on this branch
+(`NewPasswordView` can't tell forgot-password from the login challenge); the double-emission guard costs ~6 s and
+~400 MB per lane. Pre-ruled for the fix pass: `useRunAutomationNow` records `accepted`/`rejected` (its typed contract;
+never run in production), and the recipient email leaves `useShare.ts`'s dev-only info line. Learnings (dashboard
+tests): a failing test must unmount in `afterEach` and clear the app query client, or its 5-minute timers keep the file
+alive; jsdom lacks `FormData`-from-form and `createObjectURL`; typing must run inside `act`.
 
 ## 12. Lessons
 - **Adjacent owner work that shares the effort's files is Fable-gated too (2026-09-11).** Tried: telling the owner's
