@@ -142,7 +142,7 @@ metric is emitted beside it from the same call site.
 | Kind | Name | Attributes / notes |
 |---|---|---|
 | span, root per run | `optimizer.run` | kind INTERNAL; **Link** to the request span that queued the background task (the server span has ended by then — a parent would be wrong); `optimizer.job.id`, `optimizer.run.id`, `tenant.id`, `optimizer.run.status` ∈ {completed, failed}, `optimizer.solve.status` ∈ {optimal, feasible, elastic, infeasible}, `error.type`; the exception `execute_run` swallows today is recorded on the span in `_record_failure` |
-| span, child | `optimizer.solve` | around the CP-SAT solve (threadpool, CPU-bound); `optimizer.solve.workers`, `optimizer.solve.time_cap_seconds` |
+| span, child | `optimizer.solve` | around the CP-SAT solve (threadpool, CPU-bound); `optimizer.solve.workers`, `optimizer.solve.deterministic_time_cap` (renamed from `time_cap_seconds` at S triage — the value is CP-SAT deterministic time, not wall seconds) |
 | span, child | `optimizer.persist` | the output write |
 | counter | `optimizer.runs` | `status`, `solve_status` |
 | histogram, seconds | `optimizer.run.duration` | `status` (from the existing `perf_counter` timing) |
@@ -326,6 +326,9 @@ an Opus-only verdict.
   hook that closes the request duration at the final response send, with a test on a background-task route.
 - **CloudWatch `attributes.tenant.id` path.** The log bridge renames `tenant_id → tenant.id`; Logs Insights parses
   dots as nesting, so the D8 queries' `attributes.tenant_id` is probably wrong — already RE-VERIFY-flagged for B1b.
+- **Registry forbidden-attribute list does not include identity ids** (`run_id`, `job_id`, `tenant_id`/`tenant.id`) —
+  only session/user/url keys. Streams enforce their own attribute sets at emission; widening the package list is an
+  R1 follow-up once every existing metric's attributes are audited.
 - **Optimizer run attribution is spoofable / empty** (D-12): `X-User` is client-supplied and unsent; the gateway
   should inject the authenticated identity. `optimizer_active_planners` re-enters the tab after that.
 - **`panels/optimizer.py` imports private helpers from sibling panel modules** (`_stamp_times` from `quality`,
@@ -394,6 +397,31 @@ guarded DARK marker (the httpx series is now listed in §10).
 `job="flynapse/telegram-bot"`, Loki `service_name="telegram-bot"`, the `telegram.*` names/keys once T lands (refusal
 `age_seconds` must not become a metric attribute); `severity_text`/`run_id` as Loki structured metadata; span-metrics
 `server_address` populated for the bot's client spans; CloudWatch field paths (B1b).
+
+### Stream S — review brief (reviewer Opus 5, 2026-09-10; verdict **MERGE-READY** for chunk R2)
+**Scope.** shift-optimizer-obs8 `obs8-optimizer` 2afb6b6..1949d96 (+ the P2 follow-up commit) off `main` 6a70135;
+api-obs8 `obs8-api` d63097b (+ follow-up) off `langgraph-merge` a19a931.
+**Checked.** Suites re-run from the bundle env (optimizer 683 passed / 1 skipped / 62 pre-existing `tests/api` setup
+errors — `RLSEnforcementError` from utils' `rls_boot_check` on the local `shift_optimizer_test` DB, untouched by the
+stream; telemetry lane 21; api middleware 260, integration/otel 30, infra guards 66); ruff clean; diff confined to the
+stream's files. Scratch probes under the real gateway + a real BackgroundTask: the SERVER span ends before the run
+starts, `optimizer.run` is a parentless root with exactly one link to it (different trace id), solve/persist
+parented; sampled-out / SDK-disabled / no-request callers harmless; counter exactly once per path (success, persist
+failure, solve raise, invisible run, dead terminal write); `runs.active` never negative; seconds buckets on both
+histograms; the exception event carries the message only (plus the standard stacktrace tail), no other attribute or
+log field; health regex exercised against 16 URLs (only the three mounted `/api/v1/<mount>/v1/health` paths are
+silenced; the gateway's own health and every sub-path stay traced); `ortools` stays lazy; D8's series names/labels
+match what S emits.
+**Findings → rulings.** No P0/P1. P2 (a) the `signals.failed()`/WARNING prologue sat outside `_record_failure`'s
+containment guard → FIX; (b) the dead-terminal-write line lacked job/tenant ids → FIX; (c) `METRIC_ATTRIBUTE_KEYS`
+decorative and the registry lint accepts `run_id`/`job_id`/`tenant_id` on metrics → FIX by enforcing at emission;
+widening the package's forbidden list → §9 (R1 follow-up); (d) tautological `HEALTH ⊆ DEFAULT` test → FIX (assert
+the literal); (e) hardcoded `/api/v1`/`/v1` prefixes + dead `(\?.*)?` group — consistent with the pre-existing
+probe pattern, note only; (f) plan §3.2 still named `time_cap_seconds` → corrected above.
+**Residual risks (live probe only).** Prometheus-side names after exporter normalisation; Tempo's rendering of the
+link; psycopg2 child spans under `optimizer.run`/`optimizer.persist` on the real DB path; the run route's HTTP
+duration includes the solve (D-11); first-boot `seed_if_empty` runs `execute_run` in-process and counts as real
+runs; a uvicorn `root_path` deployment would defeat both anchored health patterns (none configured).
 
 ## 12. Implementation notes / Learnings (per stream, as work lands)
 
