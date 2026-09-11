@@ -1,8 +1,8 @@
 # Observability rebuild — Phase 8: satellite services (Telegram bot, Shift Optimizer) + shared OTel package
 
 **Status:** OPENED 2026-09-10 (owner request: "can we add metrics, traces, and logs to the Telegram and Shift
-Optimizer repos meanwhile?"). Build + Opus review now; **Fable review gate Sunday night 2026-09-13**; merges
-HELD until that gate. Master plan: `docs/plans/observability-rebuild.md` §11b (this phase) and §15 (ledger).
+Optimizer repos meanwhile?"). **Phase A (build + Opus adversarial review) CLOSED 2026-09-11** — all five streams built, reviewed, fix-passed and
+re-verified; **merges HELD for the Fable gate Sunday night 2026-09-13** (agenda §8b, progress §1a). Master plan: `docs/plans/observability-rebuild.md` §11b (this phase) and §15 (ledger).
 
 **Goal.** Bring the two services the design spec left for "when next touched" (spec §2 non-goals, §10) onto the
 §3.1 contract now, without touching the LangGraph conflict zone: the Telegram bot as a standalone OTel process
@@ -29,7 +29,7 @@ credentials in output, commits or screenshots; no user content in log fields or 
 no code; Terraform validated, never applied by agents; nothing pushed. Phase-8 specific: **all merges wait for the
 Fable gate**; the shared `api/.venv` refresh (`env -u VIRTUAL_ENV poetry install` in `api/`) is a **merge-time
 precondition** (Stream O adds a path dependency to `utils`), not a build-time one — every stream builds and tests
-in its own or the `wt-obs-u` bundle environment with `PYTHONPATH` pinned; ≤3 agents concurrently (WSL memory).
+in its own or the `wt-obs-u` bundle environment with `PYTHONPATH` pinned; ≤3 agents concurrently at first, raised to 5 by the owner on 2026-09-10 (WSL memory).
 
 ---
 
@@ -43,11 +43,29 @@ in its own or the `wt-obs-u` bundle environment with `PYTHONPATH` pinned; ≤3 a
 | **D8 — dashboards, both dialects** | catalogue views 7+8, Grafana JSON, CloudWatch bodies, two alert rules | `/home/aditya/Code/copilot-mro-obs8` (`obs8-dashboards` off `langgraph-merge`, `deployment/**` only); `/home/aditya/Code/iac-obs8` (`obs8-iac` off `main`) | the pinned names in §3 (no code dependency) | 2 |
 | **T — Telegram bot** | bootstrap via `flynapse-otel`, spans, metrics, logs, redaction, Docker/compose | `/home/aditya/Code/telegram-bot-obs8` (`obs8-telegram` off `main`) | O's package importable (path dep `../flynapse-otel`) | 3 |
 
-Waves run as slots free up (≤3 agents: two implementers + one reviewer at any moment). Reviewers are fresh
+Waves run as slots free up (≤3 agents at first; the owner raised the cap to 5 on 2026-09-10, so waves 2 and 3
+overlapped wave 1's reviews). Reviewers are fresh
 agents briefed with this plan's stream section + the diff; findings are triaged by the session lead (real gap →
 fix pass by the same implementer → re-verification by the same reviewer; intentional → §9 Future Improvements).
 Every agent is reported as `name — model`; all agents in the build phase are **Opus 5** (Fable rate-limited until
 the gate).
+
+### 1a. Progress
+
+- [x] Plan written (b2c71b8); R0 design chunk + §8a decision table added on owner request (9f78191)
+- [x] O — built, reviewed, fixed, re-verified: `flynapse-otel` f0c6432, `utils-obs8` c8efbe3
+- [x] S — built, reviewed, fixed: `shift-optimizer-obs8` f2591ef, `api-obs8` f8ff271
+- [x] PA8 — built, reviewed, fixed, re-verified: `core-obs8` 6c97af7, `dashboard-obs8` bb78344 (46 panels)
+- [x] D8 — built, reviewed, fixed, re-verified: `copilot-mro-obs8` ba14daa3, `iac-obs8` 094869d
+- [x] T — built, reviewed, fixed twice: `telegram-bot-obs8` 0c55122
+- [ ] Fable R0 — design review of §8a (D-1…D-12); any "change" → fix pass on the affected stream first
+- [ ] Fable R1 → merge O (then `poetry lock` + `poetry install` in `api/`, boot check, shared-env suites)
+- [ ] Fable R2 → merge S (optimizer `main`, api `langgraph-merge`)
+- [ ] Fable R3 → merge PA8 (core `master`, dashboard `agent_sdk`)
+- [ ] Fable R4 → merge T (bot `main`; hand-carry `api/compose.yaml` `additional_contexts`)
+- [ ] Fable R5 → merge D8 (copilot-mro `langgraph-merge` `deployment/**`, iac `main`)
+- [ ] §10 live probe (session lead; one Telegram turn from the owner's phone)
+- [ ] Owner: `flynapse-otel` GitHub repo + CI secrets, first CodeArtifact publish, utils source flip at publish time
 
 Worktree mechanics (memory: plain `git worktree` at sibling depth, `.env` symlinked, `env -u VIRTUAL_ENV
 POETRY_VIRTUALENVS_IN_PROJECT=true` for any in-worktree install). Test environments: O's new repo gets its own
@@ -83,8 +101,10 @@ the two guards copied from `utils`; the moved `utils` tests (`test_bootstrap_pro
   The `utils` wrapper passes the current six names, so no utils consumer sees a change.
 - The package logs through **stdlib `logging`** (structured via `extra`), never loguru; `utils`' intercept still
   routes those records into loguru for api processes.
-- `shutdown(timeout)` — flushes and shuts the three providers; idempotent; the bot's `post_shutdown` calls it.
-- `attach_stdlib_logging(level, *, logger_names_pinned)` in `flynapse_otel.logging` — the SDK `LoggingHandler`
+- `shutdown(timeout_seconds)` — shuts the three providers on one daemon thread each against a shared deadline (no
+  `force_flush`: SDK 1.44 ignores its timeout); the SDK drains the queues; one WARNING names any provider that missed
+  the bound; idempotent; the bot's `post_shutdown` calls it last (as built after the O review).
+- `attach_stdlib_logging(level, *, pinned_loggers)` in `flynapse_otel.logging` — the SDK `LoggingHandler`
   on the root logger for stdlib-logging services (the bot). `utils` keeps the loguru bridge.
 - Everything else (`state()`, `Pipelines`, `BootstrapState`, `_reset_for_tests`, the registry's unit allow-list
   and forbidden-attribute lint, `get_tracer`/`span`, the resource detector) moves unchanged.
@@ -120,19 +140,20 @@ forbidden as metric attributes).
 | Kind | Name | Attributes / notes |
 |---|---|---|
 | span, root per update | `telegram.update` | kind CONSUMER; `telegram.update.kind` ∈ {message, command, callback_query, document, photo, other}; `telegram.command` (the command word only); `telegram.chat.type`; `telegram.user.id`; `enduser.id` + `tenant.id` once the identity is resolved; **no message text, no callback payload**; status ERROR + recorded exception on an unhandled handler error |
-| span, child | `telegram.turn` | `telegram.lane`, `telegram.carrier`, `telegram.outcome`, `telegram.refund` (bool), `telegram.cost_usd`; children `telegram.turn.gate` / `.auth` / `.backend` / `.render` from the existing `TurnTiming` boundaries |
-| span, root per job | `telegram.job` | `telegram.job.name` ∈ {digest, document_watch, manuals_poll}, outcome, error recorded |
-| span, auto CLIENT | httpx | `url_filter` replaces the bot token path segment with `<redacted>` and strips every query string (presigned S3 URLs); PTB's own httpx client is covered by the same instrumentor; `traceparent` propagates into the api gateway |
+| span, child | `telegram.turn` | `telegram.lane`, `telegram.carrier`, `telegram.outcome`, `telegram.refund` ∈ {given, declined, failed} (the refund word, as built — not a bool), `telegram.refusal` on refused turns, `telegram.cost_usd`; children `telegram.turn.gate` / `.auth` / `.backend` / `.render` / `.photos` from the existing `TurnTiming` boundaries |
+| span, root per job | `telegram.job` | `telegram.job.name` ∈ {digest, document_watch} (no manuals-poll job exists), outcome, error recorded (scrubbed) |
+| span, auto CLIENT | httpx | as built: `UrlRedactingSpanProcessor.on_start` rewrites every URL attribute — the bot-token segment (matched by shape `bot\d+:[\w-]+`) → `<redacted>`, every query string dropped (presigned S3 URLs); sufficient because the instrumentor sets URL attributes at span creation (contrib 0.65b0 has no `url_filter`; its own `redact_url` does not cover `X-Amz-Signature`); `getUpdates` long-polls excluded by default (`OTEL_PYTHON_HTTPX_EXCLUDED_URLS=.*/getUpdates`, operator value wins); PTB's own client covered; `traceparent` propagates into the api gateway |
+| span events / status | every exception the bot records | `record_failure(span, error)`: `exception.message`/`exception.stacktrace` pass the same token/URL scrubber; status description = the exception type name |
 | span, auto CLIENT | psycopg (3) | `db.statement` without parameters; pool workers on their own threads are fine (no span parent) |
-| counter | `telegram.updates` | `kind`, `outcome` |
+| counter | `telegram.updates` | `kind`, `outcome` ∈ {ok, error} |
 | up-down | `telegram.updates.active` | — |
 | counter | `telegram.turns` | `lane`, `carrier`, `outcome`, `refund` (mirrors the existing `count()` key set) |
-| histogram, seconds | `telegram.turn.duration` | `lane`, `outcome` |
-| histogram, seconds | `telegram.turn.phase.duration` | `phase` ∈ {gate, auth, backend, render, photos} |
-| counter, USD | `telegram.turn.cost` | `lane` (from the backend's `cost_usd`; token counts are not available to the bot) |
-| counters | `telegram.uploads`, `telegram.provisionings`, `telegram.refusals` | the same attribute keys the matching `count()` lines carry today |
-| counter | `telegram.jobs` | `name`, `outcome` |
-| logs | stdlib root → OTLP | INFO and above; the `httpx` logger stays pinned to WARNING (token/presigned-URL leak guard); stdout format unchanged; trace/span ids attached by the handler |
+| histogram, seconds | `telegram.turn.duration` | `lane`, `outcome`; buckets 1…600 s |
+| histogram, seconds | `telegram.turn.phase.duration` | `phase` ∈ {gate, auth, backend, render, photos}; buckets 0.1…120 s |
+| counter, `{USD}` | `telegram.turn.cost` | `lane` (from the backend's `cost_usd`; token counts are not available to the bot); Prometheus name `telegram_turn_cost_total` (a braced unit gets no suffix) |
+| counters | `telegram.uploads`, `telegram.provisionings`, `telegram.refusals` | the same attribute keys the matching `count()` lines carry today (as built: refusals carry `carrier`/`chat_type` and no `lane` on stale/maintenance/group/invite refusals; provisionings carry `created`); `user`, `age_seconds`, `citations`, `cost_usd`, `*_ms` never become labels |
+| counter | `telegram.jobs` | `name`, `outcome` ∈ {ok, error, cancelled} |
+| logs | stdlib root → OTLP | INFO and above; the `httpx` logger stays pinned to WARNING; as built: a never-raising filter on the OTLP handler ships a scrubbed COPY of each record (body, `exception.*` from `exc_info`, string and string-sequence extras — token shapes and URL queries removed); stdout format unchanged; trace/span ids attached by the handler |
 
 Rule: **every existing `count()` line keeps emitting unchanged** (tests and README §11 pin the grammar); the OTel
 metric is emitted beside it from the same call site.
@@ -184,7 +205,7 @@ lifecycle log lines), `app/api/jobs.py` (capture the request span context beside
 from `opentelemetry-test-utils` in the api dev group): `tests/unit/telemetry/test_run_span_shape.py` (root span,
 link present, attributes, exception recorded on failure, status enum values), `tests/unit/telemetry/
 test_run_metrics.py` (counter/histogram names, units, attribute sets — through the registry lint),
-`tests/api/telemetry/test_health_not_traced.py` in the **api** worktree (`api-obs8`) beside the existing gateway
+`tests/middleware/telemetry/test_health_not_traced.py` (as built) in the **api** worktree (`api-obs8`) beside the existing gateway
 tests. Logging-coverage checkbox per task (§11a).
 
 **Steps per task:** failing test → run → implement → run → commit by pathspec; one commit per table row above.
@@ -200,7 +221,7 @@ health test; a manual run in the live probe (§10) shows one `optimizer.run` tra
 **Files (worktree `telegram-bot-obs8`):** `pyproject.toml` (path dep on `../flynapse-otel`; `opentelemetry-
 instrumentation-httpx`, `-psycopg`, `-threading` at the package's contrib pin; lock regenerated in the worktree
 env), `telegram_bot/telemetry.py` (bootstrap call with `instrumentations=("httpx", "psycopg", "threading")`,
-the httpx `url_filter`, `attach_stdlib_logging`, the metric instruments from §3.1, the update/turn/job span
+the URL-redacting span processor and the OTLP log-route scrubber (as built — contrib 0.65b0 has no httpx `url_filter`), `attach_stdlib_logging`, the metric instruments from §3.1, the update/turn/job span
 helpers, `shutdown` hook), `telegram_bot/app.py` (`main()` calls the bootstrap **before** the DB pool is built;
 the traced application class via `ApplicationBuilder.application_class` so `process_update` opens the root span;
 `post_shutdown` flushes), `telegram_bot/observability.py` (`count()` and `TurnTiming` emit the OTel twin beside
@@ -246,7 +267,7 @@ ids byte-identical to the backend list fixture). No new FE events (the facts com
 LATER items #22/#23 stay deferred).
 
 **Acceptance:** core db lane green (`POSTGRES_DB=copilot_mro_test`), dashboard tests exit 0, the drift test counts
-42 + 5.
+42 + 4 = 46 (as built — `optimizer_active_planners` dropped at review, D-12).
 
 ---
 
@@ -311,7 +332,7 @@ an Opus-only verdict.
 | D-2 | Package API changes limited to five: caller-declared `instrumentations` names against a catalogue; stdlib logging inside the package; `shutdown()`; `attach_stdlib_logging()`; scope name `flynapse_otel` | keep the fixed six-instrumentor list; keep loguru; no shutdown API | the bot has psycopg 3 and no loguru; a standalone process must flush on SIGTERM; a package used by the bot cannot label its scope `utils` |
 | D-3 | Telegram root span per **update** (CONSUMER) via the PTB application class, turn/phase children from the existing `TurnTiming` boundaries, job spans for scheduled work | per-handler spans; per-turn only; a `TypeHandler` in a negative group (cannot close the span after later groups run) | one span per unit of work the bot receives; the phases are already measured |
 | D-4 | Existing `count()`/`TurnTiming` log lines stay byte-identical; OTel metrics emitted beside them | replace the lines with metrics | tests + README §11 pin the grammar; log lines remain the offline story |
-| D-5 | httpx auto-instrumentation kept for the Telegram API (latency is real signal) with a `url_filter` redacting the bot token and stripping every query string | exclude `api.telegram.org` entirely via `OTEL_PYTHON_HTTPX_EXCLUDED_URLS` | keep the signal, remove the secret; a test asserts no token/`X-Amz-` in any exported attribute |
+| D-5 | httpx auto-instrumentation kept for the Telegram API (latency is real signal); as built the secret is removed in three places because contrib 0.65b0 has no `url_filter`: a span processor rewriting every URL attribute at span start, a scrubber on recorded exception events/status descriptions, and a never-raising scrubbed-copy filter on the OTLP log route (PTB logs a rejected token verbatim); `getUpdates` long-polls excluded by default | exclude `api.telegram.org` entirely via `OTEL_PYTHON_HTTPX_EXCLUDED_URLS`; scrub in the collector instead of the process | keep the signal, remove the secret before it leaves the process; tests assert no token/`X-Amz-` in any exported attribute, event, status or log record, including a real `InvalidToken` through PTB's network loop |
 | D-6 | Optimizer run = its own root span with a **Link** to the request span (which has already ended when the `BackgroundTask` runs) | parent the run to the server span (would parent to an ended span); make the endpoint synchronous | matches OTel guidance for work that outlives its trigger; the estate's `run_span.py` pattern |
 | D-7 | Optimizer metrics emitted from the api process under `service.name=api` with `optimizer.*` names (no separate service name) | a distinct `service.name=shift-optimizer` resource for the sub-app | one process = one resource; the route prefix and metric names identify the product |
 | D-8 | Optimizer product tab = 5 Postgres panels under the existing panel registry, gated `view_dashboard` + `optimizer`, no new FE events | FE events for run triggered/exported (research-07 #22/#23) | the facts already exist in `optimizer_runs`; FE-only gestures stay deferred |
@@ -605,5 +626,33 @@ is not instrumented (only `AsyncHTTPTransport`) → redaction proven over a loop
 bootstrap real exporters unless the root conftest defaults the SDK off; `service.version` is `unknown` in the image
 unless `OTEL_RESOURCE_ATTRIBUTES` sets it.
 
+### Post-review fix passes (Phase A, 2026-09-10/11)
+- **O:** fa9c623 bounded `shutdown` (daemon thread, no `force_flush`) · dbffeb7 attach lowers-never-raises + re-adds
+  after `basicConfig(force=True)` · 01f9756 every catalogue entry exercised · 78e6d77 publish workflow + README ·
+  utils c8efbe3 triple-form dependency + explicit `codeartifact` source · f0c6432 one shutdown thread per provider
+  (shared deadline; process exit 0.75 s where it was ~15 s). Package 154 → 160; utils 1023.
+- **S:** 1949d96 explicit seconds buckets + attribute rename · f2591ef containment guard around the failure-signal
+  prologue, ids on the dead-write line, `METRIC_ATTRIBUTE_KEYS` enforced at emission · api f8ff271 literal pattern
+  pinned. Telemetry lane 20 → 23; middleware 260.
+- **PA8:** 0fa9765 seed clock anchored for the endpoint tests (nine reds on `master` since 2026-09-08) · 6c97af7 /
+  dashboard bb78344 `optimizer_active_planners` dropped (D-12), RLS pins extended to the optimizer pair, wording.
+  Core 186/9 → 275/0; dashboard 46 → 51.
+- **D8:** ba14daa3 / iac 094869d WARN+ failure-log queries, run route excluded from the p95 panel and from phase 6's
+  `ApiP95LatencyHigh` (D-11), backend-error panel rebuilt from turn outcomes + span metrics, guards aligned, text.
+- **T:** d1ee421 + 56cddc5 token/URL scrubber on the OTLP log route and on exception events/status, stale-span guard
+  for job failures, tests isolated from the developer's `.env`, `getUpdates` excluded · 0c55122 never-raising scrub
+  filter, class-marked copy, sequence extras. Suite 2267 → 2282.
+
 ## 13. Lessons
 _(plan-scoped; append after any owner correction)_
+
+- **The deferred stronger-model gate reviews the design, not only the code (2026-09-10).** Tried: a Fable gate made
+  of code chunks only (R1–R5), with the design treated as settled because the owner had answered the scoping
+  questions. Owner corrected: "Fable will have to review not just the code implemented, but also the design to begin
+  with." Rule: when a build runs on a weaker model ahead of a stronger-model review, the design is its own first chunk
+  (R0) with a decision table of the alternatives considered, and a design change rescopes the affected code chunk
+  before that chunk is reviewed; design items found during the build (D-11, D-12) are added to the same table.
+- **A service that will deploy to AWS gets both dashboard dialects from the start (2026-09-10).** Tried: scoping the
+  Telegram boards as Grafana panels only (the owner's option pick). Owner added: the bot will run on AWS eventually,
+  so its backend boards need AWS panels too. Rule: for any new service board, ask where the service will run and
+  author the `aws` dialect alongside `oss` whenever AWS is a target, even while the AWS deployment itself is deferred.

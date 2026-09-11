@@ -453,6 +453,7 @@ refresh becomes a merge-time precondition. Detail plan: `observability-rebuild-p
 | Pooled psycopg2 query → span with bootstrap ordering | 1b.1 | reorder pool creation |
 | Phoenix `gen_ai.*` rendering | 7.2 | collector aliases |
 | Azure OTLP send + metric naming | only when `azure` is built | — |
+| Phase 8 satellites: bot trace continues into the api SERVER span; optimizer run trace links to its request; `telegram-bot`/`shift-optimizer` boards render; `http_client_request_duration_seconds{server_address="api.telegram.org"}` present; no token/presigned URL in the Loki raw stream after a deliberate bad-token boot; no `getUpdates` CLIENT span in Tempo | after the phase-8 R5 merge (phase-8 plan §10) | fix per finding before calling phase 8 done |
 
 ## 14. Rescoping notes (filled at Task R)
 _(empty until Gate M)_
@@ -565,7 +566,13 @@ PromQL widget console export, Stream L counter hand-off.
   chat_turn_facts backfill crontab (line in the phase-5 plan); alert-threshold review (phase-6 plan §10.2) +
   real Slack/email targets via `ALERTMANAGER_*_FILE`/SSM; CloudWatch alarm-dialect ruling (provider raise vs
   `awscc` vs defer); B1a/B1b/B1d live probes; PromQL widget console-export probe; POC acceptance run at F10.
-  **Owner rulings open:** hub-citation double-surface (one gesture = two `document_opened` rows); Gate M
+  Phase 8 (2026-09-11): create the `flynapse-otel` GitHub repo + its CI secrets, first CodeArtifact publish, flip
+  the utils dependency to the `codeartifact` source at publish time; re-run `provision_rls.py` against the local
+  `shift_optimizer_test` DB (utils' `rls_boot_check` fails on stale memory-item policies → 62 optimizer `tests/api`
+  setup errors, pre-existing).
+  **Owner rulings open:** phase-8 D-11 (the gateway records HTTP duration after BackgroundTasks) and D-12 (optimizer
+  run attribution from an unsent, spoofable `X-User` header) — Fable R0 recommends, owner rules; hub-citation
+  double-surface (one gesture = two `document_opened` rows); Gate M
   declaration when LangGraph lands → Task R rescoping → Stream L (phase 0 app half, 1b-mro, phase 3, the
   `chat_turn_facts` writer, content capture) + phase 7 eval harness; Stream L must also confirm the
   `agent_outcome="error"` spelling + doc-hub/automation counters the dark phase-6 panels assume.
