@@ -120,7 +120,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 ### 1a. Progress
 - [x] Plan v1 (`e1845fd`) + master §11c
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
-- [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review running
+- [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review MERGE-READY AFTER FIXES (1 P1 — api error text in browser.log and browser.error; 6 P2; 6 P3 — incl. the six queued cross-stream items, several widened); fix pass running
 - [ ] E9 — in progress (E9.1–E9.3 committed `f697919` → `972d532`; E9.4 withdrawn to the TanStack conversion; E9.5 uncommitted; E9.6–E9.8 to follow)
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass done (`3784b13` → `00c9763`, 7 items; unit 1874/1874, typecheck, eslint); re-verification running
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 waits for P9
@@ -729,8 +729,28 @@ api URL kwargs, sweep bypasses (import resolution, `*.fetch(`), the "4 KiB" read
 Residual: a minted `traceparent` names a parent that is never exported (until G9-18); no real `next start` run yet
 (P9 check 5); non-status errors still ride scrubbed messages under the phase-4 rule.
 
-### Streams F9 and E9
-F9's reviewer is running; E9 is still building. Their briefs land here when written.
+### Stream F9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY AFTER FIXES**; fix pass running)
+Scope: dashboard-obs9 `b87ced0..b9ba515` (11 commits) and api-obs9 `a19a931..46a86fc`. Ran: unit 1815/1815, `tsc`, eslint
+on 39 files, api middleware + infra 322; 21 mutation checks (19 caught, 2 exposed test gaps). Held: F9.1–F9.8 built and
+their §0 gaps closed; the URL-scrub test is non-vacuous; the reference comes from the injected `traceparent` through the
+real instrumentation; the api test fails with the trace-id middleware moved back inside auth; both first-load gaps
+proved on the real `AppProviders` tree; the metric-test edit is legitimate (a session-cumulative reader); ownership
+stays inside the §1b hunks; `logger.ts` and `events.ts` merge with 0 conflicts against N9 `00c9763` and E9 `972d532`.
+Findings → rulings (all accepted into the fix pass): P1 api error text reaches `browser.log` AND `browser.error`
+(`reportError`) through `error.message` — status-bearing errors ship type + status only; P2 fetch network failures
+(status 0) are not ERROR, so their root span is ratio-dropped — ERROR unless `AbortError`, in the fetch and XHR hooks;
+P2 bound `url.template` without collapsing real static segments (`level1`, `export.xlsx`) — an id rule plus a guard
+over every literal segment in `lib/api/**` and `lib/config`; P2 five ways to reference the logger slip past the AST
+guard (alias, element access, namespace import, destructuring, parentheses); P2 `no-console` off for `tests/**` and
+`scripts/**`; P2 the header-spread defect exists in `apiRequest` too; P2 camelCase identity keys in `SENSITIVE_KEY`; P3
+URL-scrub probes for status messages and links plus the api path kept; `global-error` starts telemetry only with a
+runtime config; `reportError` prefers the error's own `traceId`; `fetchOptimizerRaw`'s retry keeps its context; an AST
+check that every chat upload runs inside `uploadInTurn`; lint/guard alignment and a total-delta metric assertion.
+Residual: no `next build` on this tree (P9 builds it); cross-origin header reads and pre-config start are reasoned,
+not observed in a real browser (P9); the TanStack conversion's merge with this branch is not yet rehearsable.
+
+### Stream E9
+Still building; its brief lands here when written.
 
 
 ### 10a. Plan review — 2026-09-11 (reviewer Opus 5; verdict READY AFTER CHANGES) — triage
