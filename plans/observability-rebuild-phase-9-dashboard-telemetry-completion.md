@@ -120,7 +120,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 ### 1a. Progress
 - [x] Plan v1 (`e1845fd`) + master §11c
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
-- [ ] F9 — built, reviewed, fixed, re-verified
+- [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review running
 - [ ] E9 — built, reviewed, fixed, re-verified
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass running
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verification running
