@@ -124,7 +124,9 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] E9 — built 2026-09-11 (`f697919` → `3a2610a`, 9 commits: E9.1–E9.3, the `useAppMutation` follow-up `0b236a5`, E9.5 `286f5a3`, E9.8 `0a85834`, E9.6 `65929a0`, E9.7 `c2d05c6`, close `3a2610a` — no pending exemptions left; E9.4 withdrawn to the TanStack conversion; unit 1838/1838, typecheck, eslint); review MERGE-READY AFTER FIXES (1 P1 — Run now outcome words; 2 P2 — the useShare email, the AD page wiring untested; 5 P3); fix pass done (`a708d49` → `08b7650`, 6 commits; unit 1845/1845 in 606 s, typecheck, eslint); re-verified MERGE-READY (10 reviewer mutations all caught). **E9 Phase A done** (tip `08b7650`)
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass done (`3784b13` → `00c9763`, 7 items; unit 1874/1874, typecheck, eslint); re-verified MERGE-READY (2 new P3 — a list-`detail` 422 relayed as "[object Object]", the literal-body rule's scope — landed in the mini pass `cc193eb` + `c52f034`; unit 1877/1877). **N9 Phase A done** (tip `c52f034`)
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 waits for P9
-- [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
+- [x] P9 — live probe 2026-09-11 (checks 1–9 PASS with the gaps named in §7 "P9 results"; evidence `copilot-mro/.dev_runs/obs9-probe-20260911/`); stack torn down
+- [ ] M9.6 — DARK flip for the panels P9 saw + the `MutationRefusedError` ratio exclusion (running)
+- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`; running)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
@@ -627,6 +629,45 @@ warn with an email in its body, a render error, and a root-layout throw. Checks,
 9. `fn-frontend` renders every panel; then M9.6 flips what was seen.
 Teardown by port and `compose down -v`; results and any fix passes recorded in §11.
 
+### P9 results — 2026-09-11 (session lead; evidence in `copilot-mro/.dev_runs/obs9-probe-20260911/`)
+**Set-up.** Integration tree `obs9-probe` = `agent_sdk` + `obs9-browser` `af9f307` + `obs9-events` `08b7650` + `obs9-server`
+`c52f034` (0 merge conflicts; `logger.ts`, `events.ts` and `mutation-meta-emitters.test.tsx` auto-merged; the merged tree's
+guard and shared-file tests 46/46) + one probe-only commit (sampling ratio 1, the `/probe` forcing page, root-layout and
+SSR error toggles); `next build` clean (type check + lint), served by `next start`. api `api-obs9` `46a86fc` run on the
+CURRENT checkouts — the pinned bundle env's editable installs still point at 2026-09-05 copies in `wt-obs-u/*`, so
+`PYTHONPATH` put `api-obs9`, `utils`, `core`, `copilot-mro` and `shift-optimizer` first. The `oss` stack from
+`copilot-mro-obs9` at port prefix 3 (project `flynapse-otel-p9`); Grafana started as the M9 smoke starts it and attached
+to the P9 network. Logged in as the e2e owner through CDP Chrome (credentials read by a script, never printed).
+**Checks.** 1 PASS — Loki carries `browser.web_vital`, `browser.app.boot`, `browser.auth.login`, `browser.error`,
+`browser.log` and, new, `browser.feature.mutation` (automation create + delete), `browser.auth.flow`
+(forgot_password/code_request), `browser.automation.run_triggered` (manual, `mro`, `accepted`) and `run_settled`
+(`failed`, observed wait 27 s), `browser.export.requested` (optimizer run, xlsx), `browser.ad_review.disposition_set`
+(confirmed_applicable from the dialog, cleared from the table) — one record per action; not exercised: optimizer
+run triggers (they would solve the owner's pinned plan-of-record jobs), Data Discovery (not open to this account), the
+settings and Document Hub writes (the TanStack conversion's now), comments and the work-order export (they need
+S3/Bedrock). 2 PASS — the documentLoad/documentFetch/resourceFetch spans for `/help?invite=probe-token&chatUserId=…#frag`
+exist with query-less URLs, and nothing in Tempo or Loki carries `probe-token`, `chatUserId`, `frag-probe` or `X-Amz-`;
+the S3 presigned-preview half was blocked by an expired AWS SSO token. 3 PASS — browser body `probe warn body [email]
+https://probe-bucket.s3.ap-south-1.amazonaws.com`, backend body `… for **** with token ****`. 4 PASS for the render error
+(`react_boundary`), `global-error` (`global`) and a network failure (reference → an ERROR span with status 0) — each
+on-screen reference equals its record's trace id; a real server-500 toast was not observable (the 500s met are handled
+inline, D9-9), though the chat failure's `browser.log` record shares the failed request's trace id and carries
+`url.template` and the status but no server text; the SSR error wrote one `onRequestError` JSON line. 5 PASS — the Next
+route `/api/tenant/organization` → the api SERVER span's parent is the browser fetch span. 6 PASS — the first request of
+each cold load is traced. 7 PASS — both upload spans are children of `browser.chat.turn` (attachment_count 1,
+attachment_upload_ms 472). 8 PASS — `url_template` series for the dashboard; Tempo demand 1,910 ≪ 100,000. 9 PASS — all
+8 boards and 4 datasources provisioned and healthy; panels with data 1–6, 9–11, 13, 15, 16, 17A; empty for known
+reasons 12, 14, 17B, 18.
+**Findings.** (a) core's ingest `_pass_through` turns a client disconnect (`starlette.requests.ClientDisconnect`, the
+browser abandoning an in-flight export on a full-page navigation) into an ERROR with a traceback and a 500 — 12 of 52
+ingest requests in the probe; the routes are excluded from request metrics, so it is log noise, not an alert → stream
+C9. (b) The owner's local `api/.env` sets `OTEL_SERVICE_NAME=copilots` (plus the dead `OTEL_ENABLED` / `OTEL_ENDPOINT`), so
+locally the api reports as `copilots`; App Runner sets `api` — an owner item (the probe ran with `OTEL_SERVICE_NAME=api`).
+(c) The automations failed-run panel says "contact support with the time of this run" rather than showing a reference —
+§9. (d) Probe-set-up slips, no app defect: the first Grafana picked up the legacy provisioning path; an AD clear first
+missed its `role="alertdialog"` confirm (then cleared properly — the dev data is restored); the owner's `deployment`
+Loki/Tempo crash-loop and the leftover `flynapse-otel-probe` collector are untouched.
+
 ## 8. Review design — two phases
 
 **Phase A (now, Opus 5):** one fresh adversarial reviewer per stream (F9 includes the api change), briefed with the
@@ -635,7 +676,7 @@ not guard presence; every test must fail without its fix. Triage, fix pass, re-v
 
 **Phase B (Fable, when the limit returns; after the phase-8 chunks R0–R5):** five bounded chunks, one fresh Fable agent
 each, in merge order — R6 **design** (§0, §2, §8a, the stream split and file ownership) → RC the owner's TanStack conversion (design + code, from its own plan; merged into `agent_sdk` first, after which each obs9 dashboard branch merges `agent_sdk` and re-runs its lanes) → R7 F9 (dashboard + api) → R8
-E9 → R9 N9 → R10 M9 (copilot-mro `deployment/**` + iac). A chunk's merge follows its verdict: dashboard branches
+E9 → R9 N9 → R10 M9 (copilot-mro `deployment/**` + iac). A tiny core chunk R11 (C9, the P9 finding) follows R10; it merges into core `master`. A chunk's merge follows its verdict: dashboard branches
 `--no-ff` into `agent_sdk` (F9, E9, N9 in that order, full unit lane + `tsc` after each), api into `langgraph-merge`,
 copilot-mro `deployment/**` into `langgraph-merge`, iac into `main` — M9's two branches after phase-8 R5 has merged
 their D8 bases (if Fable changed D8 at R5, merge the new D8 tips into the obs9 branches and re-run the lanes before
@@ -691,6 +732,7 @@ _(filled at Phase-A close: branch tips, suite evidence, merge mechanics per chun
 - **Exact telemetry-drop counts.** The exporter sends cumulative per-tab totals (`resetDropped` has no caller), the reason keys count batches not items, and the trace and log exporters share one event with no signal key — so the drops panel reads a per-session max (a lower bound). Complete solution: send deltas plus an allow-listed `signal` key, then sum per report.
 - **Logger guard blind spots (F9 re-verification P3).** The constant-message guard and its ESLint rule miss a logger reached through dynamic `import()` (`(await import(…)).logger.error(…)`), through `require(…)` (`no-require-imports` is off) or from a `.js`/`.jsx`/`.mjs`/`.cjs` source (`allowJs` is on); none exists today. Complete solution: flag any `import()` or `require()` of `lib/telemetry/logger` and extend the scan to those extensions under `app`, `components`, `hooks`, `lib`.
 - **An explicit API template table for `url.template`.** Id-collapsing (F9 fix pass) plus the Tempo series cap bound the dimension; the F9 re-verification showed letter-only values still pass as route words (`work_orders`, `akj`, `faa`, `tenant-akasa`, a bare table name in `/jobs/{id}/tables/`) — mixed values (`2024-12-05`, `A320`, `run-7`, `john.doe`) collapse correctly; a table built from the api's route catalogue, with an `/unmatched` fallback like the page table, would make it exact.
+- **Automation failed-run reference (P9 finding (c)).** The automations run panel tells the user to "contact support with the time of this run". Complete solution: show the run's trace reference (its root span's trace id) with a Copy button, as the error boundaries now do. Outside phase 9's files.
 - **aws browser alarms (D9-11)** — author the documented filters and alarms once the owner rules on the alarm dialect
   and B1b verifies the stored field paths.
 - **Call-site wrappers inside a future `useMutation`.** D9-17's AST guard covers API-layer emitters; a later conversion
