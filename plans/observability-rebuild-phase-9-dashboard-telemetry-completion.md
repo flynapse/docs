@@ -135,7 +135,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 
   Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
-- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verification running
+- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 running — the analytics contract test's seed-date time-bomb (red on core `master` since about 2026-09-08)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
@@ -745,7 +745,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `90a60040` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `1d2b400` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 static + rules 77 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
-| R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `bd18984` (telemetry ingest and product events: one clause each, plus two test files) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 23 (plus 9 failures that need seeded live-Postgres rows and fail the same way on base) |
+| R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `bd18984` (telemetry ingest and product events: one clause each, plus two test files) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 23 (plus 9 failures that also fail on base — a phase-5 seed-date time-bomb, being fixed as C9.2) |
 
 The three dashboard branches were merged together once already, on P9's throwaway tree: 0 conflicts, and the shared-file and
 guard tests passed 46/46 there.
@@ -938,6 +938,25 @@ meta and the guard's pin derives to empty — the planned follow-up.
 - The App Runner / Envoy proxy path was not tested. Either way it produces no ERROR.
 - The probe used stand-ins for four gateway middlewares. A source search confirmed that none of them reads the body.
 
+**Re-verification of mini pass `88bbca5..bd18984` — MERGE-READY.**
+- Lane counts match the implementer's.
+- Fail-before confirmed: 8 of 13 on the ingest test, 2 of 4 on the events test.
+- Mutations on the new events clause: 11 of 11 caught.
+- The events route's server span records 499 with status UNSET. Every panel and alert keys on `5..`, so nothing counts
+  these as failures.
+- The widened return annotation is ignored, because `response_model` is explicit.
+- On the events route, the INFO line's volume is bounded by authentication, which fails closed before the read, and by
+  the gateway's global per-IP limiter (500 per minute per replica). That limiter does not exempt the route, so it is not
+  bounded by authentication alone.
+
+**New P3s:**
+1. The notes understated that bound. Corrected.
+2. The 9 `tests/api/analytics` failures are a date time-bomb in our phase-5 test, not an environment gap.
+   - The seed fixture pins its clock to 2026-09-01, while the panel route reads the real clock.
+   - The test asks for a one-week window, so the seed rows fell out of it around 2026-09-08. Those tests have been red on
+     core `master` since then.
+   - A tests-only fix is running as C9.2.
+
 ### 10a. Plan review — 2026-09-11 (reviewer Opus 5; verdict READY AFTER CHANGES) — triage
 
 | # | Sev | Finding | Ruling |
@@ -1089,7 +1108,7 @@ tests): a failing test must unmount in `afterEach` and clear the app query clien
 alive; jsdom lacks `FormData`-from-form and `createObjectURL`; typing must run inside `act`.
 Fix pass (after review, 2026-09-11): `a708d49` outcome words live on the EVENT — `EVENT_OUTCOME_WORDS` in `mutation-meta.ts`, typed over every meta-declarable event and read by `onMutationSettled` (both run triggers `accepted`/`rejected`, everything else `success`/`error`; the per-meta field is gone), and `useShare`'s info line carries `block_id` only (the site test captures console output for typed content); `33713a6` the airworthiness page mounted behind its real `RouteGuard` and `PermissionProvider` pins `source` and `had_prior_disposition`; `ac77de8` a RunsPanel Run press records `job_id` on preflight and solve; `e99acc3` both guards count any reference to an emitter (callback, `.bind`, alias), resolve destructured aliases and literal element access, and recognise the hook through the file's own imports (alias, namespace, `useAppMutation`, local hooks) — the derived self-emitting list gained `useTenantAPI`; `ff9bf27` three files clear the query client (5–7 s instead of a 5-minute idle); `08b7650` React 19.1 dev double-runs mount effects only on client-side mounts, so `useInvitationPreview` records once per token per view and the discovery tracker once per completed fetch. Lanes: unit 1845/1845 (606 s, was ~20 min), typecheck, eslint on 17 files. Open guard limits (none present in the app): a function created by a call and passed on uncalled, a non-literal element key, values computed from an emitting call (deliberately unflagged).
 
-### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass `bd18984`; re-verification running)
+### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass `bd18984` re-verified MERGE-READY; C9.2, the analytics seed-date time-bomb, running)
 **C9.1 `88bbca5` — the fix.** `_pass_through` in `core/resources/logging/logging_endpoints.py` gains one clause for
 starlette's `ClientDisconnect`, placed between the `HTTPException` passthrough and the 500 funnel.
 - It answers 499 with no body and forwards nothing.
@@ -1149,13 +1168,13 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   | `tests/unit/infra` | 47 passed |
   | `tests/api/analytics` | 23 passed, 9 failed |
 
-  The 9 failures are all in `test_chat_quality_endpoint_contract.py`. It needs seeded live-Postgres rows, and the same 9
-  fail on the base package.
+  The 9 failures are all in `test_chat_quality_endpoint_contract.py`, and the same 9 fail on the base package. At first
+  they were put down to missing seed rows; re-verification found the real cause, a date time-bomb (C9.2).
 - **Findings recorded in the notes:**
   - `/analytics/events` is not in the api's ingest exclusion list. Its server span now records 499 with status UNSET,
     where before it recorded 500 with ERROR.
-  - On this route the rate limiter runs after the body read, so the INFO line is bounded by authentication, not by the
-    limiter. The limiter was not reordered.
+  - On this route the rate limiter runs after the body read, so the INFO line is bounded by authentication and by
+    the gateway's global per-IP limiter, not by the route's own limiter. The limiter was not reordered.
   - The return annotation names both return types.
   - Pre-existing and left alone: an unused-import lint warning, and older lines that black would reformat.
 
