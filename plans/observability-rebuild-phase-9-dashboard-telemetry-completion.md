@@ -135,7 +135,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 
   Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
-- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass running
+- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verification running
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
@@ -201,6 +201,22 @@ sessions off the same lines:
   phase 9 adds its record at the merge), E9.7 the preview/accept flow. RC also carries a small core change on its own core branch (the department-delete endpoint declares its members' and role holders' auth-cache invalidations, since the dashboard's cascade collapses into the single DELETE); no phase-9 stream touches core. The conversion moves the phase-4 proof
   `tests/unit/telemetry/settings-mutation-sites.test.ts` to its new hooks; after RC merges, E9 deletes the then-dead
   `withSettingsMutation` export and updates its guard's pinned list. **Merge rules where both touch the same code (phase 9 merges second; the session lead runs it):** in `useOptimizer.ts` the two `meta` edits are COMBINED — one meta object literal carrying RC's `suppressGlobalError` (its caller-shows-errors option on the wizard's hooks, the CSV upload and process) and E9's `telemetry` — never one side taken (RC's `optimizer.jobs` invalidation in `useRunJob` / `useRuns` is adjacent and kept); in `settings-api.ts` RC's version of the `createDepartment` / `updateDepartment` / `deleteDepartment` blocks (~:1585-1834, where RC removes the client cascade and rewrites the swallowed head-assignment catches) is taken over F9.2's warn fixes, and F9's AST guard verifies every surviving message is a literal. The conversion's plan: `dashboard/docs/plans/tanstack-mutation-conversion.md` (on branch `tanstack-conversion`), which copies this split under "Rulings and agreements". RC's shared `useAppMutation` helper (`hooks/shared/useAppMutation.ts`: call sites write `mutationFn` and `meta: { telemetry }` as literals; one internal `useMutation` with `meta = { suppressGlobalError: true, ...meta }`) is kept — E9's coverage sweep and double-emission guard treat `useAppMutation(` call sites as mutation sites (the callee is pre-wired in E9), the helper's own internal call is exempted at the merge (the stale-exemption check rejects it earlier), and after F9 merges the helper's single error toast gains the support reference. (As landed on `tanstack-conversion` `46208ee`: one internal `useMutation` with `meta: { suppressGlobalError: true, ...options.meta }` and one error toast; its optional permission gate runs inside the helper's `mutationFn`, so a refusal settles as outcome `error` with `error_type` `MutationRefusedError` and sends no request. Ruling 2026-09-11: the helper stays as is and the class name stays stable; a refusal is not a failure, so the failure-ratio panels exclude `error_type="MutationRefusedError"` and chart refusals as their own series — M9.6.) Logger calls in converted writes (ruled 2026-09-11 at code-26's request): converted SETTINGS writes drop their hand-rolled constant `logger.error`/`warn` — their counted signal is the settle record from `meta.telemetry` and their debug pivot the always-kept ERROR fetch span (D9-9), so a `browser.log` record would report the failure twice; converted FEATURE writes (today `NotificationBell.tsx:157`) keep their existing constant logger call unchanged in `onError` until phase 9's post-merge follow-up adds their `meta.telemetry` and removes that call in the same change.
+Merge notes from code-26 (2026-09-11, TanStack phase 2–3 prep; acknowledged, nothing needed from either side before
+the merge):
+- **`useOptimizer.ts`.**
+  - All seven D9 hooks carry an inline `meta` literal whose `suppressGlobalError` is true only when the caller passes
+    `callerShowsErrors`. E9's `telemetry` key is combined into each one.
+  - `CallerErrorOptions` moves to just above `useUploadScheduleCsv`.
+  - The new `mutationKey` lines in `useRunJob`, `useProcessActivity` and `useDeleteSchedule` are kept; they are separate
+    from meta and serve the per-row locks and a wizard navigation gate.
+  - The optimizer.jobs invalidations in `useRunJob` and the `useRuns` terminal check use exact matching, and are kept.
+- **`usePreflightJob`** should merge clean. RC copies E9's `mutationFn` lines verbatim, and base already has
+  `suppressGlobalError`. If git flags the meta lines anyway, E9's literal wins; it is the superset.
+- **Data Discovery `jobs/[jobId]/page.tsx` rerun.** Expect a trivial adjacent-hunk conflict. Keep both sides: E9's meta
+  line and RC's `onSuccess` body.
+- **`useFeedback`** does not overlap.
+- **`useShare.ts:57`.** code-26 reported the logged recipient email as a privacy item. It is already fixed on
+  `obs9-events` (E9 fix pass `08b7650`, a constant message with only `block_id`). RC leaves that line alone.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
@@ -717,7 +733,7 @@ merged mainlines.
 | D9-18 | M9's branches are stacked on the phase-8 D8 branches (merges `9976fa7c`, `9231863`) | branch from the mainlines and rebase after R5 | M9 edits the same catalogue, guard and runbook files and extends their fixture lists; stacking removes the conflict and R10 already follows R5 |
 | D9-19 | Server log lines go through `process.stdout/stderr.write` via a sink and a request-context store on `globalThis`, registered by the server-only modules; `logger.ts` never imports a server module | import a server-log module from `logger.ts`'s server branch; `console` output | `logger.ts` is in ~71 client modules (a server import breaks or bloats the client bundle); separate server bundles would each get their own module singleton; production builds strip `console.*` |
 
-### 8b. Phase A close — gate agenda (drafted 2026-09-11; the R11 tip is filled when C9 lands)
+### 8b. Phase A close — gate agenda (drafted 2026-09-11; all tips filled)
 
 Branch tips the Fable chunks review — each chunk's reviewer starts from its §10 brief plus this table:
 
@@ -729,7 +745,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `90a60040` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `1d2b400` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 static + rules 77 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
-| R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ (C9 tip) | core `master` `988571b` | (C9 lane) |
+| R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `bd18984` (telemetry ingest and product events: one clause each, plus two test files) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 23 (plus 9 failures that need seeded live-Postgres rows and fail the same way on base) |
 
 The three dashboard branches were merged together once already, on P9's throwaway tree: 0 conflicts, and the shared-file and
 guard tests passed 46/46 there.
@@ -785,6 +801,10 @@ guard tests passed 46/46 there.
   Complete solution: `internal_error` takes a constant event name plus bound fields, and attaches the exception through
   loguru's exception option. The forward failure binds the exception's type name, not its text. Deferred because every
   core router shares the funnel, which puts it outside C9's one-clause fix.
+- **The product-events 429 is silent (C9 mini pass).** When `POST /analytics/events` refuses a flooding caller with a
+  429, it logs nothing. The telemetry ingest module logs its rate-limit refusals at WARNING, as an operator-actionable
+  signal. Complete solution: one constant WARNING per window per caller on both surfaces, bound to tenant and user.
+  Deferred because it was outside the disconnect fix.
 - **Browser batches in flight during a full-page navigation are lost and never counted (C9 review residual; for R7).**
   The exporter's force-flush re-sends only batches still in its queue. A plain POST already in flight when a full-page
   navigation starts is cancelled with the page and never counted as dropped. So each core 499 probably means one lost
@@ -1069,7 +1089,7 @@ tests): a failing test must unmount in `afterEach` and clear the app query clien
 alive; jsdom lacks `FormData`-from-form and `createObjectURL`; typing must run inside `act`.
 Fix pass (after review, 2026-09-11): `a708d49` outcome words live on the EVENT — `EVENT_OUTCOME_WORDS` in `mutation-meta.ts`, typed over every meta-declarable event and read by `onMutationSettled` (both run triggers `accepted`/`rejected`, everything else `success`/`error`; the per-meta field is gone), and `useShare`'s info line carries `block_id` only (the site test captures console output for typed content); `33713a6` the airworthiness page mounted behind its real `RouteGuard` and `PermissionProvider` pins `source` and `had_prior_disposition`; `ac77de8` a RunsPanel Run press records `job_id` on preflight and solve; `e99acc3` both guards count any reference to an emitter (callback, `.bind`, alias), resolve destructured aliases and literal element access, and recognise the hook through the file's own imports (alias, namespace, `useAppMutation`, local hooks) — the derived self-emitting list gained `useTenantAPI`; `ff9bf27` three files clear the query client (5–7 s instead of a 5-minute idle); `08b7650` React 19.1 dev double-runs mount effects only on client-side mounts, so `useInvitationPreview` records once per token per view and the discovery tracker once per completed fetch. Lanes: unit 1845/1845 (606 s, was ~20 min), typecheck, eslint on 17 files. Open guard limits (none present in the app): a function created by a call and passed on uncalled, a non-literal element key, values computed from an emitting call (deliberately unflagged).
 
-### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass running)
+### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass `bd18984`; re-verification running)
 **C9.1 `88bbca5` — the fix.** `_pass_through` in `core/resources/logging/logging_endpoints.py` gains one clause for
 starlette's `ClientDisconnect`, placed between the `HTTPException` passthrough and the 500 funnel.
 - It answers 499 with no body and forwards nothing.
@@ -1110,6 +1130,34 @@ one ERROR.
 - Core's pytest `addopts` already has `-q`, so an extra `-q` hides the stats line. Read the counts from junit.
 - A disconnect only reproduces through a real request over a receive channel. The module's fakes always return a body,
   which is why no earlier test reached this path.
+
+Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
+- **Ingest test.** It now covers both disconnect shapes, zero-chunk and half-body, on all four routes, and "mid-body" is
+  gone from the wording.
+- **The sibling `POST /analytics/events` gets the same fix.** A single clause returns a bodiless 499 and one constant
+  INFO line bound with `tenant_id` and `user_id`; nothing is stored or re-logged. A new
+  `tests/api/analytics/test_events_client_abort.py` covers both shapes plus two controls: a complete batch answers 202,
+  and a store failure answers 500 with one ERROR.
+- **Fail-before.** The ingest test failed 8 of 13 against a scratch copy of the base module. The events test failed 2 of
+  4 with the route unchanged, reproducing the same ERROR and traceback. After the fix: 13 of 13 and 4 of 4.
+- **Lanes:**
+
+  | Lane | Result |
+  |---|---|
+  | `tests/api/logging` | 47 passed |
+  | error-disclosure sweep | 113 passed |
+  | `tests/unit/infra` | 47 passed |
+  | `tests/api/analytics` | 23 passed, 9 failed |
+
+  The 9 failures are all in `test_chat_quality_endpoint_contract.py`. It needs seeded live-Postgres rows, and the same 9
+  fail on the base package.
+- **Findings recorded in the notes:**
+  - `/analytics/events` is not in the api's ingest exclusion list. Its server span now records 499 with status UNSET,
+    where before it recorded 500 with ERROR.
+  - On this route the rate limiter runs after the body read, so the INFO line is bounded by authentication, not by the
+    limiter. The limiter was not reordered.
+  - The return annotation names both return types.
+  - Pre-existing and left alone: an unused-import lint warning, and older lines that black would reformat.
 
 ## 12. Lessons
 - **Adjacent owner work that shares the effort's files is Fable-gated too (2026-09-11).** Tried: telling the owner's
