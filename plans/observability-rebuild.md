@@ -702,6 +702,16 @@ PromQL widget console export, Stream L counter hand-off.
   Still open from earlier: Amplify `ENV=production`, the alarm-dialect ruling (the browser alarms are documented only),
   the §2.1 catalogue look, the crash-looping local `deployment` Loki and Tempo, and the leftover `flynapse-otel-probe`
   collector.
+- **2026-09-11 — Phase 9 Phase A CLOSED.**
+  - **M9.6 DARK flip landed** (`90a60040` / iac `1d2b400`).
+    - The panels P9 saw now read LIVE, with the date.
+    - Panels 12, 14, 17 B and 18 keep a dated DARK note.
+    - The feature failure ratio leaves out the TanStack helper's client-side refusals.
+  - **C9 landed:** core-obs9 `obs9-core` @ `8e3c3ce`, Opus-reviewed and re-verified MERGE-READY twice.
+    - Telemetry ingest and product events now answer a client disconnect with a 499 and one INFO line.
+    - The review also found the phase-5 chat-quality contract test red on core `master` since about 2026-09-08, from a
+      seed-date time-bomb. It is fixed in tests only, plus a unit test for the real-clock default.
+  - The gate agenda with every tip is in phase-9 plan §8b. Nothing is merged or pushed.
 
 ## 16. Future Improvements
 _(empty)_
@@ -731,19 +741,27 @@ the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewe
 → R3 → R4 → R5 with a merge after each; agenda, tips and mechanics in the phase-8 plan §8b, briefs in §11. The shared
 `api/.venv` refresh happens at the R1 merge (`poetry lock` + `poetry install` in `api/`).
 
-**Phase 9 (added 2026-09-11):** dashboard telemetry completion covers every gap from the 2026-09-11 dashboard audit
-except Rostering, which is demo-only. The plan got an independent Opus review before the build. Four parallel Opus
-streams run in six worktrees: F9 in `dashboard-obs9` + `api-obs9`, E9 in `dashboard-obs9e`, N9 in `dashboard-obs9n`, and M9
-in `copilot-mro-obs9` + `iac-obs9`, the M9 pair stacked on phase-8 D8. Where Phase A stands:
-- F9, E9 and N9 are done (re-verified MERGE-READY).
-- M9 is done, including the M9.6 DARK flip (tips `90a60040` / `1d2b400`).
-- The P9 live probe PASSED (§7 "P9 results"; evidence in `copilot-mro/.dev_runs/obs9-probe-20260911/`).
-- C9, the one P9 finding (a core ingest client disconnect), is running in `core-obs9`.
+**Phase 9 (added 2026-09-11) — Phase A CLOSED 2026-09-11.** Dashboard telemetry completion covers every gap from the
+2026-09-11 dashboard audit except Rostering, which is demo-only. Five Opus streams were each built, Opus-reviewed, fixed
+and re-verified MERGE-READY, and the P9 live probe PASSED.
 
-Then comes Phase-A close with the §8b gate agenda. Merges are HELD: after phase 8's R0–R5, Fable runs R6 (phase-9 design),
-then **RC** (the owner's TanStack conversion, session code-26, Fable-gated too), then R7 F9, R8 E9, R9 N9, R10 M9 and R11
-C9, merging after each (§8b). The session scratchpad notes, briefs, audits and runbook are copied to
-`copilot-mro/.dev_runs/obs9-phaseA/`.
+Fable-gate tips (phase-9 plan §8b has the table, the suite evidence and the merge mechanics):
+- **F9:** `dashboard-obs9` `obs9-browser` @ `af9f307` + `api-obs9` `obs9-api` @ `72df51a`.
+- **E9:** `dashboard-obs9e` `obs9-events` @ `08b7650`.
+- **N9:** `dashboard-obs9n` `obs9-server` @ `c52f034`.
+- **M9:** `copilot-mro-obs9` `obs9-deploy` @ `90a60040` + `iac-obs9` `obs9-iac` @ `1d2b400`, stacked on phase-8 D8.
+- **C9:** `core-obs9` `obs9-core` @ `8e3c3ce`. It turns client disconnects on core's telemetry-ingest and
+  product-events routes into a 499 plus one INFO line, and fixes the phase-5 analytics seed-date time-bomb.
+
+**Merges are HELD.** After phase 8's R0–R5, Fable reviews in this order, with a merge after each chunk:
+1. R6, the phase-9 design.
+2. **RC**, the owner's TanStack conversion (session code-26). It is Fable-gated too, and merges into `agent_sdk` before
+   any phase-9 branch.
+3. R7 F9, R8 E9, R9 N9, R10 M9 and R11 C9.
+
+After R11, re-probe P9 checks 2, 4 and 5 on the merged mainlines.
+
+Durable copies of the session notes, briefs, reviews and runbook are in `copilot-mro/.dev_runs/obs9-phaseA/`.
 
 Next work, in order: (0) finish phase 9 Phase A (fix passes, reviews, P9, the DARK flip, the §8b agenda); the Sunday Fable gate for phase 8 (R0–R5), then its §10 live probe, then phase 9's chunks R6 → RC → R7–R10; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
 alarm-dialect ruling, Amplify AL2023 + Node 22, improvement-findings review → tab flag, backfill crontab,

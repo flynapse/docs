@@ -135,8 +135,8 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 
   Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
-- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verification running
-- [ ] Phase A closed — §8b gate agenda with branch tips
+- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
+- [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -745,7 +745,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `90a60040` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `1d2b400` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 static + rules 77 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
-| R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `7264e2e` (telemetry ingest and product events: one clause each, plus two test files; C9.2 fixes a phase-5 test's seed-date time-bomb) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 32, `tests/db/analytics` 98 |
+| R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `8e3c3ce` (telemetry ingest and product events: one clause each, plus two test files; C9.2 fixes a phase-5 test's seed-date time-bomb; N3 adds a unit test for the real-clock default) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 32, `tests/db/analytics` 98, `tests/unit/analytics` 70 |
 
 The three dashboard branches were merged together once already, on P9's throwaway tree: 0 conflicts, and the shared-file and
 guard tests passed 46/46 there.
@@ -967,8 +967,8 @@ meta and the guard's pin derives to empty — the planned follow-up.
   still run for real.
 - The reviewer repeated the proof with the scratch plugin at +30 days: the old file failed 9 of 20, the new file passed
   20 of 20. `tests/api/analytics` passed 32 of 32 at the real clock.
-- New P3 (N3): after the pin, no test covered the service's real-clock default. A unit test pinning that default is
-  being folded into C9.2.
+- New P3 (N3): after the pin, no test covered the service's real-clock default. It landed as `8e3c3ce`: a unit test of the real-clock
+  default, which four mutants fail. The session lead reran unit analytics and infra: 117 of 117.
 
 ### 10a. Plan review — 2026-09-11 (reviewer Opus 5; verdict READY AFTER CHANGES) — triage
 
@@ -1121,7 +1121,7 @@ tests): a failing test must unmount in `afterEach` and clear the app query clien
 alive; jsdom lacks `FormData`-from-form and `createObjectURL`; typing must run inside `act`.
 Fix pass (after review, 2026-09-11): `a708d49` outcome words live on the EVENT — `EVENT_OUTCOME_WORDS` in `mutation-meta.ts`, typed over every meta-declarable event and read by `onMutationSettled` (both run triggers `accepted`/`rejected`, everything else `success`/`error`; the per-meta field is gone), and `useShare`'s info line carries `block_id` only (the site test captures console output for typed content); `33713a6` the airworthiness page mounted behind its real `RouteGuard` and `PermissionProvider` pins `source` and `had_prior_disposition`; `ac77de8` a RunsPanel Run press records `job_id` on preflight and solve; `e99acc3` both guards count any reference to an emitter (callback, `.bind`, alias), resolve destructured aliases and literal element access, and recognise the hook through the file's own imports (alias, namespace, `useAppMutation`, local hooks) — the derived self-emitting list gained `useTenantAPI`; `ff9bf27` three files clear the query client (5–7 s instead of a 5-minute idle); `08b7650` React 19.1 dev double-runs mount effects only on client-side mounts, so `useInvitationPreview` records once per token per view and the discovery tracker once per completed fetch. Lanes: unit 1845/1845 (606 s, was ~20 min), typecheck, eslint on 17 files. Open guard limits (none present in the app): a function created by a call and passed on uncalled, a non-literal element key, values computed from an emitting call (deliberately unflagged).
 
-### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass `bd18984` re-verified MERGE-READY; C9.2 `7264e2e`, re-verification running)
+### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass `bd18984` and C9.2 `7264e2e` re-verified MERGE-READY; N3 `8e3c3ce` — tip `8e3c3ce`)
 **C9.1 `88bbca5` — the fix.** `_pass_through` in `core/resources/logging/logging_endpoints.py` gains one clause for
 starlette's `ClientDisconnect`, placed between the `HTTPException` passthrough and the 500 funnel.
 - It answers 499 with no body and forwards nothing.
@@ -1217,6 +1217,15 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   The session lead independently ran analytics and logging: 79 of 79.
 - **Learning.** A shared fixed-clock seed binds every consumer to pass that clock. A route-level test must pin the
   service's clock too, or it silently becomes a date time-bomb.
+
+**N3 `8e3c3ce` — a unit test for the service's real-clock default.** This follows the C9.2 re-verification.
+- **What the test does.** New `tests/unit/analytics/test_panel_service_clock_default.py` replaces the service module's
+  clock with a fixed UTC time and stubs the cache, the limiter and the repository. It then calls the service with no
+  `now` and asserts that the window end the repository receives and `last_updated` both equal the fixed time.
+- **Mutation proof.** Four mutants fail it: a fixed offset on each default site, and a real-clock read that ignores the
+  stub on each site.
+- **Lanes.** `tests/unit/analytics` passed 70, `tests/unit/infra` passed 47. The session lead's rerun passed 117 of 117.
+
 
 
 ## 12. Lessons
