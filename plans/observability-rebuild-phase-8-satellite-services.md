@@ -423,6 +423,27 @@ link; psycopg2 child spans under `optimizer.run`/`optimizer.persist` on the real
 duration includes the solve (D-11); first-boot `seed_if_empty` runs `execute_run` in-process and counts as real
 runs; a uvicorn `root_path` deployment would defeat both anchored health patterns (none configured).
 
+### Stream PA8 — review brief (reviewer Opus 5, 2026-09-10, re-verified after the fix pass; verdict **MERGE-READY** for chunk R3)
+**Scope.** core-obs8 `obs8-core` 988571b..6c97af7 (ed22e1f, 0fa9765, 6c97af7); dashboard-obs8 `obs8-dashboard`
+b87ced0..bb78344 (0dc631b, bb78344). Diff confined to `core/resources/analytics/{panels/optimizer.py,
+panels/__init__.py,registry.py}` + tests/fixtures; dashboard registry/types/utils/api + one test. The tab ships FOUR
+panels (46 total).
+**Checked.** Suites re-run (core analytics lanes + infra 275/0; dashboard 51/51 via the repo's `tsx --test`; `tsc`
+clean). RLS proven with the SQL tenant predicate stripped AND the LEFT JOIN tenant predicate stripped, under
+`flynapse_app` (non-BYPASSRLS; FORCE + one FOR ALL policy per relation), unbound and cross-bound → never another
+tenant's row or job name; endpoint 403 `forbidden` matrix for every id (`view_dashboard`-only, `optimizer_run` as a
+substitute, `optimizer` alone), owner 200; every id serialises with the pinned keys across all five ranges; a
+NULL-duration completed row is excluded from median/histogram; drift fixtures diffed by script (46/46, order
+identical); the clock fix restores in `finally`, is hour-aligned UTC −1 d, and the api lane uses `1w`/`1m` only (no
+hour-boundary flake); layout/basename/depth rules green.
+**Findings → rulings.** P1-1 `optimizer_active_planners` had no identity signal (`launched_by` is an unsent client
+header, always `system`) → ruled DROP; D-12 opened for gateway-injected identity; verified gone from both trees.
+P2-1 FOR-ALL/FORCE pins extended to `optimizer_runs`/`optimizer_jobs` → 4 cases PASS. P2-2/P2-4 docstrings and
+descriptions landed. P2-3 shared `_float`/`_stamp_times` helper → §9. P2-5 (`flynapse_readonly` holds SELECT on the
+optimizer pair although `READONLY_SELECT_RELATIONS` omits them; it is not the panel executor) → observation.
+**Residual.** Live `copilot_mro` RLS state re-probed by the implementer only (the reviewer had no psql client; the
+DB MCP is manual-invoke only); no browser render of the tab — the live probe (§10) covers it.
+
 ## 12. Implementation notes / Learnings (per stream, as work lands)
 
 ### Stream O — landed 2026-09-10 (implementer Opus 5; commits flynapse-otel f058771→c1102db, utils-obs8 4602211, 0cb4afd)
