@@ -441,7 +441,7 @@ returns — no merge before that gate** (the phase-8 rule). Four parallel Opus s
 **F9** browser correctness + correlation (dashboard + the api CORS headers), **E9** event coverage (seven catalogue
 events incl. the five phase-4 LATER rows, #19 completion), **N9** Next.js server side (trace forwarding, structured
 server log lines, `onRequestError`), **M9** collector allow-list + log-body masking, Tempo endpoint dimensions and
-`fn-frontend` panels in both dialects (aws browser alarms as a gated-off seam) — then **P9**, one live probe on a
+`fn-frontend` panels in both dialects (aws browser alarms documented; their Terraform waits for the owner's alarm-dialect ruling) — then **P9**, one live probe on a
 local integration tree that also retires the frontend board's DARK labels. Fable chunks R6 (design) → R7–R10 follow
 the phase-8 chunks. Detail plan: `observability-rebuild-phase-9-dashboard-telemetry-completion.md` (gap register §0,
 pinned catalogue §2, decisions D9-1…D9-16 in §8a).
