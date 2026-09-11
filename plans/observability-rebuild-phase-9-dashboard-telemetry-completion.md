@@ -58,7 +58,7 @@ production may rely on `console`; ≤5 agents at once (owner cap this session); 
 |---|---|---|
 | G9-01 | Document-load, document-fetch and resource-fetch spans carry the full page/resource URL with query and fragment: `lib/telemetry/provider.ts:241` builds `DocumentLoadInstrumentation` with no config and the library writes `location.href` / `resource.name`; these INTERNAL spans are never ratio-dropped and the collector keeps `url.*` — invite/registration tokens (`?invite=`, `?token=`), `chatUserId`, presigned S3 queries reach Tempo/X-Ray | F9.1 |
 | G9-02 | Log bodies are not scrubbed, and 14 shipped-level `logger.warn` bodies in `lib/api/settings-api.ts` interpolate data: emails at `:595`, `:1796`, `:1819`; ids at `:545`, `:621`, `:752`, `:767`, `:835`, `:1022`, `:1514`; tenant-authored names at `:1652`, `:1712`, `:1802`, `:1832` (the multi-line calls put the template on the line after `logger.warn(`); plus `handleApiError`'s conditional template (`lib/api/error-handler.ts:164-167`) | F9.2 |
-| G9-03 | The collector's `redaction` processor masks attribute values only; log bodies pass every pipeline untouched | M9.1 |
+| G9-03 | The collector's `redaction` processor masks attribute values only; log bodies pass every pipeline untouched | M9.1 — premise DISPROVED at build: the pinned 0.160.0 `redaction` already masks string log bodies (probe on the pinned image + processor source); kept as a tested property instead (every log pipeline of every profile ends `redaction` → `batch`; the compose smoke reads masked bodies back from Loki) |
 | G9-04 | `X-Request-ID` and `X-Trace-Id` are missing from the api's CORS `expose_headers` (`api/flynapse_api/middleware/cors.py`), so the browser span's `request_id` attribute (`provider.ts:74-79,165-176`) is never set | F9.4 |
 | G9-05 | No support reference anywhere in the UI (`lib/api/error-handler.ts` toast, `lib/telemetry/ErrorBoundary.tsx`, `components/shared/FeatureErrorFallback.tsx`) | F9.4 |
 | G9-06 | The api mints its own request id and ignores an inbound `X-Request-ID` (`api/flynapse_api/middleware/request_id.py:36-41`) | disposition: by design (D9-5) |
@@ -123,7 +123,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] F9 — built, reviewed, fixed, re-verified
 - [ ] E9 — built, reviewed, fixed, re-verified
 - [ ] N9 — built, reviewed, fixed, re-verified
-- [ ] M9 — built, reviewed, fixed, re-verified
+- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review running
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
@@ -193,7 +193,7 @@ Signal: **L** = OTel log record through the existing `emitRecord` envelope; **S*
 `error_type` is an error class or exception name (`ApiError`, `TypeError`, a Cognito exception name) — never a
 message. Nothing a user typed rides: no names, emails, filenames, comment text, search terms or tokens.
 
-**Collector allow-list delta for M9:** `feature`, `flow`, `step`, `attachment_count`, `attachment_upload_ms`. Every
+**Collector allow-list delta for M9:** `feature`, `flow`, `step`, `attachment_count`, `attachment_upload_ms` — plus, by session-lead ruling after M9's build, the eight `browser.telemetry.dropped` count keys the browser already sends (`batches`, `items`, `rejected`, `exhausted`, `evicted`, `serialize`, `closed`, `last_status`), so the drops panel charts dropped items and reasons. Every
 other key above is already in `base.yaml`'s browser list (confirmed by the plan review: all 21).
 
 ### 2.2 Coverage map (area → calls → event)
@@ -503,6 +503,7 @@ As F9, plus `npm run build`.
 ## 6. Stream M9 — collector, boards, alarms (stacked on phase-8 D8, §1)
 
 ### M9.1 — Collector allow-list and body masking (G9-03; D9-8)
+- **Superseded at build (2026-09-11):** M9 proved the pinned `redaction` processor already masks string log bodies, so no `transform` was added; the property is pinned by tests (G9-03). The telemetry-drop count keys join the allow-list (§2.1).
 - **Files:** `deployment/otel/base.yaml` — the browser allow-list (trace and log statements) gains the five §2.1 keys; a
   log-body masking step with the `redaction.blocked_values` patterns (email, bearer, JWT, AWS access key id) is added
   to the browser AND backend log pipelines of every profile (`backend-oss.yaml`, `backend-aws.yaml`,
@@ -616,7 +617,7 @@ merged mainlines.
 | D9-5 | The api keeps minting `X-Request-ID` and ignores an inbound one; the browser only reads it back | honour a well-formed inbound id | `traceparent` is the correlation channel; an honoured client id would let a caller choose server log keys, and nothing needs it |
 | D9-6 | Telemetry starts at module evaluation of a boot module imported first by the client providers, only for the cases F9.5's first test proves on the real provider tree; the effect stays as the fallback | (a) upgrade Next to ≥ 15.3 for `instrumentation-client.ts`; (b) an inline boot script in the layout; (c) change nothing | (a) is a framework upgrade outside this phase; (b) runs before the bundle exists; (c) is right for any case the real-tree test disproves |
 | D9-7 | URL queries and fragments are stripped, and third-party URLs reduced to scheme + host, at the exporter (the single OTLP exit) for every span and log attribute | per-instrumentation `applyCustomAttributesOnSpan` hooks; a span processor (`onEnding` does not exist in the pinned 2.11.0) | the exit sees every instrumentation, including ones added later; per-hook fixes miss the next instrumentation |
-| D9-8 | Log bodies: scrubbed in the browser (`scrubMessage`), a constant-message guard (AST test + lint), and masked again in the collector (a `transform` on the body) on the browser AND backend log pipelines of every profile | (a) browser only; (b) collector only; (c) collector browser pipeline only; (d) the `redaction` processor's body support | two independent lines of defence, as spec §3.3 promises; the backend gets the same mask because its bodies have the same exposure — Fable may narrow it to (c); (d) handles map bodies only |
+| D9-8 | Log bodies: scrubbed in the browser (`scrubMessage`), a constant-message guard (AST test + lint), and masked again in the collector by the existing `redaction` processor (M9 proved it masks string bodies; no `transform` added) on the browser AND backend log pipelines of every profile | (a) browser only; (b) collector only; (c) collector browser pipeline only; (d) the `redaction` processor's body support | two independent lines of defence, as spec §3.3 promises; the backend gets the same mask because its bodies have the same exposure — Fable may narrow it to (c); (d) was first rejected on a wrong premise (map bodies only) — M9 disproved it, so (d) is what is built |
 | D9-9 | Handled-inline API failures (`suppressGlobalError`) stay unlogged; their signal is the always-kept ERROR fetch span, charted by endpoint via Tempo span metrics | log each at warn | many handled failures are expected states (not-found-yet, polling); a record per occurrence is noise, and the span already carries the template |
 | D9-10 | Next server side: trace forwarding + request context + JSON log lines + `onRequestError` now; OTLP export (Node SDK) waits for the Amplify reachability probe | ship a Node OTel SDK now | spec §3.4 defers SSR export until Amplify can reach a private endpoint; forwarding restores the browser → api trace without it; no new dependency |
 | D9-11 | `aws` browser alarms are documented (exact filters, thresholds, SNS target) and blocked on the owner's alarm-dialect ruling and probe B1b; no Terraform alarms this phase | (v1 of this plan) author them behind a variable defaulting off | phase-6 T12 left a three-way owner ruling open whose third option is "defer aws alerting"; authoring alarms, even switched off, pre-empts it, and the field paths are unverified until B1b |
