@@ -399,8 +399,8 @@ guarded DARK marker (the httpx series is now listed in §10).
 `server_address` populated for the bot's client spans; CloudWatch field paths (B1b).
 
 ### Stream S — review brief (reviewer Opus 5, 2026-09-10; verdict **MERGE-READY** for chunk R2)
-**Scope.** shift-optimizer-obs8 `obs8-optimizer` 2afb6b6..1949d96 (+ the P2 follow-up commit) off `main` 6a70135;
-api-obs8 `obs8-api` d63097b (+ follow-up) off `langgraph-merge` a19a931.
+**Scope.** shift-optimizer-obs8 `obs8-optimizer` 2afb6b6..f2591ef (P2 fixes landed: containment guard, ids on the dead-write line, `METRIC_ATTRIBUTE_KEYS` enforced at emission; telemetry lane 23) off `main` 6a70135;
+api-obs8 `obs8-api` d63097b..f8ff271 (literal pattern pinned; middleware lane 260) off `langgraph-merge` a19a931.
 **Checked.** Suites re-run from the bundle env (optimizer 683 passed / 1 skipped / 62 pre-existing `tests/api` setup
 errors — `RLSEnforcementError` from utils' `rls_boot_check` on the local `shift_optimizer_test` DB, untouched by the
 stream; telemetry lane 21; api middleware 260, integration/otel 30, infra guards 66); ruff clean; diff confined to the
