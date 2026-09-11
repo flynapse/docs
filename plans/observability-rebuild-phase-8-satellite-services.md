@@ -316,17 +316,24 @@ an Opus-only verdict.
 | D-7 | Optimizer metrics emitted from the api process under `service.name=api` with `optimizer.*` names (no separate service name) | a distinct `service.name=shift-optimizer` resource for the sub-app | one process = one resource; the route prefix and metric names identify the product |
 | D-8 | Optimizer product tab = 5 Postgres panels under the existing panel registry, gated `view_dashboard` + `optimizer`, no new FE events | FE events for run triggered/exported (research-07 #22/#23) | the facts already exist in `optimizer_runs`; FE-only gestures stay deferred |
 | D-9 | Dashboards in both dialects now (Grafana JSON + CloudWatch bodies), AWS deployment itself still deferred | oss only until AWS deploy | owner: the bot will run on AWS; the catalogue invariant is "edit both dialects" |
+| D-11 | **Found at D8 review, needs an R0 ruling:** the gateway's ASGI middleware records `http.server.request.duration` AFTER a Starlette `BackgroundTask` finishes (upstream `finally` after `self.app`), so the optimizer run route's HTTP latency includes the whole solve. Phase-8 mitigation as built: the run route is excluded from the optimizer HTTP p95 panel and from phase 6's `ApiP95LatencyHigh`; panel/catalogue text says to read solve time from `optimizer_solve_duration_seconds` | (a) gateway records the duration at response end (custom hook/span processor — affects every background-task route estate-wide); (b) the run endpoint schedules the solve outside the request lifecycle (`asyncio.create_task`/threadpool) so the response is the end of the request; (c) accept the exclusion | plan §3.2's "HTTP RED needs nothing new" was wrong at design level; (a) is the principled fix but touches the shared gateway; (b) changes optimizer run semantics — Fable rules |
 | D-10 | Two-phase review: Opus adversarial now → Fable gate in chunks R0–R5, merge per chunk, nothing merged on an Opus-only verdict; shared-env refresh after R1 | merge after Opus review; one big Fable review | owner: Fable limit returns Sunday; one review per bounded chunk keeps each within a session |
 
 ## 9. Future Improvements
-_(filled at triage)_
+- **Gateway duration recorded after background work (D-11).** Every route that queues a Starlette `BackgroundTask`
+  reports its HTTP duration including that task. Deferred to the R0 ruling; the complete fix is a gateway-side
+  hook that closes the request duration at the final response send, with a test on a background-task route.
+- **CloudWatch `attributes.tenant.id` path.** The log bridge renames `tenant_id → tenant.id`; Logs Insights parses
+  dots as nesting, so the D8 queries' `attributes.tenant_id` is probably wrong — already RE-VERIFY-flagged for B1b.
+- **Telegram `lane` is single-valued today** (`copilot` is the only `count(TURNS…)` call site); the by-lane panels
+  become useful when other lanes emit.
 
 ## 10. Live probe (after all merges; session lead runs it)
 Smoke overlay collector (`flynapse-otel-probe` compose project, loopback remaps) + api via the shared env + the bot
 from its own env with `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14318` and `OTEL_SDK_DISABLED` unset; one
 Telegram turn from the owner's phone (owner action) → Tempo shows `telegram.update` → `telegram.turn.backend` →
 api SERVER span; one optimizer run through the dashboard → `optimizer.run` trace with its link; Prometheus has
-the §3 metrics; Grafana renders both new boards; Loki carries `telegram-bot` logs with trace ids and no token or
+the §3 metrics **and** `http_client_request_duration_seconds{server_address="api.telegram.org"}` (the httpx client histogram the Telegram board reads — free-text VERIFY marker, not a guarded DARK marker) plus `traces_spanmetrics_calls_total{service="telegram-bot"}`; Loki shows `severity_text`/`run_id` as structured metadata; Grafana renders both new boards; Loki carries `telegram-bot` logs with trace ids and no token or
 presigned URL anywhere (grep the raw stream). Teardown by port + `compose down -v`.
 
 ## 11. Review briefs (Phase A output; input to Phase B)
