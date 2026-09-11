@@ -350,5 +350,45 @@ Learnings: `import flynapse_otel.bootstrap as b` gives the FUNCTION (the `__init
 `VIRTUAL_ENV` silently points poetry at the 1.37 env); the SDK `LoggingHandler` is deprecated in 1.44 (kept, same
 as `log_bridge`); Poetry 2.3.2 has no `lock --no-update` — plain `lock` is the no-update mode.
 
+### Stream S — landed 2026-09-10 (implementer Opus 5; shift-optimizer-obs8 2afb6b6..2941bf2 + follow-up; api-obs8 d63097b)
+`run_telemetry.py` (span + four metric helpers, in-memory test lane), `run_executor.py` (own `optimizer.run` trace
+linked to the queueing request span; `optimizer.solve`/`optimizer.persist` children; exception recorded + ERROR
+status; failure counted before the terminal DB write so an outage cannot lose it; lifecycle log lines with
+`run_id`/`job_id`/`tenant_id`), `jobs.py` (request span context captured beside `add_task`), `solver.py` (the
+worker count and deterministic cap become public constants so the span reads the real parameters). Gateway:
+one anchored regex excludes every mounted sub-app `/api/v1/<mount>/v1/health` (sub-paths stay traced); test in
+`api-obs8/tests/middleware/telemetry/`. Counts: optimizer 662 → 682 passed (+20; 62 pre-existing `tests/api`
+errors — the local `shift_optimizer_test` DB fails utils' `rls_boot_check` until the owner re-runs
+`provision_rls.py`); api middleware 253 → 260. A scratch probe with the real app under `instrument_gateway`
+confirmed the linked trace, the four metrics, and the untraced health route. Triage: solver constants accepted;
+`optimizer.solve.time_cap_seconds` RENAMED `optimizer.solve.deterministic_time_cap` (the value is CP-SAT dtime,
+not wall seconds; no board reads it); the "run failed" line is WARNING with `error_type` only (the exception
+message can quote user-authored formulas — it stays in the row's `error` column and the span event); an invisible
+run (RLS/no row) gets ERROR status but no terminal `optimizer.run.status`/counter. Follow-up ruled from D8's
+cross-check: explicit seconds histogram boundaries on both duration histograms.
+Learnings: `poetry run` inside `wt-obs-u/api` resolves to the STALE shared `api/.venv` unless prefixed
+`env -u VIRTUAL_ENV POETRY_VIRTUALENVS_IN_PROJECT=true` (applies to runs, not only installs); **the gateway ASGI
+middleware records `http.server.request.duration` AFTER the BackgroundTask runs, so the run route's HTTP latency
+includes the whole solve** (upstream behaviour — boards must read solve time from the run histogram);
+`tests/smoke/imports/test_import_smoke.py::test_import_is_fast` is load-sensitive and fails cold at the branch
+base too.
+
+### Stream D8 — landed 2026-09-10 (implementer Opus 5; copilot-mro-obs8 4bab848e, d4bda565; iac-obs8 01f3644)
+Grafana `telegram-bot.json` (uid `fn-telegram-bot`, 18 panels) + `shift-optimizer.json` (uid `fn-shift-optimizer`,
+12 panels); CATALOGUE views 7/8 with `aws` notes + two alarm-translation rows (gated on the PromQL-alarm ruling);
+`rules/prometheus/flynapse-satellite-alerts.yml` (`TelegramTurnFailureRate` >20 %/15 m critical,
+`OptimizerRunFailureRate` >30 %/30 m warning, volume-guarded); `docs/runbooks/observability/alerts.md` stub
+sections (outside `deployment/**` — accepted: the committed guard requires a runbook anchor per alert); guards
+extended (8 uids, 4 rule files / 12 alerts, provisioning smoke imports `EXPECTED_UIDS`); iac: two D7-subset
+CloudWatch bodies (Logs Insights `log` + `text` PromQL widgets only). Verification: otel lane 62/9 unchanged,
+rules guard 12, `validate-rules.sh` green (promtool ×4, amtool), Grafana cold-boot smoke 2 passed (all 8 boards
+provision), 30 PromQL expressions promtool-parsed, `terraform validate` success, 8 bodies parse. Uncommitted
+2-line `deployment/observability-local/README.md` (six → eight boards) — pre-existing file, landed by the session
+lead at merge. Deviation accepted: the cost counter's Prometheus name is **`telegram_turn_cost_total`** (the
+registry spells the unit `{USD}`, and a braced unit gets no suffix — same as phase 6's `agent_model_cost_usd_total`);
+plan §3.1 "USD" means `{USD}`. Learnings: the otel lane needs `POSTGRES_DB=copilot_mro_test`; a Grafana-provisioned
+JSON does not prove PromQL syntax — promtool over synthetic recording rules does; the SDK default histogram
+buckets are useless for 10–120 s turns/runs → explicit boundaries ruled for S and T.
+
 ## 13. Lessons
 _(plan-scoped; append after any owner correction)_
