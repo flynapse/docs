@@ -329,6 +329,9 @@ an Opus-only verdict.
 - **Registry forbidden-attribute list does not include identity ids** (`run_id`, `job_id`, `tenant_id`/`tenant.id`) —
   only session/user/url keys. Streams enforce their own attribute sets at emission; widening the package list is an
   R1 follow-up once every existing metric's attributes are audited.
+- **PTB logs the full `Update` repr at CRITICAL when context-building fails** (`_application.py`), which carries
+  the user's message text into the log stream (pre-existing on stdout; now also on the OTLP route). The T scrubber
+  removes token shapes and URL queries only; a message-text scrub for that one PTB site is a follow-up.
 - **Optimizer run attribution is spoofable / empty** (D-12): `X-User` is client-supplied and unsent; the gateway
   should inject the authenticated identity. `optimizer_active_planners` re-enters the tab after that.
 - **`panels/optimizer.py` imports private helpers from sibling panel modules** (`_stamp_times` from `quality`,
