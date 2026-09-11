@@ -123,9 +123,18 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review MERGE-READY AFTER FIXES (1 P1 — api error text in browser.log and browser.error; 6 P2; 6 P3 — incl. the six queued cross-stream items, several widened); fix pass done (dashboard `af9f307`, 10 commits on `b9ba515`; api `72df51a`; unit 1841/1841, tsc, eslint, api 322); re-verified MERGE-READY (14 reviewer mutations all caught; 2 new P3 → §9). **F9 Phase A done** (tips `af9f307` / `72df51a`)
 - [ ] E9 — built 2026-09-11 (`f697919` → `3a2610a`, 9 commits: E9.1–E9.3, the `useAppMutation` follow-up `0b236a5`, E9.5 `286f5a3`, E9.8 `0a85834`, E9.6 `65929a0`, E9.7 `c2d05c6`, close `3a2610a` — no pending exemptions left; E9.4 withdrawn to the TanStack conversion; unit 1838/1838, typecheck, eslint); review MERGE-READY AFTER FIXES (1 P1 — Run now outcome words; 2 P2 — the useShare email, the AD page wiring untested; 5 P3); fix pass done (`a708d49` → `08b7650`, 6 commits; unit 1845/1845 in 606 s, typecheck, eslint); re-verified MERGE-READY (10 reviewer mutations all caught). **E9 Phase A done** (tip `08b7650`)
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass done (`3784b13` → `00c9763`, 7 items; unit 1874/1874, typecheck, eslint); re-verified MERGE-READY (2 new P3 — a list-`detail` 422 relayed as "[object Object]", the literal-body rule's scope — landed in the mini pass `cc193eb` + `c52f034`; unit 1877/1877). **N9 Phase A done** (tip `c52f034`)
-- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 waits for P9
+- [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 done after P9 (tips `90a60040` / `1d2b400`)
 - [x] P9 — live probe 2026-09-11 (checks 1–9 PASS with the gaps named in §7 "P9 results"; evidence `copilot-mro/.dev_runs/obs9-probe-20260911/`); stack torn down
-- [ ] M9.6 — DARK flip for the panels P9 saw + the `MutationRefusedError` ratio exclusion (running)
+- [x] M9.6 — DARK flip done 2026-09-11 (copilot-mro-obs9 `e3f55d65` + `90a60040`, iac-obs9 `092fcf5` + `1d2b400`). Changes:
+  - Panels 1–6, 9, 10, 11, 13, 15, 16 and 17 A now read "LIVE since the P9 probe (2026-09-11)".
+  - Panels 12, 14, 17 B and 18 keep DARK, each with a dated reason.
+  - The four Loki browser rules are LIVE.
+  - The failure ratio leaves `MutationRefusedError` out of both the failures and the attempts, and charts refusals as a
+    series of their own.
+  - The guards accept either a DARK note or a dated LIVE note, and three mutations fail them.
+
+  Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
+  validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`; running)
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
@@ -708,7 +717,7 @@ merged mainlines.
 | D9-18 | M9's branches are stacked on the phase-8 D8 branches (merges `9976fa7c`, `9231863`) | branch from the mainlines and rebase after R5 | M9 edits the same catalogue, guard and runbook files and extends their fixture lists; stacking removes the conflict and R10 already follows R5 |
 | D9-19 | Server log lines go through `process.stdout/stderr.write` via a sink and a request-context store on `globalThis`, registered by the server-only modules; `logger.ts` never imports a server module | import a server-log module from `logger.ts`'s server branch; `console` output | `logger.ts` is in ~71 client modules (a server import breaks or bloats the client bundle); separate server bundles would each get their own module singleton; production builds strip `console.*` |
 
-### 8b. Phase A close — gate agenda (drafted 2026-09-11; the R10 and R11 tips are filled when M9.6 and C9 land)
+### 8b. Phase A close — gate agenda (drafted 2026-09-11; the R11 tip is filled when C9 lands)
 
 Branch tips the Fable chunks review — each chunk's reviewer starts from its §10 brief plus this table:
 
@@ -719,7 +728,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `af9f307`; `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1841/1841, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
-| R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ (M9.6 tip; `deployment/**` only, stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ (M9.6 tip; stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | otel lane 83 (both smokes + rules) before M9.6 |
+| R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `90a60040` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `1d2b400` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 static + rules 77 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
 | R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ (C9 tip) | core `master` `988571b` | (C9 lane) |
 
 The three dashboard branches were merged together once already, on P9's throwaway tree: 0 conflicts, and the shared-file and
@@ -734,7 +743,7 @@ guard tests passed 46/46 there.
   deleted if it is dead, and the guard's pin is updated. `useAppMutation`'s inner `useMutation` gets its exemption.
 - **R7, R8, R9.** `obs9-browser`, then `obs9-events`, then `obs9-server` merge `--no-ff` into `agent_sdk`, with the full unit
   lane and `tsc` after each. `obs9-api` merges into api `langgraph-merge`.
-- **R10, after phase-8 R5 has merged D8.** `obs9-deploy` merges into `langgraph-merge` (`deployment/**` only) and `obs9-iac`
+- **R10, after phase-8 R5 has merged D8.** `obs9-deploy` merges into `langgraph-merge` (it touches no conflict-zone path) and `obs9-iac`
   into `main`. If Fable changed D8 at R5, merge the new D8 tips into the obs9 branches first. Then run the otel lane and
   `terraform validate`.
 - **R11.** `obs9-core` merges into core `master`, then the core logging lane runs.
@@ -914,7 +923,7 @@ URL kwargs; fix-6 `49a3c68` upstream error bodies read to 4 KiB and the rest can
 logger lines deleted (and a static rule against them); fix-5 `00c9763` the route sweeps resolve import specifiers, allow only `ApiError` and types from `lib/api/**`, flag any `*.fetch(` and require `traceHeaders()` as the headers argument (print and stream moved to a `tracedStreamRequest` helper). Final lanes: unit 1874/1874, typecheck, eslint on 23 files. Behaviour changes to note for the gate: print, stream, signed-url and `documents/[id]` answer an api 4xx as `{ error: <api reason> }` (the reason used to ride in `details`); an upstream 5xx answers 502 on the 15 routes whose failures arrive as an `ApiError` (content-stream's two hops and work-orders pass the upstream status through with a constant body; the tenant route's identity-header path answers 500); with `ENV` unset, info/debug server lines ship as JSON.
 Mini pass after re-verification: fix-8 `cc193eb` — a 4xx relays the api's `error`, else `detail`, only when it is a non-empty string (a FastAPI list `detail` answered `{"error":"[object Object]"}` on all 15 `ApiError` routes at `00c9763`), otherwise the route's constant with the same status; fix-9 `c52f034` — the literal-body rule checks only error bodies (a literal status ≥ 400 or a catch block), as a tested `bodyOffenders` function; the reviewer's m1 mutation still fails it. Final lanes: unit 1877/1877, typecheck, eslint.
 
-### Stream M9 — landed 2026-09-11 (implementer Opus 5; copilot-mro-obs9 `07f22475` → `6984d47b` on the stacked base `9976fa7c`; iac-obs9 `1eb8c6c` → `ad4e431` on `9231863`; final mini pass landed — tips `31526d64` / `bd7992a`)
+### Stream M9 — landed 2026-09-11 (implementer Opus 5; copilot-mro-obs9 `07f22475` → `6984d47b` on the stacked base `9976fa7c`; iac-obs9 `1eb8c6c` → `ad4e431` on `9231863`; final mini pass and M9.6 landed — tips `90a60040` / `1d2b400`)
 M9.1 `07f22475`: the five §2.1 keys in both allow-list statements. **Deviation, accepted:** no body-masking transform —
 the pinned `redaction` already masks string bodies (a probe on the pinned image plus the processor source), so the
 property is test-pinned instead (G9-03 disproved). M9.2: static pins plus a compose smoke through the real collector
@@ -935,6 +944,36 @@ parse, 29 LogQL queries accepted by the pinned Loki. Pre-existing, left alone: `
 cumulative per tab and its reason keys count batches; Tempo 3 counts a series as active only if touched in the last
 15 minutes.
 Mini pass (after re-verification): `28973020` LogQL's `__error__` / `__error_details__` accepted by the parity guard (m4 now passes, m1 still fails); `7d453a6d` the oss-only alert `TempoGeneratorSeriesNearCap` (`max by (tenant)` of `tempo_metrics_generator_registry_active_series_demand_estimate` > 80000 for 15m, warning — the metric name read from a live Tempo 3.0.3, which also exported 19 series per label set; a plan-default threshold for the owner's alert review), its runbook section and catalogue lines, and a cap test bounded to [50000, 1000000); `31526d64` + iac `bd7992a` the drops widget retitled "top 50 tabs". Lanes: static + rules 76 passed / 8 skipped, `validate-rules.sh` (5 platform rules), `terraform validate`, bodies parse.
+M9.6 (after P9):
+- **Refusals ruling — `e3f55d65` + iac `092fcf5`.**
+  - Panel 11's failure ratio leaves the TanStack helper's client-side refusals out of both the failures and the attempts.
+    These are `MutationRefusedError`, and they send no request.
+  - A second series charts the refusal share.
+  - The CloudWatch widget counts refusals separately.
+  - A new guard, written test-first, pins that every stream in the ratio excludes refusals.
+- **Flip — `90a60040` + iac `1d2b400`.**
+  - The observed panels now say "LIVE since the P9 probe (2026-09-11)", in the same style as the existing "LIVE at
+    Phase 5" notes.
+  - Three panels keep a dated DARK note:
+    - 12, settings: emitted once the TanStack conversion merges;
+    - 14, optimizer triggers: not exercised;
+    - 18: no drops happened in the window.
+  - Panel 17 notes that its discovery target could not be observed.
+  - The same flip reaches the Loki browser rules, `alerts.md`, the catalogue conventions, the §5 rows, the alarm-table
+    labels and the aws "Blocked on" data gate (catalogue and `aws-profile.md`).
+  - Nine CloudWatch widgets drop DARK and three keep a dated DARK title. Every query keeps its RE-VERIFY flag.
+  - Guard grammar, test-first: the old guards failed on the flipped content. Now every `browser.*` panel or rule must
+    state either "DARK until …" or a dated "LIVE since … (YYYY-MM-DD)". Three mutations fail it: no note, an undated
+    LIVE, and a rule without a note.
+- **Lanes:**
+  - static otel lane with the rules check: 77 passed, 8 skipped;
+  - `validate-rules.sh` passed;
+  - `terraform validate` passed, and all 8 bodies parse;
+  - the pinned Loki 3.7.7 accepted all 23 LogQL targets.
+
+  The compose smoke was not re-run, because only board text and queries changed.
+- **Learning:** panel 15 had data only in the final panel check (the optimizer-run export), not the interim one. Read
+  the last evidence file, not the first.
 
 ### Stream E9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9e `f697919` → `3a2610a`, 9 commits; review running)
 E9.1 `f697919` (+ `0b236a5`): the seven §2.1 names, allow-lists and typed emitters; `withFeatureMutation`,

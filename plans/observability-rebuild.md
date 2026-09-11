@@ -686,7 +686,7 @@ PromQL widget console export, Stream L counter hand-off.
   `flynapse-otel-probe` collector holds 14318/14319/14313. Session-scratchpad notes, briefs and the P9 runbook are copied
   to `copilot-mro/.dev_runs/obs9-phaseA/`. Nothing merged, nothing pushed.
 - **2026-09-11 — Phase 9 P9 live probe PASSED; Phase A closing.** F9 (`af9f307` + api `72df51a`), E9 (`08b7650`) and N9
-  (`c52f034`) were re-verified MERGE-READY. M9 is MERGE-READY; its M9.6 DARK flip is running. P9 ran on a throwaway
+  (`c52f034`) were re-verified MERGE-READY. M9 is MERGE-READY, and its M9.6 DARK flip landed after the probe (`90a60040` / iac `1d2b400`). P9 ran on a throwaway
   integration tree of the three dashboard branches, merged with 0 conflicts. Checks 1–9 passed; the gaps are named in the
   phase-9 plan §7 "P9 results": the S3 half of check 2 is blocked by an expired AWS SSO token, optimizer run triggers were
   not exercised because they would solve the owner's pinned jobs, and Data Discovery is not open to this account.
@@ -736,7 +736,7 @@ except Rostering, which is demo-only. The plan got an independent Opus review be
 streams run in six worktrees: F9 in `dashboard-obs9` + `api-obs9`, E9 in `dashboard-obs9e`, N9 in `dashboard-obs9n`, and M9
 in `copilot-mro-obs9` + `iac-obs9`, the M9 pair stacked on phase-8 D8. Where Phase A stands:
 - F9, E9 and N9 are done (re-verified MERGE-READY).
-- M9 is done except the M9.6 DARK flip, which is running.
+- M9 is done, including the M9.6 DARK flip (tips `90a60040` / `1d2b400`).
 - The P9 live probe PASSED (§7 "P9 results"; evidence in `copilot-mro/.dev_runs/obs9-probe-20260911/`).
 - C9, the one P9 finding (a core ingest client disconnect), is running in `core-obs9`.
 
