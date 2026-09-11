@@ -320,7 +320,32 @@ an Opus-only verdict.
 | D-12 | **Found at PA8 review, needs an R0 ruling:** optimizer run attribution (`optimizer_runs.launched_by`) comes from a client-supplied `X-User` header that nothing sends (always `system`) — so `optimizer_active_planners` was DROPPED from the tab (46 panels) rather than shipped always-wrong | (a) the api gateway's optimizer shim (`routers/optimizer.py`, which already resolves the authenticated user for its permission middleware) strips any client `X-User` and injects the authenticated user id for the sub-app — also closes the spoofable-attribution gap; (b) the optimizer reads the identity from the gateway's auth context directly; (c) leave attribution as `system` | (a) is small, lives in the api repo, and fixes attribution for every optimizer write; the panel returns once identity is real |
 | D-10 | Two-phase review: Opus adversarial now → Fable gate in chunks R0–R5, merge per chunk, nothing merged on an Opus-only verdict; shared-env refresh after R1 | merge after Opus review; one big Fable review | owner: Fable limit returns Sunday; one review per bounded chunk keeps each within a session |
 
-## 9. Future Improvements
+### 8b. Phase A CLOSED 2026-09-11 — the Sunday-night (2026-09-13) Fable gate agenda
+
+Every stream is built, adversarially reviewed on Opus 5, fix-passed and re-verified; all worktrees are clean and
+nothing is pushed. Branch tips the gate reviews (a chunk's reviewer starts from its §11 brief + this table):
+
+| Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
+|---|---|---|---|
+| R0 | this plan §8a (D-1…D-12) | spec §3/§4/§7/§9/§10 | — (design review) |
+| R1 | `/home/aditya/Code/flynapse-otel` `main` @ f0c6432; `/home/aditya/Code/utils-obs8` `obs8-utils` @ c8efbe3 | new repo; utils `langgraph-merge` 9f74a11 | package 160; utils 1023 (bundle env) |
+| R2 | `/home/aditya/Code/shift-optimizer-obs8` `obs8-optimizer` @ f2591ef; `/home/aditya/Code/api-obs8` `obs8-api` @ f8ff271 | `main` 6a70135; api `langgraph-merge` a19a931 | optimizer telemetry lane 23 (+ 683/1/62 pre-existing RLS setup errors); api middleware 260 |
+| R3 | `/home/aditya/Code/core-obs8` `obs8-core` @ 6c97af7; `/home/aditya/Code/dashboard-obs8` `obs8-dashboard` @ bb78344 | core `master` 988571b; dashboard `agent_sdk` b87ced0 | core analytics + infra 275/0; dashboard 51/51, `tsc` clean |
+| R4 | `/home/aditya/Code/telegram-bot-obs8` `obs8-telegram` @ 0c55122 | `main` 1961778 | 2282 passed / 1 skipped (own env); ruff clean; docker build OK |
+| R5 | `/home/aditya/Code/copilot-mro-obs8` `obs8-dashboards` @ ba14daa3 (`deployment/**` only); `/home/aditya/Code/iac-obs8` `obs8-iac` @ 094869d | copilot-mro `langgraph-merge` 07c2d4ee; iac `main` 5996e5a | otel lane 64/7 incl. promtool; validate-rules; terraform validate; 8 bodies parse; Grafana cold-boot 2 |
+
+**Merge mechanics per chunk (session lead, after each Fable verdict):** `--no-ff` merge into the base branch named
+above (flynapse-otel is already on its own `main`); R1 additionally: in `api/` run `env -u VIRTUAL_ENV poetry lock`
+(also repairs the committed lock's stale `../../utils-obs` url) then `env -u VIRTUAL_ENV poetry install`, boot-check
+`import flynapse_api.main` → "Telemetry configured" with six instrumentors, then re-run the utils + api middleware
+lanes from the SHARED env (the bundle env retires after this); R2/R3 are ordinary merges; R4 additionally hand-carries
+`api/compose.yaml` → `telegram-bot.build.additional_contexts: {otel: ../flynapse-otel}`, then `poetry lock` +
+`install` in the bot's own env against the merged package; R5 is an ordinary merge (the README edit is already
+committed). Owner-side later: GitHub secrets on the new `flynapse-otel` repo, its first CodeArtifact publish, the
+source flip at publish time (§9 / D-1). Then the §10 live probe. If a Fable verdict changes a design row in §8a, the
+affected chunk gets a fix pass BEFORE its review, in this session on whatever model is available.
+
+
 - **Gateway duration recorded after background work (D-11).** Every route that queues a Starlette `BackgroundTask`
   reports its HTTP duration including that task. Deferred to the R0 ruling; the complete fix is a gateway-side
   hook that closes the request duration at the final response send, with a test on a background-task route.
@@ -447,8 +472,8 @@ optimizer pair although `READONLY_SELECT_RELATIONS` omits them; it is not the pa
 **Residual.** Live `copilot_mro` RLS state re-probed by the implementer only (the reviewer had no psql client; the
 DB MCP is manual-invoke only); no browser render of the tab — the live probe (§10) covers it.
 
-### Stream T — review brief (reviewer Opus 5, 2026-09-10/11, re-verified after the fix pass; verdict **MERGE-READY AFTER FIXES → final small fix pass in flight** for chunk R4)
-**Scope.** `telegram-bot-obs8` `obs8-telegram` 6443d89 → 56cddc5 (+ the R1/R2/R3 follow-up commit) off `main` 1961778; path
+### Stream T — review brief (reviewer Opus 5, 2026-09-10/11, re-verified after the fix pass; verdict **MERGE-READY AFTER FIXES — all ruled fixes landed (last: 0c55122, 2282 passed); the R1/R2/R3 re-verification is folded into Fable chunk R4** )
+**Scope.** `telegram-bot-obs8` `obs8-telegram` 6443d89 → 0c55122 (9 commits) off `main` 1961778; path
 dep on `flynapse-otel`; `api/compose.yaml` `additional_contexts` hand-carried at merge.
 **Checked.** Suites before/after the fix pass (2267 → 2279 / 1 skipped), ruff, mypy (4 pre-existing); lock additivity;
 Dockerfile stages/pins (build not re-run by the reviewer — stack busy; the implementer's build succeeded); contrib 0.65b0 httpx
