@@ -74,7 +74,7 @@ production may rely on `console`; ≤5 agents at once (owner cap this session); 
 | G9-16 | The 12 Next.js route handlers log through `console` only — which `compiler.removeConsole` probably strips from production builds entirely — and forward `X-Session-ID` but not `traceparent`; there is no `instrumentation.ts` / `onRequestError` | N9.1–N9.4 |
 | G9-17 | `app/api/document-hub/documents/[id]/content-stream/route.ts:80-84,108-112` log raw upstream bodies (the api's detail; S3 XML naming buckets and keys) | N9.5 |
 | G9-18 | SSR spans and logs are not exported over OTLP | disposition: deferred by spec §3.4 to the Amplify private-reachability probe; N9 builds the seam (§9) |
-| G9-19 | `browser.settings.mutation` (#19) misses invitations, operators, operator grants, the operator registry, organization, `deleteDepartment` (`settings-api.ts:1728`), `deleteOperator` (`:1359`) | E9.4 |
+| G9-19 | `browser.settings.mutation` (#19) misses invitations, operators, operator grants, the operator registry, organization, `deleteDepartment` (`settings-api.ts:1728`), `deleteOperator` (`:1359`) | E9.4 → withdrawn 2026-09-11: the owner's TanStack conversion session owns these call sites and adds `meta.telemetry` with `browser.settings.mutation` (§1b) |
 | G9-20 | AD review emits nothing (`hooks/mro/useAdReview.ts`) | E9.3 |
 | G9-21 | Optimizer: 22 mutations with no telemetry (`hooks/api/useOptimizer.ts`), including solve and export | E9.2 |
 | G9-22 | LATER rows #16, #18, #22, #23, #24 are unbuilt and tracked only in the phase-4 appendix | E9.2, E9.3, E9.6, E9.8 (roster export excluded) |
@@ -93,7 +93,7 @@ production may rely on `console`; ≤5 agents at once (owner cap this session); 
 | G9-35 | The optimizer wizard's chained direct writes (`components/features/optimizer/wizard/steps/ReviewStep.tsx:174,181,186,191` — create/process activity, create role, create job) escape a `useMutation`-only sweep | E9.2 |
 | G9-36 | Five chat display components have no event (`NotamCard`, `WeatherCard`, `FilePreviewModal`/`SignedFilePreviewContent`, `DocumentSearch`, `MobileChatNavigation`) | §2.3 |
 | G9-37 | `browser.automation.run_triggered` allows `department` but never sets it | E9.5 |
-| G9-38 | The member update in `hooks/settings/useTeamData.ts` (~`:380`) emits two `browser.settings.mutation` records per click (reported by the TanStack mutation audit, §1b) | E9.4 |
+| G9-38 | The member update in `hooks/settings/useTeamData.ts` (~`:380`) emits two `browser.settings.mutation` records per click (reported by the TanStack mutation audit, §1b) | withdrawn to the TanStack conversion session (§1b) |
 | G9-39 | 79 direct `toast.error(` sites bypass `handleApiError` (e.g. `components/features/optimizer/outputs/CanvasHeader.tsx:193` toasts `err.message`), and `lib/api/optimizer-api.ts:803,820` build their own `ApiError` | F9.3 routes the two optimizer sites through the shared helper; the direct toast sites are a Future Improvement (§9) |
 | G9-40 | The api's auth-layer 500s (and its 401/403/429) leave without `X-Trace-Id`: `setup_trace_id_header` is added inside `UniversalAuthMiddleware` (`api/flynapse_api/main.py:283-305`), and auth converts downstream exceptions into a `JSONResponse(500)` it returns itself (`middleware/auth.py:504-540`) | F9.4 |
 | G9-41 | Cross-origin resource URLs (S3 previews, iframes, anything loaded before telemetry starts) keep bucket and object-key paths in `url.full` (`instrumentation-document-load/.../instrumentation.js:120`) | F9.1 |
@@ -122,7 +122,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
 - [ ] F9 — built, reviewed, fixed, re-verified
 - [ ] E9 — built, reviewed, fixed, re-verified
-- [ ] N9 — built, reviewed, fixed, re-verified
+- [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review running
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass running
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
@@ -153,6 +153,30 @@ targets (`NotificationBell.tsx:149`, the wizard chain, Document Hub writes, invi
 department cascade). E9 does **not** convert them (pending state, invalidation and cascade fixes are that audit's
 scope); it emits so that telemetry stays correct whichever way those sites end up, and its double-emission guard
 catches a later conversion that would count an action twice (D9-17).
+
+**Coordination with the owner's TanStack conversion session (ruled 2026-09-11, after the owner launched it).** The
+owner is now converting the audit's 34 direct writes to `useMutation` in a separate session. Split, to keep two
+sessions off the same lines:
+- **The conversion session owns** every call site on that audit's convert list — the settings writes (tenant and
+  department roles, team add/update/remove, departments, invitations, operators and grants, organization, the
+  invite-accept retry), Document Hub upload/metadata/retry/delete, notifications bulk mark-read, delete-chat, the
+  optimizer wizard's direct writes and CanvasHeader's re-run preflight — and the mutation bugs it lists. For converted
+  **settings** writes it swaps `withSettingsMutation` for `meta.telemetry` with the existing `browser.settings.mutation`
+  (its own prerequisite #3), using the §2.1/§2.2 entity and action words. It adds **no new events** and does not change
+  `MutationTelemetryEvent`. Converted **feature** writes get no `meta.telemetry` yet (their event exists only on
+  `obs9-events`); the optimizer wizard should call the existing hooks, which E9 already instruments.
+- **Phase 9 (E9) owns** the event catalogue and telemetry on mutations that already exist (optimizer hooks, AD review,
+  automations CRUD, comments, improvement, chat share, the data-discovery page mutations), the settles, auth flows and
+  exports. E9.4 is therefore withdrawn from E9 (G9-19, G9-38 move to the conversion session), and E9.5 drops the
+  notifications and Document Hub writes.
+- **At the merge:** the conversion lands on `agent_sdk` first (it is not Fable-gated), so before R7 each obs9 dashboard
+  branch merges the then-current `agent_sdk` and re-runs its lanes. E9's repo-wide coverage sweep then lists every
+  converted mutation still without `meta.telemetry`; the follow-up adds `browser.feature.mutation` meta to those, and
+  its double-emission guard rejects any mutation that declares meta while calling a still-wrapped primitive. E9's
+  call-site wrappers in `ReviewStep.tsx` / `CanvasHeader.tsx` give way to the hook path (CanvasHeader's re-run passes
+  `jobId` to `usePreflightJob` to keep `job_id`). Conflict-prone files between the two efforts: `settings-api.ts`,
+  `lib/api/utils.ts`, `lib/api/client.ts`, `useOptimizer.ts`, `RunsPanel.tsx`, `ReviewStep.tsx`, `CanvasHeader.tsx`,
+  `useComments.ts`, `useShare.ts`, `useAutomations.ts`, the data-discovery pages, `InviteAcceptView.tsx`.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
