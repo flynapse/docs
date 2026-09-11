@@ -135,7 +135,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 
   Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
-- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review running
+- [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass running
 - [ ] Phase A closed — §8b gate agenda with branch tips
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
@@ -777,6 +777,23 @@ guard tests passed 46/46 there.
   that moves a call-site-wrapped write into a `mutationFn` and also adds `meta.telemetry` would double-count until a
   site test catches it. Complete solution: the conversion removes the wrapper in the same change (named in the TanStack
   audit's checklist when it is executed).
+- **Core's shared 500 funnel breaks the constant-message rule (C9 review).** Two sites:
+  - `core/resources/http_errors.py` `internal_error` logs the caller's context, with its interpolated ids, together with
+    the traceback as one message.
+  - The "collector forward failed" line in `logging_endpoints.py` binds the exception's text.
+
+  Complete solution: `internal_error` takes a constant event name plus bound fields, and attaches the exception through
+  loguru's exception option. The forward failure binds the exception's type name, not its text. Deferred because every
+  core router shares the funnel, which puts it outside C9's one-clause fix.
+- **Browser batches in flight during a full-page navigation are lost and never counted (C9 review residual; for R7).**
+  The exporter's force-flush re-sends only batches still in its queue. A plain POST already in flight when a full-page
+  navigation starts is cancelled with the page and never counted as dropped. So each core 499 probably means one lost
+  batch, and core's INFO line is its only record.
+
+  Measure this on real use first. P9's 23% rate is inflated by CDP-driven full-page loads, and SPA route changes do not
+  cancel fetches. Complete solution: send every export whose body fits the browser's 64 KiB keepalive budget with
+  keepalive, tracking the in-flight total, so a navigation no longer cancels it. Larger batches stay plain and keep
+  today's behaviour.
 
 ## 10. Review briefs (Phase A output; input to Phase B)
 ### Stream M9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY** after one fix pass and re-verification; four P3 nits in a final mini pass)
@@ -854,6 +871,52 @@ conflict files can't be rehearsed yet; after the conversion merges, E9's sweep l
 meta and the guard's pin derives to empty — the planned follow-up.
 **Re-verification (2026-09-11): MERGE-READY.** Unit 1845/1845 (587 s, alone), typecheck, eslint on all 40 branch files; 10 mutations of the reviewer's own all caught (dropping the automation entry from `EVENT_OUTCOME_WORDS` fails typecheck with TS2741 and three tests; the email back in the share line; the old M12 and a hard-wired `hadPriorDisposition`; the old M18; ten guard-bypass shapes flagged with the two documented limits and two clean controls left alone; the three lingering files now finish together in 16 s; removing either Strict Mode guard fails). Notes: hook recognition does not follow a default import (the conversion's `useAppMutation` is a named export).
 
+
+### Stream C9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY**; six P3s — four landed in a mini pass, two recorded)
+**Scope:** core-obs9 `988571b..88bbca5` (two files).
+
+**What the reviewer checked:**
+- The module under test loads from core-obs9. This matters because the bundle venv's editable installs point elsewhere.
+- Lanes: 203 passed.
+- Fail-before reproduced: 4 of 9 tests fail on the base module.
+- Mutations: 12 of 12 caught — the clause removed, a 500 or 204 instead of 499, WARNING or ERROR level, an
+  interpolated or placeholder message, a traceback attached, a forward inside the clause, an extra log key, a body on the
+  499, the clause widened to other errors, and `public` made constant.
+- A real-server probe: uvicorn under both h11 and httptools, behind a gateway-shaped middleware chain that includes the
+  api's real logging middleware. Two shapes were tried: half a body then close, and the full body then close during a
+  slow auth hop.
+  - The base logs one ERROR plus a WARNING 500 line. The tip logs one INFO plus an INFO 499 line. Nothing is forwarded.
+  - uvicorn never writes to a client that has gone, and a connected client reads a clean 499 under both parsers.
+
+**Lens conclusions:**
+- Nothing reads the body before the pipe.
+- A disconnect always surfaces as starlette's `ClientDisconnect`, because BaseHTTPMiddleware passes it on as a
+  disconnect message.
+- Both rate limiters run before the read.
+- No span, metric, counter or alert counts a 499 as a failure. The ingest routes are excluded from the api's OTel server
+  instrumentation, the api alert keys on 5xx, and the auth-rejection counter counts only 401 and 403.
+- loguru 0.7.3 puts the kwargs into `extra` and leaves a message with no braces unchanged.
+- INFO lines ship: the level defaults to INFO and iac does not override it.
+- The three deviations are accepted.
+
+**Findings and triage:**
+1. The notes claimed a gateway server span that does not exist. Corrected in §11 and in the notes.
+2. The notes' reason for returning a bare `Response` was only half right. A starlette `HTTPException` can carry 499 when
+   given a detail, but FastAPI would then send a JSON body. Corrected in the notes.
+3. The test covered the rarer shape. The more common one — the full body arrives and the client leaves during the auth
+   hop, so uvicorn delivers the disconnect first — joins the parametrization as a zero-chunk case. "Mid-body" becomes
+   "before the handler read the body". Mini pass.
+4. The sibling route `POST /analytics/events` has the identical defect. R11 is widened with the same clause, test-first.
+   Mini pass.
+5. The shared 500 funnel's interpolated message and the forward failure's exception text go to §9.
+6. The 413, 415 and 400 refusals log nothing. Disposition: no change.
+   - The browser already counts them, as `rejected` with `last_status` in `browser.telemetry.dropped`.
+   - A server line per refusal on an anonymous route would give callers a way to inflate log volume.
+
+**Residual risks:**
+- In-flight browser batches are lost during a full-page navigation (→ §9, for R7).
+- The App Runner / Envoy proxy path was not tested. Either way it produces no ERROR.
+- The probe used stand-ins for four gateway middlewares. A source search confirmed that none of them reads the body.
 
 ### 10a. Plan review — 2026-09-11 (reviewer Opus 5; verdict READY AFTER CHANGES) — triage
 
@@ -1006,7 +1069,7 @@ tests): a failing test must unmount in `afterEach` and clear the app query clien
 alive; jsdom lacks `FormData`-from-form and `createObjectURL`; typing must run inside `act`.
 Fix pass (after review, 2026-09-11): `a708d49` outcome words live on the EVENT — `EVENT_OUTCOME_WORDS` in `mutation-meta.ts`, typed over every meta-declarable event and read by `onMutationSettled` (both run triggers `accepted`/`rejected`, everything else `success`/`error`; the per-meta field is gone), and `useShare`'s info line carries `block_id` only (the site test captures console output for typed content); `33713a6` the airworthiness page mounted behind its real `RouteGuard` and `PermissionProvider` pins `source` and `had_prior_disposition`; `ac77de8` a RunsPanel Run press records `job_id` on preflight and solve; `e99acc3` both guards count any reference to an emitter (callback, `.bind`, alias), resolve destructured aliases and literal element access, and recognise the hook through the file's own imports (alias, namespace, `useAppMutation`, local hooks) — the derived self-emitting list gained `useTenantAPI`; `ff9bf27` three files clear the query client (5–7 s instead of a 5-minute idle); `08b7650` React 19.1 dev double-runs mount effects only on client-side mounts, so `useInvitationPreview` records once per token per view and the discovery tracker once per completed fetch. Lanes: unit 1845/1845 (606 s, was ~20 min), typecheck, eslint on 17 files. Open guard limits (none present in the app): a function created by a call and passed on uncalled, a non-literal element key, values computed from an emitting call (deliberately unflagged).
 
-### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; review running)
+### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass running)
 **C9.1 `88bbca5` — the fix.** `_pass_through` in `core/resources/logging/logging_endpoints.py` gains one clause for
 starlette's `ClientDisconnect`, placed between the `HTTPException` passthrough and the 500 funnel.
 - It answers 499 with no body and forwards nothing.
@@ -1036,10 +1099,10 @@ one ERROR.
 - Fail-before on `988571b`: 4 failed (500 instead of 499), and the probe's traceback reproduced.
 - After the fix: 9 of 9 passed.
 - Lanes: `tests/api/logging`, the router error-disclosure sweep and `tests/unit/infra` — 203 passed.
-- Side effect: the gateway's server span now records a 499, which is not a span error under semconv, instead of an
-  error 500.
+- Side effect: the ingest routes are excluded from the api's OTel server instrumentation, so no span or metric sees
+  them. The api's "Request processed" log line moves from WARNING with 500 to INFO with 499 (corrected after review).
 
-**Left for review:**
+**Left for review (dispositions in §10 Stream C9: the refusals stay silent; the funnel goes to §9):**
 - The 413, 415 and 400 refusals log nothing.
 - The shared 500 funnel in `core/resources/http_errors.py` interpolates values into its message.
 
