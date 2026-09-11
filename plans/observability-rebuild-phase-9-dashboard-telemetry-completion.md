@@ -122,7 +122,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
 - [ ] F9 — built, reviewed, fixed, re-verified
 - [ ] E9 — built, reviewed, fixed, re-verified
-- [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review running
+- [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass running
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass running
 - [ ] P9 — live probe on the integration tree; DARK flip (M9.6)
 - [ ] Phase A closed — §8b gate agenda with branch tips
@@ -605,7 +605,7 @@ warn with an email in its body, a render error, and a root-layout throw. Checks,
    Reference opens the browser span; a forced render error's fallback Reference finds its `browser.error` record in
    Loki; the forced root-layout throw reports once from `global-error`.
 5. A Next route call (content-stream or tenant) → the api SERVER span is a child of the browser fetch span; the
-   `next start` stdout carries one JSON line with the same trace id for a forced route failure; a forced content-stream
+   `next start` stdout carries one JSON line with the same trace id for a forced route failure; a forced SSR render error writes one `onRequestError` line; a forced content-stream
    upstream failure's line carries a status and code, no body, bucket or key.
 6. The first auth/bootstrap request of a cold load has a span (F9.5, for what it proved).
 7. A chat turn with an image attachment (with Bedrock unavailable the turn ends as `error` — the upload spans'
@@ -661,7 +661,7 @@ _(filled at Phase-A close: branch tips, suite evidence, merge mechanics per chun
 - **SSR OTLP export (G9-18).** Missing: route-handler spans and server logs in Tempo/Loki. Deferred by spec §3.4 until
   Amplify WEB_COMPUTE can reach a private endpoint (master §13 probe). Complete solution: `instrumentation.ts`
   `register()` starts a Node OTel SDK exporting to the api's authenticated ingest with a service credential (or a
-  private collector if Amplify gains VPC reach); N9's request context becomes the span parent.
+  private collector if Amplify gains VPC reach); N9's request context becomes the span parent. Until then, a trace the Next hop minted (no inbound `traceparent`) shows its api span with a parent Tempo never receives.
 - **Raw `fetch` without `X-Session-ID` (G9-30).** Authenticated raw calls (`optimizer-api.ts:760`,
   `improvement-api.ts:333`, `lib/api/utils.ts` helpers) skip `fetchWithAuth`, so server logs lack the session binding
   for them. Complete solution: route every authenticated call through `fetchWithAuth`; the public-page calls stay
