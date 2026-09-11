@@ -625,6 +625,19 @@ PromQL widget console export, Stream L counter hand-off.
   psycopg2 spans from Stream U — only the solver run (a `BackgroundTask` that outlives the server span) lacks
   signal. Build on Opus in five worktree streams, ≤3 agents concurrent; merges held for the Fable gate.
 
+- **2026-09-11 — Phase 8 Phase A CLOSED (build + Opus review).** Five streams built in nine worktrees, each
+  adversarially reviewed, fix-passed and re-verified on Opus 5: O `flynapse-otel` package + utils shim (R1
+  MERGE-READY), S optimizer run/solve spans + metrics + gateway health exclusion (R2 MERGE-READY), PA8 optimizer
+  product tab — four panels, 46 total (R3 MERGE-READY), T Telegram bot telemetry incl. token/presigned-URL scrubbing
+  on spans AND the OTLP log route (R4 MERGE-READY AFTER FIXES, all landed), D8 Grafana + CloudWatch boards + two
+  alerts (R5 MERGE-READY). Two design items surfaced for the Fable R0 review: D-11 (gateway records HTTP duration
+  after BackgroundTasks — the optimizer run route's p95 is the solve; mitigated on boards + `ApiP95LatencyHigh`) and
+  D-12 (optimizer run attribution comes from an unsent, spoofable client `X-User` header — `optimizer_active_planners`
+  dropped until the gateway injects identity). Pre-existing defects found and fixed in-stream: nine core analytics
+  endpoint tests red since 2026-09-08 (seed clock aged out); found and deferred to the R1 merge: api's committed
+  `poetry.lock` still points at the deleted `../../utils-obs` worktree path. Nothing merged, nothing pushed; the
+  Sunday-night agenda, branch tips and merge mechanics are in the phase-8 plan §8b.
+
 ## 16. Future Improvements
 _(empty)_
 
@@ -646,7 +659,14 @@ the ONLY env with the new OTel pins until the owner runs the shared-venv refresh
 install` in `api/`, only when the parallel LangGraph session is idle); until then run utils/api tests from
 the bundle with PYTHONPATH pinned to the MAIN checkouts. Everything is local/unpushed per workspace norm.
 
-Next work, in order: (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
+**Phase 8 (added 2026-09-10/11):** Telegram bot + Shift Optimizer telemetry, the `flynapse-otel` package extraction,
+the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewed in nine worktrees (`flynapse-otel`,
+`utils-obs8`, `shift-optimizer-obs8`, `api-obs8`, `core-obs8`, `dashboard-obs8`, `copilot-mro-obs8`, `iac-obs8`,
+`telegram-bot-obs8`) — **merges HELD for the Fable gate Sunday night 2026-09-13**, run as chunks R0 (design) → R1 → R2
+→ R3 → R4 → R5 with a merge after each; agenda, tips and mechanics in the phase-8 plan §8b, briefs in §11. The shared
+`api/.venv` refresh happens at the R1 merge (`poetry lock` + `poetry install` in `api/`).
+
+Next work, in order: (0) the Sunday Fable gate for phase 8, then its §10 live probe; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
 alarm-dialect ruling, Amplify AL2023 + Node 22, improvement-findings review → tab flag, backfill crontab,
 Weaviate pin, Portainer, B1a/B1b/B1d probes); (2) AWS deployment DEFERRED by owner ruling until all
 implementation is done — laptop-only profile testing until then; (3) Gate M when the owner declares the
