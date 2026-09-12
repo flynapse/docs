@@ -289,6 +289,22 @@ Further notes from code-26 (2026-09-12):
     reducer wipes `state.data`, so an attrs builder reading the response loses it as well as the outcome. Also named in
     the fix: the emit at `mutation-meta.ts:58` is unguarded while the `attrs` builder one line above is guarded, an
     asymmetry that reads as a decision, which is why it survived review.
+    **E9.9b widened (2026-09-12, measured by code-26 on their branch).** The condition E9.9's sweep called future is
+    already live: their Document Hub conversion put the upload wrapper inside a `mutationFn`. Reading the wrapper
+    (`lib/telemetry/events.ts` ~:442-468), the success-side `finish` is called INSIDE the `try` whose `catch` calls
+    `finish` again and rethrows. So in development, for an upload that SUCCEEDED and whose telemetry carries an off-list
+    key: the success finish throws, its own catch emits a SECOND `upload_finished` whose outcome is derived from the
+    telemetry error rather than from the upload, and the telemetry error is rethrown as the upload's — which inside a
+    `mutationFn` is the write genuinely failing. The user is told an uploaded file failed, and the surviving record
+    describes the wrong outcome.
+    E9.9b therefore has two halves: the product-event queue reports out of band, AND the wrapper's structure is fixed on
+    its own terms — exactly one `upload_finished` per attempt, its outcome from the upload and never from a telemetry
+    failure, and the run's own error rethrown. That second half is a defect with no telemetry involved: any throw from
+    the success-side finish becomes a wrong-outcome event plus a wrong error. The sweep looks for the shape — any wrapper
+    that emits inside a `try` it also catches — not just this instance. Tests run in development mode specifically, since
+    a dev-only throw is invisible to a production-mode lane, which is why neither side's suite caught it.
+    Note on the dedupe: keeping the FIRST record is correct here only because the first one happens to be the true one.
+    The structural fix is what makes it right; the dedupe is a backstop.
     Their own call sites came back clear today — eleven read response fields unguarded, but every route behind them
     declares a non-optional response model — held closed entirely by backend discipline that nothing on their side
     asserts. They are recording that as its own work.
