@@ -711,6 +711,8 @@ PromQL widget console export, Stream L counter hand-off.
     - Telemetry ingest and product events now answer a client disconnect with a 499 and one INFO line.
     - The review also found the phase-5 chat-quality contract test red on core `master` since about 2026-09-08, from a
       seed-date time-bomb. It is fixed in tests only, plus a unit test for the real-clock default.
+  - **F9.9, after the close** (`279df2f`): one precedence for the server's own sentence on a failed request — reported by
+    the owner's TanStack session, reviewed MERGE-READY with a fix pass. The F9 gate tip moves with it.
   - The gate agenda with every tip is in phase-9 plan §8b. Nothing is merged or pushed.
 
 ## 16. Future Improvements
@@ -746,7 +748,7 @@ the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewe
 and re-verified MERGE-READY, and the P9 live probe PASSED.
 
 Fable-gate tips (phase-9 plan §8b has the table, the suite evidence and the merge mechanics):
-- **F9:** `dashboard-obs9` `obs9-browser` @ `af9f307` + `api-obs9` `obs9-api` @ `72df51a`.
+- **F9:** `dashboard-obs9` `obs9-browser` @ `279df2f`, which includes the post-close F9.9, + `api-obs9` `obs9-api` @ `72df51a`.
 - **E9:** `dashboard-obs9e` `obs9-events` @ `08b7650`.
 - **N9:** `dashboard-obs9n` `obs9-server` @ `c52f034`.
 - **M9:** `copilot-mro-obs9` `obs9-deploy` @ `90a60040` + `iac-obs9` `obs9-iac` @ `1d2b400`, stacked on phase-8 D8.
