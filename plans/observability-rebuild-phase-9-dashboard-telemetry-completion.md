@@ -120,7 +120,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 ### 1a. Progress
 - [x] Plan v1 (`e1845fd`) + master §11c
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
-- [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review MERGE-READY AFTER FIXES (1 P1 — api error text in browser.log and browser.error; 6 P2; 6 P3 — incl. the six queued cross-stream items, several widened); fix pass done (dashboard `af9f307`, 10 commits on `b9ba515`; api `72df51a`; unit 1841/1841, tsc, eslint, api 322); re-verified MERGE-READY (14 reviewer mutations all caught; 2 new P3 → §9). **F9 Phase A done** (tips `af9f307` / `72df51a`); F9.9 post-close 2026-09-11 from the TanStack session's report — one precedence for the server's sentence, reviewed MERGE-READY, fix pass `279df2f` (unit 1852/1852) — F9 tip now `279df2f`
+- [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review MERGE-READY AFTER FIXES (1 P1 — api error text in browser.log and browser.error; 6 P2; 6 P3 — incl. the six queued cross-stream items, several widened); fix pass done (dashboard `af9f307`, 10 commits on `b9ba515`; api `72df51a`; unit 1841/1841, tsc, eslint, api 322); re-verified MERGE-READY (14 reviewer mutations all caught; 2 new P3 → §9). **F9 Phase A done** (tips `af9f307` / `72df51a`); F9.9 post-close 2026-09-11 from the TanStack session's report — one precedence for the server's sentence, reviewed MERGE-READY, fix pass `279df2f` re-verified MERGE-READY (unit 1852/1852; the old-vs-new classifier matrix changes 72 rows, all improvements, none at 401/429/5xx) — F9 tip now `279df2f`
 - [ ] E9 — built 2026-09-11 (`f697919` → `3a2610a`, 9 commits: E9.1–E9.3, the `useAppMutation` follow-up `0b236a5`, E9.5 `286f5a3`, E9.8 `0a85834`, E9.6 `65929a0`, E9.7 `c2d05c6`, close `3a2610a` — no pending exemptions left; E9.4 withdrawn to the TanStack conversion; unit 1838/1838, typecheck, eslint); review MERGE-READY AFTER FIXES (1 P1 — Run now outcome words; 2 P2 — the useShare email, the AD page wiring untested; 5 P3); fix pass done (`a708d49` → `08b7650`, 6 commits; unit 1845/1845 in 606 s, typecheck, eslint); re-verified MERGE-READY (10 reviewer mutations all caught). **E9 Phase A done** (tip `08b7650`)
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass done (`3784b13` → `00c9763`, 7 items; unit 1874/1874, typecheck, eslint); re-verified MERGE-READY (2 new P3 — a list-`detail` 422 relayed as "[object Object]", the literal-body rule's scope — landed in the mini pass `cc193eb` + `c52f034`; unit 1877/1877). **N9 Phase A done** (tip `c52f034`)
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 done after P9 (tips `90a60040` / `1d2b400`)
@@ -820,6 +820,11 @@ guard tests passed 46/46 there.
   Complete solution: `internal_error` takes a constant event name plus bound fields, and attaches the exception through
   loguru's exception option. The forward failure binds the exception's type name, not its text. Deferred because every
   core router shares the funnel, which puts it outside C9's one-clause fix.
+- **The classifier's two branches disagree about a sentence containing a readout (F9.9 re-verification).** The
+  plain-`Error` branch (`error-handler.ts:159`) still makes its readout decision with an unanchored pattern, so a server
+  sentence that contains a status line keeps its explanation inside an `ApiError` and loses it as a plain `Error`.
+  Complete solution: that branch asks `isStatusReadout` for the decision and keeps its own pattern only for extracting
+  the status. Deferred: low impact, since a server would have to echo the literal.
 - **Four error readers still read `detail` first (F9.9 review).** `fetch-utils.ts` `describeApiError`,
   `improvement-api.ts` `describeFailure`, `optimizer-api.ts` `optimizerErrorDetail` and `client.ts:52`
   `fetchJsonWithStatus` keep their own order, and the last reads `detail` only, applies no cap, and throws an error
@@ -916,6 +921,24 @@ Scope: `dashboard-obs9` `af9f307..4df943f`, then the fix pass to `279df2f`.
   status-matched. The plan update and the deferral inventory (§9, four readers) were the other two P2s. Two P3s: the
   headline wording, corrected in the notes, and the N9 merge-order coupling, recorded in §8b.
 - **Lanes:** unit 1850 of 1850 at `4df943f` and 1852 of 1852 after the fix pass, `tsc` clean, eslint clean.
+
+**Re-verification of the fix pass (`4df943f..279df2f`) — MERGE-READY, one new P3.**
+- The shape-only readout check is right, and better than the status-matched one the reviewer first suggested. Over 18
+  message shapes: both literals are swallowed; the anchors hold, so a sentence that merely contains a status line keeps
+  its words; whitespace and digit-count variants behave; and a readout naming a status the proxy converted is swallowed,
+  where a status-equality test would have shown it. The only sentence the rule can lose is a body that is exactly a bare
+  readout, which is noise by definition. Recognising both spellings also beats repointing, because a third producer
+  exists and the classifier's other branch reads that literal to refuse the same shape.
+- Readout-then-cap is observationally equivalent in both orders, and neither leg truncates. A message at exactly the cap
+  is shown whole; one character more is canned.
+- The matrix re-ran at 7 statuses × 11 payload shapes × 4 constructor messages: 72 rows change, none at 401, 429 or 500,
+  and every change falls into one of four improvement classes. No row loses a sentence a user should see, and none gains
+  one it should not.
+- Test honesty re-proved: exactly the two new cases are red at the previous tip, and all three mutations were caught and
+  restored.
+- **New P3 → §9:** the classifier's two branches now disagree about a sentence that contains a readout. The
+  plain-`Error` branch still decides with its own unanchored pattern, so the same string keeps its explanation inside an
+  `ApiError` and loses it arriving as a plain `Error`.
 
 ### Stream E9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY AFTER FIXES**; fix pass running)
 Scope: dashboard-obs9e `b87ced0..3a2610a` (9 commits). Ran: the E9 targeted set 52/52, the full unit lane 1838/1838
