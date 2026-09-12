@@ -265,6 +265,18 @@ Further notes from code-26 (2026-09-12):
     actually does before choosing what to assert, because "nothing wrong appeared" and "nothing appeared" are
     indistinguishable to a negative assertion. Assert a key set positively; give every absence assertion a positive
     control in the same test.
+  - **Measured 2026-09-12 — the development throw travels through TanStack and flips the write's outcome (E9.9, opened).**
+    `lib/query/query-client.ts:13-18` wires the settle hook through `MutationCache({ onSuccess, onError })`, and
+    query-core awaits those callbacks inside the same `try` whose `catch` runs the failure path
+    (`@tanstack/query-core/build/modern/mutation.js:103,110,122`). So in development a successful write carrying an
+    off-list attribute loses its record, is re-reported as an error — a failure toast for a write that succeeded — and
+    the error path throws again on the same key, rejecting out of `mutateAsync`. This is what code-26 measured as "the
+    record is deleted"; their shared helper is innocent. Production is unaffected: the stray key is stripped and the
+    record kept. The discriminator between the two modes is whether a record exists at all.
+    **E9.9:** the development-mode catalogue throw must surface out of band, as an unhandled error the console and the
+    test lane see, so a caller bug can never change a mutation's outcome or what the user is told. Production behaviour
+    unchanged. Anything handed to `MutationCache` config callbacks sits in that same swallow-and-reclassify position, so
+    the sweep covers every emitter reached from one.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
