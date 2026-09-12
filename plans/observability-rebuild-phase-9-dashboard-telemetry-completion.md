@@ -289,6 +289,19 @@ Further notes from code-26 (2026-09-12):
       for E9.10's inventory: `RunsPanel.tsx:913` does a JSON round-trip inside a per-call `mutate(vars, { onSuccess })`,
       a reachable instance of the callback hazard — the dedupe keeps the record right, but the user still gets a failure
       toast for a write that landed.
+    - **Volume correction (code-26, 2026-09-12): the refusal shape is not new and the count is not three.** Fifteen
+      mutations across seven hook files pair a permission gate with `meta.telemetry` post-merge — tenant roles, tenant
+      departments, department roles and team landed in their Phases 4 and 5, so refusals have been emitting on
+      `browser.settings.mutation` since then on their branch, not only from the invitations work. The shape is unchanged
+      (`outcome: error`, `error_type: MutationRefusedError`, and our split handles it); what changes is the settings
+      panels' first live hours — the step change is larger and arrives all at once rather than trailing their remaining
+      tasks. Verified here: on `tanstack-t13`, four hook files pair a mutation gate with telemetry (team, department
+      roles, tenant roles, tenant departments), consistent with their count.
+      A near-miss while checking it, recorded because it is the same failure in our own hands: a grep first counted
+      `hooks/settings/useOperatorGrants.ts` as a gated write with NO telemetry — which would have been a real defect,
+      since a gated write that emits nothing is invisible in both directions. Opening the file showed its `gate:` is
+      prose in a comment about a query's `open` flag. A word counted is not a fact measured. If a converted write ever
+      does carry a gate and no `meta.telemetry`, E9's coverage sweep lists it at the merge.
     - **Ruling on the refusal class (code-26, agreed 2026-09-12): it stays ONE class.** Our corrected wording — refused
       before the write was attempted — is true of both populations, and that is the property the discriminator carries. A
       second class would be another thing to keep in sync across their helper, every consumer and our catalogue, for a
