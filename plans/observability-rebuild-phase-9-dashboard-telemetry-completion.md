@@ -245,6 +245,24 @@ Further notes from code-26 (2026-09-12):
   failure ratio it lands in. What phase 9 checks when it arrives: one record per user-visible write (D9-17); the outcome
   describes the whole composite, so any failed step makes it an error; `error_type` comes from the step that failed;
   `duration_ms` spans the whole sequence; and a partial failure is still one record unless phase 9 rules otherwise.
+  - **Merge facts measured by code-26 against E9.9b (2026-09-12), by taking our files into a scratch copy of their trunk
+    rather than reasoning about it:**
+    - **The telemetry fix drags in a third module.** `lib/telemetry/events.ts` and `lib/telemetry/product-events.ts` both
+      import `lib/telemetry/report-bug.ts`, which exists only on `obs9-events`. Anyone moving those two files without it
+      gets a tree that does not compile.
+    - **Their whole Document Hub suite passes 58 of 58 with our fix in their tree**, in development mode — which is the
+      only form of that check that means anything, since running it against the old wrapper proves only that their tests
+      send no stray attribute.
+    - **Two of their guards go red at the merge, both theirs to fix.** One asserts the contract E9.9b deliberately
+      removed (that an off-list attribute throws in development); they are rewriting it against the new contract — the
+      record survives with the key stripped and the complaint arrives out of band — rather than deleting it, since the
+      property is still worth holding. The other pins `EVENT_NAMES` as an exact list, which our branch extends.
+    - **Both sides edit `tests/unit/telemetry/events-envelope.test.ts`**, so expect a conflict there: E9.9's version is
+      the contract, and any assertion their rewrite adds is re-applied on top of it.
+    - **Ruling (2026-09-12): one exact pin, in the list's owner; consumers pin subsets.** A consumer test that pins the
+      whole catalogue goes red every time phase 9 adds an event, which trains its owner to loosen it under time
+      pressure. The catalogue's own definition test holds the exact list — that is where a literal belongs and where a
+      rename must be noticed — and a consumer asserts only the entries its own code emits.
   - **RC's composite-write swap delivered for phase 9's look (2026-09-12):** `/home/aditya/Code/dashboard-t13`,
     `tanstack-t13` @ `06f6aa3`, report at `.superpowers/sdd/tanstack-mutation-conversion/task-13-report.md`. An Opus
     reviewer is checking it against §1b's five checks and the rollback ruling. Thirteen call-site literals in, thirteen
