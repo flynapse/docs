@@ -138,6 +138,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
+- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 the development catalogue throw out of band (running); F9.10 and N9.6 the guard-audit fixes (running); an E9 guard batch after E9.9
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -851,6 +852,39 @@ guard tests passed 46/46 there.
   `terraform validate`.
 - **R11.** `obs9-core` merges into core `master`, then the core logging lane runs.
 - **After R11.** Re-run P9 checks 2, 4 and 5 on the merged mainlines, as a short re-probe.
+
+### 8c. Guard audit — absence assertions that could pass for the wrong reason (2026-09-12)
+Prompted by code-26 hitting this class six times: a test asserting "nothing bad appeared" also passes when nothing
+appeared at all. An Explore agent audited every absence assertion in the three dashboard trees. **Rule adopted (D9-20):
+every absence assertion carries a positive control in the same test run** — assert the key set positively, assert the
+sibling path still fires, assert the sweep scanned something — and a rewritten guard is not done until it is shown
+catching the breakage it is meant to catch.
+
+The shapes found, most deceptive first:
+1. **The emit path is dead by construction.** The test never triggers what it says must not settle, so a renamed event, a
+   drifted stub URL or an unwired effect all read as a pass.
+2. **Records filtered by a string literal rather than the catalogue constant.** A rename empties the filter: positives
+   fail loudly, negatives pass silently. Structural, so it multiplies every other shape.
+3. **A render proved to exist but not to have run.** "The button rendered" proves a click, not that the handler did
+   anything.
+4. **A static sweep with no presence control.** `deepEqual(offenders, [])` over a scan that returns early on a missing
+   path and never counts what it read.
+5. **A capture not proved live in the same test.** An empty array of posts cannot distinguish "nothing posted" from
+   "nothing was wired".
+6. **A regex that does not match empty output.** An absence claim over HTML that is empty because the component threw.
+7. **A presence control in a sibling test only.** Later tests iterate the same helper with nothing proving it returned
+   anything.
+
+Also found, the production-side version of the same class: the session watcher wraps its whole fact-emitting block in a
+catch, so a bug there becomes no session fact, silently, and every absence assertion downstream of it is suspect. Handled
+with E9.9's out-of-band rule rather than by removing the catch.
+
+Fixes: **F9.10** (`legacy-module-absent`, `global-error-page`, `support-reference`), **N9.6** (`server-routes-wrapped`,
+`instrumentation-hook`), and an E9 batch after E9.9 (`long-running-settles`, plus the pre-existing `document-card-open`,
+`logger-wrapper-browser` and `events-envelope`, which no stream had modified). Judged sound, with a positive control
+already in the same run: the provider propagation, catalogue, product-events, document-view, hub-preview, logger
+warn-path, mutation-meta, optimizer canvas, session lifecycle, network-failure, api-error-text, log-body, export-url,
+server-log-sink and every N9 server-route sweep.
 
 ## 9. Future Improvements
 - **SSR OTLP export (G9-18).** Missing: route-handler spans and server logs in Tempo/Loki. Deferred by spec §3.4 until
