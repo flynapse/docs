@@ -120,7 +120,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 ### 1a. Progress
 - [x] Plan v1 (`e1845fd`) + master §11c
 - [x] Independent plan review (Opus 5, READY AFTER CHANGES) → triage §10a → plan v2 (this file)
-- [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review MERGE-READY AFTER FIXES (1 P1 — api error text in browser.log and browser.error; 6 P2; 6 P3 — incl. the six queued cross-stream items, several widened); fix pass done (dashboard `af9f307`, 10 commits on `b9ba515`; api `72df51a`; unit 1841/1841, tsc, eslint, api 322); re-verified MERGE-READY (14 reviewer mutations all caught; 2 new P3 → §9). **F9 Phase A done** (tips `af9f307` / `72df51a`)
+- [ ] F9 — built 2026-09-11 (dashboard `ee68a7a` → `b9ba515`, 11 commits; api `46a86fc`; unit 1815/1815, tsc, eslint, api middleware + infra 322; F9.5 PROVED both first-load gaps on the real tree → `lib/telemetry/boot.ts`); review MERGE-READY AFTER FIXES (1 P1 — api error text in browser.log and browser.error; 6 P2; 6 P3 — incl. the six queued cross-stream items, several widened); fix pass done (dashboard `af9f307`, 10 commits on `b9ba515`; api `72df51a`; unit 1841/1841, tsc, eslint, api 322); re-verified MERGE-READY (14 reviewer mutations all caught; 2 new P3 → §9). **F9 Phase A done** (tips `af9f307` / `72df51a`); F9.9 post-close 2026-09-11 from the TanStack session's report — one precedence for the server's sentence, reviewed MERGE-READY, fix pass `279df2f` (unit 1852/1852) — F9 tip now `279df2f`
 - [ ] E9 — built 2026-09-11 (`f697919` → `3a2610a`, 9 commits: E9.1–E9.3, the `useAppMutation` follow-up `0b236a5`, E9.5 `286f5a3`, E9.8 `0a85834`, E9.6 `65929a0`, E9.7 `c2d05c6`, close `3a2610a` — no pending exemptions left; E9.4 withdrawn to the TanStack conversion; unit 1838/1838, typecheck, eslint); review MERGE-READY AFTER FIXES (1 P1 — Run now outcome words; 2 P2 — the useShare email, the AD page wiring untested; 5 P3); fix pass done (`a708d49` → `08b7650`, 6 commits; unit 1845/1845 in 606 s, typecheck, eslint); re-verified MERGE-READY (10 reviewer mutations all caught). **E9 Phase A done** (tip `08b7650`)
 - [ ] N9 — built 2026-09-11 (`81b1ea9` → `f3d7d21`; unit 1851/1851, typecheck, eslint, `next build` clean; `removeConsole` settled: literal `console.x` calls are stripped server-side, computed calls survive); review MERGE-READY AFTER FIXES (3 P1: api error text in route log lines and in 5xx bodies, the NODE_ENV-keyed format; 4 P3); fix pass done (`3784b13` → `00c9763`, 7 items; unit 1874/1874, typecheck, eslint); re-verified MERGE-READY (2 new P3 — a list-`detail` 422 relayed as "[object Object]", the literal-body rule's scope — landed in the mini pass `cc193eb` + `c52f034`; unit 1877/1877). **N9 Phase A done** (tip `c52f034`)
 - [ ] M9 — built 2026-09-11 (copilot-mro-obs9 `07f22475` → `c3faabf1`, iac-obs9 `1eb8c6c`; otel lane 80 passed incl. both compose smokes); review MERGE-READY AFTER FIXES (the pre-ruled drop-keys P1, 3 P2, P3s); fix pass done (copilot-mro-obs9 `6984d47b`, iac-obs9 `ad4e431`; otel lane 83 passed incl. both smokes; Tempo `max_active_series` cap 100000); re-verified MERGE-READY (4 P3 nits: `__error__` in the parity guard, a cap alert + test ceiling, the iac drops-widget title — landed in the mini pass `28973020`, `7d453a6d`, `31526d64` + iac `bd7992a`, incl. a new warning alert `TempoGeneratorSeriesNearCap` at 80% of the cap; the "fetch network failures once F9's fix lands" wording rides on F9's fix pass). **M9 Phase A done** (tips `31526d64` / `bd7992a`); M9.6 done after P9 (tips `90a60040` / `1d2b400`)
@@ -435,6 +435,22 @@ never-throw rule.
   `tests/unit/telemetry/legacy-module-absent.test.ts` (the roots gain the repo's env example files; the forbidden list
   gains the generator's function names).
 
+### F9.9 — One precedence for the server's own sentence (post-close, 2026-09-11; reported by the owner's TanStack session)
+A failed write through a Next proxy showed the user "HTTP error! status: 500" instead of the server's sentence.
+`apiRequest` read only a `message` key, while the proxy routes refuse with an `error` key, and the repo carried four
+different orders across the throwers and the classifier.
+- **Files:** `lib/api/utils.ts` (`serverErrorText`, `statusFallbackMessage`, `isStatusReadout`, `MAX_SERVER_SENTENCE`, and
+  the three live throwers), `lib/api/error-handler.ts` (the explanation reader), `tests/unit/api/server-error-text.test.ts`.
+- **One order everywhere:** `message`, then `detail`, then `error`. A value is a sentence only if it is a non-blank
+  string within the 300-character cap; anything else falls through to the next key and then to the status fallback.
+  Neither leg is truncated.
+- **A bare status readout is not an explanation**, in either spelling the repo produces, so an unexplained 4xx shows its
+  canned sentence instead of the raw readout. The check is anchored, so a sentence that merely contains a status line is
+  still the server's words.
+- **Unchanged:** the classifier's per-status behaviour. 401, 429 and every 5xx are byte-identical, so a server error
+  still shows its canned sentence and no upstream text can reach a user through a proxy 5xx.
+- **Not touched:** the proxy routes (N9's files) and every feature call site.
+
 ### F9 close
 Full unit lane, `tsc`, eslint on touched files, the api test lane for the touched middleware; notes; the reviewer's
 brief in §10.
@@ -741,7 +757,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 |---|---|---|---|
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
 | RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` (+ its core branch), reviewed from its own plan | `agent_sdk` `b87ced0` | its own |
-| R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `af9f307`; `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1841/1841, `tsc`, eslint; api middleware + infra 322 |
+| R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `279df2f` (includes the post-close F9.9); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1852/1852, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `90a60040` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `1d2b400` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 static + rules 77 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
@@ -759,6 +775,9 @@ guard tests passed 46/46 there.
   deleted if it is dead, and the guard's pin is updated. `useAppMutation`'s inner `useMutation` gets its exemption.
 - **R7, R8, R9.** `obs9-browser`, then `obs9-events`, then `obs9-server` merge `--no-ff` into `agent_sdk`, with the full unit
   lane and `tsc` after each. `obs9-api` merges into api `langgraph-merge`.
+  Ordering note (F9.9 review): between R7 and R9 the Next proxies still answer a 5xx with the upstream error's text, and
+  F9.9 now carries that text into the browser's thrown message. Nothing renders it and every 5xx still classifies to its
+  canned sentence, so there is no leak in the gap; N9's constant-body route error response closes it at R9.
 - **R10, after phase-8 R5 has merged D8.** `obs9-deploy` merges into `langgraph-merge` (it touches no conflict-zone path) and `obs9-iac`
   into `main`. If Fable changed D8 at R5, merge the new D8 tips into the obs9 branches first. Then run the otel lane and
   `terraform validate`.
@@ -801,6 +820,12 @@ guard tests passed 46/46 there.
   Complete solution: `internal_error` takes a constant event name plus bound fields, and attaches the exception through
   loguru's exception option. The forward failure binds the exception's type name, not its text. Deferred because every
   core router shares the funnel, which puts it outside C9's one-clause fix.
+- **Four error readers still read `detail` first (F9.9 review).** `fetch-utils.ts` `describeApiError`,
+  `improvement-api.ts` `describeFailure`, `optimizer-api.ts` `optimizerErrorDetail` and `client.ts:52`
+  `fetchJsonWithStatus` keep their own order, and the last reads `detail` only, applies no cap, and throws an error
+  whose message IS rendered raw (`TenantAllChatsPanel.tsx:237`, `DataViewModal`). Complete solution: one ruling on the
+  array and object legs those richer readers parse, then the shared `serverErrorText` everywhere, with the cap.
+  Deferred because the ruling is bigger than the bug F9.9 fixed.
 - **A past-dated invitation stub (C9.2 sweep).** `tests/api/invitations/test_invitation_endpoints.py:58` stubs an
   invitation whose expiry, 2026-08-20, is already in the past. So the resend email's "expires in N days" value now
   clamps to 1. No test asserts that value today, but a future one would fail. Complete solution: build the stub's expiry
@@ -872,6 +897,25 @@ check that every chat upload runs inside `uploadInTurn`; lint/guard alignment an
 Residual: no `next build` on this tree (P9 builds it); cross-origin header reads and pre-config start are reasoned,
 not observed in a real browser (P9); the TanStack conversion's merge with this branch is not yet rehearsable.
 **Re-verification (2026-09-11): MERGE-READY.** Unit 1841/1841 (run once, after the other trees' lanes), `tsc`, eslint 0 problems on all 48 F9 files plus the console-using tests, Playwright specs and `scripts/lint-changed.mjs`, api 322, the 36 new fix-pass tests; 14 mutations of the reviewer's own all caught (the server text back on `browser.error` or `browser.log`, the network-failure mark or its abort exclusion removed, the digit rule or the served-file exception dropped, caller headers replacing auth, `global-error` without a runtime config, `reportError` ignoring the error's trace id, the optimizer retry losing its context, identity keys back to snake_case only, an unwrapped Pilot upload, and the old status/link and api-origin gaps). All three deviations accepted. Merge safety: 0 conflicts against N9 `00c9763` and E9 `972d532`; the TanStack tree (`tanstack-conversion` @ `196a376`) shares no file with F9. New P3s, both to §9: letter-only id values survive `url.template`; the constant-message guard does not see a logger reached through dynamic `import()`, `require()` or a `.js` source.
+
+### F9.9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY**; four P2 and two P3, two of them fixed in a fix pass)
+Scope: `dashboard-obs9` `af9f307..4df943f`, then the fix pass to `279df2f`.
+- **Behaviour proved by matrix.** The reviewer compared the classifier old against new over 7 statuses × 11 payload
+  shapes × 2 constructor messages. 32 rows change, all in the 400, 404, 409 and 422 arms, and every one is an
+  improvement. 401, 429 and 5xx show zero deltas, so no upstream text can reach a user through a proxy 5xx.
+- **Tests honest.** With the production files reverted, the new file is 6 red of 9. The reviewer re-proved four
+  mutations itself, restoring byte-identically.
+- **Consumers walked.** `apiRequest`'s only client consumer swallows its mutation errors and renders a constant, so the
+  reported symptom lands at the classifier and at the TanStack session's converted call sites, not in this tree's panel.
+- **Telemetry contract intact.** The logger already refuses a status-carrying error's message, `error_type` stays the
+  error's name, and both F9 guards cover these files and pass.
+- **Import graph verified:** the helper lives in `utils.ts` because the alternative home imports a toast package and
+  `utils.ts` is imported by eleven server route handlers. The change adds no import.
+- **Findings:** the readout rule matched only one of the two spellings the repo produces, and the cap did not cover the
+  constructor-message leg — both fixed in the fix pass, with the readout check deliberately shape-only rather than
+  status-matched. The plan update and the deferral inventory (§9, four readers) were the other two P2s. Two P3s: the
+  headline wording, corrected in the notes, and the N9 merge-order coupling, recorded in §8b.
+- **Lanes:** unit 1850 of 1850 at `4df943f` and 1852 of 1852 after the fix pass, `tsc` clean, eslint clean.
 
 ### Stream E9 — review brief (reviewer Opus 5, 2026-09-11; verdict **MERGE-READY AFTER FIXES**; fix pass running)
 Scope: dashboard-obs9e `b87ced0..3a2610a` (9 commits). Ran: the E9 targeted set 52/52, the full unit lane 1838/1838
@@ -1020,6 +1064,22 @@ Queued for the fix pass with the review's findings: id-collapsing `url.template`
 marked ERROR (not aborts), the `authenticatedApiRequest` header spread, `no-console` scope for test fixtures, no api
 error text in status-bearing browser records, camelCase identity keys in `SENSITIVE_KEY`.
 Fix pass (after review, 2026-09-11): `d5ac0c5` status-bearing errors ship type + status + `url.template` on `browser.log` and a fixed `HTTP <status> <template>` summary as `browser.error`'s `error_message` (never the server's text — `browser.error` has no status key and its names belong to E9), camelCase identity keys redacted, `reportError` prefers the error's own trace id; `304c985` fetch network failures (no response, not `AbortError`; `TimeoutError` counts) marked ERROR so the sampler keeps them (the XHR instrumentation already did); `a43dfeb` `apiRoutePattern` collapses id shapes, off-alphabet segments, digits except numbered words (`v1`, `level1`, `level2-runs`) and dots except served file names (`export.xlsx`), with a harvest guard over literal segments in `lib/api/**` and `lib/config`; `cd61c0b` both `apiRequest` and `authenticatedApiRequest` merge caller headers over the auth headers through `Headers`; `389d547` `global-error` starts telemetry only with a runtime config; `fec89ec` an AST pin that every chat upload runs inside `uploadInTurn`; `ce1e1c9` the logger guard closes the alias, element-access, namespace, destructuring, parenthesised and re-export bypasses; `9201d67` `fetchOptimizerRaw`'s retry keeps its context; `81f20ea` `no-console` off for `tests/**` and `scripts/**`, the lint selector matches the guard; `af9f307` status-message and link probes in the URL-scrub test plus the api path kept; api `72df51a` the metric test also asserts the total delta. Lanes: unit 1841/1841, tsc, eslint (F9 files + `app components lib`), api 322.
+
+**F9.9 (post-close, `4df943f` + fix pass `279df2f`) — one precedence for the server's own sentence.** Origin: the owner's
+TanStack session reported that a failed comment write showed "HTTP error! status: 500".
+- Root cause: `apiRequest` read only a `message` key, the Next proxies refuse with an `error` key, and four different
+  orders existed across the throwers and the classifier.
+- Fix: `serverErrorText`, `statusFallbackMessage`, `isStatusReadout` and an exported cap in `utils.ts`, used by the three
+  live throwers and by the classifier's explanation reader.
+- Deviation, accepted: the helper lives in `utils.ts`, not in `server-error-message.ts`, because that module imports a
+  toast package and `utils.ts` is imported by eleven server route handlers. The readout check takes no status argument;
+  a readout naming a status the proxy has since converted is the same noise to a user.
+- Also better for users: a validation payload no longer renders as "[object Object]", an over-long body no longer rides
+  into a toast, and an unexplained 4xx shows its canned sentence.
+- Tests: 11 cases in a new file; 8 of them were red before their fix, and 11 mutations were each caught and restored.
+- Lanes: unit 1852 of 1852, `tsc` clean, eslint clean.
+- Learning: a shared classifier can normalise a payload and still leave the thrown message generic. Anything a call site
+  reads directly needs the sentence in the message itself.
 
 ### Stream N9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9n `81b1ea9` → `f3d7d21`; fix pass `3784b13` → `00c9763` + mini pass `cc193eb`, `c52f034` done — tip `c52f034`)
 N9.1 `81b1ea9`: the request context lives on `globalThis` under `Symbol.for` keys (a module-level store fails the
