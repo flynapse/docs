@@ -236,6 +236,14 @@ Further notes from code-26 (2026-09-12):
   - The near-zero duration stays honest. No panel reads mutation duration, and a refusal makes no span, so it cannot
     reach the span-metrics latency views. A later latency view over mutation records reads successes only, which M9.7
     writes into the catalogue conventions.
+- **A composite write can report a false success (code-26, 2026-09-12; review asked for before RC's gate).** On a couple
+  of RC's composite writes the API primitive wraps only the first request, so a failure in the second step emits
+  `outcome: success` while the user is told it failed. RC's telemetry swap removes the primitive's wrapper as it adds the
+  call-site literal, which fixes the divergence rather than doubling the record. The session lead asked to see that
+  change before RC merges, because a false success is the one shape the panels cannot detect and it deflates every
+  failure ratio it lands in. What phase 9 checks when it arrives: one record per user-visible write (D9-17); the outcome
+  describes the whole composite, so any failed step makes it an error; `error_type` comes from the step that failed;
+  `duration_ms` spans the whole sequence; and a partial failure is still one record unless phase 9 rules otherwise.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
