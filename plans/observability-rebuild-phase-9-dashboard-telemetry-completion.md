@@ -254,6 +254,17 @@ Further notes from code-26 (2026-09-12):
   - E9's double-emission guard is the backstop at the merge: it resolves by the TypeScript checker and fails any
     mutation declaring `meta.telemetry` whose `mutationFn` transitively reaches an action emitter through app code,
     including a rollback branch. `lib/telemetry/**` is opaque to it, so a `logger.warn` is not a double count.
+  - **Three surfaces gain records at the merge, not one** (code-26, 2026-09-12). The organization update and the
+    department delete both go from silent to recorded, and every gate refusal, still-held role and unreadable scan now
+    arrives as `MutationRefusedError` where those paths emitted nothing before, because the old wrapper spanned only the
+    inner request. The settings panels are DARK until the merge, so the step change is expected rather than alarming.
+  - **The off-list attribute mechanic, measured (2026-09-12).** In production `emitRecord` strips a stray key and KEEPS
+    the record; in development it THROWS, and in the settle path that throw is outside the try (only the attrs builder is
+    guarded), so a caller bug surfaces loudly. The risk to guard against is therefore not "the record is deleted" but "a
+    caller swallowed the throw". The wider rule, from code-26 hitting this class six times: check what the broken code
+    actually does before choosing what to assert, because "nothing wrong appeared" and "nothing appeared" are
+    indistinguishable to a negative assertion. Assert a key set positively; give every absence assertion a positive
+    control in the same test.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
@@ -865,6 +876,16 @@ guard tests passed 46/46 there.
   Complete solution: `internal_error` takes a constant event name plus bound fields, and attaches the exception through
   loguru's exception option. The forward failure binds the exception's type name, not its text. Deferred because every
   core router shares the funnel, which puts it outside C9's one-clause fix.
+- **Composite writes report a coarse `error_type` (ruled 2026-09-12; RC's swap lands with it).** Three of RC's composite
+  failures report `Error` instead of the failing step's class, for two reasons in the API layer rather than in the
+  mutations: the role delete's scan returns a message string instead of throwing, so the class is gone by the time the
+  mutation rejects; and the department create/update head step is deliberately re-wrapped to say "created, but the head
+  could not be assigned", which replaces the class along with the message. Accepted for now: the outcome and the duration
+  are correct in all three, nothing phase 9 charts keys on those classes, and reshaping user-facing failure text inside a
+  telemetry change is the mixing this phase has refused elsewhere. Complete solution, as its own task with its own
+  review: the head case keeps its sentence and gains a NAMED error class of its own (`error_type` is a class, never a
+  message), and the scan throws a typed error instead of reporting failure in its return value — a step that reports
+  failure in a return value cannot be seen by anything downstream, telemetry included.
 - **The classifier's two branches disagree about a sentence containing a readout (F9.9 re-verification).** The
   plain-`Error` branch (`error-handler.ts:159`) still makes its readout decision with an unanchored pattern, so a server
   sentence that contains a status line keeps its explanation inside an `ApiError` and loses it as a plain `Error`.
