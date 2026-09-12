@@ -138,7 +138,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
-- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 the development catalogue throw out of band (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
+- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b the product-event throw and E9.10 the guard batch (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -841,7 +841,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
 | RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` (+ its core branch), reviewed from its own plan | `agent_sdk` `b87ced0` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
-| R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
+| R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `c2f2025` (includes the post-close E9.9) | `agent_sdk` `b87ced0` | unit 1855/1855, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `0259fd8d` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `a0059f9` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 and M9.7 static + rules 78 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
 | R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `8e3c3ce` (telemetry ingest and product events: one clause each, plus two test files; C9.2 fixes a phase-5 test's seed-date time-bomb; N3 adds a unit test for the real-clock default) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 32, `tests/db/analytics` 98, `tests/unit/analytics` 70 |
@@ -1388,6 +1388,33 @@ never run in production), and the recipient email leaves `useShare.ts`'s dev-onl
 tests): a failing test must unmount in `afterEach` and clear the app query client, or its 5-minute timers keep the file
 alive; jsdom lacks `FormData`-from-form and `createObjectURL`; typing must run inside `act`.
 Fix pass (after review, 2026-09-11): `a708d49` outcome words live on the EVENT — `EVENT_OUTCOME_WORDS` in `mutation-meta.ts`, typed over every meta-declarable event and read by `onMutationSettled` (both run triggers `accepted`/`rejected`, everything else `success`/`error`; the per-meta field is gone), and `useShare`'s info line carries `block_id` only (the site test captures console output for typed content); `33713a6` the airworthiness page mounted behind its real `RouteGuard` and `PermissionProvider` pins `source` and `had_prior_disposition`; `ac77de8` a RunsPanel Run press records `job_id` on preflight and solve; `e99acc3` both guards count any reference to an emitter (callback, `.bind`, alias), resolve destructured aliases and literal element access, and recognise the hook through the file's own imports (alias, namespace, `useAppMutation`, local hooks) — the derived self-emitting list gained `useTenantAPI`; `ff9bf27` three files clear the query client (5–7 s instead of a 5-minute idle); `08b7650` React 19.1 dev double-runs mount effects only on client-side mounts, so `useInvitationPreview` records once per token per view and the discovery tracker once per completed fetch. Lanes: unit 1845/1845 (606 s, was ~20 min), typecheck, eslint on 17 files. Open guard limits (none present in the app): a function created by a call and passed on uncalled, a non-literal element key, values computed from an emitting call (deliberately unflagged).
+
+**E9.9 (post-close, 2026-09-12) — a telemetry bug can no longer change a write's outcome.** `c2f2025`, five files.
+- **Measured first, through the app's own query client:** a successful write carrying an off-list attribute threw inside
+  the settle hook, the library caught it, and the write was re-reported as a failure — the run even printed the shared
+  handler toasting the telemetry bug to the user as the write's own error. The record was lost. Query-core's success
+  dispatch sits at the end of the same `try`, so everything before it, both cache and hook callbacks, is inside.
+- **Fix:** a stray key is stripped and the record kept in every mode, so a record's shape no longer depends on the mode,
+  and the caller bug is reported out of band in development — a microtask throw the console, `window.onerror` and the
+  test lane all see, never on the caller's stack.
+- **At most one settle record per mutation, first one wins.** Deviation, proved rather than argued: keyed on a weak set
+  of the mutation objects, not on `mutationId`, because that counter lives on each cache and restarts at 1 per client —
+  with the id, later writes lost their records entirely (5 of 10 tests red, including "exactly one settle record,
+  saw 0"). This also closes the duplicate-with-opposite-outcomes path, where a per-call success callback throws after the
+  success record was already emitted.
+- The guarded-`attrs` / unguarded-emit asymmetry is removed rather than explained: the settle hook is a boundary a
+  library reads a throw from as the write's failure, so it is guarded end to end, and the attrs catch reports out of band
+  instead of swallowing.
+- **Sweep, eleven paths.** Only the settle hook sits in a mutation-cache callback and nothing in a hook-level handler
+  today. Also covered: the long-running settle helpers — the discovery tracker deleted its row BEFORE emitting, so a
+  development throw lost that settle permanently — and every direct-write wrapper, which emits after the write landed.
+  The query cache wires only an error path with no emitter. Flagged and taken as E9.9b: `enqueueProductEvent` still
+  throws synchronously, and its call sites are one conversion away from a `mutationFn`, where a throw IS the write
+  failing.
+- **Contract change:** the envelope guard no longer asserts a throw; it asserts the out-of-band report, that the record
+  survived with the key stripped, and a positive control on the key that rode. Load-bearing: silencing the report turns
+  6 of 10 tests red.
+- Lanes: unit 1855 of 1855 (ten new tests), typecheck and eslint clean.
 
 ### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass `bd18984` and C9.2 `7264e2e` re-verified MERGE-READY; N3 `8e3c3ce` — tip `8e3c3ce`)
 **C9.1 `88bbca5` — the fix.** `_pass_through` in `core/resources/logging/logging_endpoints.py` gains one clause for
