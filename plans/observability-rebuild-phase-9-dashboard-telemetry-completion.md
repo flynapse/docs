@@ -138,7 +138,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
-- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b the product-event throw and E9.10 the guard batch (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
+- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); M9.8 the refusal wording (running); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b the product-event throw and E9.10 the guard batch (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -270,6 +270,33 @@ Further notes from code-26 (2026-09-12):
       `onSuccess`, and cannot flip a landed write. RC's helper awaits its invalidation deliberately, which is why it needs
       the try/catch it has. Unguarded-and-not-awaited is noisy but safe; awaited-and-unguarded is the dangerous shape.
       Closing the noise belongs with whoever converts those two hooks.
+    - **Verdict (Opus reviewer, 2026-09-12): `tanstack-t13` `06f6aa3` merges into phase 9's contract cleanly.** All five
+      checks and the rollback ruling hold, verified in an isolated copy: thirteen wrappers at the parent commit and zero
+      at HEAD, with the only surviving references the definition, our guard and the test caller; every primitive reached
+      only from a meta-declaring mutation or from inside a composite, so no surface went dark; all thirteen `mutationFn`s
+      await the whole composite, so the duration spans the sequence but not the refresh; their suite re-run unmodified
+      23 of 23, and three of their twelve breaks reproduced verbatim.
+    - **Ours, opened as M9.8: the refusal label is now false for one population.** `useTenantRoleMutations.ts:157-168`
+      throws `MutationRefusedError` only after `deleteRole` has run an N+1 holder scan (one GET per tenant user), so that
+      refusal sends many requests and can take seconds. Our panels, the aws widget titles and the catalogue say
+      "MutationRefusedError: no request sent", and M9.7's conventions bullet claims a near-zero duration. The arithmetic
+      is unaffected — refusals are still counted apart — but the wording is wrong and a later latency view would inherit
+      it. M9.8 says "refused before the write was attempted", which is true of both populations, and records that a gate
+      may query before refusing.
+    - **Ours, for E9.10:** `entity: memory` (`useMemoryMutations.ts`) and `entity: output_preferences`
+      (`useOutputPreferencesQuery.ts`) emit `browser.settings.mutation` with entity words absent from §2.1's settings
+      list — both predate phase 9, and the panel groups by entity, so the catalogue must name them or say why not. Also
+      for E9.10's inventory: `RunsPanel.tsx:913` does a JSON round-trip inside a per-call `mutate(vars, { onSuccess })`,
+      a reachable instance of the callback hazard — the dedupe keeps the record right, but the user still gets a failure
+      toast for a write that landed.
+    - **Ours, merge hygiene:** when the post-merge follow-up deletes `withSettingsMutation`, the first half of
+      `tests/unit/telemetry/settings-mutation-meta-guard.test.ts:77-99` becomes a vacuous absence assertion — it scans one
+      file for a string that can never appear again (§8c shapes 1 and 4). Delete it with the function or repoint it at
+      direct `emitSettingsMutation` calls. Its second half is sound; it carries a 13-action presence control.
+    - **Theirs, reported back:** the generic-`error_type` exception is five paths, not the ruled three
+      (`settings-api.ts:1851` and `:1958` re-wrap for the same "say what half-landed" reason), and one volume claim is
+      incomplete — `member/delete/department` loses its head-handover volume app-wide, because `updateDepartment` calls
+      the removal primitive that carried that triple pre-swap.
   - **Ruling (2026-09-12): a compensating or rollback request is not a user action and emits nothing**, whatever its own
     outcome. The user did one thing, and the flow's record says what happened to it. Today RC's team add proves the
     point: its compensating revoke calls a still-wrapped primitive, so a FAILED add emits two records — the rollback's
