@@ -452,7 +452,7 @@ other key above is already in `base.yaml`'s browser list (confirmed by the plan 
 `document_hub`, `data_discovery`}. `entity` is the resource noun and `action` the verb (`create`, `update`,
 `delete`, `upload`, `process`, `save`, `preview`, `refresh`, `archive`, `rerun`, `retry`, `share`, `vote`,
 `mark_read`, `trigger`, `triage`, `recompute`, `materialize`, `grant`, `revoke`, `resend`, `accept`), snake_case,
-from one closed map in code; E9 records the final (feature, entity, action) table in its notes. `flow` ∈ {`register`,
+from one closed map in code; E9 records the final (feature, entity, action) table in its notes. Settings `entity` additionally carries `memory` and `output_preferences` (E9.10, 2026-09-12): both predate phase 9, both emit `browser.settings.mutation`, and both are now catalogued through the settings-entity list and its typed helper rather than excluded. The limit is named in code — the emitter checks attribute KEYS, never values, so a raw `meta` literal can still sidestep the word map, as it can the feature action map. `flow` ∈ {`register`,
 `confirm_signup`, `forgot_password`, `new_password`, `invite_accept`}; `step` ∈ {`submit`, `code_request`,
 `code_confirm`, `preview`, `accept`}; auth `outcome` ∈ {`success`, `failure`, `challenge`}.
 
