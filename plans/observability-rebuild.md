@@ -713,6 +713,8 @@ PromQL widget console export, Stream L counter hand-off.
       seed-date time-bomb. It is fixed in tests only, plus a unit test for the real-clock default.
   - **F9.9, after the close** (`279df2f`): one precedence for the server's own sentence on a failed request — reported by
     the owner's TanStack session, reviewed MERGE-READY with a fix pass. The F9 gate tip moves with it.
+  - **M9.7, 2026-09-12** (`0259fd8d` / iac `a0059f9`): the settings panels keep client-side refusals apart too, now that
+    the owner's invitations conversion produces that shape. The M9 gate tips move with it.
   - The gate agenda with every tip is in phase-9 plan §8b. Nothing is merged or pushed.
 
 ## 16. Future Improvements
@@ -751,7 +753,7 @@ Fable-gate tips (phase-9 plan §8b has the table, the suite evidence and the mer
 - **F9:** `dashboard-obs9` `obs9-browser` @ `279df2f`, which includes the post-close F9.9, + `api-obs9` `obs9-api` @ `72df51a`.
 - **E9:** `dashboard-obs9e` `obs9-events` @ `08b7650`.
 - **N9:** `dashboard-obs9n` `obs9-server` @ `c52f034`.
-- **M9:** `copilot-mro-obs9` `obs9-deploy` @ `90a60040` + `iac-obs9` `obs9-iac` @ `1d2b400`, stacked on phase-8 D8.
+- **M9:** `copilot-mro-obs9` `obs9-deploy` @ `0259fd8d` + `iac-obs9` `obs9-iac` @ `a0059f9`, stacked on phase-8 D8. The tips include M9.7, the settings-side refusal split.
 - **C9:** `core-obs9` `obs9-core` @ `8e3c3ce`. It turns client disconnects on core's telemetry-ingest and
   product-events routes into a 499 plus one INFO line, and fixes the phase-5 analytics seed-date time-bomb.
 

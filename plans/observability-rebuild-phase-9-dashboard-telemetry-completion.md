@@ -133,7 +133,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
     series of their own.
   - The guards accept either a DARK note or a dated LIVE note, and three mutations fail them.
 
-- [ ] M9.7 — the settings-side refusal split, after RC's invitations conversion produced the shape (running)
+- [x] M9.7 — the settings-side refusal split, after RC's invitations conversion produced the shape: done 2026-09-12 (`0259fd8d` / iac `a0059f9`; static + rules 78 passed, 8 skipped; the new guard mutation-checked by the session lead)
   Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
@@ -805,7 +805,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `279df2f` (includes the post-close F9.9); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1852/1852, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
-| R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `90a60040` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `1d2b400` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 static + rules 77 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
+| R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `0259fd8d` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `a0059f9` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 and M9.7 static + rules 78 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
 | R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `8e3c3ce` (telemetry ingest and product events: one clause each, plus two test files; C9.2 fixes a phase-5 test's seed-date time-bomb; N3 adds a unit test for the real-clock default) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 32, `tests/db/analytics` 98, `tests/unit/analytics` 70 |
 
 The three dashboard branches were merged together once already, on P9's throwaway tree: 0 conflicts, and the shared-file and
@@ -1217,6 +1217,23 @@ M9.6 (after P9):
   The compose smoke was not re-run, because only board text and queries changed.
 - **Learning:** panel 15 had data only in the final panel check (the optimizer-run export), not the interim one. Read
   the last evidence file, not the first.
+
+**M9.7 (post-close, 2026-09-12) — the settings side keeps refusals apart.** `0259fd8d` + iac `a0059f9`.
+- Panel 12 now counts by entity and outcome with refusals excluded, and a second target counts refusals by entity,
+  legended "refused (no request sent)" — the same shape as panel 11.
+- The aws settings widget counts refusals as their own column and says so in its title.
+- Catalogue: the §5 settings row, the aws bullet, and a new conventions bullet — a refusal is not a failure, and its
+  near-zero duration stays out of any latency view added later, which reads successful settles only.
+- Guard `test_settings_outcome_breakdown_keeps_client_side_refusals_apart`, failing first on the unfiltered target. Both
+  refusal guards now share one expression helper.
+- Both panels keep their DARK note; the refusal shape is what will light them up.
+- Two premises re-checked per target, not by grep: no rule reads mutation outcomes (the `outcome` matches in the agent
+  and satellite rule files are backend labels), and no board target reads `duration_ms` (its one occurrence is prose in
+  panel 12's description).
+- Lanes: static with the rules check 78 passed, 8 skipped; `validate-rules.sh` passed; 24 LogQL targets accepted by a
+  pinned Loki 3.7.7; `terraform validate` passed with all 8 bodies parsing. The session lead reran the dashboard guards
+  (14 passed) and mutation-checked the new one: removing the filter from panel 12 fails it, and the board was restored
+  byte-identical.
 
 ### Stream E9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9e `f697919` → `3a2610a`, 9 commits; review running)
 E9.1 `f697919` (+ `0b236a5`): the seven §2.1 names, allow-lists and typed emitters; `withFeatureMutation`,
