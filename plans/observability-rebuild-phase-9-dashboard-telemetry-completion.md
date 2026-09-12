@@ -133,6 +133,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
     series of their own.
   - The guards accept either a DARK note or a dated LIVE note, and three mutations fail them.
 
+- [ ] M9.7 — the settings-side refusal split, after RC's invitations conversion produced the shape (running)
   Evidence: the static otel lane with the rules check passed 77, skipped 8; `validate-rules.sh` passed; `terraform
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
@@ -217,6 +218,24 @@ the merge):
 - **`useFeedback`** does not overlap.
 - **`useShare.ts:57`.** code-26 reported the logged recipient email as a privacy item. It is already fixed on
   `obs9-events` (E9 fix pass `08b7650`, a constant message with only `block_id`). RC leaves that line alone.
+Further notes from code-26 (2026-09-12):
+- **`lib/api/client.ts`.** RC deletes the hand-rolled chat listing and history caches. F9.8 deleted a dead `sendMessage`
+  in the same file. The deletions look disjoint, but both sides rewrote inside `listChats` and `getChatHistory`, so the
+  merge re-reads those two bodies rather than trusting a clean result.
+- **`tests/unit/telemetry/chat-turn-hook-outcomes.test.tsx`.** RC wraps it in a `QueryClientProvider`, because the stream
+  now reads the query client. Additive, with every existing assertion unchanged; phase 9's guards read the hook's
+  emissions, not its wrapper.
+- **A refusal now reaches a site with telemetry.** RC's invitations conversion is the first place where the helper's
+  permission gate meets `meta.telemetry`, so a non-owner's Resend emits a `browser.settings.mutation` record with
+  outcome `error`, `error_type` `MutationRefusedError` and a near-zero duration, having sent no request. The same shape
+  follows on the department-roles, team, tenant-departments and operator surfaces.
+  - **Ruling (2026-09-12): the records stay.** They are the signal for permission friction per surface. M9.7 extends
+    M9.6's split to the settings panels, so refusals never sit in an error bucket.
+  - No alert can fire on one: no rule reads mutation outcomes, and the helper only toasts on a refusal, so there is no
+    `browser.error` record either.
+  - The near-zero duration stays honest. No panel reads mutation duration, and a refusal makes no span, so it cannot
+    reach the span-metrics latency views. A later latency view over mutation records reads successes only, which M9.7
+    writes into the catalogue conventions.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
@@ -634,6 +653,14 @@ As F9, plus `npm run build`.
 In the same change, the failure-ratio panels (Grafana and CloudWatch) exclude `error_type="MutationRefusedError"` — the TanStack helper's client-side permission refusals, which send no request — and chart refusals as their own series. Remove "DARK until …" from the `fn-frontend` panels, the four Loki browser rule descriptions, the CloudWatch widget
 titles and CATALOGUE §5 — **only for signals P9 observed**; anything P9 could not see keeps its marker with a dated
 note. The guards in `test_grafana_dashboards.py` / `test_alert_rules_layout.py` pass either way.
+
+### M9.7 — Refusals kept apart on the settings side (post-close, 2026-09-12)
+M9.6 split client-side refusals out of the feature failure ratio. The settings panels had not met the shape yet. Now
+that RC's invitations conversion emits it, the "Settings changes by entity" panel and its aws twin would report a
+refusal as an error, so the same split applies there: the failure stream excludes `error_type="MutationRefusedError"`
+and a second target counts refusals. The catalogue row and aws bullet follow, the M9.6 guard grows a sibling for the
+settings breakdown, and both surfaces keep their DARK note until the conversion merges. The catalogue conventions also
+gain the rule that a later latency view over mutation records reads successes only.
 
 ### M9 close
 Full `tests/integration/otel/` lane (static + both smokes + rules check), `validate.sh`, `terraform validate`; the guard
