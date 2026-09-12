@@ -138,7 +138,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
-- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 the development catalogue throw out of band (running); F9.10 and N9.6 the guard-audit fixes (running); an E9 guard batch after E9.9
+- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 the development catalogue throw out of band (running); F9.10 the guard-audit fixes (running); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -842,7 +842,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` (+ its core branch), reviewed from its own plan | `agent_sdk` `b87ced0` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `279df2f` (includes the post-close F9.9); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1852/1852, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
-| R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `c52f034` | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
+| R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `0259fd8d` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `a0059f9` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 and M9.7 static + rules 78 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
 | R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `8e3c3ce` (telemetry ingest and product events: one clause each, plus two test files; C9.2 fixes a phase-5 test's seed-date time-bomb; N3 adds a unit test for the real-clock default) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 32, `tests/db/analytics` 98, `tests/unit/analytics` 70 |
 
@@ -893,8 +893,7 @@ Also found, the production-side version of the same class: the session watcher w
 catch, so a bug there becomes no session fact, silently, and every absence assertion downstream of it is suspect. Handled
 with E9.9's out-of-band rule rather than by removing the catch.
 
-Fixes: **F9.10** (`legacy-module-absent`, `global-error-page`, `support-reference`), **N9.6** (`server-routes-wrapped`,
-`instrumentation-hook`), and an E9 batch after E9.9 (`long-running-settles`, plus the pre-existing `document-card-open`,
+Fixes: **F9.10** (`legacy-module-absent`, `global-error-page`, `support-reference`), **N9.6** (done — `server-routes-wrapped`, `instrumentation-hook`), and an E9 batch after E9.9 (`long-running-settles`, plus the pre-existing `document-card-open`,
 `logger-wrapper-browser` and `events-envelope`, which no stream had modified). Judged sound, with a positive control
 already in the same run: the provider propagation, catalogue, product-events, document-view, hub-preview, logger
 warn-path, mutation-meta, optimizer canvas, session lifecycle, network-failure, api-error-text, log-body, export-url,
@@ -1246,6 +1245,22 @@ for everything else; fix-3 `6ca7fda` JSON lines follow `NODE_ENV`, levels follow
 URL kwargs; fix-6 `49a3c68` upstream error bodies read to 4 KiB and the rest cancelled; fix-7 `3784b13` dead commented
 logger lines deleted (and a static rule against them); fix-5 `00c9763` the route sweeps resolve import specifiers, allow only `ApiError` and types from `lib/api/**`, flag any `*.fetch(` and require `traceHeaders()` as the headers argument (print and stream moved to a `tracedStreamRequest` helper). Final lanes: unit 1874/1874, typecheck, eslint on 23 files. Behaviour changes to note for the gate: print, stream, signed-url and `documents/[id]` answer an api 4xx as `{ error: <api reason> }` (the reason used to ride in `details`); an upstream 5xx answers 502 on the 15 routes whose failures arrive as an `ApiError` (content-stream's two hops and work-orders pass the upstream status through with a constant body; the tenant route's identity-header path answers 500); with `ENV` unset, info/debug server lines ship as JSON.
 Mini pass after re-verification: fix-8 `cc193eb` — a 4xx relays the api's `error`, else `detail`, only when it is a non-empty string (a FastAPI list `detail` answered `{"error":"[object Object]"}` on all 15 `ApiError` routes at `00c9763`), otherwise the route's constant with the same status; fix-9 `c52f034` — the literal-body rule checks only error bodies (a literal status ≥ 400 or a catch block), as a tested `bodyOffenders` function; the reviewer's m1 mutation still fails it. Final lanes: unit 1877/1877, typecheck, eslint.
+
+**N9.6 (post-close, 2026-09-12) — the guard audit's N9 fixes.** `7fc2bcc`, two test files, no production code.
+- `server-routes-wrapped.test.ts`: the floor on how many route files the sweep found lived only in the first test. Test 2
+  had no control at all and test 3 only a partial one. A shared helper now asserts the floor and returns the files, so
+  every test runs it; test 2 counts imports that actually resolved into the api layer, and test 3 asserts its
+  third-party hops equal the listed exemptions — a key set asserted positively.
+- `instrumentation-hook.test.ts`: the two edge-runtime "writes nothing" tests had their controls in sibling tests. Each
+  now proves the machinery in its own run — the register test flips to Node and asserts the sink IS installed, and the
+  error test keeps ONE capture across both calls, so the capture that saw nothing is shown seeing something.
+- **Each fix was shown catching its breakage, run at both the old tip and the new one.** Four of the seven breakages
+  passed at the old tip, two of them 3 of 3 green: a renamed api-layer prefix, so the rule read nothing, and a stale
+  exemption entry for a call that no longer exists. Those two were inert guards in the strict sense.
+- Judged sound and left alone, with reasons recorded: the secret sweep and the trace-id absence check (both preceded by
+  presence and content assertions on the same line) and the first route sweep, which fails closed rather than open.
+- Lanes: unit 1877 of 1877, unchanged in count because the controls went inside existing tests; typecheck and eslint
+  clean.
 
 ### Stream M9 — landed 2026-09-11 (implementer Opus 5; copilot-mro-obs9 `07f22475` → `6984d47b` on the stacked base `9976fa7c`; iac-obs9 `1eb8c6c` → `ad4e431` on `9231863`; final mini pass and M9.6 landed — tips `90a60040` / `1d2b400`)
 M9.1 `07f22475`: the five §2.1 keys in both allow-list statements. **Deviation, accepted:** no body-masking transform —
