@@ -244,6 +244,16 @@ Further notes from code-26 (2026-09-12):
   failure ratio it lands in. What phase 9 checks when it arrives: one record per user-visible write (D9-17); the outcome
   describes the whole composite, so any failed step makes it an error; `error_type` comes from the step that failed;
   `duration_ms` spans the whole sequence; and a partial failure is still one record unless phase 9 rules otherwise.
+  - **Ruling (2026-09-12): a compensating or rollback request is not a user action and emits nothing**, whatever its own
+    outcome. The user did one thing, and the flow's record says what happened to it. Today RC's team add proves the
+    point: its compensating revoke calls a still-wrapped primitive, so a FAILED add emits two records — the rollback's
+    `member/revoke/tenant` as a success, landing first because the wrapper emits when its callback completes, then the
+    flow's `member/create/department` as an error. Read on a panel that pair says "the write succeeded, then something
+    else failed", which is why the class is invisible from a dashboard. The assertion is that the count is exactly one
+    and that it is the flow's, not merely that the second record is gone — only the former catches a third emitter.
+  - E9's double-emission guard is the backstop at the merge: it resolves by the TypeScript checker and fails any
+    mutation declaring `meta.telemetry` whose `mutationFn` transitively reaches an action emitter through app code,
+    including a rollback branch. `lib/telemetry/**` is opaque to it, so a `logger.warn` is not a double count.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
