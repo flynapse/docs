@@ -962,6 +962,10 @@ guard tests passed 46/46 there.
   `terraform validate`.
 - **R11.** `obs9-core` merges into core `master`, then the core logging lane runs.
 - **After R11.** Re-run P9 checks 2, 4 and 5 on the merged mainlines, as a short re-probe.
+- **Every count in this plan is branch-relative.** The censuses, coverage floors and entity lists were measured on
+  worktrees cut from `b87ced0`. After each chunk merges, re-run that branch's full lane and re-check the numbers this
+  plan quotes against the merged tree: a figure that was true when written can be false after a merge that touched
+  nothing it names.
 
 ### 8c. Guard audit — absence assertions that could pass for the wrong reason (2026-09-12)
 Prompted by code-26 hitting this class six times: a test asserting "nothing bad appeared" also passes when nothing
@@ -1659,6 +1663,19 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   the reader cannot tell which half was checked, and the checked half vouches for the other. Corollary, applied here:
   check a peer's characterisation in your own tree before acting on it, because taking "uncensused" at face value would
   have sent someone hunting for panel volume that is already charted.
+- **A branch-local measurement is a claim about the branch, not about the world (2026-09-12, from code-26).** Their
+  grep for a gated write without telemetry hit twice on unmerged branches and was clean on the trunk. Both hits were
+  stale views: those branches were cut before the telemetry swap landed and neither touches that file, so the merge takes
+  the trunk's version and the defect exists in no tree anyone will run. Their red lane is the same phenomenon with the
+  opposite sign — a coverage floor the trunk gained after the branch point, invisible to both parents and failing only on
+  the merged tree. Rule for this plan: every census and floor quoted here was measured on a phase-9 worktree cut from
+  `b87ced0`, so each is branch-relative. After each gate chunk merges, re-run that branch's full lane AND re-check any
+  count this plan quotes (the emitter censuses, the coverage floors, the entity lists) against the merged tree, because a
+  number that was true when written can be false after a merge that touched nothing it names.
+- **A search result measures the search, not the thing (2026-09-12).** A grep that counts a word, in a file that uses the
+  word for something else, is the same failure as a measured clause with an unmeasured characterisation attached. The
+  example is this plan's own near-miss: `hooks/settings/useOperatorGrants.ts` counted as a gated write emitting nothing,
+  where the `gate:` was prose in a comment about a query's open flag. Open the file before the finding leaves the desk.
 - **Ask what is awaited, not what is guarded (2026-09-12).** A callback that calls a refresh without awaiting it cannot
   fail the write around it — a rejection surfaces as an unhandled rejection instead. The same call awaited inside a
   handler that a library reads for the write's outcome CAN fail it, which is why the shared helper that awaits its
