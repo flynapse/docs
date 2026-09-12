@@ -750,7 +750,7 @@ the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewe
 and re-verified MERGE-READY, and the P9 live probe PASSED.
 
 Fable-gate tips (phase-9 plan §8b has the table, the suite evidence and the merge mechanics):
-- **F9:** `dashboard-obs9` `obs9-browser` @ `279df2f`, which includes the post-close F9.9, + `api-obs9` `obs9-api` @ `72df51a`.
+- **F9:** `dashboard-obs9` `obs9-browser` @ `01a3882`, which includes the post-close F9.9 and F9.10, + `api-obs9` `obs9-api` @ `72df51a`.
 - **E9:** `dashboard-obs9e` `obs9-events` @ `08b7650`.
 - **N9:** `dashboard-obs9n` `obs9-server` @ `7fc2bcc`, including the post-close N9.6 guard fixes.
 - **M9:** `copilot-mro-obs9` `obs9-deploy` @ `0259fd8d` + `iac-obs9` `obs9-iac` @ `a0059f9`, stacked on phase-8 D8. The tips include M9.7, the settings-side refusal split.

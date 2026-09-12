@@ -138,7 +138,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
-- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 the development catalogue throw out of band (running); F9.10 the guard-audit fixes (running); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
+- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); E9.9 the development catalogue throw out of band (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -840,7 +840,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 |---|---|---|---|
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
 | RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` (+ its core branch), reviewed from its own plan | `agent_sdk` `b87ced0` | its own |
-| R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `279df2f` (includes the post-close F9.9); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1852/1852, `tsc`, eslint; api middleware + infra 322 |
+| R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `08b7650` | `agent_sdk` `b87ced0` | unit 1845/1845, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `0259fd8d` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `a0059f9` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 and M9.7 static + rules 78 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
@@ -893,7 +893,7 @@ Also found, the production-side version of the same class: the session watcher w
 catch, so a bug there becomes no session fact, silently, and every absence assertion downstream of it is suspect. Handled
 with E9.9's out-of-band rule rather than by removing the catch.
 
-Fixes: **F9.10** (`legacy-module-absent`, `global-error-page`, `support-reference`), **N9.6** (done — `server-routes-wrapped`, `instrumentation-hook`), and an E9 batch after E9.9 (`long-running-settles`, plus the pre-existing `document-card-open`,
+Fixes: **F9.10** (done — `legacy-module-absent`, `global-error-page`, `support-reference`), **N9.6** (done — `server-routes-wrapped`, `instrumentation-hook`), and an E9 batch after E9.9 (`long-running-settles`, plus the pre-existing `document-card-open`,
 `logger-wrapper-browser` and `events-envelope`, which no stream had modified). Judged sound, with a positive control
 already in the same run: the provider propagation, catalogue, product-events, document-view, hub-preview, logger
 warn-path, mutation-meta, optimizer canvas, session lifecycle, network-failure, api-error-text, log-body, export-url,
@@ -956,6 +956,11 @@ server-log-sink and every N9 server-route sweep.
   whose message IS rendered raw (`TenantAllChatsPanel.tsx:237`, `DataViewModal`). Complete solution: one ruling on the
   array and object legs those richer readers parse, then the shared `serverErrorText` everywhere, with the cap.
   Deferred because the ruling is bigger than the bug F9.9 fixed.
+- **A timer flake under load (F9.10, 2026-09-12).** `tests/unit/mro/ad-review-materialize-hook.test.ts` failed once on a
+  poll-timing assertion during a lane run with five full suites running concurrently on the box, and passed 7 of 7 in
+  isolation and on the clean lane. The file is E9-adjacent and F9.10 does not touch it. Complete solution: drive the
+  poll with a fake clock rather than wall-clock waits, so the assertion cannot depend on scheduler latency. Watch for
+  recurrence under load before spending the change.
 - **A past-dated invitation stub (C9.2 sweep).** `tests/api/invitations/test_invitation_endpoints.py:58` stubs an
   invitation whose expiry, 2026-08-20, is already in the past. So the resend email's "expires in N days" value now
   clamps to 1. No test asserts that value today, but a future one would fail. Complete solution: build the stub's expiry
@@ -1228,6 +1233,28 @@ TanStack session reported that a failed comment write showed "HTTP error! status
 - Lanes: unit 1852 of 1852, `tsc` clean, eslint clean.
 - Learning: a shared classifier can normalise a payload and still leave the thrown message generic. Anything a call site
   reads directly needs the sentence in the message itself.
+
+**F9.10 (post-close, 2026-09-12) — the guard audit's F9 fixes.** `01a3882`, three test files, no production code.
+- `legacy-module-absent.test.ts`: the sweep's walk returns early on a missing path and counted nothing, so a wrong root
+  read as a pass. The walk is enumerated once, and a new sibling test holds per-root floors (against today's counts) plus
+  a spot check that the walk reaches that very file; a file read as empty is now refused. The shape was copied from an
+  existing sweep in the repo rather than invented.
+- `global-error-page.test.tsx`: one real post must land in the capture before its emptiness counts.
+- `support-reference.test.tsx`: the fallback's own copy is asserted before the absence of the reference, so an empty
+  render can no longer pass.
+- **Each rewritten test was shown catching its breakage, and in every case the original passed under the same mutation:**
+  a renamed `hooks/` directory (the old absence test passed with that root unread), an extension filter that matched
+  nothing (the old test passed in 2.2 ms having read zero files), an unwired post capture, and a fallback component
+  short-circuited to an empty element.
+- **What that sweep can and cannot guarantee**, now recorded because its docstring reads as a total guarantee: it covers
+  13 substrings over five roots and five extensions plus the root example env files, and nothing else — not `scripts/`,
+  `types/` or root config, not other extensions, not a reference spelled differently, and nothing about runtime
+  behaviour.
+- The sibling test asserting the deleted directories do not exist is sound and was left alone: a positive claim about a
+  named path, with a root finder that throws rather than resolving silently. A drafted control on it was reverted
+  byte-identically.
+- No fourth defective absence assertion in those files; each remaining one already has a positive claim in its own test.
+- Lanes: unit 1853 of 1853, typecheck and eslint clean.
 
 ### Stream N9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9n `81b1ea9` → `f3d7d21`; fix pass `3784b13` → `00c9763` + mini pass `cc193eb`, `c52f034` done — tip `c52f034`)
 N9.1 `81b1ea9`: the request context lives on `globalThis` under `Symbol.for` keys (a module-level store fails the
