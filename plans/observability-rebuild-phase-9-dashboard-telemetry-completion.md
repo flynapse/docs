@@ -138,7 +138,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
-- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); M9.8 the refusal wording (running); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b the product-event throw and E9.10 the guard batch (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
+- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); M9.8 the refusal wording done (tips `83f4a8f7` / `b72307b`; a new guard fails on all five false claims); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b the product-event throw and E9.10 the guard batch (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -926,7 +926,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `c2f2025` (includes the post-close E9.9) | `agent_sdk` `b87ced0` | unit 1855/1855, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
-| R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `0259fd8d` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `a0059f9` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6 and M9.7 static + rules 78 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
+| R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `83f4a8f7` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `b72307b` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6, M9.7 and M9.8 static + rules 79 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
 | R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `8e3c3ce` (telemetry ingest and product events: one clause each, plus two test files; C9.2 fixes a phase-5 test's seed-date time-bomb; N3 adds a unit test for the real-clock default) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 32, `tests/db/analytics` 98, `tests/unit/analytics` 70 |
 
 The three dashboard branches were merged together once already, on P9's throwaway tree: 0 conflicts, and the shared-file and
@@ -1440,6 +1440,29 @@ M9.6 (after P9):
   pinned Loki 3.7.7; `terraform validate` passed with all 8 bodies parsing. The session lead reran the dashboard guards
   (14 passed) and mutation-checked the new one: removing the filter from panel 12 fails it, and the board was restored
   byte-identical.
+
+**M9.8 (post-close, 2026-09-12) — the refusal wording stops promising a request-free refusal.** `84809362` + `83f4a8f7`,
+iac `b72307b`. Filters and counts are byte-identical; only prose changed.
+- Verified first in the conversion branch: the role delete's refusal is thrown after an N+1 holder scan, one GET per
+  tenant user, so it sends many requests and its duration spans the scan.
+- **Nuance found while fixing it:** that refusal comes from the CALLER's own precondition inside the `mutationFn`, not
+  from the helper's permission gate — the hook also takes the helper's documented reporting escape hatch, because a held
+  role has a dialog of its own. The wording therefore says "the helper's permission gate, or a caller's own
+  precondition". This matches code-26's own reframing: their gate carries a permission question and a precondition
+  question, and the scan's duration is the visible edge of that.
+- Legends read "refused (write not attempted)"; panels 11 and 12, both aws widget titles, the §5 rows and the aws bullet
+  say the write was refused before it was attempted; the near-zero-duration claim is gone, replaced by a statement that
+  the duration covers whatever the gate itself did; the conventions bullet names the scan as the example and keeps a
+  later latency view reading successful settles only.
+- **Guard:** a new test scans every board description, legend and catalogue block that speaks about refusals for the five
+  false claims. It failed first on all five sites and passes now, with both refusal-split guards still green. No existing
+  test pinned the old wording.
+- Lanes: static with the rules check 79 passed, 8 skipped; `validate-rules.sh`; `terraform validate` with all 8 bodies
+  parsing. No occurrence of the old phrase remains in either tree.
+- **Process slip, recorded by the implementer:** a scripted edit anchored on a table header that matches all seven view
+  tables. The count assertion aborted the script, but earlier swaps had already written to disk, so the first commit
+  landed without the §5 paragraph; it was added as a second commit rather than an amend. Lesson: anchor a catalogue
+  insert on text unique to its view, and re-read the script's output before committing when a step fails.
 
 ### Stream E9 — landed 2026-09-11 (implementer Opus 5; dashboard-obs9e `f697919` → `3a2610a`, 9 commits; review running)
 E9.1 `f697919` (+ `0b236a5`): the seven §2.1 names, allow-lists and typed emitters; `withFeatureMutation`,
