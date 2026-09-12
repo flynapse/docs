@@ -1571,4 +1571,20 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   stronger-model gate, treat any parallel work that shares the effort's files as gated too unless the owner says
   otherwise — give it its own gate chunk (here RC), fix its merge order against the effort's chunks, and say so in the
   first coordination message.
+- **A measured half lends its credibility to an unmeasured half (2026-09-12, from code-26).** They verified a count —
+  nineteen emitters of `browser.settings.mutation`, thirteen in their account — and in the same sentence characterised
+  the other six as "unconverted, uncensused, outside the guard", which was reasoning from the fact that those six sat
+  outside THEIR guard. Two of the three words were wrong: the six already carried `meta.telemetry` from phase 4 and were
+  already in phase 9's coverage. Their own implementer had predicted one turn earlier that the next instance would be "a
+  sentence accurate about the thirteen and silent about the nineteen"; it arrived as a sentence accurate about the
+  thirteen and wrong about the six. Rule: when a sentence carries a measured claim and an inferred one, split them —
+  the reader cannot tell which half was checked, and the checked half vouches for the other. Corollary, applied here:
+  check a peer's characterisation in your own tree before acting on it, because taking "uncensused" at face value would
+  have sent someone hunting for panel volume that is already charted.
+- **Ask what is awaited, not what is guarded (2026-09-12).** A callback that calls a refresh without awaiting it cannot
+  fail the write around it — a rejection surfaces as an unhandled rejection instead. The same call awaited inside a
+  handler that a library reads for the write's outcome CAN fail it, which is why the shared helper that awaits its
+  invalidation needs its try/catch and the two hooks that do not await are safe without one. "Is this callback guarded?"
+  is the question that comes to mind and it is the wrong one; unguarded-and-not-awaited is noisy but safe, and
+  awaited-and-unguarded is the dangerous shape.
 
