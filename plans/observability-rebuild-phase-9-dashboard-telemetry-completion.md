@@ -289,6 +289,21 @@ Further notes from code-26 (2026-09-12):
       for E9.10's inventory: `RunsPanel.tsx:913` does a JSON round-trip inside a per-call `mutate(vars, { onSuccess })`,
       a reachable instance of the callback hazard — the dedupe keeps the record right, but the user still gets a failure
       toast for a write that landed.
+    - **Ruling on the refusal class (code-26, agreed 2026-09-12): it stays ONE class.** Our corrected wording — refused
+      before the write was attempted — is true of both populations, and that is the property the discriminator carries. A
+      second class would be another thing to keep in sync across their helper, every consumer and our catalogue, for a
+      distinction nothing consumes. Their reframing is the better shape and is theirs to fix: the gate is carrying two
+      different KINDS of question — "may this user delete roles" is a permission check, "is anybody still holding this
+      role" is a precondition check — and the N+1 scan's duration is the visible edge of that. **Revisit if** a second
+      gate starts querying before refusing, or anyone builds a view that aggregates refusal DURATION rather than counting
+      refusals.
+    - **`RunsPanel.tsx`'s per-call `onSuccess` clone is CLEARED** (checked in our tree, fifth pass overall):
+      `cloneSnapshot` (`:191`) is a JSON round-trip, and both callers (`:786` and the `onSuccess` at `:893`) pass
+      `job.configSnapshot`, a value parsed from a server body — a cycle or a BigInt cannot survive that, so the throw is
+      unreachable. The condition that would flip it, recorded rather than the verdict alone: the client-edited
+      `snapshotDraft` is never the clone's input, so if any path ever assembles a snapshot client-side and then clones
+      it, the line becomes reachable. The SHAPE stays in E9.10's sweep; the site goes in its cleared column with this
+      reason attached.
     - **Ours, merge hygiene:** when the post-merge follow-up deletes `withSettingsMutation`, the first half of
       `tests/unit/telemetry/settings-mutation-meta-guard.test.ts:77-99` becomes a vacuous absence assertion — it scans one
       file for a string that can never appear again (§8c shapes 1 and 4). Delete it with the function or repoint it at
