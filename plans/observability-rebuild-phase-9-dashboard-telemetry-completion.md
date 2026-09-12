@@ -245,6 +245,31 @@ Further notes from code-26 (2026-09-12):
   failure ratio it lands in. What phase 9 checks when it arrives: one record per user-visible write (D9-17); the outcome
   describes the whole composite, so any failed step makes it an error; `error_type` comes from the step that failed;
   `duration_ms` spans the whole sequence; and a partial failure is still one record unless phase 9 rules otherwise.
+  - **RC's composite-write swap delivered for phase 9's look (2026-09-12):** `/home/aditya/Code/dashboard-t13`,
+    `tanstack-t13` @ `06f6aa3`, report at `.superpowers/sdd/tanstack-mutation-conversion/task-13-report.md`. An Opus
+    reviewer is checking it against §1b's five checks and the rollback ruling. Thirteen call-site literals in, thirteen
+    wrappers out.
+    - **Volume changes our panels will see at the merge:** the organization update and the department delete gain records
+      (neither was ever wrapped); every gate refusal, still-held role and unreadable scan now emits where it emitted
+      nothing; a department create whose head step fails moves from `success` to `error`, which is check 2 working but a
+      step change on a live surface; and three triples go to zero volume app-wide — `member/grant/tenant`,
+      `member/grant/department` and `member/revoke/tenant` — because the department composites emitted them too.
+    - **Correction from code-26, worth keeping for how it was found:** a team removal was ALWAYS two records
+      (`member/revoke/tenant` then `member/delete/department`), so the delete triple is not new on that surface; what
+      disappears beside it is the revoke. Their earlier framing ("the word changes to delete") would read to a panel
+      reader as a missing migration. Their reviewer caught it by reconstructing the pre-swap world and running it.
+    - **`withSettingsMutation` has no app caller after the swap**, so phase 9's post-merge follow-up deletes it — together
+      with its remaining TEST caller at `events-catalogue.test.ts:139-145`, in the same change, or the lane reds.
+    - **The `browser.settings.mutation` census is nineteen emitters, all accounted for on our side:** thirteen are RC's,
+      and the other six — `useMemoryMutations` (memory: approve / archive / reject / supersede) and
+      `useOutputPreferencesQuery` (output_preferences: update / delete) — already carry `meta.telemetry` from phase 4
+      (`e998911`), so they emit through the settle hook and our coverage guard counts them. They are outside RC's task,
+      not outside our catalogue.
+    - **Exposure tracks the await, not the guard.** Those six call `invalidateQueries` unguarded but do NOT await it
+      (`useOutputPreferencesQuery.ts:37`, `:51`), so a rejected refresh is an unhandled rejection rather than a throw in
+      `onSuccess`, and cannot flip a landed write. RC's helper awaits its invalidation deliberately, which is why it needs
+      the try/catch it has. Unguarded-and-not-awaited is noisy but safe; awaited-and-unguarded is the dangerous shape.
+      Closing the noise belongs with whoever converts those two hooks.
   - **Ruling (2026-09-12): a compensating or rollback request is not a user action and emits nothing**, whatever its own
     outcome. The user did one thing, and the flow's record says what happened to it. Today RC's team add proves the
     point: its compensating revoke calls a still-wrapped primitive, so a FAILED add emits two records — the rollback's
