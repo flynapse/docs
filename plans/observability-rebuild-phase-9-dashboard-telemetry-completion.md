@@ -278,6 +278,20 @@ Further notes from code-26 (2026-09-12):
     test lane see, so a caller bug can never change a mutation's outcome or what the user is told. Production behaviour
     unchanged. Anything handed to `MutationCache` config callbacks sits in that same swallow-and-reclassify position, so
     the sweep covers every emitter reached from one.
+    **E9.9 extension (2026-09-12, from code-26's 78-handler sweep): the settle hook emits AT MOST ONCE per mutation,**
+    keyed on `mutationId`. Their probe found a path that produces two records with OPPOSITE outcomes for one user action
+    and no wrapper involved: a per-call `mutate(vars, { onSuccess })` callback that throws escapes the success dispatch
+    AFTER the hook-level `onSuccess` and `onSettled` have run, so the success record is already emitted, and then the
+    library's error path emits a second record as an error. The AST double-emission guard cannot see it, because both
+    records come from the same correct call site, and no panel can tell it from one success plus one unrelated failure.
+    The first record wins: it describes what actually happened to the write. Two mechanism facts for the write-up:
+    `onSettled` sits inside the same `try`, so moving work there relocates the bug rather than fixing it; and the error
+    reducer wipes `state.data`, so an attrs builder reading the response loses it as well as the outcome. Also named in
+    the fix: the emit at `mutation-meta.ts:58` is unguarded while the `attrs` builder one line above is guarded, an
+    asymmetry that reads as a decision, which is why it survived review.
+    Their own call sites came back clear today — eleven read response fields unguarded, but every route behind them
+    declares a non-optional response model — held closed entirely by backend discipline that nothing on their side
+    asserts. They are recording that as its own work.
 
 ### 1c. Test environments
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
