@@ -138,7 +138,7 @@ intentional → §9); the reviewer writes the stream's brief into §10.
   validate` passed; the session lead's rerun of the two guard files passed 25/25.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
-- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); M9.8 the refusal wording done (tips `83f4a8f7` / `b72307b`; a new guard fails on all five false claims); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b the product-event throw and E9.10 the guard batch (running); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
+- [ ] Post-close additions (2026-09-12, each reviewed): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); M9.8 the refusal wording done (tips `83f4a8f7` / `b72307b`; a new guard fails on all five false claims); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b done (`64a6fa0`: all five timing wrappers emitted their success record inside the try they catch) and E9.10 done (`bc9fbcc`: the guards, and 18 files moved off literal event names); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
 - [ ] Owner look at the §2.1 catalogue delta (non-blocking)
 - [ ] Fable R6 (design) → RC (the owner's TanStack conversion, Fable-gated too; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9, merge after each
 
@@ -937,7 +937,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
 | RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` (+ its core branch), reviewed from its own plan | `agent_sdk` `b87ced0` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
-| R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `c2f2025` (includes the post-close E9.9) | `agent_sdk` `b87ced0` | unit 1855/1855, typecheck, eslint |
+| R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `bc9fbcc` (includes the post-close E9.9, E9.9b and E9.10) | `agent_sdk` `b87ced0` | unit 1866/1866, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
 | R10 | `/home/aditya/Code/copilot-mro-obs9` `obs9-deploy` @ `83f4a8f7` (deployment, the otel tests and the observability runbooks — no conflict-zone path; stacked on `obs8-dashboards`); `/home/aditya/Code/iac-obs9` `obs9-iac` @ `b72307b` (stacked on `obs8-iac`) | `langgraph-merge` `bc0e3858` + `9976fa7c`; `main` `5996e5a` + `9231863` | full otel lane 83 incl. both smokes (before M9.6); after M9.6, M9.7 and M9.8 static + rules 79 passed / 8 skipped, `validate-rules.sh`, `terraform validate` |
 | R11 | `/home/aditya/Code/core-obs9` `obs9-core` @ `8e3c3ce` (telemetry ingest and product events: one clause each, plus two test files; C9.2 fixes a phase-5 test's seed-date time-bomb; N3 adds a unit test for the real-clock default) | core `master` `988571b` | `tests/api/logging` 47, the error-disclosure sweep 113, `tests/unit/infra` 47, `tests/api/analytics` 32, `tests/db/analytics` 98, `tests/unit/analytics` 70 |
@@ -993,7 +993,7 @@ Also found, the production-side version of the same class: the session watcher w
 catch, so a bug there becomes no session fact, silently, and every absence assertion downstream of it is suspect. Handled
 with E9.9's out-of-band rule rather than by removing the catch.
 
-Fixes: **F9.10** (done — `legacy-module-absent`, `global-error-page`, `support-reference`), **N9.6** (done — `server-routes-wrapped`, `instrumentation-hook`), and an E9 batch after E9.9 (`long-running-settles`, plus the pre-existing `document-card-open`,
+Fixes: **F9.10** (done — `legacy-module-absent`, `global-error-page`, `support-reference`), **N9.6** (done — `server-routes-wrapped`, `instrumentation-hook`), and **E9.10** (done — `long-running-settles`, plus the pre-existing `document-card-open`,
 `logger-wrapper-browser` and `events-envelope`, which no stream had modified). Judged sound, with a positive control
 already in the same run: the provider propagation, catalogue, product-events, document-view, hub-preview, logger
 warn-path, mutation-meta, optimizer canvas, session lifecycle, network-failure, api-error-text, log-body, export-url,
@@ -1061,6 +1061,16 @@ server-log-sink and every N9 server-route sweep.
   isolation and on the clean lane. The file is E9-adjacent and F9.10 does not touch it. Complete solution: drive the
   poll with a fake clock rather than wall-clock waits, so the assertion cannot depend on scheduler latency. Watch for
   recurrence under load before spending the change.
+- **Three per-call callbacks dereference a response field, so an absent field reports a landed write as failed (E9.10
+  sweep, 2026-09-12).** `OutputsPanel.tsx:122` reads `run.id`, `ActivitySetupPanel.tsx:932,935` read `saved.id`, and
+  `UploadStep.tsx:81` reads `created.id`, each inside a per-call success callback — the position where a throw escapes
+  after the write has landed, so the user is told a successful write failed. They are unreachable today only because
+  every route behind them declares a non-optional response model; nothing on the client asserts that, and the API layer
+  casts bodies rather than validating them (28 such casts in the optimizer api alone). Complete solution: response
+  validation at the API layer, so a missing field is a typed failure at the boundary instead of a throw inside a
+  callback. Deferred because it is a product decision about where validation lives, not a per-site guard — and guarding
+  three sites would leave the class open. The owner's TanStack session reports the same class on its side: eleven
+  unguarded reads held closed by backend discipline alone.
 - **A past-dated invitation stub (C9.2 sweep).** `tests/api/invitations/test_invitation_endpoints.py:58` stubs an
   invitation whose expiry, 2026-08-20, is already in the past. So the resend email's "expires in N days" value now
   clamps to 1. No test asserts that value today, but a future one would fail. Complete solution: build the stub's expiry
@@ -1538,6 +1548,39 @@ Fix pass (after review, 2026-09-11): `a708d49` outcome words live on the EVENT �
   survived with the key stripped, and a positive control on the key that rode. Load-bearing: silencing the report turns
   6 of 10 tests red.
 - Lanes: unit 1855 of 1855 (ten new tests), typecheck and eslint clean.
+
+**E9.9b `64a6fa0` — the product-event throw, and a defect with no telemetry in it.**
+- `enqueueProductEvent` threw the validator's error in development; it now drops the fact, counts it `invalid` in every
+  mode, and reports out of band. It DROPS where `emitRecord` strips and keeps, deliberately: the schema judges the whole
+  event, so a body naming a tenant id is a 400 for the entire batch.
+- **All five timing wrappers emitted their SUCCESS record inside the `try` whose `catch` emits the failure record and
+  rethrows** — not just the upload path code-26 measured. Red before the fix: an upload whose success reporting throws
+  failed the upload; an upload that failed while its fact was malformed rethrew the telemetry error instead of its own;
+  a preflight whose result could not be read was reported as a rejected run. All five now report from outside that
+  `try` through one helper.
+- **On "make `finish` at-most-once":** the implementer checked the control flow first and did NOT add a flag. With the
+  success call moved out, the two calls are mutually exclusive by structure, and a flag could only fire for a third
+  caller that does not exist — while silently swallowing it if one were added. `startAuthFlowTiming` keeps its flag,
+  because it hands `finish` to a caller who may call it twice.
+- Lane 1864 of 1864, typecheck and eslint clean.
+
+**E9.10 `bc9fbcc` — the guard audit's E9 batch.**
+- Each rewritten guard was shown catching its breakage with the original green under the same breakage: the settle
+  unwired, the document handler returning early, the logger not emitting, and the allow-list table emptied (the old test
+  passed in 1.4 ms).
+- **The structural fix, proven both ways.** Renaming an event on the literal code left the presence test red and the
+  absence test GREEN — the guard went quiet, exactly the shape the audit predicted. After migrating 18 files onto the
+  catalogue constants, the same rename leaves the settle guard measuring the real emitter and is noticed in exactly one
+  place: the catalogue's own definition tests. Definition tables, the schema, the case-expectation table and the
+  double-emission fixture keep their literals, each with its reason recorded.
+- `memory` and `output_preferences` are catalogued rather than excluded, through a settings-entity list and a typed
+  helper pinned by the catalogue test. **The limit is named in code:** the map binds only through the helper, because the
+  emitter checks attribute KEYS and never values, so a raw `meta` literal still sidesteps it — as it does the feature
+  action map.
+- The clone site is in the cleared column with its reason and its re-check condition. The sweep found the risky sites are
+  one class: the optimizer api casts bodies (28 sites) and four per-call callbacks dereference the result. Only the one
+  whose sibling handler already states a fail-open policy was fixed; its test asserts the toast.
+- Lane 1866 of 1866, typecheck clean, eslint clean on all 27 files.
 
 ### Stream C9 — landed 2026-09-11 (implementer Opus 5; core-obs9 `88bbca5` on `master` `988571b`; reviewed MERGE-READY; mini pass `bd18984` and C9.2 `7264e2e` re-verified MERGE-READY; N3 `8e3c3ce` — tip `8e3c3ce`)
 **C9.1 `88bbca5` — the fix.** `_pass_through` in `core/resources/logging/logging_endpoints.py` gains one clause for
