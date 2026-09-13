@@ -1045,13 +1045,33 @@ guard tests passed 46/46 there.
 - **R10, after phase-8 R5 has merged D8.** `obs9-deploy` merges into `langgraph-merge` (it touches no conflict-zone path) and `obs9-iac`
   into `main`. If Fable changed D8 at R5, merge the new D8 tips into the obs9 branches first. Then run the otel lane and
   `terraform validate`.
-- **R11.** `obs9-core` merges into core `master`, then the core logging lane runs.
+- **R11.** `obs9-core` merges into core `master`, then the core logging lane runs. The trial merge showed this may run BEFORE RC's core commit at no cost, and doing so cures the 9 contract failures core `master` carries today instead of leaving them red for the whole window.
 - **After R11.** Re-run P9 checks 2, 4 and 5 on the merged mainlines, as a short re-probe.
 - **A trial integration merge runs before the gate (2026-09-12).** The owner's conversion finished, so a throwaway tree
   merges RC then F9, E9 and N9 on top (and, in core, C9 then `tanstack-dept-delete`), applying the §1b rules and doing
   the post-merge work, so the gate sees measured conflicts, red guards and re-checked counts instead of predictions.
   Trial branches: `obs9-trial-merge` in both repos, worktrees `dashboard-obs9x` and `core-obs9x`; nothing pushed and no
   existing branch touched. Reports: `scratchpad/phase9-trial-merge-{dashboard,core}.md`.
+- **Core trial merge result (2026-09-12; `obs9-trial-merge` @ `69666f0` in `core-obs9x`, kept for inspection).**
+  - **Zero conflicts at both merges.** C9 and `tanstack-dept-delete` are file-disjoint, and the merge was proved to
+    invent nothing: the diff from each parent to the merged tree is byte-identical to the other parent's own diff from
+    `master`. `tanstack-dept-delete` is based on `988571b`, one commit on top.
+  - **Every R11 count re-checks exact on the merged tree:** logging 47, analytics 32, the disclosure sweep 113, infra 47,
+    unit analytics 70, db analytics 98, plus the department-delete lane 5 and authz departments 23. Whole-suite collection
+    2795, exit 0. A scratch provenance plugin reported one checkout root for every imported module in every lane, so the
+    counts are the merged tree's and not another checkout's.
+  - **C9.2's clock pin is load-bearing now, not merely present:** the run was 12 days past the seed's date and the
+    contract file passes 20 of 20 at the real clock.
+  - **Nothing is red on the merged tree; the red is on the parents.** `tests/api/analytics` fails the same 9 contract
+    tests on core `master` alone AND on `tanstack-dept-delete` alone — the time-bomb C9.2 cures.
+  - **Sequencing gain, adopted: R11 may merge into core `master` BEFORE RC's core commit, at no cost.** §8b's order put
+    R11 last, which would leave core mainline 9-red for the whole RC→R11 window. C9.2 is tests-only and provably disjoint
+    from RC's two files, so merging R11 first cures the red immediately and changes nothing else. Fable still reviews in
+    the agreed chunk order; only the core merge moves.
+  - **Two items for RC's own review, not for this merge:** their `_affected_user_ids` runs inside the try BEFORE the
+    delete, so a fault in the three services now returns a 500 and leaves the department undeleted where it previously
+    deleted — fail-closed and defensible, but an unpinned behaviour change in the delete's error path; and the eviction
+    half of `role_user_ids` lives in the api middleware, so no core lane can prove the per-user eviction happens.
 - **Every count in this plan is branch-relative.** The censuses, coverage floors and entity lists were measured on
   worktrees cut from `b87ced0`. After each chunk merges, re-run that branch's full lane and re-check the numbers this
   plan quotes against the merged tree: a figure that was true when written can be false after a merge that touched
