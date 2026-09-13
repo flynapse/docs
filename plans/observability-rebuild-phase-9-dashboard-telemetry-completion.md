@@ -1883,6 +1883,14 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   discipline that cannot be run, a quantifier hunt is runnable but passes a sentence that names a scope with an article,
   and asking the writer to name an instance costs one message and holds against a writer being as careful as they know
   how.
+- **File content cannot answer a question about file ownership; only history can (2026-09-12).** Both this plan and
+  code-26's carried the SAME false entry — that RC owed two guard fixes at the merge — independently, through an evening
+  in which each session was checking the other's work. It survived because both sides read the files' CONTENT (an
+  `assert.throws` here, a `deepEqual` there) to answer a question that only `git log -- <path>` against the fork point can
+  answer. Two careful readers making the same mistake for the same reason is a better argument for the command than either
+  instance is. Corollary on recording corrections: leave a corrected claim on the page marked false rather than deleting
+  it — a worked example that two sessions fell for teaches a reviewer more than a clean list, and the note should name the
+  command that resolved it.
 - **A caveat that names the wrong axis is worse than none (2026-09-12, from code-26).** Their "43 bare writes" came with a
   caveat — file-granularity rather than per-call, our sweep authoritative — which was true and named the wrong axis. The
   defect was never precision; it was SCOPE: 43 is what their branch has alone, and 8 is what exists on the merged tree. A
