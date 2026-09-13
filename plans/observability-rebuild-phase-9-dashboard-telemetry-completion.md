@@ -245,6 +245,25 @@ Further notes from code-26 (2026-09-12):
   failure ratio it lands in. What phase 9 checks when it arrives: one record per user-visible write (D9-17); the outcome
   describes the whole composite, so any failed step makes it an error; `error_type` comes from the step that failed;
   `duration_ms` spans the whole sequence; and a partial failure is still one record unless phase 9 rules otherwise.
+  - **Correction to this section's own instruction (measured 2026-09-12): "the call-site wrappers give way to the hook
+    path" silences counted actions if taken literally.** On `obs9-events`, `ReviewStep.tsx` counts its actions with
+    `withFeatureMutation` (`:181`, `:193`, `:200`, `:210`) and `withOptimizerRunTriggered` (`:220`), and `CanvasHeader.tsx`
+    with `withExportRequested` (`:188`). On `tanstack-conversion` those components call RC's hooks instead
+    (`useCreateJob`, `useProcessActivity`, `useRunJob` at `:125-128`), and those hooks' meta carries only
+    `suppressGlobalError` (`useOptimizer.ts:304`, `:438`, `:505`). Dropping the wrapper with nothing added turns the
+    wizard's activity create, activity process, role create, job create and RUN TRIGGER, plus the CanvasHeader export
+    path, from counted into silent — and neither branch is wrong on its own.
+    **The rule: anything counted on either branch stays counted across the merge.** Where RC's hook path supersedes a
+    phase-9 call-site wrapper, the telemetry MOVES into that hook's existing meta literal — combined with RC's
+    `suppressGlobalError`, one literal — and the wrapper goes in the same change, so the double-emission guard proves it
+    was a move and not an addition. The attributes come from the closed word maps and E9's existing optimizer-run helper,
+    not from new words. This is what separates these five from the 43 bare feature writes: those were never counted, so
+    deferring them changes no data.
+    **And how the finding was reached, recorded because the failure was this session's own:** the session lead named this
+    class to code-26 as "a settings write", having measured the class and inferred the domain. They traced all thirteen
+    previously-wrapped settings primitives, found every app call site declaring telemetry, and asked for the instance to
+    be named rather than accepting the class — which is the request that catches exactly that error. No settings write
+    goes silent; the class is real in the feature domain.
   - **Two sweep boundaries measured before the trial merge ran (code-26, 2026-09-12), both worth stating once:**
     - **The wrapped upload is instrumented and invisible.** `hooks/document-hub/useDocumentHubMutations.ts:83` emits
       through `withUploadTelemetry` called inside its `mutationFn`, not through a `meta.telemetry` literal. The coverage
