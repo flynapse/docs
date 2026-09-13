@@ -964,6 +964,26 @@ The three dashboard branches were merged together once already, on P9's throwawa
 guard tests passed 46/46 there.
 
 **Merge mechanics per chunk (session lead, after each Fable verdict):**
+- **RC's own chunking, for the gate (code-26, 2026-09-12).** One branch, so phase 9's integration has no ordering
+  problem, but the gate reviews it in nine chunks in this order: **RC-D, then RC-1 through RC-8.** RC-D is first because
+  its rulings bind every later chunk; RC-1 is second because it owns `lib/query/query-keys.ts`, which five of the eight
+  chunks touch and which is the branch's real cross-chunk surface. Three chunks are non-contiguous in history (RC-1's
+  guard merge landed after five later merges, and RC-3's fix pass landed inside RC-4's territory and splits it), and
+  RC-5's Task 10 is the core commit, which never appears in a dashboard diff. Per-chunk ranges and file ownership:
+  `.superpowers/sdd/tanstack-mutation-conversion/rc-chunk-ranges.md` on their branch, cross-checked both directions
+  against the changed-file list (158 = 158, no file in zero chunks).
+- **Do not merge the task branches.** `tanstack-t11`…`t18`, `tanstack-guard` and `tanstack-phase3-fix` are all absorbed
+  into `tanstack-conversion` — verified independently on both sides with `git merge-base --is-ancestor`. Each keeps a
+  local ref and a tip of its own, which is exactly what makes them look live; merging one on top would be a no-op at
+  best and would resurrect a pre-fix state at worst.
+- **Lane figures to treat carefully.** Their dashboard lane is 2118 of 2118 measured at `f2bfbbf`, one commit below the
+  tip, and the tip commit touches only a plan document — so the tip's lane state is INHERITED, not re-run, and they said
+  so rather than quoting it as measured. Their core figure (197 passed) is a scoped run, not core's full lane. The trial
+  integration's own lane runs are therefore the first measurement of either side on a merged tree.
+- **Both of their guards are still owed at the merge, deliberately:** the `events-envelope` test still asserts the throw
+  E9.9b removed, and the `EVENT_NAMES` exact-list pin is not yet loosened. They left both for the merge because E9.9's
+  version is the contract and their rewrite goes on top of it; doing it early would have meant rewriting against a
+  contract they would then re-resolve. The trial merge fixes both and reports which.
 - **RC first.** The owner's conversion merges into `agent_sdk` (its core branch into core `master`). Each obs9 dashboard
   branch then merges the post-RC `agent_sdk` and re-runs its full lane and `tsc` before its own chunk, applying the §1b
   merge rules. In `useOptimizer.ts` the two `meta` edits are combined. The settings-api department blocks come from RC.
