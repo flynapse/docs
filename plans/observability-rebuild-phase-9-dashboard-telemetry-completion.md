@@ -1000,7 +1000,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
 |---|---|---|---|
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
-| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `87ac90a` for the gate (measured: five commits above the pin, one file, +11 lines, nothing a test reads) — the trial merge is pinned at `b728d33` because every commit between touches only their plan document, so the merge surface is identical (101 commits off the base at `b728d33`; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `401c2a6`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
+| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `0b19dee` for the gate (measured: six commits above the pin, their plan document only). Their tip advances over plan documentation as the gate approaches — re-measure the range before the gate rather than trusting this SHA; the trial's pin does not move while the diff stays documentation-only — the trial merge is pinned at `b728d33` because every commit between touches only their plan document, so the merge surface is identical (101 commits off the base at `b728d33`; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `401c2a6`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `bc9fbcc` (includes the post-close E9.9, E9.9b and E9.10) | `agent_sdk` `b87ced0` | unit 1866/1866, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
@@ -1027,10 +1027,7 @@ guard tests passed 46/46 there.
   tip, and the tip commit touches only a plan document — so the tip's lane state is INHERITED, not re-run, and they said
   so rather than quoting it as measured. Their core figure (197 passed) is a scoped run, not core's full lane. The trial
   integration's own lane runs are therefore the first measurement of either side on a merged tree.
-- **Both of their guards are still owed at the merge, deliberately:** the `events-envelope` test still asserts the throw
-  E9.9b removed, and the `EVENT_NAMES` exact-list pin is not yet loosened. They left both for the merge because E9.9's
-  version is the contract and their rewrite goes on top of it; doing it early would have meant rewriting against a
-  contract they would then re-resolve. The trial merge fixes both and reports which.
+- **Corrected 2026-09-12 — neither guard was ever theirs.** An earlier note here said RC owed two guard fixes at the merge (the `events-envelope` throw contract and the `EVENT_NAMES` exact pin). Measured since, on both sides: RC's branch has ZERO commits touching `tests/unit/telemetry/events-envelope.test.ts` or `events-catalogue.test.ts` and both are byte-identical to the base, while E9 has two commits on the first. So the throw-contract test is base code that E9.9's contract change supersedes, there is no collision, and the only wholesale `EVENT_NAMES` enumeration is the catalogue's own definition test — exactly where the one-exact-pin ruling puts it. Both sides had characterised those files from their CONTENT rather than running `git log -- <path>` against the fork point, which is the one command that says whose a file is.
 - **RC first.** The owner's conversion merges into `agent_sdk` (its core branch into core `master`). Each obs9 dashboard
   branch then merges the post-RC `agent_sdk` and re-runs its full lane and `tsc` before its own chunk, applying the §1b
   merge rules. In `useOptimizer.ts` the two `meta` edits are combined. The settings-api department blocks come from RC.
@@ -1077,8 +1074,8 @@ guard tests passed 46/46 there.
     that overstates work. The optimizer's 22 sites are 19 (RC deleted three uncalled hooks); the route floor is 12 of 12;
     the legacy sweep's roots grew (hooks 64 → 75, tests 221 → 305); the settings entity map covers `memory` and
     `output_preferences` with zero off-map words.
-  - **Predictions that did not hold, all in RC's favour:** neither of their guards went red — they had already made the
-    throw-contract test mode-independent, and no consumer pins `EVENT_NAMES` (the only exact pin is the catalogue's own
+  - **Predictions that did not hold, all in RC's favour:** neither of their guards went red — nothing of theirs ever went near
+    either file (verified: zero commits on both since the fork point), and no consumer pins `EVENT_NAMES` (the only exact pin is the catalogue's own
     definition test, where the ruling puts it). They never edited `events-envelope.test.ts`, so that collision never
     happened, and §1b's `client.ts` warning was over-cautious: F9's diff never enters `listChats` or `getChatHistory`.
   - **Rulings given on the trial's three questions:** `NotificationBell#markRead` stays bare and exempted, with the reason
@@ -1886,6 +1883,16 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   discipline that cannot be run, a quantifier hunt is runnable but passes a sentence that names a scope with an article,
   and asking the writer to name an instance costs one message and holds against a writer being as careful as they know
   how.
+- **A caveat that names the wrong axis is worse than none (2026-09-12, from code-26).** Their "43 bare writes" came with a
+  caveat — file-granularity rather than per-call, our sweep authoritative — which was true and named the wrong axis. The
+  defect was never precision; it was SCOPE: 43 is what their branch has alone, and 8 is what exists on the merged tree. A
+  caveat spends the reader's scepticism where the writer points it, so a wrong axis is worse than silence. Ask of a caveat
+  what you would ask of the claim: what is it silent about?
+- **A correct deletion on one branch can turn a guard on another branch inert, with nothing going red when it happens
+  (2026-09-12).** RC's removal of a method's self-emission was right; all eleven fixture cases of our double-emission
+  guard leaned on that self-emission, so on the merged tree the guard would have passed while proving nothing — shape 4,
+  inside the guard whose job is policing double counting. The question to ask of a guard is therefore not what it asserts
+  but what its fixtures RELY ON BEING TRUE.
 - **An indefinite article introducing a category is a quantifier in disguise (2026-09-12, with code-26).** "A settings
   write that goes from counted to silent" used no quantifier, so a reader watching for *every* and *all* had nothing to
   catch — while the article asserted the domain just as hard, dressed as a modest single-instance claim. The countermeasure
