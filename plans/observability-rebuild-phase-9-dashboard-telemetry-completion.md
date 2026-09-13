@@ -245,6 +245,24 @@ Further notes from code-26 (2026-09-12):
   failure ratio it lands in. What phase 9 checks when it arrives: one record per user-visible write (D9-17); the outcome
   describes the whole composite, so any failed step makes it an error; `error_type` comes from the step that failed;
   `duration_ms` spans the whole sequence; and a partial failure is still one record unless phase 9 rules otherwise.
+  - **Two sweep boundaries measured before the trial merge ran (code-26, 2026-09-12), both worth stating once:**
+    - **The wrapped upload is instrumented and invisible.** `hooks/document-hub/useDocumentHubMutations.ts:83` emits
+      through `withUploadTelemetry` called inside its `mutationFn`, not through a `meta.telemetry` literal. The coverage
+      sweep reads the declaration as literal syntax and its exemption map is empty, so it reports that site as bare when
+      it is fully instrumented. The resolution is an EXEMPT entry with its reason, never a literal: `withUploadTelemetry`
+      is in the double-emission guard's emitter list, so a `meta.telemetry` there would be a real double count and that
+      guard would fail it. The two guards disagree about the same site for opposite reasons, and the exemption is where
+      that is stated once — with the reason attached, so the next reader does not "fix" it. The file's other three writes
+      are genuinely bare. This is the cost of the inline-literal rule (D9-17) stated plainly: it makes the common case
+      visible at the price of making a structurally-correct wrapped case invisible.
+    - **The bare feature writes are a scope boundary, not a gap.** Their branch carries 27 settings writes, all 27
+      declaring telemetry, and 48 feature writes of which 4 declare it plus the wrapped upload. The other 43 — 22 of them
+      in `useOptimizer.ts`, whose `meta` carries only `suppressGlobalError` — are bare by phase 9's own ruling: a
+      converted feature write keeps its logger call until phase 9's later follow-up adds its meta and removes that call in
+      the same change. The trial merge therefore instruments only two classes — a settings write whose previous emission
+      the merge itself removes, and the invite retry named above — and LISTS the rest with its reason. Their counts are
+      file-granularity arithmetic, stated as such; the sweep's per-call analysis is authoritative and the trial reports
+      where the two differ.
   - **Merge facts measured by code-26 against E9.9b (2026-09-12), by taking our files into a scratch copy of their trunk
     rather than reasoning about it:**
     - **The telemetry fix drags in a third module.** `lib/telemetry/events.ts` and `lib/telemetry/product-events.ts` both
