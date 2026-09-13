@@ -953,7 +953,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
 |---|---|---|---|
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
-| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` (+ its core branch), reviewed from its own plan | `agent_sdk` `b87ced0` | its own |
+| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `b728d33` (101 commits off the base; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `7288d06`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `bc9fbcc` (includes the post-close E9.9, E9.9b and E9.10) | `agent_sdk` `b87ced0` | unit 1866/1866, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
@@ -980,6 +980,11 @@ guard tests passed 46/46 there.
   `terraform validate`.
 - **R11.** `obs9-core` merges into core `master`, then the core logging lane runs.
 - **After R11.** Re-run P9 checks 2, 4 and 5 on the merged mainlines, as a short re-probe.
+- **A trial integration merge runs before the gate (2026-09-12).** The owner's conversion finished, so a throwaway tree
+  merges RC then F9, E9 and N9 on top (and, in core, C9 then `tanstack-dept-delete`), applying the §1b rules and doing
+  the post-merge work, so the gate sees measured conflicts, red guards and re-checked counts instead of predictions.
+  Trial branches: `obs9-trial-merge` in both repos, worktrees `dashboard-obs9x` and `core-obs9x`; nothing pushed and no
+  existing branch touched. Reports: `scratchpad/phase9-trial-merge-{dashboard,core}.md`.
 - **Every count in this plan is branch-relative.** The censuses, coverage floors and entity lists were measured on
   worktrees cut from `b87ced0`. After each chunk merges, re-run that branch's full lane and re-check the numbers this
   plan quotes against the merged tree: a figure that was true when written can be false after a merge that touched
