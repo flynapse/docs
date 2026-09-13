@@ -1906,7 +1906,9 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   it hours earlier: the floors, the single enumeration and the self-referential spot check are on `obs9-browser`, and zero
   of it exists at `b87ced0`. Both halves of their sentence were true and the conclusion was stale — the temporal form of
   the caveat-axis rule: ownership is a history question, currency is a different history question, and a diff against the
-  base answers only the first.
+  base answers only the first. Operationally, in one line (code-26): **when reporting a defect in someone else's file, read
+  their branch, not the base you share.** This one is harder than the wrong-axis caveat, because that at least had a false
+  half to find and this had none — both halves were measured and true.
 - **An exact pin is a completeness control by accident; a floor is one only if it is sized against the real count
   (2026-09-12).** Their settings guard survives the completeness test because its control is an exact 21 with zero slack,
   while carrying the same early-return-on-missing-path shape our sweep had — so the pin is the only thing making that
