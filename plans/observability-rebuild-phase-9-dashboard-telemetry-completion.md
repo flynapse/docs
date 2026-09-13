@@ -1052,12 +1052,12 @@ guard tests passed 46/46 there.
   the post-merge work, so the gate sees measured conflicts, red guards and re-checked counts instead of predictions.
   Trial branches: `obs9-trial-merge` in both repos, worktrees `dashboard-obs9x` and `core-obs9x`; nothing pushed and no
   existing branch touched. Reports: `scratchpad/phase9-trial-merge-{dashboard,core}.md`.
-- **Core trial merge result (2026-09-12; `obs9-trial-merge` @ `69666f0` in `core-obs9x`, kept for inspection).**
+- **Core trial merge result (2026-09-12; `obs9-trial-merge` @ `694113a` in `core-obs9x`, kept for inspection; re-pinned to their `401c2a6` and re-measured).**
   - **Zero conflicts at both merges.** C9 and `tanstack-dept-delete` are file-disjoint, and the merge was proved to
     invent nothing: the diff from each parent to the merged tree is byte-identical to the other parent's own diff from
     `master`. `tanstack-dept-delete` is based on `988571b`, one commit on top.
   - **Every R11 count re-checks exact on the merged tree:** logging 47, analytics 32, the disclosure sweep 113, infra 47,
-    unit analytics 70, db analytics 98, plus the department-delete lane 5 and authz departments 23. Whole-suite collection
+    unit analytics 70, db analytics 98, plus the department-delete lane 8 (5 before their new guard) and authz departments 23. Whole-suite collection
     2795, exit 0. A scratch provenance plugin reported one checkout root for every imported module in every lane, so the
     counts are the merged tree's and not another checkout's.
   - **C9.2's clock pin is load-bearing now, not merely present:** the run was 12 days past the seed's date and the
@@ -1074,8 +1074,9 @@ guard tests passed 46/46 there.
     of the gap is the part worth keeping: the realistic future break is not moving the call — the docstring's reason makes
     that look impossible — but making the gathering RESILIENT, a `try/except` carrying on with an empty list, which would
     delete the department and silently under-evict with no error anywhere. That break fails all three new
-    parametrizations while leaving the five original tests green. The trial re-pins to `401c2a6` and re-runs that break
-    itself.
+    parametrizations while leaving the five original tests green. Confirmed independently on the merged tree: the break fails all three new parametrizations and leaves all five
+    originals green — including the one whose name sounds like it would catch this and does not, which is the finding more
+    than the red is. The file was restored byte-identically, sha256 checked both ways.
   - **Item 2 recorded by them as a Future Improvement, with a caveat that generalises:** their Task 10 review cleared the
     eviction by READING the api middleware rather than measuring it, so the clearance rests on a premise — that the
     middleware honours the declared user list without a role lookup — and expires if that key's handling changes. They
