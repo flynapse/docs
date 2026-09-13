@@ -1052,6 +1052,41 @@ guard tests passed 46/46 there.
   the post-merge work, so the gate sees measured conflicts, red guards and re-checked counts instead of predictions.
   Trial branches: `obs9-trial-merge` in both repos, worktrees `dashboard-obs9x` and `core-obs9x`; nothing pushed and no
   existing branch touched. Reports: `scratchpad/phase9-trial-merge-{dashboard,core}.md`.
+- **Dashboard trial merge result (2026-09-12; `obs9-trial-merge` @ `70aef0c` in `dashboard-obs9x`, kept).** Lane per step:
+  base 1793 → RC 2118 → F9 2178 (15 red first, repaired) → E9 2249 (7 red first, resolved) → N9 **2333 of 2333**, with
+  `tsc` clean, lint clean and all fifteen named guards green. Conflicts: RC 0, F9 one file and four hunks
+  (`settings-api.ts`, RC's cascade rewrite versus F9.2's message fixes — RC taken per §1b, seven of F9's fixes auto-merged
+  and survive), E9 seven files and twelve hunks, N9 0 — `logger.ts` included, so the §1b hunk split held.
+  - **The finding the real merge most needs: a conflict-free merge silently dropped seven `meta.telemetry` keys.** RC and
+    E9 each add a `meta:` to the same seven optimizer hooks (`useUploadScheduleCsv`, `useProcessSchedule`,
+    `useCreateActivity`, `useProcessActivity`, `useCreateRole`, `useCreateJob`, `useRunJob`). The edits sit far enough
+    apart that git reports NO conflict and keeps BOTH as sibling keys in one literal — the later wins, so `telemetry`
+    vanished from all seven. The coverage sweep passes, because it reads the first `meta.telemetry` it finds as syntax.
+    **Only `tsc` caught it, as TS1117, duplicate object key.** So §1b's "combine the two meta edits" is EIGHT sites, seven
+    of which git never flags. **Rule for the real merge:** after resolving any file where both sides touched a `meta`
+    literal, grep the merged file for two `meta:` keys in one object and confirm `telemetry` survived at every site §1b
+    names. A clean merge is not evidence here.
+  - **The audit's shape 4 caught us inside the guard that polices double counting.** All eleven of the double-emission
+    guard's fixture cases reached `SettingsAPI.deleteRole`, whose self-emission RC removed — so on the merged tree the
+    guard would have passed as a pure absence assertion. Repointed at a stand-in emitter, all eleven flag again, and the
+    self-emitting method list is pinned empty.
+  - **Count re-checks on the merged tree, against what this plan quoted:** the settings emitter census is **27, not 19** —
+    ours counted the wrappers RC swapped, while RC declares on eight more that were never wrapped, and 27 matches their
+    own count. Coverage is **77 sites, 69 declaring, 8 bare** — so **the 43 bare feature writes do not exist**: that
+    number was RC's branch measured without phase 9's instrumentation on top, the branch-relative error in the direction
+    that overstates work. The optimizer's 22 sites are 19 (RC deleted three uncalled hooks); the route floor is 12 of 12;
+    the legacy sweep's roots grew (hooks 64 → 75, tests 221 → 305); the settings entity map covers `memory` and
+    `output_preferences` with zero off-map words.
+  - **Predictions that did not hold, all in RC's favour:** neither of their guards went red — they had already made the
+    throw-contract test mode-independent, and no consumer pins `EVENT_NAMES` (the only exact pin is the catalogue's own
+    definition test, where the ruling puts it). They never edited `events-envelope.test.ts`, so that collision never
+    happened, and §1b's `client.ts` warning was over-cautious: F9's diff never enters `listChats` or `getChatHistory`.
+  - **Rulings given on the trial's three questions:** `NotificationBell#markRead` stays bare and exempted, with the reason
+    recorded — it carries no emission on `obs9-events` either, so it was never counted and belongs to the later follow-up;
+    the vacuous half of `settings-mutation-meta-guard` stays deleted, because the double-emission guard holds that
+    property repo-wide with a positive control; and the coverage floor is raised from 45 to **70** against 77 actual,
+    because a floor that low catches "the sweep found nothing" but not "the sweep found half", which is the regression a
+    merge can actually cause.
 - **Core trial merge result (2026-09-12; `obs9-trial-merge` @ `694113a` in `core-obs9x`, kept for inspection; re-pinned to their `401c2a6` and re-measured).**
   - **Zero conflicts at both merges.** C9 and `tanstack-dept-delete` are file-disjoint, and the merge was proved to
     invent nothing: the diff from each parent to the merged tree is byte-identical to the other parent's own diff from
