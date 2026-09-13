@@ -1000,7 +1000,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
 |---|---|---|---|
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
-| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `c68b869` for the gate (measured: three commits above the pin, one file, +4 lines, nothing a test reads) — the trial merge is pinned at `b728d33` because every commit between touches only their plan document, so the merge surface is identical (101 commits off the base at `b728d33`; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `401c2a6`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
+| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `87ac90a` for the gate (measured: five commits above the pin, one file, +11 lines, nothing a test reads) — the trial merge is pinned at `b728d33` because every commit between touches only their plan document, so the merge surface is identical (101 commits off the base at `b728d33`; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `401c2a6`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `bc9fbcc` (includes the post-close E9.9, E9.9b and E9.10) | `agent_sdk` `b87ced0` | unit 1866/1866, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
@@ -1113,6 +1113,17 @@ The shapes found, most deceptive first:
 6. **A regex that does not match empty output.** An absence claim over HTML that is empty because the component threw.
 7. **A presence control in a sibling test only.** Later tests iterate the same helper with nothing proving it returned
    anything.
+
+8. **A test name that asserts more than the test covers** (added 2026-09-12, from the core trial). Different in kind from
+   the seven above: this one proves something real, and far less than its name says.
+   `test_the_affected_users_are_read_before_the_delete` pins exactly what it claims — on a SUCCESSFUL delete — and
+   survives a change that deletes the department and silently under-evicts. **The name is the damage:** it reads as
+   though the ordering is covered, so the question is closed and nobody writes the failure-path case. It is this plan's
+   confident-clause failure relocated into an identifier, where it is strictly worse than in a comment — a comment that
+   overstates misleads a reader, a name that overstates PREVENTS A TEST FROM BEING WRITTEN. "Before" was measured,
+   "always" was assumed.
+   **The check:** when a test name asserts an ordering, an exclusion or an invariant, confirm it holds on the FAILURE
+   paths too, or narrow the name to the path it actually covers.
 
 Also found, the production-side version of the same class: the session watcher wraps its whole fact-emitting block in a
 catch, so a bug there becomes no session fact, silently, and every absence assertion downstream of it is suspect. Handled
