@@ -259,6 +259,16 @@ Further notes from code-26 (2026-09-12):
     was a move and not an addition. The attributes come from the closed word maps and E9's existing optimizer-run helper,
     not from new words. This is what separates these five from the 43 bare feature writes: those were never counted, so
     deferring them changes no data.
+    **Why the metas cannot be carried on RC's branch (code-26 measured it, 2026-09-12):** `EVENT_NAMES` on
+    `tanstack-conversion` has 13 entries and none of the six sites' events is among them — no feature-mutation event, no
+    optimizer run-triggered event (its automations entry is a different event), no export-requested event — and the three
+    wrapper helpers are absent too. Declaring those metas there would mean adding entries to `lib/telemetry/events.ts`,
+    which breaks the no-new-events rule, the `lib/telemetry/**` fence and RC's own exact-list pin at once, and
+    `EVENT_ATTRIBUTE_KEYS` is keyed by event name so each entry needs its attribute list beside it — three coupled edits
+    in phase 9's file to make their branch mechanical. So the move belongs in the merge, where the wrapper and the meta
+    change together and the double-emission guard proves it was a move. Shape they asked for, and §1b already requires:
+    the `telemetry` key goes INSIDE the existing meta literal (several of which carry a computed `suppressGlobalError`),
+    one literal per call.
     **And how the finding was reached, recorded because the failure was this session's own:** the session lead named this
     class to code-26 as "a settings write", having measured the class and inferred the domain. They traced all thirteen
     previously-wrapped settings primitives, found every app call site declaring telemetry, and asked for the instance to
