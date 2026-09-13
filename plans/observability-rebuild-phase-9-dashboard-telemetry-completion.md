@@ -1000,7 +1000,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
 |---|---|---|---|
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
-| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `b728d33` (101 commits off the base; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `7288d06`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
+| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `40db41b` for the gate — the trial merge is pinned at `b728d33`, two commits below it, because the two commits between touch only their plan document (measured: one file, +2 lines, and no test in their repo reads that path), so the merge surface is identical (101 commits off the base at `b728d33`; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `7288d06`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `bc9fbcc` (includes the post-close E9.9, E9.9b and E9.10) | `agent_sdk` `b87ced0` | unit 1866/1866, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
@@ -1796,6 +1796,12 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   the reader cannot tell which half was checked, and the checked half vouches for the other. Corollary, applied here:
   check a peer's characterisation in your own tree before acting on it, because taking "uncensused" at face value would
   have sent someone hunting for panel volume that is already charted.
+- **An indefinite article introducing a category is a quantifier in disguise (2026-09-12, with code-26).** "A settings
+  write that goes from counted to silent" used no quantifier, so a reader watching for *every* and *all* had nothing to
+  catch — while the article asserted the domain just as hard, dressed as a modest single-instance claim. The countermeasure
+  that resolved it in one round: **ask for an instance, not a re-confirmation.** "Name it" cannot be satisfied by
+  restating the class, so an inferred scope has nowhere to hide, and unlike a quantifier hunt it works on clauses that
+  name a scope without using one. Watch the articles, not only the quantifiers.
 - **A branch-local measurement is a claim about the branch, not about the world (2026-09-12, from code-26).** Their
   grep for a gated write without telemetry hit twice on unmerged branches and was clean on the trunk. Both hits were
   stale views: those branches were cut before the telemetry swap landed and neither touches that file, so the merge takes
