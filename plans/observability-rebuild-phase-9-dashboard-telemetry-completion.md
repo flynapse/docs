@@ -1049,7 +1049,7 @@ guard tests passed 46/46 there.
   the post-merge work, so the gate sees measured conflicts, red guards and re-checked counts instead of predictions.
   Trial branches: `obs9-trial-merge` in both repos, worktrees `dashboard-obs9x` and `core-obs9x`; nothing pushed and no
   existing branch touched. Reports: `scratchpad/phase9-trial-merge-{dashboard,core}.md`.
-- **Dashboard trial merge result (2026-09-12; `obs9-trial-merge` @ `70aef0c` in `dashboard-obs9x`, kept).** Lane per step:
+- **Dashboard trial merge result (2026-09-12; `obs9-trial-merge` @ `dc7a043` in `dashboard-obs9x`, kept).** Lane per step:
   base 1793 → RC 2118 → F9 2178 (15 red first, repaired) → E9 2249 (7 red first, resolved) → N9 **2333 of 2333**, with
   `tsc` clean, lint clean and all fifteen named guards green. Conflicts: RC 0, F9 one file and four hunks
   (`settings-api.ts`, RC's cascade rewrite versus F9.2's message fixes — RC taken per §1b, seven of F9's fixes auto-merged
@@ -1084,6 +1084,23 @@ guard tests passed 46/46 there.
     property repo-wide with a positive control; and the coverage floor is raised from 45 to **70** against 77 actual,
     because a floor that low catches "the sweep found nothing" but not "the sweep found half", which is the regression a
     merge can actually cause.
+  - **The rulings applied, and the floor proved to bite (trial tip now `dc7a043`; lane 2333 of 2333, `tsc` and lint
+    clean).** The coverage floor went from 45 to 70 against 77 actual sites, and the raise was shown catching a breakage
+    rather than merely asserted: with `hooks/settings` excluded from the walk the sweep finds 50 sites, which the old floor
+    **accepted silently while the file's other five tests stayed green** — a sweep blind to 27 of 77 mutations, every
+    settings write, reporting nothing wrong. Per-root distribution for future tuning: `hooks` 68, `app` 7, `components` 2,
+    so 70 leaves seven sites of headroom. `NotificationBell#markRead` stays bare with its exemption reason stating that it
+    was never counted on any branch and that its meta and its `logger.warn` removal are ONE later change — adding the meta
+    alone would report the same failure twice. The vacuous guard half stays deleted, with the reasoning recorded in the
+    remaining file's own header, naming the stronger holder of the property so a weaker copy is not re-added.
+  - **The duplicate-key procedure, written into the trial report's §3a for whoever runs the real merge.** `tsc --noEmit` is
+    the detector and must run BEFORE the unit lane: a duplicate key is TS1117, and it was the only thing that saw seven of
+    the eight sites — no test, lint rule or telemetry guard sees it. TS1117 on a file you just resolved means COMBINE the
+    literals, never delete a side. Then confirm per-site survival by counting, because TS1117 only fires while both keys
+    sit in the same literal: on the trial tree `meta:` 20, `telemetry:` 19, `suppressGlobalError` 13, and a `meta:` count
+    above the hook count is the bug. It is written down rather than left in prose because every other conflict in this
+    merge announced itself, while the one failure that would have shipped silently produced no marker, no test failure and
+    no warning.
 - **Core trial merge result (2026-09-12; `obs9-trial-merge` @ `694113a` in `core-obs9x`, kept for inspection; re-pinned to their `401c2a6` and re-measured).**
   - **Zero conflicts at both merges.** C9 and `tanstack-dept-delete` are file-disjoint, and the merge was proved to
     invent nothing: the diff from each parent to the merged tree is byte-identical to the other parent's own diff from
