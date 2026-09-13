@@ -1000,7 +1000,7 @@ Branch tips the Fable chunks review — each chunk's reviewer starts from its §
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
 |---|---|---|---|
 | R6 | this plan: §0, §2, §8a (D9-1…D9-19), §1b (stream split, file ownership, the TanStack coordination and merge rules), §7 "P9 results" | spec §3.3, §3.4, §7.4, §9 | — (design review) |
-| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `c68b869` for the gate (measured: three commits above the pin, one file, +4 lines, nothing a test reads) — the trial merge is pinned at `b728d33` because every commit between touches only their plan document, so the merge surface is identical (101 commits off the base at `b728d33`; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `7288d06`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
+| RC | the owner's TanStack conversion — `/home/aditya/Code/dashboard-tanstack` `tanstack-conversion` @ `c68b869` for the gate (measured: three commits above the pin, one file, +4 lines, nothing a test reads) — the trial merge is pinned at `b728d33` because every commit between touches only their plan document, so the merge surface is identical (101 commits off the base at `b728d33`; verified to contain all twelve task branches `tanstack-t11`…`t18`, `tanstack-guard`, `tanstack-phase3-fix`), plus core `/home/aditya/Code/core-tanstack` `tanstack-dept-delete` @ `401c2a6`; reviewed from its own plan | `agent_sdk` `b87ced0`; core `master` | its own |
 | R7 | `/home/aditya/Code/dashboard-obs9` `obs9-browser` @ `01a3882` (includes the post-close F9.9 and F9.10); `/home/aditya/Code/api-obs9` `obs9-api` @ `72df51a` | `agent_sdk` `b87ced0`; api `langgraph-merge` `a19a931` | unit 1853/1853, `tsc`, eslint; api middleware + infra 322 |
 | R8 | `/home/aditya/Code/dashboard-obs9e` `obs9-events` @ `bc9fbcc` (includes the post-close E9.9, E9.9b and E9.10) | `agent_sdk` `b87ced0` | unit 1866/1866, typecheck, eslint |
 | R9 | `/home/aditya/Code/dashboard-obs9n` `obs9-server` @ `7fc2bcc` (includes the post-close N9.6) | `agent_sdk` `b87ced0` | unit 1877/1877, typecheck, eslint; `next build` clean |
@@ -1068,6 +1068,20 @@ guard tests passed 46/46 there.
     R11 last, which would leave core mainline 9-red for the whole RC→R11 window. C9.2 is tests-only and provably disjoint
     from RC's two files, so merging R11 first cures the red immediately and changes nothing else. Fable still reviews in
     the agreed chunk order; only the core merge moves.
+  - **Item 1 fixed on their side (core tip now `401c2a6`, verified: one commit above `7288d06`, tests-only, +64 lines,
+    two commits off `988571b`).** The new guard is parametrized over all three services, because the second and third run
+    inside a comprehension over the first's result, so a guard on one is not a guard on the sequence. Their measurement
+    of the gap is the part worth keeping: the realistic future break is not moving the call — the docstring's reason makes
+    that look impossible — but making the gathering RESILIENT, a `try/except` carrying on with an empty list, which would
+    delete the department and silently under-evict with no error anywhere. That break fails all three new
+    parametrizations while leaving the five original tests green. The trial re-pins to `401c2a6` and re-runs that break
+    itself.
+  - **Item 2 recorded by them as a Future Improvement, with a caveat that generalises:** their Task 10 review cleared the
+    eviction by READING the api middleware rather than measuring it, so the clearance rests on a premise — that the
+    middleware honours the declared user list without a role lookup — and expires if that key's handling changes. They
+    wrote it with the condition attached. The complete fix is one api-repo test driving such a declaration through the
+    real middleware; it is outside their fence, and outside phase 9's scope, so it is an owner item rather than work
+    either side takes now.
   - **Two items for RC's own review, not for this merge:** their `_affected_user_ids` runs inside the try BEFORE the
     delete, so a fault in the three services now returns a 500 and leaves the department undeleted where it previously
     deleted — fail-closed and defensible, but an unpinned behaviour change in the delete's error path; and the eviction
