@@ -1900,6 +1900,18 @@ Mini pass after review — `0368671` and `bd18984`, tip `bd18984`:
   discipline that cannot be run, a quantifier hunt is runnable but passes a sentence that names a scope with an article,
   and asking the writer to name an instance costs one message and holds against a writer being as careful as they know
   how.
+- **A file identical to the base tells you who owns it, not whether its owner has fixed it (2026-09-12).** code-26 ran the
+  completeness lesson against their suite and reported our legacy sweep as having no presence control — correct about the
+  file they read, and byte-identical to the base, which is how they concluded it was ours to fix. F9.10 had already fixed
+  it hours earlier: the floors, the single enumeration and the self-referential spot check are on `obs9-browser`, and zero
+  of it exists at `b87ced0`. Both halves of their sentence were true and the conclusion was stale — the temporal form of
+  the caveat-axis rule: ownership is a history question, currency is a different history question, and a diff against the
+  base answers only the first.
+- **An exact pin is a completeness control by accident; a floor is one only if it is sized against the real count
+  (2026-09-12).** Their settings guard survives the completeness test because its control is an exact 21 with zero slack,
+  while carrying the same early-return-on-missing-path shape our sweep had — so the pin is the only thing making that
+  early return harmless, and at the `>= 13` it carried earlier the failure mode would have been live. A guard that is
+  sound because nobody has loosened its number yet is sound for now.
 - **File content cannot answer a question about file ownership; only history can (2026-09-12).** Both this plan and
   code-26's carried the SAME false entry — that RC owed two guard fixes at the merge — independently, through an evening
   in which each session was checking the other's work. It survived because both sides read the files' CONTENT (an
