@@ -716,6 +716,42 @@ PromQL widget console export, Stream L counter hand-off.
   - **M9.7, 2026-09-12** (`0259fd8d` / iac `a0059f9`): the settings panels keep client-side refusals apart too, now that
     the owner's invitations conversion produces that shape. The M9 gate tips move with it.
   - The gate agenda with every tip is in phase-9 plan §8b. Nothing is merged or pushed.
+- **2026-09-12 — Phase 9 post-close batch, the guard audit, and a trial integration merge of the finished TanStack work.**
+  Nothing merged or pushed; every tree below verified clean at its tip on 2026-09-13.
+  - **Post-close fixes, each reviewed or mutation-proven:**
+    - F9.9 + F9.10 (`01a3882`): one precedence for the server's own sentence on a failed request; guard fixes.
+    - E9.9 / E9.9b / E9.10 (`bc9fbcc`):
+      - a telemetry bug can no longer change a write's outcome — TanStack catches a settle-hook throw and re-reports the
+        write as failed;
+      - at most one settle record per mutation, keyed on the mutation objects because `mutationId` restarts per client;
+      - all five timing wrappers used to emit success inside the try they catch;
+      - 18 test files moved off literal event names.
+    - N9.6 (`7fc2bcc`): guard fixes.
+    - M9.7 + M9.8 (`83f4a8f7` / iac `b72307b`): the settings-side refusal split, and wording that no longer promises a
+      refusal sends no request (one gate runs an N+1 scan first).
+  - **Guard audit (phase-9 plan §8c):** absence assertions that pass for the wrong reason, in eight shapes. New rule
+    D9-20: every absence assertion carries a positive control in the same run.
+  - **The TanStack conversion (RC, session code-26) FINISHED.** Dashboard `tanstack-conversion` (tip `173706c`; trial
+    pinned at `b728d33`, and everything above it is their plan document only) and core `tanstack-dept-delete` @
+    `401c2a6`. Phase 9 reviewed their composite-write swap before their gate and ruled:
+    - refusals stay one class;
+    - a rollback request emits nothing;
+    - a coarse `error_type` is accepted on five composite paths.
+  - **Trial integration merge (throwaway, kept for the gate):**
+    - dashboard `dashboard-obs9x` @ `dc7a043` — RC, then F9, E9, N9 — **2333 of 2333**, `tsc` and lint clean, 15 guards
+      green;
+    - core `core-obs9x` @ `694113a` — every R11 count exact, zero conflicts.
+  - **What only the merged tree showed:**
+    - git silently dropped seven `meta.telemetry` keys (two `meta:` keys in one literal, the later wins), and only `tsc`
+      TS1117 saw it;
+    - the double-emission guard's fixtures had gone inert after RC's deletion;
+    - the coverage floor of 45 accepted a sweep blind to 27 of 77 sites; it is raised to 70;
+    - the plan's counts were branch-relative: settings emitters are 27, not 19, and the "43 bare feature writes" did not
+      exist — 8 are bare.
+  - **Core merge order changed:** R11 merges into core `master` FIRST, which cures the 9 analytics contract tests red on
+    `master` today.
+  - **New owner decision:** 14 known per-call callbacks across both teams report a landed write as failed if a response
+    field is absent. Their complete answer is response validation at the API layer (phase-9 plan §9).
 
 ## 16. Future Improvements
 _(empty)_
@@ -745,29 +781,45 @@ the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewe
 → R3 → R4 → R5 with a merge after each; agenda, tips and mechanics in the phase-8 plan §8b, briefs in §11. The shared
 `api/.venv` refresh happens at the R1 merge (`poetry lock` + `poetry install` in `api/`).
 
-**Phase 9 (added 2026-09-11) — Phase A CLOSED 2026-09-11.** Dashboard telemetry completion covers every gap from the
-2026-09-11 dashboard audit except Rostering, which is demo-only. Five Opus streams were each built, Opus-reviewed, fixed
-and re-verified MERGE-READY, and the P9 live probe PASSED.
+**Phase 9 (added 2026-09-11) — built, reviewed, trial-merged; WAITING ON THE FABLE GATE (state as of 2026-09-13).**
+Dashboard telemetry completion covers every gap from the 2026-09-11 dashboard audit except Rostering, which is demo-only.
+Five Opus streams were each built, Opus-reviewed, fixed and re-verified. The P9 live probe PASSED. A post-close batch
+(2026-09-12) fixed what the guard audit and the TanStack exchange found. A throwaway integration merge of everything,
+including the owner's finished TanStack conversion, is green.
 
-Fable-gate tips (phase-9 plan §8b has the table, the suite evidence and the merge mechanics):
-- **F9:** `dashboard-obs9` `obs9-browser` @ `01a3882`, which includes the post-close F9.9 and F9.10, + `api-obs9` `obs9-api` @ `72df51a`.
-- **E9:** `dashboard-obs9e` `obs9-events` @ `bc9fbcc`, including the post-close E9.9, E9.9b and E9.10.
-- **N9:** `dashboard-obs9n` `obs9-server` @ `7fc2bcc`, including the post-close N9.6 guard fixes.
-- **M9:** `copilot-mro-obs9` `obs9-deploy` @ `83f4a8f7` + `iac-obs9` `obs9-iac` @ `b72307b`, stacked on phase-8 D8. The tips include M9.7, the settings-side refusal split, and M9.8, the refusal wording.
-- **C9:** `core-obs9` `obs9-core` @ `8e3c3ce`. It turns client disconnects on core's telemetry-ingest and
-  product-events routes into a 499 plus one INFO line, and fixes the phase-5 analytics seed-date time-bomb.
+Gate tips (verified clean 2026-09-13; phase-9 plan §8b has the table, the evidence, the merge mechanics and the trial
+results):
+- **F9:** `dashboard-obs9` `obs9-browser` @ `01a3882` + `api-obs9` `obs9-api` @ `72df51a`.
+- **E9:** `dashboard-obs9e` `obs9-events` @ `bc9fbcc`.
+- **N9:** `dashboard-obs9n` `obs9-server` @ `7fc2bcc`.
+- **M9:** `copilot-mro-obs9` `obs9-deploy` @ `83f4a8f7` + `iac-obs9` `obs9-iac` @ `b72307b`, stacked on phase-8 D8.
+- **C9:** `core-obs9` `obs9-core` @ `8e3c3ce`.
+- **RC (owner's TanStack conversion, session code-26):** `dashboard-tanstack` `tanstack-conversion` @ `173706c` +
+  `core-tanstack` `tanstack-dept-delete` @ `401c2a6`. Never merge the `tanstack-t11…t18`, `tanstack-guard` or
+  `tanstack-phase3-fix` refs — all are absorbed into `tanstack-conversion`.
+- **Trial trees (reference, not for merging):** `dashboard-obs9x` `obs9-trial-merge` @ `dc7a043` (2333 of 2333) and
+  `core-obs9x` `obs9-trial-merge` @ `694113a`. Reports: `copilot-mro/.dev_runs/obs9-phaseA/phase9-trial-merge-*.md`.
 
-**Merges are HELD.** After phase 8's R0–R5, Fable reviews in this order, with a merge after each chunk:
-1. R6, the phase-9 design.
-2. **RC**, the owner's TanStack conversion (session code-26). It is Fable-gated too, and merges into `agent_sdk` before
-   any phase-9 branch.
-3. R7 F9, R8 E9, R9 N9, R10 M9 and R11 C9.
+**Gate order:**
+1. Phase 8 R0–R5.
+2. Phase 9 R6, the design.
+3. RC in its own nine chunks: RC-D, then RC-1 through RC-8.
+4. R7 F9, R8 E9, R9 N9, R10 M9, R11 C9, merging after each.
 
-After R11, re-probe P9 checks 2, 4 and 5 on the merged mainlines.
+**Exception in core:** R11 merges into core `master` BEFORE RC's core commit (tests-only and disjoint; it cures 9 red
+contract tests). After R11, re-probe P9 checks 2, 4 and 5.
 
-Durable copies of the session notes, briefs, reviews and runbook are in `copilot-mro/.dev_runs/obs9-phaseA/`.
+**Rules for the real merge, learned on the trial tree:**
+- Run `tsc --noEmit` BEFORE the unit lane. TS1117 on a resolved file means two `meta:` keys: combine the literals, never
+  drop a side. Then confirm by count that `telemetry` survived at every site.
+- Anything counted on either branch stays counted. Where RC's hook supersedes a phase-9 call-site wrapper, the telemetry
+  moves into that hook's existing meta literal in the same change.
+- Every count the plan quotes is branch-relative: re-check it on the merged tree.
+- Read the other side's BRANCH, not the shared base.
 
-Next work, in order: (0) finish phase 9 Phase A (fix passes, reviews, P9, the DARK flip, the §8b agenda); the Sunday Fable gate for phase 8 (R0–R5), then its §10 live probe, then phase 9's chunks R6 → RC → R7–R10; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
+Durable copies of every note, brief, review and trial report: `copilot-mro/.dev_runs/obs9-phaseA/`.
+
+Next work, in order: (0) the Sunday Fable gate (2026-09-13): phase 8 R0–R5, then its §10 live probe, then phase 9's chunks R6 → RC (RC-D, RC-1…RC-8) → R7–R11, using the trial trees and the merge rules above; (1) owner checklist in §15 (alert thresholds + Slack/email targets, CloudWatch
 alarm-dialect ruling, Amplify AL2023 + Node 22, improvement-findings review → tab flag, backfill crontab,
 Weaviate pin, Portainer, B1a/B1b/B1d probes); (2) AWS deployment DEFERRED by owner ruling until all
 implementation is done — laptop-only profile testing until then; (3) Gate M when the owner declares the
