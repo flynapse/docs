@@ -153,14 +153,14 @@ under `dashboard/tests/unit/analytics/`.
 
 **Steps:**
 
-- [ ] Write the resolver tests first: configured versus supported panels, feature gating, owner/capability
+- [x] Write the resolver tests first: configured versus supported panels, feature gating, owner/capability
       intersection, unknown panel fail-closed behavior, and deterministic output ordering.
-- [ ] Add RLS tests proving one tenant cannot read or alter another tenant's profile.
-- [ ] Add the authenticated profile endpoint and tests proving a caller cannot request a wider profile or
+- [x] Add RLS tests proving one tenant cannot read or alter another tenant's profile.
+- [x] Add the authenticated profile endpoint and tests proving a caller cannot request a wider profile or
       supply a tenant identity.
-- [ ] Change the Flynapse UI registry/page to render the effective profile. Test POC-safe, restricted-client,
+- [x] Change the Flynapse UI registry/page to render the effective profile. Test POC-safe, restricted-client,
       tenant-owner and capability-holder views using the same frontend build.
-- [ ] Verify that changing a dashboard profile neither changes Collector configuration nor exposes an external
+- [x] Verify that changing a dashboard profile neither changes Collector configuration nor exposes an external
       observability link to ordinary client users.
 
 **Acceptance:** a server-side per-client change alters the next Flynapse UI dashboard response without a
@@ -271,7 +271,7 @@ provider evidence.
       optional profile.
 - [ ] Run the destination-swap test with identical application images and compare required resource attributes,
       metric units, trace propagation and redaction at every supported destination.
-- [ ] Check metric cardinality: `tenant.id` appears only on the explicitly approved tenant-scoped instruments;
+- [x] Check metric cardinality: `tenant.id` appears only on the explicitly approved tenant-scoped instruments;
       user, session, chat, document and request IDs do not appear as metric labels.
 - [ ] Refresh the dashboard catalogue's live/dark status markers from the final canaries; remove stale phase
       labels without claiming any signal that was not retrieved.
@@ -354,3 +354,22 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   `copilot-mro` repository from the isolated worktree. Dashboard's repository-wide changed-file lint remains
   blocked by two pre-existing `prefer-const` findings in `hooks/pdf-viewer/use-pdf-search.ts`; the modified
   files typecheck and their tests pass.
+- **2026-09-17 — Task 8.2 acceptance refresh in `obs-telemetry-merge`.** Fresh Task 6 checks passed the Core
+  dashboard-profile resolver/table/API lane as part of the `167 passed, 1 skipped` Core analytics/API command,
+  the isolated dashboard-profile scratch database lane (`3 passed`), Dashboard mounted/profile tests inside the
+  `42 passed` native Node command, Dashboard typecheck, and touched-file Dashboard lint. The same run kept
+  destination and Collector behavior separate through the explicit profile-composition lane (`31 passed`). No
+  browser/UI process was started, so Flynapse UI rendering and profile switching remain owner-run acceptance.
+- **2026-09-17 — Task 8.6 partial backend acceptance refresh.** The bounded non-container matrix passed startup,
+  partition, lifecycle, agent evaluation, OTel/Collector, Grafana dashboard JSON, alert layout, metric
+  cardinality, destination/profile composition, Dashboard product-event envelope, Dashboard profile rendering
+  unit tests, TypeScript checking, touched-file lint, Copilot MRO lock metadata, and `validate.sh` shell syntax.
+  Command-level counts were `575` passing assertions and `13` expected environment-gated skips. The
+  product-event replay scratch DB lane is still blocked before assertions: the disposable database is created
+  and dropped, but tenant fixture setup fails with `psycopg2.errors.InsufficientPrivilege: permission denied for
+  table tenants` (`5 errors`). The facts-backfill scratch DB lane reproduces the same fixture-grant blocker
+  (`2 errors`). Treat these as scratch-lane/test-harness privilege blockers until a scoped harness repair or
+  owner/CI safe database lane reruns them; do not claim product-event database replay or backfill idempotency
+  from this run. Live UI, Grafana, Prometheus/Tempo retrieval, Phoenix traces/evaluations, pinned Collector
+  Docker validation, single-host Docker runs, provider canaries/field paths, Azure support refresh and
+  production queue restart proof remain owner-run. Gate M remains closed and Task R remains unrun.

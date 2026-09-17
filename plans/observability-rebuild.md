@@ -559,8 +559,10 @@ duplicate ownership already assigned to Phase 3.
 - [ ] 8.5 Add the New Relic Collector profile, production queue/retry persistence, retrieved canaries for every
       provider claimed supported, and an explicit Azure production-support go/no-go gate.
       Config-only implementation and the provider catalogue matrix are complete in `copilot-mro` branch
-      `obs-non-agent`; live provider canaries, provider-specific field-path evidence and file-queue restart
-      proof remain. Azure is marked production `NO-GO` while Microsoft's Collector OTLP path remains Preview.
+      `obs-telemetry-merge`; fresh non-container tests passed profile composition, env documentation,
+      destination-swap/static contracts and metric-cardinality checks. Live provider canaries, provider-specific
+      field-path evidence and file-queue restart proof remain. Azure is marked production `NO-GO` while
+      Microsoft's Collector OTLP path remains Preview.
 - [ ] 8.6 After Phase 1c plus the gated Phase 0 chat cleanup, Phase 1b runtime handoff and required Phase 3 work
       are complete, run the final tenant-isolation, dashboard-profile, runtime-parity, Docker-resource and
       destination-swap acceptance matrix; close only claims backed by runtime evidence.
@@ -892,6 +894,17 @@ acceptance left `deployment-otel-collector-1` and `deployment-tempo-1` running f
 checkout. Tasks 8.2, 8.4 and the configuration-only part of 8.5 may proceed without waiting for runtime work.
 Task 8.3 still requires Gate M and Task R. Phase 8.6 is the final integration gate. Do not implement `otel-lgtm`
 or Kubernetes as part of this continuation.
+
+**2026-09-17 continuation:** Task 8.2 is implemented and refreshed on `obs-telemetry-merge`; the Core
+dashboard-profile resolver/API/static lane, isolated dashboard-profile scratch DB lane, Dashboard mounted/profile
+unit tests, Dashboard typecheck and touched-file lint passed. The configuration-only part of 8.5 is also refreshed:
+metric-cardinality and destination/profile composition tests, the non-container OTel lane, the Task 5
+dashboard/alert/Collector bundle, Copilot MRO `poetry check --lock`, and `bash -n deployment/otel/validate.sh`
+passed. Task 8.6 remains open: the product-event replay scratch DB lane still blocks before assertions on
+`permission denied for table tenants`, the facts-backfill scratch DB lane reproduces the same fixture-grant
+blocker, and no owner-run UI, Grafana/Prometheus/Tempo, Phoenix, Docker, provider-canary or queue-restart proof
+has run. The final GPT-5.6 architecture/code review is still pending. Gate M remains closed and Task R remains
+unrun.
 
 ---
 
