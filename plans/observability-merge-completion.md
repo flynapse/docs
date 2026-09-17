@@ -23,11 +23,11 @@
 
 **Files:** inspect every currently modified or untracked file reported by Git; do not commit `.env.codex-backup-20260916T043907Z` or any credentials.
 
-- [ ] Classify the existing API and Copilot MRO changes into coherent units: Weaviate local-startup policy, agent telemetry/Phoenix content wiring, and Phoenix evaluation tooling.
-- [ ] Verify each unit against the governing plan and existing tests before staging it.
-- [ ] Run focused tests for the API lifecycle, MRO lifecycle, partition boot check, agent telemetry, model gateway, content capture, Collector profiles, and evaluation tooling where present.
-- [ ] Commit only coherent, reviewed units with repository-specific commits. Leave unrelated or unsafe files untouched and record them as pending.
-- [ ] Confirm `core`, `utils`, and `dashboard` remain clean before moving to new feature work.
+- [x] Classify the existing API and Copilot MRO changes into coherent units: Weaviate local-startup policy, agent telemetry/Phoenix content wiring, and Phoenix evaluation tooling.
+- [x] Verify each unit against the governing plan and existing tests before staging it.
+- [x] Run focused tests for the API lifecycle, MRO lifecycle, partition boot check, agent telemetry, model gateway, content capture, Collector profiles, and evaluation tooling where present.
+- [x] Commit only coherent, reviewed units with repository-specific commits. Leave unrelated or unsafe files untouched and record them as pending.
+- [x] Confirm `core`, `utils`, and `dashboard` remain clean before moving to new feature work.
 
 **Acceptance:** the implementation baseline is understandable and reproducible; no secret or backup file is committed; every committed unit has fresh focused test evidence.
 
@@ -103,3 +103,5 @@
 ## Review Notes
 
 Implementation notes, deviations, rulings, test evidence, and final residual risks will be appended here as each task is completed.
+
+- **2026-09-17 — Task 1 complete.** Existing work was split into API and Copilot MRO Weaviate warning-mode commits, a Phoenix content-trace projection commit, and an offline Phoenix evaluation-runner commit. Independent review found and the fix round corrected broad exception swallowing, unbound evaluator result identity, unsafe judge labels, and missing API behavior coverage. Controller verification passed 103 focused startup, partition, lifecycle and evaluation tests. The only remaining scoped working-tree item is the deliberately uncommitted API `.env.codex-backup-20260916T043907Z`; no container, UI or live-provider checks were run.
