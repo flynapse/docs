@@ -628,11 +628,15 @@ with tools 56/56, skills 18/18 and manifest 0, and the runtime divergence regist
 merged. Gate M still remains **closed** because the required owner declaration has not been recorded: no tracked
 doc states that no further batch is expected to touch the conflict zone during Stream L. Task R also remains
 unrun: R.1-R.4 are still unchecked, and no approved post-merge runtime signal catalogue exists. Current owners:
-the migration owner/session lead owns the Gate M declaration; the Task R / Stream L observability owner owns the
-runtime inventory and catalogue; Stream L Phase 3.7 owns the sole online `chat_turn_facts` writer. Current code
-evidence also keeps Phase 3.7 pending: the table definition and Core backfill exist, but the block-save transaction
-does not insert or upsert a facts row. Next decision point: record Gate M explicitly, then dispatch Task R before
-any writer implementation; otherwise keep Task 8.3 and Phase 3.7 blocked.
+the runtime migration owner owns the Gate M declaration; the observability workstream owner owns Task R runtime
+inventory/catalogue execution and approval; the Phase 3.7 writer implementation owner owns the sole online
+`chat_turn_facts` writer. Current code evidence also keeps Phase 3.7 pending: the selected Claude/LangGraph
+runtimes converge before the route persistence boundary through `get_agent_pipeline()`, non-streaming `/rag`
+saves the built chat block synchronously before return, and `/rag/stream` queues `final` before starting a
+timeout-bounded background `save_block` whose failure does not change the client response. A future sole writer
+inside `save_block` can cover both database transactions, but the block-save transaction does not yet insert or
+upsert a facts row. Next decision point: record Gate M explicitly, then dispatch Task R before any writer
+implementation; otherwise keep Task 8.3 and Phase 3.7 blocked.
 
 ## 15. Implementation notes / Learnings (per phase, filled as work lands)
 

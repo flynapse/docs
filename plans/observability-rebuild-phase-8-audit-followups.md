@@ -321,12 +321,18 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   Batch 5 and post-Batch-5 parity blockers: the Copilot MRO S4 ledger records the conversion gates closed and
   the runtime divergence register records R-PAR-2 closed. Gate M is still **not declared** because the owner has
   not recorded the required conflict-zone stability declaration, and Task R has not produced the refreshed
-  runtime inventory or signal catalogue. Phase 8.3 therefore remains blocked. Phase 3.7 remains the only online
-  `chat_turn_facts` writer owner: `chat_turn_facts` DDL and Core's idempotent backfill exist, but the block-save
-  path still has no same-transaction facts upsert. Safe local verification passed the projection/drift-pin/index
-  and dashboard dark-signal static lanes; the live database backfill-idempotency lane could not run in this
-  sandbox because `127.0.0.1:5432` access was blocked. No runtime, schema, dashboard or duplicate writer change
-  was made.
+  runtime inventory or signal catalogue. Phase 8.3 therefore remains blocked. The selected Claude/LangGraph
+  runtimes converge before route persistence through `get_agent_pipeline()`: non-streaming `/rag` saves the
+  chat block synchronously before return, while `/rag/stream` sends `final` before its timeout-bounded background
+  `save_block` and does not change the client response if that save fails. Phase 3.7 remains the only online
+  `chat_turn_facts` writer implementation owner: `chat_turn_facts` DDL and Core's idempotent backfill exist, but
+  the block-save path still has no same-transaction facts upsert. A future sole writer inside `save_block` can
+  cover both database transactions while preserving the current stream response ordering. Safe local verification
+  passed the projection/drift-pin/index and dashboard dark-signal static lanes; the database backfill-idempotency
+  lane has no result because the direct `copilot_mro_test` retry found no database and the isolated Core scratch
+  lane's grant fixture hit `permission denied for table tenants`. This is a scratch-lane/test-harness privilege
+  blocker, not evidence of a backfill logic failure. No runtime, schema, dashboard or duplicate writer change was
+  made.
 - **2026-09-08 — Task 8.1 complete in isolated worktrees.** Dashboard now assigns a UUID and schema version 1
   when a validated event enters its in-memory queue and reuses that envelope for retries. Core accepts both
   the legacy shape and the versioned shape, supplies compatibility values for omitted fields, and performs one
