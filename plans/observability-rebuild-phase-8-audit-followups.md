@@ -231,11 +231,11 @@ Update `iac` only after its existing deployment deferral is lifted.
       and application images must remain unchanged.
 - [x] Add bounded retry, memory queue and file-backed queue support for production profiles. Document disk
       sizing, permissions, overflow behavior and the fact that a Collector queue is not permanent storage.
-- [x] Validate OSS, AWS, Azure and New Relic overlays in CI with secrets absent. Validation must prove the
+- [ ] Validate OSS, AWS, Azure and New Relic overlays in CI with secrets absent. Validation must prove the
       three operational signals route correctly and the optional content lane is not enabled accidentally.
 - [ ] For each production provider, send a uniquely identified trace, metric and log from the same unchanged
       canary producer; retrieve all three from the destination and record the provider query/link evidence.
-- [x] Reverify Azure Monitor's direct Collector ingestion support against current official documentation at
+- [ ] Reverify Azure Monitor's direct Collector ingestion support against current official documentation at
       execution time. If the required path is still preview or lacks an acceptable support commitment, mark
       Azure production support `NO-GO` and document the supported bridge rather than claiming parity.
 - [x] Update the shared dashboard catalogue with provider translations and explicit unsupported panels. Exact
@@ -247,14 +247,15 @@ Update `iac` only after its existing deployment deferral is lifted.
 claimed production-ready has retrieved log/metric/trace canary evidence; production queues survive a Collector
 restart; unsupported provider features are explicit.
 
-**Implementation note — 2026-09-09:** configuration-only work completed in `copilot-mro` branch
-`obs-non-agent`: added `backend-newrelic.yaml`, New Relic env examples, bounded exporter queue/retry defaults,
-production file-backed queue fragments for OSS/AWS/Azure/New Relic, and CI validation for normal, optional
-Phoenix and production queue profiles. Local Collector validation passed for all listed profiles. Azure is
-marked production `NO-GO` because Microsoft documentation still marks the Collector OTLP path Preview and not
-recommended for production workloads. Remaining 8.5 work is live destination canary retrieval for supported
-providers, provider-specific field-path evidence for dashboard queries, and a file-backed queue restart proof
-in a real production-style mount.
+**Implementation note — 2026-09-17:** configuration artifacts were reconciled in `copilot-mro` branch
+`obs-telemetry-merge`: `backend-newrelic.yaml`, `env/newrelic.env.example`, `durability-production.yaml`,
+profile env documentation, `validate.sh` production-durability composition, and the dashboard catalogue status
+note now exist. Non-container tests prove the checked-in profile shape, env documentation, all five operational
+pipelines, processor ordering, New Relic OTLP/HTTP + `api-key` header wiring, bounded retry/queue settings and
+the absence of an implied Phoenix content lane. The pinned Collector validation path still runs through Docker,
+so it was not executed in this task. CI/pinned-Collector validation, owner-run provider trace/metric/log
+retrieval, Azure production support re-check, provider field-path evidence and production-mounted queue restart
+survival remain open. Configuration evidence must not be treated as live provider evidence.
 
 ### Task 8.6 — Cross-phase acceptance and closeout
 
