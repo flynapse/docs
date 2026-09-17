@@ -373,3 +373,12 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   from this run. Live UI, Grafana, Prometheus/Tempo retrieval, Phoenix traces/evaluations, pinned Collector
   Docker validation, single-host Docker runs, provider canaries/field paths, Azure support refresh and
   production queue restart proof remain owner-run. Gate M remains closed and Task R remains unrun.
+- **2026-09-17 — Task 8.6 final review closeout.** The whole-change GPT-5.6 review found no Critical, one
+  Important AWS Query Studio catalogue contradiction, and one non-blocking Minor API degraded-state
+  observation. Copilot MRO commit `4838cfc` normalized the complete AWS catalogue to CloudWatch brace
+  selectors with original dotted OTLP names and widened the static guard. The focused test passed, the full
+  Task 5 static lane passed again (`72 passed, 2 skipped`), and the scoped GPT-5.6 re-review approved the fix
+  with no unresolved Critical or Important issue. The Minor remains future cleanup: warning mode logs the
+  degraded Weaviate state but does not publish the helper's returned flag through health state. The database
+  fixture blockers and every owner-run live check listed above remain pending and must not be represented as
+  validated runtime behavior.

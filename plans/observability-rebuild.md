@@ -900,11 +900,14 @@ dashboard-profile resolver/API/static lane, isolated dashboard-profile scratch D
 unit tests, Dashboard typecheck and touched-file lint passed. The configuration-only part of 8.5 is also refreshed:
 metric-cardinality and destination/profile composition tests, the non-container OTel lane, the Task 5
 dashboard/alert/Collector bundle, Copilot MRO `poetry check --lock`, and `bash -n deployment/otel/validate.sh`
-passed. Task 8.6 remains open: the product-event replay scratch DB lane still blocks before assertions on
+passed. Task 8.6 is complete within the bounded non-container review scope: the product-event replay scratch DB lane still blocks before assertions on
 `permission denied for table tenants`, the facts-backfill scratch DB lane reproduces the same fixture-grant
 blocker, and no owner-run UI, Grafana/Prometheus/Tempo, Phoenix, Docker, provider-canary or queue-restart proof
-has run. The final GPT-5.6 architecture/code review is still pending. Gate M remains closed and Task R remains
-unrun.
+has run. The final GPT-5.6 architecture/code review found one Important AWS Query Studio catalogue
+contradiction; Copilot MRO commit `4838cfc` corrected it, the full static lane passed again (`72 passed,
+2 skipped`), and the scoped GPT-5.6 re-review approved the result with no unresolved Critical or Important
+issue. One non-blocking Minor remains: API warning mode does not expose its degraded result in health state.
+Gate M remains closed and Task R remains unrun.
 
 ---
 
