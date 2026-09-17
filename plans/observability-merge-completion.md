@@ -37,11 +37,11 @@
 
 **Files:** `copilot-mro/deployment/otel/`, its Collector profile tests and documentation, plus the Phase 8 plan and current-state research notes.
 
-- [ ] Add failing profile tests proving New Relic configuration and production durability fragments exist, validate without secrets, route traces/metrics/logs, and do not enable the optional content lane.
-- [ ] Add the missing New Relic overlay and environment example using deployment-supplied endpoint and secret values.
-- [ ] Add bounded retry, memory limiting, file-backed queue/storage, and documented disk/overflow behavior for production profiles without changing application images.
-- [ ] Validate OSS, AWS, Azure, and New Relic profile composition with the repository-native static validation suite.
-- [ ] Correct Phase 8 implementation notes so configuration-only evidence, live provider canaries, and unsupported provider paths are accurately separated.
+- [x] Add failing profile tests proving New Relic configuration and production durability fragments exist, validate without secrets, route traces/metrics/logs, and do not enable the optional content lane.
+- [x] Add the missing New Relic overlay and environment example using deployment-supplied endpoint and secret values.
+- [x] Add bounded retry, memory limiting, file-backed queue/storage, and documented disk/overflow behavior for production profiles without changing application images.
+- [x] Validate OSS, AWS, Azure, and New Relic profile composition with the repository-native non-container static validation suite.
+- [x] Correct Phase 8 implementation notes so configuration-only evidence, live provider canaries, and unsupported provider paths are accurately separated.
 
 **Acceptance:** checked-in files match the plan's configuration claims; static validation passes; live provider retrieval and restart proof remain visibly pending until owner-run credentials and infrastructure are available.
 
@@ -105,3 +105,4 @@
 Implementation notes, deviations, rulings, test evidence, and final residual risks will be appended here as each task is completed.
 
 - **2026-09-17 — Task 1 complete.** Existing work was split into API and Copilot MRO Weaviate warning-mode commits, a Phoenix content-trace projection commit, and an offline Phoenix evaluation-runner commit. Independent review found and the fix round corrected broad exception swallowing, unbound evaluator result identity, unsafe judge labels, and missing API behavior coverage. Controller verification passed 103 focused startup, partition, lifecycle and evaluation tests. The only remaining scoped working-tree item is the deliberately uncommitted API `.env.codex-backup-20260916T043907Z`; no container, UI or live-provider checks were run.
+- **2026-09-17 — Task 2 complete within the no-container boundary.** Added a New Relic OTLP/HTTP profile and backend-specific production durability fragments, enabled safe file-storage directory creation, and added merged-composition tests so one profile cannot inherit incomplete exporters from another. Controller verification passed the full non-container Collector lane: 73 passed and 10 compose/runtime checks skipped. Pinned Collector Docker validation, live provider retrieval, Azure supportability refresh, Prometheus restart durability and production-mounted queue restart proof remain pending owner/CI checks. A transient SDD report is absent from the tracked final tree but remains in an earlier local docs-branch commit; purge it through owner-approved history rewrite or squash integration.
