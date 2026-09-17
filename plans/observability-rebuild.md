@@ -622,6 +622,18 @@ Phase 8 starting state. It finds both runtime adapters present but does **not** 
 the post-Batch-5 fuse/judge parity slice and the owner's explicit stability declaration remain. This is not R.1
 completion; R.1-R.4 remain unchecked and must refresh the runtime inventory after Gate M.
 
+**Task 4 reassessment (2026-09-17, documentation-only):**
+The old Batch 5 and post-Batch-5 parity blockers are stale: the Copilot MRO S4 status now records Phase 5 closed
+with tools 56/56, skills 18/18 and manifest 0, and the runtime divergence register records R-PAR-2 closed and
+merged. Gate M still remains **closed** because the required owner declaration has not been recorded: no tracked
+doc states that no further batch is expected to touch the conflict zone during Stream L. Task R also remains
+unrun: R.1-R.4 are still unchecked, and no approved post-merge runtime signal catalogue exists. Current owners:
+the migration owner/session lead owns the Gate M declaration; the Task R / Stream L observability owner owns the
+runtime inventory and catalogue; Stream L Phase 3.7 owns the sole online `chat_turn_facts` writer. Current code
+evidence also keeps Phase 3.7 pending: the table definition and Core backfill exist, but the block-save transaction
+does not insert or upsert a facts row. Next decision point: record Gate M explicitly, then dispatch Task R before
+any writer implementation; otherwise keep Task 8.3 and Phase 3.7 blocked.
+
 ## 15. Implementation notes / Learnings (per phase, filled as work lands)
 
 The task checkboxes in the original phase sections preserve their planned scope and sequencing. For current

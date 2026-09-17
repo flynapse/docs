@@ -2,7 +2,8 @@
 
 **Status:** Task 8.0 complete as a static, pre-Gate-M audit on 2026-09-08. No application code was changed.
 This is the current-state baseline for Phase 8; it is not the final Task R inventory. Task R must refresh this
-file after the owner declares Gate M.
+file after the owner declares Gate M. The 2026-09-17 Task 4 reassessment below supersedes only the dated
+Gate M and turn-facts blockers; it still does not count as R.1 completion.
 
 ## 1. Audit basis
 
@@ -32,12 +33,13 @@ Evidence labels used below:
    overlays exist; New Relic and production queue persistence do not.
 3. The client dashboard already lives inside the Flynapse settings UI and reads the Core Product Analytics API.
    It has 42 locally registered panels, but it has no server-owned per-client dashboard profile.
-4. Both Agent SDK/Claude and LangGraph runtimes now exist behind one deployment selector. This does not satisfy
-   Gate M: migration Batch 5 and its post-Batch-5 parity slice remain unfinished, and the owner has not declared
-   the conflict zone stable.
-5. Agent/runtime metrics and spans, the online `chat_turn_facts` writer, application-side content capture and
-   the eval-results workbench remain incomplete. Plans and dashboard definitions must not be read as proof that
-   those signals are live.
+4. Both Agent SDK/Claude and LangGraph runtimes now exist behind one deployment selector. The old Batch 5 and
+   post-Batch-5 parity blockers have current completion evidence, but this still does not satisfy Gate M because
+   no tracked owner declaration says the conflict zone is stable for Stream L.
+5. Agent/runtime model-usage telemetry is now wired at the shared pipeline boundary, but Task R has not refreshed
+   the runtime inventory or approved a post-merge signal catalogue. The online `chat_turn_facts` writer,
+   application-side content capture and the eval-results workbench remain incomplete. Plans and dashboard
+   definitions must not be read as proof that those signals are live.
 
 ## 3. File-level current state
 
@@ -68,9 +70,9 @@ Evidence labels used below:
 | Area | Observed now | Remaining work |
 |---|---|---|
 | Runtime selection | `copilot-mro/copilot_mro/app/services/agent_pipeline.py:1-16,454-466` composes either `claude` or `lang` once per deployment. `config.py:1061-1069` exposes `AGENT_RUNTIME` and the LangGraph provider profile. | The LangGraph composition is still described as development/evaluation. Runtime availability is not the same as migration completion or production parity. |
-| Gate M | `copilot-mro/docs/plans/s4-batch-5-amos-synthesis.md:1-7` says Batch 5 is not started. `runtime-divergence-register.md:167-170` assigns a fuse/judge parity slice after Batch 5. | **Gate M is not declared.** The remaining dependency is Batch 5, its post-Batch-5 parity slice, and the owner's explicit statement that no further work will touch the conflict zone during Stream L. Task 8.3 stays blocked; Phase 1c, Tasks 8.1, 8.2, 8.4 and configuration-only 8.5 do not. |
-| Runtime telemetry | `agent_shared/telemetry.py:18-131` defines content-free turn, model, tool and subagent instruments. Repository use is limited to that class and its unit tests. | It is not wired into either production runtime. Its current metric names/units also need reconciliation against the approved catalogue before use; presence of the class does not light the dashboards. |
-| Durable turn facts | `postgres_table_definitions_modules/chat_turn_facts.py:1-24,43-78,107-148` defines the tenant-scoped projection. `core/scripts/backfill_chat_turn_facts.py:1-19,287-300` is the idempotent current writer. `chat_history/blocks.py:515-631` saves blocks and chat rollups without inserting a facts row. | The online same-transaction writer is absent. Phase 3.7 remains its sole owner after Gate M + Task R; Phase 8 must not add a second projection path. |
+| Gate M | `copilot-mro/docs/plans/s4-capability-batches.md:68,193-195` records the conversion program through Phase 5 with tools 56/56, skills 18/18 and an empty manifest. `copilot-mro/docs/plans/runtime-divergence-register.md:222` records the post-Batch-5 lang fuse/judge slice as closed and merged. | **Gate M is still not declared.** The old Batch 5 and parity-slice blockers are stale, but the governing master plan requires an owner declaration that no further batch is expected to touch the conflict zone during Stream L. No such declaration was found in the tracked docs. Owner: migration owner/session lead. Next decision point: record Gate M explicitly, or record that the gate remains intentionally closed. |
+| Runtime telemetry | `agent_pipeline.py:33-44` builds a backend-neutral `RuntimeTelemetry` facade; `agent_pipeline.py:174-178` adds it to the Claude lifecycle usage sinks, and `agent_pipeline.py:433-436` adds it to the LangGraph model usage sinks. | This is wiring evidence, not Task R approval. R.1 still must refresh the runtime call-site inventory, and R.2 still must approve the exact span/metric catalogue and cardinality bounds before Phase 3 production wiring or dashboard-lighting claims. Owner: Task R / Stream L observability owner. |
+| Durable turn facts | `postgres_table_definitions_modules/chat_turn_facts.py:15-24,43-78,107-148` defines the tenant-scoped projection and states "No writer yet". `core/scripts/backfill_chat_turn_facts.py:1-19,287-318` is the idempotent current writer. `chat_history/blocks.py:24-32,515-631` saves blocks and chat rollups without inserting a facts row. | The online same-transaction writer is absent. Phase 3.7 remains its sole owner after Gate M + Task R; Phase 8 must not add a second projection path. Owner: Stream L Phase 3.7. |
 | Content capture and Phoenix | `base.yaml:63-73,191-204` strips content from ordinary telemetry and reserves marked copies. `content-phoenix.yaml:1-41` defines the optional content-only routing fragment and tenant project mapping. | No production app path currently emits the `flynapse.content_copy` marker or writes the planned `llm_turn_content` record. Therefore “off by default” is enforced, but config-enabled capture is still planned under Phase 3.5/3.6. |
 | Eval workbench | A pinned Phoenix service/fragment and smoke infrastructure exist. | No `eval_results` table or completed harness/report flow was found. Phase 7.2-7.6 remain planned; Task 8.4 only makes Phoenix packaging optional. |
 
@@ -80,7 +82,7 @@ Evidence labels used below:
 |---|---|---|
 | 8.1 Product-event reliability | Existing end-to-end event route and tenant key confirmed; identity/version/deduplication absent. | May start. |
 | 8.2 Per-client Flynapse UI profile | Core panel authorization and 42-panel Flynapse UI registry confirmed; server profile absent. | May start. |
-| 8.3 Runtime/facts completion | Two runtime adapters exist; telemetry is unwired and the online facts writer is absent. | Blocked on Gate M + Task R. |
+| 8.3 Runtime/facts completion | Two runtime adapters exist; model-usage telemetry is now wired through the pipeline boundary, but the online facts writer is absent and Task R has not refreshed the runtime inventory/catalogue. | Blocked on explicit Gate M declaration + Task R. |
 | 8.4 Optional Phoenix | Standalone observability compose is Phoenix-free; root and POC compose files hard-wire Phoenix. | May start. |
 | 8.5 Destination readiness | OSS/AWS/Azure/New Relic overlays and profile-specific production durability fragments exist as checked-in configuration. Non-container profile tests pass on 2026-09-17. | Pinned Docker validation, live provider canary retrieval, Azure supportability refresh, provider field-path evidence and production queue restart proof remain pending; live claims require credentials and owner go-ahead. |
 | 8.6 Acceptance | Earlier local browser/OSS evidence is historical, not a substitute for the final matrix. | Last, after 8.1-8.5, Phase 1c and all required Stream L work: gated Phase 0 chat cleanup, Phase 1b runtime handoff and Phase 3. |
@@ -107,3 +109,18 @@ they are not a reliable current-status ledger. The dated ledger in master §15 a
 This document answers Task 8.0's question—whether Gate M can be declared—with **no**. It must not be treated as
 R.1 completion. After the owner declares Gate M, R.1 must update the branch/HEAD baseline and re-enumerate all
 runtime call sites; R.2 must then approve the exact span/metric catalogue before any Phase 3 production wiring.
+
+## 7. Task 4 reassessment - 2026-09-17
+
+Task 4 rechecked the merged `obs-telemetry-merge` state without changing runtime code. Current evidence retires
+the old "Batch 5 not started" and "post-Batch-5 parity slice pending" blockers, but it does not open Gate M:
+
+| Requirement | Current evidence | Status / owner |
+|---|---|---|
+| Gate M owner declaration | Conversion status is current in `s4-capability-batches.md`; R-PAR-2 is closed in `runtime-divergence-register.md`. No tracked owner declaration says the conflict zone is stable for Stream L. | **Closed** until the migration owner/session lead records Gate M explicitly. |
+| Task R.1 / R.2 | This file is still a Task 8.0 baseline. No post-Gate-M inventory or approved signal catalogue has been written here. | **Pending**, owner: Task R / Stream L observability owner. |
+| Phase 3.7 online writer | `chat_turn_facts` DDL and Core backfill exist, but `chat_history/blocks.py` has no same-transaction facts upsert. | **Pending**, owner: Stream L Phase 3.7. |
+| Backfill/version/idempotency contract | Unit projection and drift-pin tests pass with `FACTS_VERSION = 1`; the database idempotency lane could not run in this sandbox because local Postgres access to `127.0.0.1:5432` was blocked. | **Static contract verified; DB proof owner/CI-run.** |
+
+Next decision point: the owner either records Gate M and dispatches Task R before any writer implementation, or
+keeps Gate M closed with the same owners named above. No duplicate writer is authorized by this reassessment.

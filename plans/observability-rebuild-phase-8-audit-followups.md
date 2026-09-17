@@ -317,6 +317,16 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   Phoenix packaging and configuration-only provider work may proceed. The audit also corrected one wording
   error: Collector-side content suppression exists, while application-side configurable capture remains
   planned under Phase 3.5/3.6. No application code or runtime state changed.
+- **2026-09-17 — Task 4 turn-facts gate reassessment (documentation-only).** Current evidence retires the stale
+  Batch 5 and post-Batch-5 parity blockers: the Copilot MRO S4 ledger records the conversion gates closed and
+  the runtime divergence register records R-PAR-2 closed. Gate M is still **not declared** because the owner has
+  not recorded the required conflict-zone stability declaration, and Task R has not produced the refreshed
+  runtime inventory or signal catalogue. Phase 8.3 therefore remains blocked. Phase 3.7 remains the only online
+  `chat_turn_facts` writer owner: `chat_turn_facts` DDL and Core's idempotent backfill exist, but the block-save
+  path still has no same-transaction facts upsert. Safe local verification passed the projection/drift-pin/index
+  and dashboard dark-signal static lanes; the live database backfill-idempotency lane could not run in this
+  sandbox because `127.0.0.1:5432` access was blocked. No runtime, schema, dashboard or duplicate writer change
+  was made.
 - **2026-09-08 — Task 8.1 complete in isolated worktrees.** Dashboard now assigns a UUID and schema version 1
   when a validated event enters its in-memory queue and reuses that envelope for retries. Core accepts both
   the legacy shape and the versioned shape, supplies compatibility values for omitted fields, and performs one
