@@ -248,14 +248,16 @@ claimed production-ready has retrieved log/metric/trace canary evidence; product
 restart; unsupported provider features are explicit.
 
 **Implementation note — 2026-09-17:** configuration artifacts were reconciled in `copilot-mro` branch
-`obs-telemetry-merge`: `backend-newrelic.yaml`, `env/newrelic.env.example`, `durability-production.yaml`,
-profile env documentation, `validate.sh` production-durability composition, and the dashboard catalogue status
-note now exist. Non-container tests prove the checked-in profile shape, env documentation, all five operational
-pipelines, processor ordering, New Relic OTLP/HTTP + `api-key` header wiring, bounded retry/queue settings and
-the absence of an implied Phoenix content lane. The pinned Collector validation path still runs through Docker,
-so it was not executed in this task. CI/pinned-Collector validation, owner-run provider trace/metric/log
-retrieval, Azure production support re-check, provider field-path evidence and production-mounted queue restart
-survival remain open. Configuration evidence must not be treated as live provider evidence.
+`obs-telemetry-merge`: `backend-newrelic.yaml`, `env/newrelic.env.example`,
+`durability-production-{oss,aws,azure,newrelic}.yaml`, profile env documentation, `validate.sh`
+production-durability composition, and the dashboard catalogue status note now exist. Non-container tests prove
+the checked-in profile shape, env documentation, all five operational pipelines, processor ordering, New Relic
+OTLP/HTTP + `api-key` header wiring, backend-specific bounded retry/queue settings, file-storage directory
+creation for fresh local defaults, and the absence of an implied Phoenix content lane. The pinned Collector
+validation path still runs through Docker, so it was not executed in this task. CI/pinned-Collector validation,
+owner-run provider trace/metric/log retrieval, Azure production support re-check, provider field-path evidence
+and production-mounted queue restart survival remain open. Configuration evidence must not be treated as live
+provider evidence.
 
 ### Task 8.6 — Cross-phase acceptance and closeout
 
