@@ -51,13 +51,13 @@
 
 **Files:** Core analytics profile, endpoint, registry, schema, table definitions, migrations and tests; dashboard analytics API client, panel registry, page, and tests listed by Phase 8 Task 8.2.
 
-- [ ] Write Core resolver tests for configured-versus-supported panels, feature gates, role/capability intersection, fail-closed unknown panels, sensitive-panel control, and deterministic ordering.
-- [ ] Write database tests for tenant isolation and the safe default profile.
-- [ ] Implement one server-owned, versioned dashboard profile per tenant and an authenticated endpoint that derives tenant identity from trusted request context.
-- [ ] Preserve authorization on every existing panel endpoint; the profile controls presentation only.
-- [ ] Write dashboard tests for POC-safe, restricted-client, tenant-owner, and capability-holder views using one frontend build.
-- [ ] Update the Flynapse UI to render the server-returned effective tabs and panels without exposing destinations, credentials, vendor queries, or external observability links.
-- [ ] Run focused Core analytics/database/API tests and dashboard unit/type checks.
+- [x] Write Core resolver tests for configured-versus-supported panels, feature gates, role/capability intersection, fail-closed unknown panels, sensitive-panel control, and deterministic ordering.
+- [x] Write database tests for tenant isolation and the safe default profile.
+- [x] Implement one server-owned, versioned dashboard profile per tenant and an authenticated endpoint that derives tenant identity from trusted request context.
+- [x] Preserve authorization on every existing panel endpoint; the profile controls presentation only.
+- [x] Write dashboard tests for POC-safe, restricted-client, tenant-owner, and capability-holder views using one frontend build.
+- [x] Update the Flynapse UI to render the server-returned effective tabs and panels without exposing destinations, credentials, vendor queries, or external observability links.
+- [x] Run focused Core analytics/database/API tests and dashboard unit/type checks.
 
 **Acceptance:** changing a tenant profile changes the next Flynapse UI dashboard response without rebuilding the frontend; unsupported and unauthorized panels fail closed; direct panel APIs remain protected.
 
@@ -106,3 +106,4 @@ Implementation notes, deviations, rulings, test evidence, and final residual ris
 
 - **2026-09-17 — Task 1 complete.** Existing work was split into API and Copilot MRO Weaviate warning-mode commits, a Phoenix content-trace projection commit, and an offline Phoenix evaluation-runner commit. Independent review found and the fix round corrected broad exception swallowing, unbound evaluator result identity, unsafe judge labels, and missing API behavior coverage. Controller verification passed 103 focused startup, partition, lifecycle and evaluation tests. The only remaining scoped working-tree item is the deliberately uncommitted API `.env.codex-backup-20260916T043907Z`; no container, UI or live-provider checks were run.
 - **2026-09-17 — Task 2 complete within the no-container boundary.** Added a New Relic OTLP/HTTP profile and backend-specific production durability fragments, enabled safe file-storage directory creation, and added merged-composition tests so one profile cannot inherit incomplete exporters from another. Controller verification passed the full non-container Collector lane: 73 passed and 10 compose/runtime checks skipped. Pinned Collector Docker validation, live provider retrieval, Azure supportability refresh, Prometheus restart durability and production-mounted queue restart proof remain pending owner/CI checks. A transient SDD report is absent from the tracked final tree but remains in an earlier local docs-branch commit; purge it through owner-approved history rewrite or squash integration.
+- **2026-09-17 — Task 3 complete within the no-UI boundary.** Added a tenant-RLS `dashboard_profiles` relation, trusted-context `GET /analytics/dashboard-profile`, and deterministic server-side intersection of configured, supported, feature-enabled and authorized panels. The Flynapse UI now renders only the returned profile, fails closed on missing/error/unknown state, and keys profiles, filters and panel caches to the resolved tenant so stale cross-tenant responses cannot render. The profiled page no longer mounts the separate LLM-turn summary card outside the allow-list; its component remains available elsewhere. Independent review required two fix rounds and then approved all findings. Controller verification passed 138 focused Core unit/API checks, the isolated three-test two-tenant database lane, 26 Dashboard profile/page tests, TypeScript checking and touched-file lint. Browser rendering remains an owner-run Task 6 check.
