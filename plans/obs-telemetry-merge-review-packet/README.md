@@ -19,6 +19,8 @@ discovery the Opus reviewers already paid for.
 | `claims-C1-utils-B1-core.md` | utils `289ba71..e6b464e`, core `8b7dfad..d7f7b54` | 36 |
 | `claims-D-copilot-mro-app.md` | copilot-mro application half, `e26be7dd..6dc3160e` | 45 |
 | `claims-E-deployment-and-iac.md` | copilot-mro deployment `6dc3160e..ea0ac559` + iac `f35ec20..3068b47` | 39 |
+| `claims-C2-api.md` | api `4da716f..9812f44` — the gateway merge, 8 commits | 35 |
+| `claims-phase6-dashboards.md` | Phase 6 — Grafana boards, Prometheus/Loki rules, runbooks, `iac` boards + `alarms.tf` | 48 |
 
 ## How to read a row
 
@@ -36,9 +38,9 @@ source document named a guard that does not resolve in the tree — read those f
 
 ## Totals, and the result worth knowing
 
-186 claims. **41 SETTLED · 60 ASSERTED · 85 OPEN.** 83 tier 2, 103 tier 1, **0 tier 0.**
+269 claims. **64 SETTLED · 85 ASSERTED · 120 OPEN.** **0 tier 0.**
 
-Tier 0 is empty in all four files, independently. Work mechanical enough to qualify is work nobody
+Tier 0 is empty in all six files, independently. Work mechanical enough to qualify is work nobody
 records a decision about, so it never becomes a claim; everything that *is* a claim embodies a
 decision, which puts it at tier 1 or 2. So the cost saving does not come from tier 0 excluding most
 of the corpus — it comes from a SETTLED claim being adjudicable from one row.

@@ -1180,7 +1180,7 @@ readiness test reached Postgres, S3 and Weaviate **for real** when run in the sa
 the module through the route and asserts the fake probe's service-key set, so it cannot pass against
 a live AWS session again.
 
-**18 mutation proofs**, each restored from a scratchpad copy rather than by `git checkout --`.
+**24 mutation labels across 23 runs** (M1–M5, W1–W7, G1–G5, H1–H3, F1/F2/F3b, P1; G2+G3 were applied as one run, and the series carries an `F3b` with no `F3`), each restored from a scratchpad copy rather than by `git checkout --`. The figure of 18 previously on this line did not reconcile with any grouping of the commit bodies; corrected 2026-09-20 from the C2 claims table, which also downgraded two of the 24 to ASSERTED (M1 names a count, not which tests; and no mutation reverted `main.py:520` itself).
 
 #### Silent-merge register (§2.2a), api
 
@@ -1194,8 +1194,10 @@ swept it**, the repo's only `failure_fields` site being `main.py`, so their `err
 sweep lists. `startup/__init__.py` — adds a bare top-level module name `startup`; checked for
 collision, none. `test_startup_boot_check.py` — OUR guard, edited by them alone.
 `test_weaviate_partition_startup_mode.py` — asserts an exact log tuple containing `error_type`, which
-would have **locked in** the R22 regression. `test_logging_context_middleware.py` — kept, with the
-assertion it lacked added.
+would have **locked in** the R22 regression. `test_logging_context_middleware.py` — not merely kept: their
+`test_exception_logging_preserves_errors_with_mapping_text` was REMOVED and replaced with three cases over a
+captured-record fixture. The substance holds; the earlier wording "kept, with the assertion it lacked
+added" understated the change (corrected 2026-09-20 from the C2 claims table).
 
 #### Corrections to the plan from this phase
 
