@@ -866,6 +866,38 @@ site intact, and independently pinned by a silent merge of THEIR test asserting 
 silent merge; and the two tests this phase relaxed, both of which pin the property more tightly
 than the shape they replaced.
 
+### Review round 2 and the theirs-only audit, 2026-09-20
+
+The reviewer returned a correction pass. Both new points confirmed by reproduction.
+
+- **A teardown ERROR I introduced.** D.7 added `get_runtime_telemetry` as the composition-root
+  fixture's third cache to clear; one of their tests monkeypatches that symbol with a bare lambda,
+  so teardown called `.cache_clear()` on a lambda. The test BODY passed and the file errored — and
+  D.1's stated acceptance is "their composition-root test passes". Fixed asymmetrically: SETUP
+  asserts each of the three still has a `cache_clear` (that is the regression worth catching, and it
+  runs before any patch), TEARDOWN tolerates its absence, because a stub having no cache is correct.
+  This is also the "1 error" that appeared in a lang_agent lane early in the phase and was not chased.
+- **A correction to `b112f860`'s own record.** It says the reviewer's probe read green "against the
+  copy while the real path already caught it". Wrong, and the distinction matters: their probe
+  called the PATH-based function, and those cases were genuinely green there —
+  `_is_mutated_after_its_literal` is what closed them, not merging the two bodies. The
+  duplicate-body finding stands; the attribution did not.
+- **The guard's last hole** (`query_type=message`) is closed. Putting `message` in the general
+  content list flags `message.subtype` and `getattr(message, "session_id", None)` — facts ABOUT the
+  turn — so it went into a BARE-ONLY class, compared against a bare `ast.Name` and never walked over
+  an expression. `_log_detail` joined `failure_fields` as a recognised sanitiser.
+
+**The theirs-only audit, which is the method gap that let flightops through.** The §2.2a register was
+built from files BOTH sides changed, on the reasoning that collisions are where decisions get lost.
+A THEIRS-ONLY edit to a file whose guard is ours merges just as silently, and there are far more of
+them: 65 theirs-only production files here against 22 in the intersection. Four carried a
+lost-sanitiser or narrowed-field signature; the fourth was `amos_synthesis_core._error`, D.11's own
+defect in a sibling file (`bb7cbe35`).
+
+**D.11's wording was a description, not an inventory.** "The synthesis and db-query logs" — I fixed
+three files and there were four. A plan item that names a CLASS of site needs the class enumerated
+before it is ticked, not the examples it happens to mention.
+
 ### Deferred from Phase D, 2026-09-20
 
 - **`record_subagent` has no production call site anywhere.** `RuntimeTelemetry.record_subagent` and its
@@ -1076,16 +1108,33 @@ inspected. It now resolves a splat three ways, including one hop through a param
 Per-directory lanes over both trees, set-differenced on failing IDs (§2.4). Final state after the
 phase's fixes:
 
+**CORRECTED 2026-09-20.** The first reading of this table said 2 new ids. It was taken while
+`tests/unit` — the largest directory, 22 minutes — was still running on BOTH trees, and the number
+was reported before the lane that produced it had finished. The completed count is **20**.
+
 | | |
 |---|---|
-| pre-merge failing ids | 20 |
-| merged failing ids | 19 |
-| **new on the merged tree** | **2**, both Phase E work — `test_panel_datasources_are_allowed_and_declared` (E.0a) and `test_dark_panel_notes_are_present` (E.0d) |
+| pre-merge failing ids | 32 |
+| merged failing ids | 41 |
+| **new on the merged tree** | **20** |
 
-Two more appeared in the first reading and were fixed inside the phase (`e3e31e14`): the tenancy
-route sweep did not list the 12th router their merge mounts, and D.11's `reason` -> `reason_code`
-rename reached an assertion in a file named for stream persistence rather than block saves. Both
-were invisible to every targeted run this phase made, which is the whole argument for the gate.
+Of the 20: **4 were real defects**, all fixed in-phase; 2 are Phase E work (E.0a, E.0d); 2 are the
+owner-blocked branch-hygiene guard; 1 is an ERROR id the FAILED-only filter never counted; and the
+remaining ~10 pass standalone and fail only in the full `unit` lane — import pollution, reproducible
+in 19 s by COLLECTING `tests/unit` and running only the affected tests, which proves it is
+import-time. Bisect in progress at close; it is not a merge defect in those files, and per-directory
+runs are all green.
+
+The four real ones, none visible to any targeted run this phase made:
+- the tenancy route sweep did not list the 12th router their merge mounts (`e3e31e14`);
+- D.11's `reason` -> `reason_code` rename reached an assertion in a file named for stream
+  persistence rather than block saves (`e3e31e14`);
+- `_error_kinds` passed a whole error entry through when it carried no colon (`e09f7ac0`);
+- flightops lost `_log_detail` at three sites (`e09f7ac0`).
+
+**Two lane rules, both learned by getting it wrong here:** never read a set difference before every
+directory has finished on both trees, and filter for `^ERROR <path>::` as well as `^FAILED` — an
+ERROR id is a failing id, and a loguru `ERROR` log line is not.
 
 **A lane rule learned the hard way: never run two per-directory lanes concurrently against the
 same test database.** Both lanes hit `copilot_mro_test`, and the DB-backed directories reported 34
@@ -1152,6 +1201,21 @@ largely is not: the item was specified when nothing was instrumented, and our ow
 calls it would have caught, so installing it would double-count exactly as the spec's botocore ban predicts.
 **Rule: before reporting an unimplemented plan item as owed, check whether later work made it redundant. "No
 one built it" is not the same as "it is still needed."**
+
+**Audit what only ONE side changed, too (2026-09-20).** §2.2a's silent-merge register was built
+from the intersection — files both sides touched — because that is where decisions collide. But a
+theirs-only edit to a file whose guard is ours merges with no conflict and no marker either, and
+there are three times as many of them. `flightops_brief.py` lost `_log_detail` at three sites that
+way, and our own test had predicted that exact regression in its docstring. **Rule: the register
+covers every file the incoming branch changed, partitioned into "both sides" and "theirs only" —
+the second set is audited for what OUR guards and OUR sanitisers expect of it, not for collisions.**
+
+**Never read a set difference before the lane finishes (2026-09-20).** I reported the D.13 gate at
+2 new ids while `tests/unit` — 22 minutes, the largest directory — was still running on both trees.
+The real number was 20, and three were real defects. The same reading also filtered `^FAILED` only,
+so an ERROR id went uncounted, while `^ERROR` on its own matched loguru log lines and produced a
+contention story that was half wrong. **Rule: wait for the sentinel the script writes, count
+`^FAILED` and `^ERROR <path>::` together, and never quote a gate from a partial file.**
 
 **A guard with two bodies is a guard with none (2026-09-20).** The ordinary-log privacy guard
 had a file-walking implementation and a tree-walking copy, and the file's own self-tests called
