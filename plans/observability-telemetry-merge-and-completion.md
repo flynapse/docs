@@ -614,7 +614,7 @@ resolved; the merge commit records them and E fixes them.
       The online writer (G.5) becomes the sole populator; `core/scripts/backfill_chat_turn_facts.py` stays
       available for a one-off reconciliation but is scheduled nowhere. Panels reading facts show data from the
       writer's landing forward, not historically.
-- [~] G.10 **SPAN HALF DONE 2026-09-20 (`utils-obsm 431aefc` + an uncommitted 299/48 diff); the DIMENSIONS
+- [ ] G.10 **NOT CLOSABLE ON THIS WORK — see G.28. The `utils` class half is done and guarded (`utils-obsm 21fc319`), but the door C1.6 actually named is untouched.** 2026-09-20 (`utils-obsm 431aefc` + an uncommitted 299/48 diff); the DIMENSIONS
       half is NOT fully closed and two residuals are now G.23.** The span work lives in `utils`, not
       copilot-mro — a correction from the G-APP pass. **Nineteen untraced doors, not six**: one shared factory
       `_weaviate_span` (`weaviate_service.py:71`, name `f"weaviate.{operation}"` at `:108`) now covers **20
@@ -793,6 +793,24 @@ resolved; the merge commit records them and E fixes them.
       object never consulted. **The hook simply never fired.** Fixed at the root (restore, don't pop), found
       only because a new file sorted last in its directory. **Invisible to the sanctioned per-directory lane:**
       each directory was green alone and the combined run failed. Worth a sweep for the same shape elsewhere.
+
+- [ ] G.28 **G.10's real door: ~26 production call sites bypass `class Weaviate` entirely — and it is the door
+      C1.6 NAMED.** The G.10 reviewer's headline finding, triaged by the implementer, which then recommended
+      **not** ticking G.10 on its own work. **Verified by the controller:**
+      `copilot-mro-obsm/copilot_mro/app/services/weaviate_tenancy.py` exposes `collection_handle` (`:418`),
+      `collections_for` (`:431`) and `weaviate_connection` (`:565`), and **26 call sites across eleven modules
+      reach Weaviate through them** — the whole llama_index RAG retrieval path, document-hub indexing, the
+      memory index, the AMOS retrieval tool, the workout gate, tenant and operator partitions, and the boot
+      check. **C1.6's own wording says the spec put the wrapper on `weaviate_connection()` deliberately.**
+      The G.10 pass instrumented a different object, in a different repo, and **its guard structurally cannot
+      see these sites** — it parses one `ClassDef` in one file.
+      **And the board impact is far smaller than first reported: 16 of the 20 traced methods have ZERO
+      production callers** (health_check 14, get_object_by_id 1, hybrid_search 1, bm25_search 1; the rest
+      none). So the dependency board went from **~2 live shapes to ~4, not 1 to 20** — the implementer
+      corrected its own overstatement, and I had relayed the wrong figure.
+      **This is a copilot-mro slice, not a utils one.** It needs an owner decision on shape before it is
+      built: wrap the three tenancy functions, or instrument at each of the 26 sites, or push callers onto
+      the traced class.
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
