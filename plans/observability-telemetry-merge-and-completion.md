@@ -357,7 +357,7 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
 - [ ] C2.5 M-LOCK: take our lock. Gate the merge on an actual `import flynapse_api.main`.
 
 ### Phase D — copilot-mro, application half
-- [ ] D.1 Resolve the six app-code conflicts. Base of record is **ours** for chat management, user feedback,
+- [x] **D.1 DONE.** Resolve the six app-code conflicts. Base of record is **ours** for chat management, user feedback,
       agent pipeline, improvement scheduler and the lang backend; **theirs** for the shared pipeline, with our
       one log call restored; **both** blocks kept in the lifecycle test.
       **"Ours as base" never means "drop theirs."** In `agent_pipeline.py` their entire 59-line delta *is* the
@@ -370,26 +370,26 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
       Acceptance: `get_runtime_telemetry` survives in `agent_pipeline.py` and their composition-root test passes.
       Guard the scheduler resolution so `STOP_UNWIND_SECONDS` is not dropped — it exists only on our side and
       `api/flynapse_api/shutdown_budget.py` imports it, so a "take theirs" resolution breaks the api repo.
-- [ ] D.2 Re-apply the user-content fixes their conflicts discard (both prompt-logging sites, filename, S3 key).
-- [ ] D.3 Repair the shutdown-drain handler the clean auto-merge breaks — their side deletes the traceback
+- [x] **D.2 DONE** (bigger than written — the harness join was silently blind, 44 tests). Re-apply the user-content fixes their conflicts discard (both prompt-logging sites, filename, S3 key).
+- [x] **D.3 DONE**, plus a second merge-invented defect the item did not predict: the drain also landed OUTSIDE the shutdown span. Repair the shutdown-drain handler the clean auto-merge breaks — their side deletes the traceback
       import, ours calls it. Gate on a pyflakes run.
-- [ ] D.4 Apply M-CAPTURE and M-TOOLIO to `config.py` and the policy reader.
-- [ ] D.5 Hoist the tenant policy read above the snapshot build, so an opted-out tenant's prompt is never
+- [x] **D.4 DONE.** M-CAPTURE was FALSE on the merged tree; M-TOOLIO-2's retirement is accepted, so only M-CAPTURE applied. Apply M-CAPTURE and M-TOOLIO to `config.py` and the policy reader.
+- [x] **D.5 DONE**, hoisted above the ACCUMULATOR rather than the snapshot — an opted-out tenant now accumulates nothing all turn. Hoist the tenant policy read above the snapshot build, so an opted-out tenant's prompt is never
       materialised and redacted in memory just to be discarded.
-- [ ] D.6 Move capture off the request critical path — a shielded task with a bound, as the block save does.
-- [ ] D.7 Fix the nine depth-coupled test paths; clear the new cache in the composition-root fixture; drop the
+- [x] **D.6 DONE.** Move capture off the request critical path — a shielded task with a bound, as the block save does.
+- [~] **D.7 PARTLY DONE** — paths fixed (6 files), cache cleared; the SHA-pinned guard's DELETION is blocked and owner-owed (see the phase notes). Fix the nine depth-coupled test paths; clear the new cache in the composition-root fixture; drop the
       SHA-pinned branch-hygiene guard, which pins a branch that does not exist here and re-activates after the
       merge.
-- [ ] D.8 Fix our own three raw-exception log sites in the lang browser transport, which their privacy guard
+- [x] **D.8 DONE** — four sites, not three, and their guard was made honest enough to be ours. Fix our own three raw-exception log sites in the lang browser transport, which their privacy guard
       correctly flags; then their guard should run clean and becomes ours.
-- [ ] D.9 Their read API: correct the docstring, confirm the RBAC intent, and either wire the dashboard card to
+- [~] **D.9 DEFERRED by its own terms** — the wire-or-hold decision belongs with the consumer, which is Phase B2. Their read API: correct the docstring, confirm the RBAC intent, and either wire the dashboard card to
       it or hold it — no speculative backend ahead of a consumer.
-- [ ] D.10 Invert the permissive default in the read DAO's scope clause.
-- [ ] D.11 Restore the bounded failure reason in the synthesis and db-query logs their sweep over-corrected —
+- [x] **D.10 DONE**, mutation-proven. Invert the permissive default in the read DAO's scope clause.
+- [x] **D.11 DONE** — restored content-FREE (type + frames), because the message it over-corrected really could quote the question. Restore the bounded failure reason in the synthesis and db-query logs their sweep over-corrected —
       the code name alone cannot say why nine turns failed.
-- [ ] D.12 Gate the legacy root-span suppression on a genuinely configured provider; as written it is always on
+- [x] **D.12 DONE**, confirmed open by code-read first. Gate the legacy root-span suppression on a genuinely configured provider; as written it is always on
       and the legacy span disappears regardless of whether OTel is up.
-- [ ] D.13 Relock (resolve `pyproject.toml` to the union, then lock — never hand-merge). Run the app lane.
+- [x] **D.13 DONE.** Relock (resolve `pyproject.toml` to the union, then lock — never hand-merge). Run the app lane.
 
 ### Phase E — copilot-mro, deployment half
 - [ ] E.1 Reject-list first (M-ACCEPT, M-PINS), so nothing downstream depends on it.
@@ -417,6 +417,55 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
       container* run and could not fail.) Then the
       container lanes and both validate scripts — the only thing that has ever proved the New Relic overlay and
       the four durability compositions actually load. Neither side has run it.
+
+#### Phase E — what Phase D hands it, 2026-09-20
+
+Everything below is already IN the merged tree and wrong. None of it conflicted, so none of it was
+resolved; the merge commit records them and E fixes them.
+
+- [ ] **E.0a M-GRAFANA, `datasources.yml`.** Auto-merged to theirs: the `flynapse-postgres` entry is
+      GONE and `deleteDatasources: [{name: Flynapse Postgres, orgId: 1}]` is PRESENT. Restore the
+      entry, drop the deletion block. Until this lands, our `fn-frontend` panels 7 and 8 and both
+      exact-spend panels point at a uid that does not exist.
+- [ ] **E.0b M-GRAFANA + M-TOKENUSAGE, `llm-agents.json`.** Auto-merged to theirs: both exact-spend
+      panels deleted, and five token queries rewritten `gen_ai_client_token_usage_sum` → `_total`.
+      The emitter is a Histogram as of Phase D, so `_total` now matches nothing at all. Also fix
+      "Tool attempts and failures": its B target queries `tool_outcome="error"` on BOTH sides'
+      history and the merged emitter emits `"failure"` (`telemetry.py`), so that panel has never
+      matched a series. Their catalogue inventory has this right; the board does not.
+- [ ] **E.0c M-GRAFANA, `oss-profile.md`.** Auto-merged to theirs, losing three things: the
+      `POSTGRES_READONLY_PASSWORD` rotation row (the credential the kept datasource logs in with),
+      the pointer to the `fn-llm-agents` exact-spend panels, and the sentence saying the datasource
+      is EXPECTEDLY unhealthy in the standalone observe stack — without which the first person to
+      run the smoke files a false bug. Their two true clauses (the agent spans land with this merge)
+      are worth keeping. §2.2a guessed this file would lose the exact-spend SECTION; it did not.
+- [ ] **E.0d The dark-note vocabulary is RED right now.** `llm-agents.json` silently took their
+      `"STATIC-MAPPED, live retrieval pending:"` descriptions, so our
+      `test_dark_panel_notes_are_present` — which demands `DARK until ` or a dated `LIVE since …` on
+      every `gen_ai[._]`/`agent_` panel — fails on the merged tree. `CATALOGUE.md` already carries
+      BOTH vocabularies after D's hand-merge. Resolve the three boards, the two tests and the
+      catalogue in ONE pass (E.8), not file by file.
+- [ ] **E.0e The positive guard §2.2a asked for.** `test_flynapse_postgres_datasource_is_declared_
+      kept_and_used`: the datasource is declared, `deleteDatasources` is empty, and all four
+      M-GRAFANA panels still read it. It fails on all three limbs today, which is the point — it is
+      the guard that would have caught this silent merge, and neither side's existing pair can
+      satisfy it.
+- [ ] **E.0f M-FRONTEND's graft.** Their "Slowest Pages" panel is the only additive thing on their
+      3-panel board; append it as id 19 at `{h:8,w:12,x:0,y:72}`. Its description needs a
+      `DARK until ` / dated `LIVE since …` note or our D6 guard fails it on arrival. Verified: the
+      `browser.app.boot` emitter IS live in our dashboard, and the collector allow-list already
+      passes `load_complete_ms` and `entry_route_pattern`, so nothing else is owed for it.
+- [ ] **E.0g M-TOKENUSAGE's board half.** `CATALOGUE.md` lines with `_total` (5 sites) and
+      `iac/dashboards/llm-agents.json.tftpl`. Phase D deliberately left these so the file is
+      rewritten once.
+- [ ] **E.0h `test_compose_image_pins.py` no longer covers the Phoenix split.** `COMPOSE_FILES`
+      scans the original four stacks; theirs' split moved a pinned image into
+      `deployment/docker-compose.phoenix.yml` and `deployment/poc/docker-compose.phoenix.yml`.
+      Both are correctly pinned TODAY, and nothing would notice if they stopped being.
+- [ ] **E.0i The adopted agent-rule guard is an allow-list, not a rule.** Theirs' `PENDING_RULE_
+      SERIES` / `EMITTED_RULE_SERIES` are two hand-maintained tuples, so a NEW rule on an unemitted
+      `agent_*` / `gen_ai.*` series falls through both and is checked by nothing. Ours' regex caught
+      that class generically. The elegant fix is a derived emitted-series inventory.
 
 ### Phase F — docs
 - [ ] F.1 Merge docs with our master plan as the base; graft their new sections.
@@ -742,6 +791,42 @@ which is what will enumerate the wrappers.
 
 ---
 
+### Deferred from Phase D, 2026-09-20
+
+- **`record_subagent` has no production call site anywhere.** `RuntimeTelemetry.record_subagent` and its
+  two instruments (`agent.subagent.calls`, `agent.subagent.duration_seconds`) are dead: the only caller
+  in the tree is a unit test. The lang runtime's subagent dispatch (`SubagentDispatcher`) has zero
+  telemetry references. The `fn-llm-agents` "Subagent rate and p95 duration" panel is therefore
+  permanently empty, and their catalogue inventory correctly marks it PENDING. This is the plan's owed
+  "subagent call sites" work and it is genuinely unstarted — the merge did not touch it.
+- **Branch attribution is lost on the canonical tool path.** `ToolOperationRecord` carries
+  `parent_call_id`, and the LEGACY `emit_tool_spans` path sets `gen_ai.tool.branch_id` and
+  `gen_ai.tool.ref`. `record_tool_operation` sets neither. So once `suppress_legacy_agent_sdk_spans` is
+  on — which, after D.12, is whenever OTel is actually configured — a branch-leaf tool span is
+  indistinguishable from a parent one.
+- **Dispatcher-projected standalone tools are outside the observer.** `post_tool_observer` is threaded
+  into exactly ONE builder (`build_claude_pilot_tool_runtime`). The ~12 `build_standalone_*` projections
+  ride a lighter tail and take no observer, so they emit no `gen_ai.*` operation and are absent from
+  `canonical_tool_names`. That is consistent with their "suppress duplicates without hiding
+  non-migrated calls" design, but it means the canonical tool surface covers only the pilot
+  dispatcher's tools — and our own P6 work moved tools OUT of that set while their telemetry work was
+  landing on the assumption they were in it. Neither side is wrong alone; the seam between them is the
+  coverage hole.
+- **A failed tool can leave a step event with no tool-I/O record.** On the unauthorized branch-leaf leg
+  and on a raising parent dispatch, `nodes.py` emits the failed step but `continue`s past both
+  `_record_tool_io` and `dump_tool_call`. Each side is internally consistent; the union is not. A turn's
+  step trace can therefore show a failed tool that has no entry in `content.tools.io`.
+- **`model_gateway._error_snapshot` stores the exception MESSAGE.** Deliberate and correct as written —
+  the destination is the governed capture store, which already retains the raw prompts beside it, and it
+  is double-gated. Recorded so a future R22 sweep does not "fix" it into uselessness.
+- **`prometheus-client` is now an orphaned dependency** and `README.md:122` still documents
+  `GET /metrics`, which their side removed (correctly — the estate is push-only over OTLP, and the api
+  gateway removed its own copy in an earlier phase).
+- **`BrowserSpawnError`'s stderr tail no longer reaches any log.** D.8 stopped logging the exception
+  message because it embeds up to 2000 bytes of subprocess stderr. The tail is still on the exception
+  for the caller; if spawn failures prove hard to diagnose, the right fix is a bounded, explicitly
+  sanitised field, not restoring the message.
+
 ## 7. Implementation notes / learnings
 
 ### Phase 0 — 2026-09-19, CLOSED
@@ -827,6 +912,108 @@ forced** and a `dashboard_profiles_isolation` policy. `llm_turn_content` is corr
 copilot-mro registry table, so `--registry core` was never going to create it and neither did the all-registry
 run against an unmerged copilot-mro.
 
+### Phase D — copilot-mro application half, 2026-09-20, MERGED (worktree `copilot-mro-obsm`)
+
+Commits on `obs-merge`: `e26be7dd` merge, `36467f29` repair + reject-list, `12b899ed` privacy,
+`248590dd` capture, `04ad6284` provider gate + token usage, `2879a1cf` repoint + scope + paths.
+
+**The merge.** 20 textual conflicts, exactly the six app-code files §3 predicted plus the deployment
+half and `poetry.lock`. D.1 held: their 59-line `agent_pipeline.py` delta was grafted whole, so all
+four acceptance sites survive and `RuntimeTelemetry` has a production wiring for the first time.
+`agent_shared/pipeline.py` took THEIRS as base (their 341-line delta is the turn telemetry) with our
+`failure_fields(exc)` restored at the execute-failed site plus the import theirs lacked.
+`chat_management.py` and `user_feedback.py` took OURS at every hunk — theirs is weaker throughout AND
+leaks user content twice, into the client's 500 detail and over the SSE error frame.
+`improvement/scheduler.py` took OURS (its messages are asserted verbatim by an ours-only test) with
+their `operation_outcome` dimensions grafted in. `poetry.lock` was relocked, never hand-merged: 0
+packages removed, 12 added, 1 version move.
+
+**Three rulings were reversed by SILENT merges** — no conflict, no marker, no failing test, which is
+§2.2a's whole thesis firing:
+- `datasources.yml` lost `flynapse-postgres` and GAINED `deleteDatasources` (M-GRAFANA forbids both);
+- `llm-agents.json` lost both exact-spend panels and moved five queries to the Counter spelling;
+- `oss-profile.md` lost the readonly-role rotation row, the board pointer and the "expectedly
+  unhealthy" note that stops an operator filing a false bug.
+All three are Phase E fixes. §2.2a also guessed that `oss-profile.md` would delete the exact-spend
+SECTION; it did not — the heading and the §6.6 companion paragraph survive verbatim. The guess was
+wrong in the specific and right in the general.
+
+**Two defects the MERGE created**, neither side's decision:
+- `main.py` — their R22 sweep deleted `import traceback` while ours added the only remaining caller,
+  so the shutdown drain carried an undefined name. A save drain that failed at exit would have
+  raised NameError out of the lifespan. `py_compile` passes; only pyflakes sees it. Fixed as
+  `**failure_fields(exc)`, NOT by restoring the import — `format_exc()` ends in a `Type: message`
+  line, so restoring it re-introduces the leak the sweep existed to remove.
+- The drain also landed OUTSIDE their new `mro.lifecycle.shutdown` span, so a failed drain never
+  marked the span and "MRO shutdown completed" was written BEFORE the saves were drained.
+
+**A defect their branch shipped**, found by our tests, not by reading: `forecast.py`'s privacy fix
+replaced `forecast=result.forecast` with `forecast_points=len(result.forecast or [])`. That value is
+a SCALAR — the same function unpacks it as `low, high = (rng + [result.forecast, result.forecast])[:2]`
+— so `len()` raised on every successful forecast and the tool returned `forecast_error`. A privacy fix
+that turned a working tool off.
+
+**M-CAPTURE was FALSE on the merged tree.** Capture defaulted off *and* a validator hard-coerced the
+opt-in shut; composed with B1's core column (default true, opt-OUT), a stock deployment retained tool
+I/O NOWHERE. So M-TOOLIO-2's "capture becomes the single store" had been accepted against a store that
+never ran. D.4 flips the default, deletes the `require_tenant_opt_in` shim and its argument (one legal
+value is not a setting, and a name that reads as a bypass invites being used as one), D.5 hoists the
+tenant read above the accumulator so an opted-out tenant's content is never materialised, and D.6 moves
+capture off the request path into a held, bounded, drained task registry.
+
+**D.12 confirmed and closed.** `get_runtime_telemetry`'s `try/except` gated nothing:
+`from_current_provider` calls the OTel API's `get_tracer`/`get_meter`, neither of which raises without
+an SDK, so the facade was always constructible and the function never returned None in its life.
+`suppress_legacy_agent_sdk_spans` was therefore unconditionally true — a process with no collector lost
+its legacy span and emitted nothing in its place. Gated on the bootstrap state instead.
+
+**M-TOKENUSAGE landed for the EMITTER only.** Counter → Histogram at both constructors and the record
+site, with the semconv bucket ladder, because the SDK default tops out at 10,000 — below an ordinary
+prompt — and a histogram with the wrong buckets is as unreadable as a Counter with the wrong name. The
+`_total` spellings in `llm-agents.json`, `CATALOGUE.md` and `iac/dashboards/llm-agents.json.tftpl` are
+deliberately untouched: Phase E rewrites those same files for M-GRAFANA, and editing them twice invites
+one pass being lost.
+
+**The D.2 repoint was a silent blindness, not a documentation chore.** The harness join reads its
+availability off `settings.tool_io_archive_enabled`, whose default their branch flipped — so every
+argument-level check across four E2E suites degraded to SKIP. 44 tests against a zero baseline, and a
+harness reporting SKIP looks like a harness with nothing to say. Also corrected: nothing ever READ the
+archive from code; `dump_debug` is a sibling sink, so the repoint is "the documented surface points at
+a store with no writer", not "swap a reader".
+
+**D.10.** The read DAO failed OPEN for the caller it knew least about — no identity and no capability
+returned NO predicate, while an identity without a capability correctly returned `AND FALSE`.
+
+**Guards fixed, not just used.** Their ordinary-log privacy guard flagged 15 sites that were the
+estate's own R22 form (`**failure_fields(exc)` names `exc`, which is in its content list) and could not
+see through ANY `**` splat — 24 log calls in the retrieval and synthesis tools splat a dict it never
+inspected. It now resolves a splat three ways, including one hop through a parameter to its call sites.
+
+**Everything was mutation-proven, and two guards were inert on the first try:**
+- my own D.5 assertion `"llm_content_capture_enabled" in source` is satisfied by
+  `settings.llm_content_capture_enabled`, the DEPLOYMENT switch in the same function, so deleting the
+  per-tenant read entirely still passed;
+- the privacy guard's content-name list knew `query` but not `queries`, so a planted
+  `"first_query": queries[0]` went through untouched.
+
+### Phase D — not done, and why
+
+- **D.7's third clause is BLOCKED.** `tests/unit/observability/test_phase1c_nonagent_scope_guard.py`
+  must be deleted and the deletion was refused as a security-test removal — the right automated rule
+  and the wrong outcome here, so it is the owner's call. It is a branch-scoped CHANGE-CONTROL guard: it
+  diffs against four hard-coded SHAs and asserts the changed production paths are a subset of one
+  branch review's agreed scope, disarming itself when the branch is named `obs-telemetry-merge`. Ours
+  is `obs-merge`, so it is ARMED and fails naming ~100 legitimately-changed paths. It cannot be
+  repaired into something meaningful: widening the allow-list makes it assert that the files that
+  changed are the files that changed, and always-skipping makes it inert, which §2.3a rates worse than
+  absent. A branch-name check is also decoy-defeatable — renaming the branch disarms it.
+- **D.9 is deferred to Phase E/G by its own terms.** "Either wire the dashboard card to it or hold it
+  — no speculative backend ahead of a consumer." The read API exists and is RBAC-correct (D.10 closed
+  the one real defect in it); the dashboard consumer is Phase B2's question, so the wire-or-hold
+  decision belongs where the consumer is.
+- **E.1 was pulled FORWARD into D**, out of phase order: the restored M-PINS guard fails while the
+  floating tag is in the tree, and the M-ACCEPT suite would otherwise be collected by D's own lane.
+
 ### Environment rules confirmed this phase
 - **Worktree lanes MUST set `PYTHONPATH`, or they test the wrong tree (found 2026-09-20).** The shared `api`
   Poetry env installs `core`, `utils`, `copilot-mro`, `flynapse-otel` and `shift-optimizer` as develop/path
@@ -867,6 +1054,30 @@ largely is not: the item was specified when nothing was instrumented, and our ow
 calls it would have caught, so installing it would double-count exactly as the spec's botocore ban predicts.
 **Rule: before reporting an unimplemented plan item as owed, check whether later work made it redundant. "No
 one built it" is not the same as "it is still needed."**
+
+**A green lane after a merge measures the tests, not the merge (2026-09-20).** Phase D's three
+worst findings were all invisible to the suite. `main.py` carried an undefined name that only
+pyflakes sees and `py_compile` accepts. `forecast.py` called `len()` on a scalar, so every successful
+forecast returned an error — caught only because an unrelated directory's tests were run. And the E2E
+harness's argument-level checks all degraded to SKIP, which reads as "nothing to say" rather than as
+failure. **Rule: after a merge, run a linter over the merged tree and diff its output against the
+pre-merge tree, run every directory rather than the ones you touched, and treat a jump in SKIPs as a
+failure signal, not a quiet lane.**
+
+**An assertion that names a constant can be satisfied by a different constant (2026-09-20).** Two
+guards written in this phase were inert on the first try for the same reason. My D.5 test asserted
+`"llm_content_capture_enabled" in source` — satisfied by `settings.llm_content_capture_enabled`, the
+DEPLOYMENT switch, which lives in the same function, so deleting the per-tenant read entirely still
+passed. Their privacy guard's content-name list held `query` but not `queries`, so a planted
+`queries[0]` went straight through. **Rule: assert the thing that can only be true one way — an
+import line, a call, a type — not a substring that a sibling name also satisfies. And mutate every
+guard you write, including the ones you wrote to catch someone else's mistake.**
+
+**"Base of record is ours" is a rule about hunks, not about files (2026-09-20).** Taking ours for the
+conflicted hunks of `user_feedback.py` left `failure_fields(e)` against an `except ... as exc` that
+their side had renamed in a NON-conflicted region three lines up. Git resolved the file; the file did
+not work. **Rule: after every "take ours" on a file the other side also edited, run a linter over that
+file specifically — the failure is a name, and names are exactly what a textual merge cannot see.**
 
 **Never `git checkout --` to undo a mutation test (2026-09-20).** During C1's mutation checks I restored each
 mutated file with `git checkout -- <file>`. That restores the **committed** state, so it silently discarded
