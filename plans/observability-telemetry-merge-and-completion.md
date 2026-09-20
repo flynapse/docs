@@ -649,7 +649,7 @@ resolved; the merge commit records them and E fixes them.
 - [x] G.15 **M-DEADROUTER — DONE 2026-09-20 (`api-obsm d6ab632`).** — delete `routers/cache_management.py`.** Verify the import graph before deleting;
       retires 6 log sites and 6 disclosure sites, and the stale comment at `middleware/auth.py:1314` goes
       with it. **IN FLIGHT, same implementer as G.14.**
-- [ ] G.16 **M-RUNERROR — sanitise `automation_runs.error`.** ~20 write sites in
+- [~] G.16 **M-RUNERROR — api WRITE SIDE DONE 2026-09-20 (`api-obsm cc56667`); the `core` side is owed.** Sanitise `automation_runs.error`.** ~20 write sites in
       `api-obsm/flynapse_api/automations/`; the read is `core`'s `AutomationRun.error`. Category plus a
       safe message. **Spans two repos and needs both trees free.** Neither sweep can see it — the api guard
       sees a database write and the core guard sees a column read — so it needs its own guard, at the
@@ -667,7 +667,7 @@ resolved; the merge commit records them and E fixes them.
       implementer. Must settle the raise-vs-drop asymmetry: the registry **raises** and `_safe_add`
       swallows, so a forbidden key makes the **whole series vanish silently**, while the legacy shim drops
       the key and warns once. **utils-side IN FLIGHT; call sites in copilot-mro and core follow.**
-- [ ] G.19 **The log sweep needs the HTTP-exception carve-out its sibling already has. CONTROLLER
+- [x] G.19 **DONE 2026-09-20 (`api-obsm cc56667`).** The log sweep needed the HTTP-exception carve-out its sibling already has. CONTROLLER
       DECISION 2026-09-20, pending owner review — it is a rule change, not a paydown.** One site
       survives G.14: `api-obsm/flynapse_api/middleware/auth.py:474`, `except HTTPException as exc:`
       logging `exc.status_code` and `exc.detail`. **That is not a `str(exc)` leak** — the detail is the
@@ -687,6 +687,32 @@ resolved; the merge commit records them and E fixes them.
       sanctioned shape" (keep the f-string, append `**failure_fields(e)`) is **RED**. Every message must
       become a constant with its ids moved to bound fields. **This governs the remaining 128 recorded
       sites** and belongs in the brief of whoever pays down the next tranche.
+- [ ] G.21 **M-RUNERROR, the `core` half.** The api write side shipped a closed six-member vocabulary
+      (`access`, `configuration`, `timed_out`, `unavailable`, `no_answer`, `internal`) in
+      `api-obsm/flynapse_api/automations/run_errors.py`; the stored shape is `"<category>: <sentence>"`
+      and no token contains a space or a colon, so `partition(": ")` is unambiguous. **`core` owes three
+      things**, the second of which my brief got wrong:
+      (1) **A read-time fallback:** a value with no recognised prefix is pre-M-RUNERROR — treat it as
+      `internal` and **do not render its detail**, because that detail is exactly the raw text this work
+      removed.
+      (2) **`core` is itself a WRITER of this column** — my brief said it only reads it.
+      `core/resources/automations/services/automation_store.py` composes `error` from bound constants in
+      `_REAP_STALE_RUNS_SQL` (~:1175, should become `timed_out: …`) and `_CLOSE_UNSERVED_ONE_SHOT_SQL`
+      (~:1197, should become `internal: …`). Both are safe but **uncategorised, so without this the
+      column is only 29 of 31 typed.**
+      (3) **Legacy rows: a read-time guard, NOT a migration.** Measured on the local dev database: 37
+      runs, 4 with a non-null error, **0 categorised** — and one of the four is a genuine leak in the
+      wild, a raw `ImportError` naming internal module paths. A migration cannot tell a safe legacy
+      string from an unsafe one; "no prefix ⇒ do not render the detail" is correct for every row without
+      inspecting any.
+- [ ] G.22 **The dashboard can now render a real sentence per category — and it has been shipping the
+      raw value to the browser all along.** `dashboard-obsm/components/features/automations/RunHistoryPanel.tsx:176`
+      puts the raw column into a `data-run-error` DOM attribute, while
+      `runOutcomeCopy.ts:147` **deliberately never renders it as prose** and its own comment says why —
+      *"It is a raw exception — a psycopg2 message, an import failure"*. **So the frontend already knew
+      the value was unsafe, and the disclosure path was API JSON → browser DOM regardless.** Both verified.
+      With a category prefix the panel can map each category to actionable copy the way `RUN_REASON_COPY`
+      already maps `reason`. Needs the `dashboard` writer, after G.21.
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
 secrets and the AWS deferral.
