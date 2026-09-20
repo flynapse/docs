@@ -314,8 +314,8 @@ Execution has passed the DB step. A (prep), C1 (utils), B1 (core), D (copilot-mr
 (copilot-mro deployment half, plus a new `obs-merge` branch in **iac**) and F (docs) are merged in their own
 `<repo>-obsm` worktrees on branch `obs-merge` — copilot-mro's tip is `ea0ac559` — each phase followed by a
 fresh adversarial Opus review whose findings were triaged into the same phase. The **DB step is complete**:
-the all-registry migration and the RLS run both landed after D, as §2.2 sequences them. **C2 (api) and B2
-(dashboard) are in flight.** No mainline has moved and nothing is pushed. `copilot_mro_test` has been migrated
+the all-registry migration and the RLS run both landed after D, as §2.2 sequences them. **C2 (api) and B2 (dashboard) are both MERGED and CLOSED** — C2 at `api-obsm 9812f44`, B2 at `dashboard-obsm 3afd524`. Phase G is in flight. The former sentence read "C2 and B2
+(dashboard) are in flight", superseded 2026-09-20. No mainline has moved and nothing is pushed. `copilot_mro_test` has been migrated
 with the merged definitions, so **the pre-merge baselines in the SDD ledger cannot be reproduced.** Per-phase
 outcomes are in §7; deferred items with their reasons are in §6.
 
@@ -337,7 +337,7 @@ outcomes are in §7; deferred items with their reasons are in §6.
 - [x] B1.1 Merge (clean). Repair our `_Sink` test double for the new `ProductEventInsertResult` return type and
       its `{"accepted": 1}` assertion — without this the merged handler dereferences `None` and 500s. Done via
       an `_InsertSink` subclass, so the double that must return a result is distinct from the one that must not.
-- [x] B1.2 Add the missing tenant-admin gate on `GET /analytics/dashboard-profile`; it is the only route on
+- [x] B1.2 Add the missing gate on `GET /analytics/dashboard-profile` — **"tenant-admin" is this plan's word, not core's behaviour, and it misled the B2 implementer into a false 403 rationale.** `core/resources/analytics/analytics_endpoints.py:44` `is_tenant_admin` returns `is_tenant_owner OR has_capability("view_dashboard")` — the SAME gate the dashboard page checks before it asks, so the 403 branch is unreachable today. Corrected 2026-09-20; it is the only route on
       that router without one. Confirmed by enumerating the router: two GET routes, one gated.
 - [x] B1.3 Log the widen-to-all-panels branch in the profile loader, so "no row" and "corrupt row" stop failing
       in opposite directions silently. `_coerce_panel_ids` now returns `None` for a non-list (corruption, warn,
@@ -355,14 +355,14 @@ outcomes are in §7; deferred items with their reasons are in §6.
       exists to make a browser retry idempotent.
 
 **B2 dashboard**
-- [ ] B2.1 Merge (clean). Guard the UUID mint with the repo's existing idiom and move it inside the never-throw
+- [x] B2.1 Merge (clean). Guard the UUID mint with the repo's existing idiom and move it inside the never-throw
       region — as merged it violates E9.9b and throws on any non-secure-context origin.
-- [ ] B2.2 Apply M-FALLBACK: profile failure degrades to the capability path.
-- [ ] B2.3 LLM turn summaries card: typed error message instead of the server's text, a constant-message
+- [x] B2.2 Apply M-FALLBACK: profile failure degrades to the capability path.
+- [x] B2.3 LLM turn summaries card: typed error message instead of the server's text, a constant-message
       breadcrumb on failure, the response contract instead of a bare cast, and the query layer instead of
       hand-rolled `useState`/`useEffect`. Mis-described docstring corrected — it returns 180-char prompt and
       answer previews, which is not "content-free".
-- [ ] B2.4 typecheck → unit → `next lint`, plus the post-merge greps for the optimizer tab, the panel count,
+- [x] B2.4 typecheck → unit → `next lint`, plus the post-merge greps for the optimizer tab, the panel count,
       the E9.9b catch and duplicate object keys.
 
 ### Phase C — utils, then api
@@ -438,8 +438,18 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
       merge.
 - [x] **D.8 DONE** — four sites, not three, and their guard was made honest enough to be ours. Fix our own three raw-exception log sites in the lang browser transport, which their privacy guard
       correctly flags; then their guard should run clean and becomes ours.
-- [~] **D.9 DEFERRED by its own terms** — the wire-or-hold decision belongs with the consumer, which is Phase B2. Their read API: correct the docstring, confirm the RBAC intent, and either wire the dashboard card to
-      it or hold it — no speculative backend ahead of a consumer.
+- [x] **D.9 CLOSED by Phase B2, 2026-09-20 — subject to owner ruling B2-R1 below.** The wire-or-hold decision
+      was B2's, and B2 wired it: the LLM-turn-summaries card now reads the API through TanStack `useQuery`
+      (`hooks/api/useObservability.ts`), with a typed failure, a response contract in place of a bare cast, and a
+      corrected docstring — the card renders 180-character previews of the user's question and the model's answer,
+      verified against `llm_turn_content_read.py`, which is not what the docstring used to say.
+      **The RBAC intent is NOT confirmed and is the owner's call (B2-R1):** the card sits OUTSIDE the improvement
+      page's internal-only gate. `notInternal` is derived from the other queries' errors, so on first paint it is
+      `null` and the card mounts and fetches unconditionally. The route gates on `view_dashboard`; the page's
+      `RouteGuard` requires `view_memory_admin`. A **non-internal** holder of both therefore sees real question and
+      answer text on a page whose other three panels refuse them — and B2.3 made one aspect worse, because the query
+      cache now holds those rows for a 5-minute `gcTime` after the card unmounts behind the notice. This is the
+      colleague's placement; B2 deliberately did not change it, because it is a product decision.
 - [x] **D.10 DONE**, mutation-proven. Invert the permissive default in the read DAO's scope clause.
 - [x] **D.11 DONE** — restored content-FREE (type + frames), because the message it over-corrected really could quote the question. Restore the bounded failure reason in the synthesis and db-query logs their sweep over-corrected —
       the code name alone cannot say why nine turns failed.
@@ -829,6 +839,14 @@ migration could introduce. So the deferral survives on the narrower reason — t
 not, and copilot-mro's own scan covers only its own tree. The complete solution is
 `(tenant_id, user_id, event_id)` — `user_id` is server-stamped and unforgeable, so it closes the class for
 free — plus widening core's existing conflict-target guard from the tenancy prefix to the full key.
+**RESOLVED by B2.1, 2026-09-20.** B2.1 took the omit-rather-than-weaken branch: the mint moved inside
+the `try` and routes through `eventIdOf()`, with the `ChatInput` idiom's `Date.now()-Math.random()`
+fallback **deliberately removed**. core types `event_id` as `Optional[UUID]` under `extra="forbid"` and
+`events_endpoints.py` answers **400 for the whole batch** on one bad event — so a weak id would have
+destroyed every product event from every insecure-origin browser, which is worse than the collision this
+paragraph warns about. The module now omits the key and core's `event_id or uuid4()` covers it. The
+sentence below described the risk correctly and it did not materialise.
+
 **Sequence it with B2.1**, which fixes the same mint throwing on non-secure-context origins: any
 lower-entropy fallback introduced there turns this from latent into live.
 
@@ -1115,6 +1133,111 @@ NULL`, `tenants.llm_content_capture_enabled DEFAULT true`, `dashboard_profiles` 
 forced** and a `dashboard_profiles_isolation` policy. `llm_turn_content` is correctly still absent — it is a
 copilot-mro registry table, so `--registry core` was never going to create it and neither did the all-registry
 run against an unmerged copilot-mro.
+
+### Phase B2 — dashboard, 2026-09-20, MERGED (worktree `dashboard-obsm`, head `3afd524`)
+
+Five commits on `obs-merge`: `42b3380` merge · `acd8b78` B2.1 · `9002ed9` B2.2 · `cc17cf4` B2.3 ·
+`3afd524` review triage. Working tree clean, nothing pushed, no mainline moved.
+
+**Lanes.** `typecheck` rc=0 with output **byte-identical to pre-merge at every step**; `next lint`
+likewise byte-identical; unit **2475 → 2502 passed, 0 failed, 0 skipped**. `next build` was never run
+and the merged standalone guard fired correctly when it was attempted. Because the background runner
+truncates output to its tail, no failing-id set difference was quoted from it — `fail 0` on both sides
+makes the difference empty by construction, and loss was disproved the local way instead: for every
+changed test file, `git show 4a2898b:<f>` against the file shows **no test name removed anywhere**,
++27 all additive.
+
+**Silent-merge register (§2.2a), dashboard.** Textually clean, **zero conflicts** across all 15 files,
+so the merge commit carries no resolution because there was none. **Both sides (4):**
+`analytics-panel-registry.ts`, `analytics-api.ts`, `product-events.ts`,
+`analytics-panel-registry.test.ts`. **Theirs-only (11)**, each audited against our guards
+(`logger-message-constant`, `api-route-pattern-bounded`, `route-pattern-table`,
+`logger-client-import-graph`, `mutation-response-contract`, `route-access`, `standalone-guard`) — none
+violated.
+
+**B2.1, and the reasoning matters.** The defect was reproduced first: the new guard failed on the
+merged tree with `TypeError: globalThis.crypto.randomUUID is not a function`. The mint moved inside
+the `try` and now routes through `eventIdOf()` — but the repo's `ChatInput`/`useChatAttachments` idiom
+was adopted **with its `Date.now()-Math.random()` fallback removed**, deliberately. core types
+`event_id` as `Optional[UUID]` under `extra="forbid"`, and `events_endpoints.py` answers **400 for the
+whole batch** on one bad event, so a weak id would have destroyed every product event from every
+insecure-origin browser — a far worse outcome than the tenant-wide `(tenant_id, event_id)` collision
+§6 warns B2.1 not to escalate. The module now **omits the key**; core's `event_id or uuid4()` covers
+it. This resolves §6's "sequence it with B2.1" note: B2.1 took the omit-rather-than-weaken branch.
+
+**B2.2 / M-FALLBACK.** Their page replaced the capability gate outright and set an *empty profile* on
+any failure — and their own test asserted that outcome, a P0-INERT-class defect-pinning test, which was
+rewritten rather than deleted. The page now carries a three-valued `DashboardOffer`
+(`profile` | `capability` | `none`), because a nullable profile cannot distinguish "core said offer
+nothing" from "core said nothing" from "nothing to ask yet". Only the middle degrades. That also
+retires §5.5's "these become dead code" finding. `fetchDashboardProfile` gained a read response
+contract, so a malformed 200 is now a rejection the fallback handles rather than a `TypeError` inside a
+`useMemo`.
+
+**B2.3.** All five sub-items landed: typed error state (`classifyAnalyticsError` with card-local copy,
+never the server's prose), a constant-message `logger.error` breadcrumb, a response contract in place
+of the bare cast, TanStack `useQuery` (new `hooks/api/useObservability.ts`, new
+`queryKeys.observability.llmTurns`) replacing hand-rolled `useState`/`useEffect`, and the
+mis-describing docstring corrected.
+
+**Adversarial review — two independent Opus reviewers. No P0. Both of the two real findings were the
+implementer's own, and both were corrected in `3afd524`:**
+
+1. **The M-FALLBACK 403 rationale was fiction.** It was taken from THIS PLAN's B1.2 wording
+   ("tenant-admin gate") rather than from core's body. The 403 branch stays — a gate is a thing that
+   changes — but is now documented as unreachable today. B1.2's wording is corrected above.
+2. **"No widening" was half true.** `panel_service.get_panel_data` calls `authorize_panel` +
+   `feature_enabled` and **never reads `dashboard_profiles`**. So the degraded read does not widen
+   *capability*, and **does** widen past a tenant's own narrowed profile. Now stated precisely in the
+   docblock.
+
+Also fixed: the test harness answered **503 for every `Error`**, so "the caller is refused" was an
+outage with different prose. Failures now carry a status, the wire records it, and each case asserts
+the status it names — which immediately found that **401 never reaches this fallback at all**
+(`fetchWithAuth` refreshes and then navigates to sign-in). Recorded rather than asserted, because
+pinning a jsdom navigation pins an environment.
+
+**Four properties had no guard at all.** `retryLlmTurnSummaries` had zero references outside its
+module, and the card's only mounted test built its own `QueryClient` with `retry: false` and no
+`QueryCache` — so both the retry rule and `meta.suppressGlobalError` were unguarded. A new
+`llm-turn-summaries-hook.test.tsx` drives the real `makeQueryClient()`. The retry rule also **changed**:
+it no longer reads `ANALYTICS_ERROR_COPY.retryable`, which answers "is a *button* worth offering" — a
+human, a minute later. A machine re-asking a 429 at TanStack's ~1 s backoff adds load exactly when core
+asked for less, so only `unavailable` auto-retries.
+
+**13 mutation proofs**, every one restored from a scratchpad copy; `git checkout --` never used.
+
+**M-FRONTEND needs no dashboard-repo action** — verified both halves. `dashboard-obsm` references no
+Grafana board, uid or panel count anywhere, and the merge touched none of `lib/telemetry/events.ts`,
+`use-route-telemetry.ts`, `TelemetryProvider.tsx` or `events-catalogue.test.ts`; `browser.app.boot` is
+unchanged and still unconditional.
+
+**Owner rulings owed out of B2:** **B2-R1** the LLM-turns card's placement outside the internal-only
+gate (stated at D.9 above) · **B2-R2** M-FALLBACK's true scope now that the widening is stated
+correctly — the degraded read shows a tenant the un-narrowed offer while the profile route is down;
+core calls the profile "presentation state only… It never grants panel access", so the ruling reads as
+still standing, but it was taken without this fact · **B2-R3** `dashboard_profiles` still has **no
+writer anywhere in the estate** (§5.5 P1, unchanged by B2), so no tenant can narrow anything yet.
+
+**Recorded for §6 Future Improvements, deliberately not fixed:** the offline wedge (`isPending` +
+`networkMode:'online'` leaves "Loading captured turns…" forever with no exit; it needs a third *paused*
+branch, not a swap to `isLoading`) · **version skew** — a 200 profile naming panel ids this build does
+not know intersects to `[]` and renders exactly the blank page M-FALLBACK exists to eliminate, with no
+degrade, because the fetch succeeded · panel-order drift between `panelsForProfileTab` (profile order)
+and `panelsForTab` (registry order) · `logger.error` books an ordinary `forbidden` as an ERROR record,
+one per mount · the `llmTurns` query key omits the tenant while `shouldClearQueryCache` keys on user id
+— one reviewer suspected a hole, the other proved it unreachable; recorded, proved neither way · **no
+guard requires a *read* api to use `parseResponse`** (the existing guard walks `useMutation` only), so
+both read contracts B2 added are voluntary · the profile wire shape is declared twice
+(`DashboardProfileView` / `DashboardProfileResponse`) — the dashboard analogue of B1's two-copies
+finding · a `randomUUID` that exists and throws is booked as a caller bug, documented in code as the
+accepted price of one catch · `content_bytes: 0` renders `—`.
+
+**Honest gaps.** Nothing in B2 is half-done. Two things to know: the three M-FALLBACK failure routes are
+behaviourally identical **by design**, so the status assertion is the only thing that can tell them
+apart — the degrade itself is proven once, not three times. And no B2 plan item turned out stale in the
+"already done" sense; the staleness encountered was in **this plan's description of core** (B1.2), which
+is what produced the false 403 rationale.
 
 ### Phase C2 — api, 2026-09-20, MERGED (worktree `api-obsm`, head `9812f44`)
 
