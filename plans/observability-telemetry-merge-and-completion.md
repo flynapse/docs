@@ -711,7 +711,20 @@ resolved; the merge commit records them and E fixes them.
       sanctioned shape" (keep the f-string, append `**failure_fields(e)`) is **RED**. Every message must
       become a constant with its ids moved to bound fields. **This governs the remaining 128 recorded
       sites** and belongs in the brief of whoever pays down the next tranche.
-- [ ] G.21 **M-RUNERROR, the `core` half.** The api write side shipped a closed six-member vocabulary
+- [x] G.21 **M-RUNERROR, the `core` half — DONE 2026-09-20 (`core-obsm bbc67ed` + 2 uncommitted production
+      files).** Lane **2314 → 2401 collected and passed**, `rootdir` correct on all 29 invocations. **Exactly
+      two originating write sites**, both categorised: the stalled-one-shot close as `timed_out` (the category
+      **reports what was observed and claims no cause** — the predicate is `started_at + ceiling < now`, which
+      is that category's definition verbatim; `internal` would assert a fault that may not have happened) and
+      the unserved close as `internal`, **deliberately not `unavailable`, because a one-shot row has NO next
+      slot** — telling the owner to wait would strand them.
+      **The hole nobody anticipated, and it was real:** putting the fallback on the response model is **not
+      sufficient**. Pydantic v2 defaults to `revalidate_instances="never"`, so FastAPI serialising ready-made
+      instances passes them through **untouched** — probed and seen to leak, then fixed with
+      `revalidate_instances="always"` and confirmed by a reviewer against a live app (default config served
+      `{"error": "RAW-LEAK"}`).
+      **An adversarial reviewer found eleven gaps; all eleven were real and fixed — and one objection was
+      re-argued rather than accepted, and WITHDRAWN.** ORIGINAL ITEM FOLLOWS. The api write side shipped a closed six-member vocabulary
       (`access`, `configuration`, `timed_out`, `unavailable`, `no_answer`, `internal`) in
       `api-obsm/flynapse_api/automations/run_errors.py`; the stored shape is `"<category>: <sentence>"`
       and no token contains a space or a colon, so `partition(": ")` is unambiguous. **`core` owes three
@@ -842,6 +855,30 @@ resolved; the merge commit records them and E fixes them.
       six in the same repo (`utils/migrate_weaviate_collection.py`) and tenant-partition creation in copilot-mro
       (`weaviate_tenancy.py:722/738/741`), **whose own docstring says the raw-client bypass is deliberate.**
       *"Every door into Weaviate"* is true of the class and false of the dependency.
+
+- [ ] G.30 **Two facts G.21 surfaced that change what the column means, neither asked for.**
+      **(a) `core`'s two writes cannot reach a tenant reader today.** Both sweeps filter `trigger = one_shot`;
+      a one-shot row is inserted with `automation_id` NULL; `list_runs` — **the only tenant-facing read** —
+      selects `WHERE automation_id = %s`; and `list_due_retries` selects `status = skipped`, which a closed
+      one-shot row never is. **The implementer's own docstrings said these values are "handed to the
+      automation's owner", which was FALSE for exactly the rows they described**, and it corrected them. The
+      honest reason to categorise them is column consistency plus the day a surface renders one-shot history.
+      **A design fact, not a doc bug** — and it means M-RUNERROR's customer-facing half is entirely api's 29
+      sites.
+      **(b) `read_run_error("")` returns `None`, not the fallback** — a deliberate behaviour change made on
+      review. `NULL` and `''` are the same claim, the dashboard renders nothing for a blank string, and mapping
+      blank onto "contact support" would **manufacture a failure notice on a run that never reported one.**
+      Flagged for the owner.
+- [ ] G.31 **A FIFTH sibling-checkout instance, and the first with a reusable answer.**
+      `sibling_repo(__file__, "api")` resolves to the **primary checkout, on `langgraph-merge`, which has no
+      `run_errors.py` at all** — so a cross-repo pin written the obvious way would have **silently gated this
+      branch against code it never read.** The fix is the pattern to copy estate-wide: **the copy is FOUND, not
+      NAMED** — the pin scans sibling checkouts, **requires at least one**, holds every copy it finds, and
+      **names the checkout it read in the parametrised test id (`[api-obsm]`) — the cross-repo equivalent of
+      reporting `rootdir`.** Companions: my pytest lane, the phase-1c guard's `_utils_root`, G.5's drift pin,
+      and the namespace package spanning both checkouts.
+      Two documented residual costs: core's unit suite now needs an `api` checkout beside it, and **a sibling
+      holding a genuinely stale copy reddens core.**
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
