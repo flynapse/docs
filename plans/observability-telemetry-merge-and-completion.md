@@ -1261,6 +1261,85 @@ appends the fragment only for profiles whose own env example sets `PHOENIX_ENDPO
    pointed at our whole merged tree. **This is the file whose deletion the auto-mode classifier
    refused as a "Security Test Removal" — still owner-owed, and still red.**
 
+#### Phase E adversarial review — findings taken, 2026-09-20
+
+An independent Opus reviewer re-ran every lane (including both container-gated smokes), ran
+`validate.sh` against the real image, and mutation-tested the new guards in a throwaway `git
+archive` copy. Thirteen CONFIRMED findings. Eleven were fixed in this phase; two are recorded below.
+It found nothing in M-GRAFANA's restoration, the Slowest Pages graft, the in-repo M-TOKENUSAGE
+sweep, E.0h, E.1, or collateral damage — and it independently verified all four "stale plan item"
+claims and ran the container lanes this plan had declared not done (7 + 2 passed, no leftovers).
+
+**The severe one, and it was mine.** `validate.sh`'s start pass passed `-e OTEL_FILE_STORAGE_DIR=…`
+on top of `--env-file`, so it never exercised the value every `env/*.env.example` pins
+(`/tmp/otelcol-storage`) — *the exact variable whose value caused P0-COLLECTOR*. The check written
+to prove P0-COLLECTOR could not have seen P0-COLLECTOR. There are two start passes now: **shipped**
+(`--tmpfs /tmp:mode=1777`, nothing else overridden — the shape every compose stack provides) and
+**mounted** (bind-mounted dirs, which is the only way to prove the compaction directory is created).
+Mutation-proved: drop the tmpfs from the shipped pass and it fails with
+`failed to build extensions … mkdir /tmp: permission denied`. 18 healthy starts across the four
+profiles and the aws+phoenix composition.
+
+**The inventory was half derived.** `SPAN_SIGNALS` had no mechanical backing at all — deleting
+`span.set_attribute("agent.outcome", outcome)`, the selector the "Failed agent turns" panel depends
+on, left every lane green. And `_call_sites()` was a *substring* grep, so
+`# TODO: re-enable telemetry.record_turn` satisfied the reachability limb that the whole WIRED claim
+rests on. Both fixed: span attribute keys, span-name prefixes and `attributes=` dict keys are now
+read from the package AST, and call sites are AST `Attribute` nodes rather than text.
+
+**`KNOWN_LABELS` was an unguarded third allow-list** — exactly what E.0i abolished. One line added
+there disarmed the lint for any series, and nothing checked it. It cannot now shadow an inventoried
+signal.
+
+**Label VALUES were outside the inventory's reach**, so `tool_outcome="error"` — the defect that
+shipped once — could be reintroduced green. There is a check against the dispatcher's own
+`Literal["success", "failure"]` annotation, read by AST rather than copied.
+
+**A mixed-state panel was unsatisfiable**: any other state's grammar in a description was an
+offence, so a panel reading one wired and one dark series had no legal description and the only
+exit was the escape hatch above. Fixed — every state the query touches needs its note; a note for a
+state it does not touch is the offence.
+
+**Four more:** the `meter` construction path's `unit=` was never compared (the unit is part of the
+exported NAME); the runbook `alerts.md` still carried both retired vocabularies at the on-call
+surface, which E.8 missed; `iac`'s `alarms.tf` and `agent-turn-explorer.json.tftpl` kept both the
+`_total`-on-a-dotted-name dialect and "DARK until Stream L" — and the reviewer was right that the
+scope line was drawn inconsistently, since §4b-corrections pulled the sibling template in with an
+argument that covers these identically; and "DARK" meant two things at once, so the grafted Slowest
+Pages panel now reads WIRED and the browser state note accepts all three states.
+
+**One check I wrote was inert, and only a mutation showed it.** The "the prose must vouch for a
+signal the query actually reads" check sat behind an early return that fired precisely in the
+repointed-panel case it existed to catch. This is the third time in this plan that a guard passed
+on first write and failed its own mutation; the rule in §8 holds.
+
+**Both lint bodies are one body now.** `signal_state_offenders()` in `_emitted_series.py` — the
+board lint and the alert lint call it. They were two copies for one review round, which is the
+shape §8's "a guard with two bodies is a guard with none" lesson names.
+
+#### Phase E — recorded, not fixed
+
+- **The lint's scope is three metric prefixes.** `FAMILY_TOKEN` matches `agent_`, `gen_ai_` and
+  `claude_code_`, so repointing a panel at a name outside them (the reviewer used
+  `llm_model_calls_total`, which is a real table in this product) is not caught as an unknown
+  series. Partially mitigated: the prose check now fails a panel whose description names an
+  inventory series while its query reads none. The complete solution is an inventory of EVERY
+  metric family the boards may name — `otelcol_*`, `loki_*`, `tempo_*`, `prometheus_*`,
+  `traces_spanmetrics_*`, `telegram_*`, `optimizer_*`, `http_*` — most of which are third-party
+  self-telemetry whose names this repo does not own and cannot derive. That is a different contract
+  (pin third-party spellings against a live scrape) and belongs with the B1a/B1b re-verification
+  work, not here.
+- **`validate.sh` leaks a temp directory on the success path.** Once the durability fragment is
+  layered the collector writes queue files as uid 10001 into 0700 subdirectories the runner cannot
+  unlink, so `/tmp/tmp.*/queue` accumulates. Cleanup is best-effort by design and prints a note.
+  Removing it properly needs a second image with a shell, which is a dependency the pinned-image
+  script deliberately does not have.
+- **PLAUSIBLE, not reproduced:** `up_down_counter` instruments are invisible to the AST scan
+  (`registry.py` exports one; `_declarations()` matches counter/histogram only). The failure mode is
+  loud — a panel on such a series reports as unknown — so it is a gap, not a hole. And `docker port`
+  is queried once in `start_check`; an empty answer at that instant burns the deadline and reports
+  `state: timeout`, which reads as a config failure. A flake, never a false pass.
+
 ### Phase E — not done, and why
 
 - **The `oss_profile_smoke` container lane** (`OTEL_COMPOSE_SMOKE=1`, 8 tests) was not run to
@@ -1400,6 +1479,23 @@ descriptions from the other. Both sides were right about different things: the e
 retrieval IS unproven. Picking a winner would have shipped a lie either way. **Rule: when two sides
 have incompatible wording for the same fact, check whether they are describing two different states
 that one vocabulary cannot hold — and if so, add the state rather than choosing a side.**
+
+**Verify on the real input, not on a convenient one (2026-09-20).** `validate.sh`'s start pass
+overrode `OTEL_FILE_STORAGE_DIR` with a bind-mounted path so the test could inspect the directories
+from the host. That override silently replaced the one variable whose real value — the
+`/tmp/otelcol-storage` every env example pins — caused P0-COLLECTOR, so the check built to prove
+P0-COLLECTOR ran on inputs where P0-COLLECTOR cannot occur. The convenience that made the assertion
+easy is what removed its subject. **Rule: when a check needs to alter its input to make an
+assertion possible, keep a second pass on the unaltered input, and make the unaltered pass the one
+that must hold.**
+
+**Half a guard is the half nobody adversarially read (2026-09-20).** The emitted-series inventory
+was proved against the emitter by AST for its metrics and not at all for its spans, and its
+reachability limb — the sentence the whole design rests on — was a *substring* grep, so
+`# TODO: re-enable telemetry.record_turn` satisfied it. Both halves were written in the same sitting
+by someone who had just argued that hand-maintained lists are the problem. **Rule: after building a
+mechanism to replace a hand-maintained list, enumerate every field the mechanism declares and ask of
+each one, separately, what proves it. A field nothing checks is the old list wearing the new name.**
 
 **A check that cannot fail is not a check, and `rc=0` is not evidence (2026-09-20).** `otelcol
 validate` returns 0 on a config whose collector dies at startup, because it never builds a
