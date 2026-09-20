@@ -34,6 +34,13 @@ Terraform.
 - No user, session, chat, document or request identifier and no raw URL path on any metric. `tenant.id` is
   allowed only on explicitly approved tenant-scoped instruments with a documented cardinality bound; units
   declared; `{USD}` not `USD`.
+  *(Merged wording, annotated 2026-09-20: this is the rule, not a description of a guard. What
+  `flynapse_otel.registry.FORBIDDEN_ATTRIBUTE_KEYS` actually raises on is `session_id`/`session.id`,
+  `user_id`/`user.id`, `enduser.id`, `path`, `url`, `url.path`, `url.full`, `http.target` — chat, document
+  and request identifiers are not in it, the collector's `attributes/metric_cardinality` deletes a different
+  and partly overlapping list, and the "explicitly approved tenant-scoped instruments" list does not exist
+  anywhere. Task R.2 owes both the list and the bound; until then this line is aspiration with partial
+  enforcement.)*
 - No user content in log lines; prompt/completion bodies only in `llm_turn_content` and the Phoenix pipeline.
 - Pins: `opentelemetry-sdk==1.44.0`, `opentelemetry-exporter-otlp-proto-http==1.44.0`, contrib `==0.65b0`;
   collector image pinned; every compose image pinned.
@@ -109,7 +116,7 @@ conflict zone; A's and L's runtime tasks still wait for Gate M and Task R.
 | **N — stable non-agent telemetry** | 0 (safe MRO hygiene), 1c | copilot-mro + utils (`obs-non-agent`) | merged Stream U; Phase 1c signal-slice approval | now |
 | **P — product analytics** | 5 | core (`obs-analytics`), dashboard (`obs-analytics`), copilot-mro table definitions (tiny) | nothing (writer deferred) | now |
 | **F — frontend telemetry** | 4 | dashboard (`obs-frontend`) | P's ingest evolution for the switch-over only | now |
-| **L — agent runtime** | 0 (chat/runtime hygiene), Phase 1b runtime remainder, 3, `chat_turn_facts` writer, content capture | copilot-mro (`obs-agent`), utils `llm.py` | **Gate M + Task R** | after gate |
+| **L — agent runtime** | 0 (chat/runtime hygiene), Phase 1b runtime remainder, 3, `chat_turn_facts` writer, content capture | copilot-mro (`obs-agent`), utils `llm.py` | ~~**Gate M + Task R**~~ **Task R** (Gate M declared 2026-09-14/15) | after Task R |
 | **D — dashboards & alerts** | 6 | copilot-mro `deployment/`, iac | catalogue (R.2) for LLM/agent views; instrumentor names for service views | service views now; agent views after R |
 | **E — evals** | 7 | copilot-mro `tests/e2e` (harness), deployment (Phoenix) | optional Phoenix activation (I); content copy needs L | harness now; Phoenix wiring after L |
 | **A — audit follow-ups** | 11 (§11e; written as "8") | core, dashboard, copilot-mro `deployment/`, and later iac | current-state reconciliation; runtime work also needs Task R (Gate M declared 2026-09-14/15) | non-runtime tasks after 11.0; runtime task after Task R |
