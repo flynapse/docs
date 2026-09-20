@@ -106,6 +106,25 @@ follow the loader rule, and Phase 0 measures whether that costs anything.
 
 ### 2.2 Precondition inherited from the merge — the provider allowlist / residency
 
+
+> **BLOCK LIFTED 2026-09-20 — G.13 is closed and mutation-proved.** `copilot-mro-obsm 4bfa4967`.
+> The judge provider is now validated against `IN_ACCOUNT_JUDGE_PROVIDERS` (`azure`, `bedrock`,
+> `ollama`) declared in code at `agent_evaluation/contracts.py:56`, enforced twice — in `__init__`
+> and again immediately before `LLM(...)`, ahead of the vendor SDK import — with a fail-closed refusal
+> that cites this spec. The runbook no longer teaches `--provider openai` anywhere, and a guard
+> resolves every `--provider` in it against the catalogue. **Per M-EVALSGATE this project is now
+> unblocked and may start.**
+>
+> **Two things it INHERITS rather than finds solved, and neither is a reason to wait:**
+> 1. **Configurability is per-DEPLOYMENT, not per-tenant.** §2.2 below asks for both. The narrowing was
+>    escalated rather than quietly widened, and building the per-tenant half is this project's work.
+> 2. **Two residuals cannot be closed in-process:** an `evaluator=` object injected already bound to a
+>    vendor LLM carries its own client, and a caller implementing the `JudgeEvaluator` protocol
+>    entirely sits outside the adapter's reach. Both are code-level, not config-level — a reviewer, not
+>    a runtime check, is what catches them.
+>
+> The exporter-side residency question remains this project's Phase 8 and was deliberately untouched.
+
 > **STATUS CORRECTION, 2026-09-20 — read this before relying on the paragraph below.**
 > The owner's ruling is real and unchanged: residency enforcement lands in the merge, not here. **But no
 > Phase G item existed for it until today**, so the ruling had no owner and nothing was built. The control
