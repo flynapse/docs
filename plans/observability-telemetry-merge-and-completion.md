@@ -742,14 +742,16 @@ resolved; the merge commit records them and E fixes them.
       `copilot-mro-obsm/tests/integration/otel/test_tempo_span_metrics.py:34` — while ZERO production code in
       `utils-obsm`, `copilot-mro-obsm` or `core-obsm` sets it.** A promoted dimension nothing emits, with a test
       that certifies the promotion rather than the emission.
-      (2) **`s3.download` still has no `db.system`**, so on the two panels grouping by `(db_system, server_address)`
-      it remains an empty-`db_system` series. **That is the literal complaint in G.10's own plan line** ("the board's
-      named consumer gets nothing for S3"). C1.8's `server.address` fixed the *collapse*; it never gave S3 a
-      `db_system`. An S3-side edit, deliberately out of the span half's scope.
-      **Also corrected here: my own arithmetic.** I briefed "without `server.address` the span is excluded from three
-      of the four dependency panels". Measured from the exact expressions it is **one** — the panel filtering
-      `db_system=""`, which excludes a Weaviate span **regardless** of `server.address`; one panel is unaffected and
-      two collapse into an empty-label series. The instruction was right; the count was not.
+      (2) ~~**`s3.download` still has no `db.system`**~~ — **WRONG, and it was MY error. Struck 2026-09-20 by the
+      independent G.10 review, and re-verified by the controller.** I wrote that S3 "remains an empty-`db_system`
+      series". It does not. The two panels group by the **pair** with legend `{{db_system}}{{server_address}}`
+      (confirmed in `dependencies.json`), so S3 gets **its own host-named series** — not a collapse. And the
+      omission is **deliberate and documented at `utils-obsm/utils/s3_service.py:218-222`**: `server.address` is
+      precisely what keeps S3 out of the empty-label bucket, while the "DB client p95 by system" panel filters
+      `db_system != ""` and drops S3 **by design, because S3 is not a database.** The G.10 plan line's
+      "the board's named consumer gets nothing for S3" was already answered by C1.8. **Nothing is owed here.**
+      **G.23(1) stands, confirmed independently:** `peer.service` promoted at `tempo.yaml:61`, asserted at
+      `test_tempo_span_metrics.py:34`, **zero production emitters across all four repos.**
 - [ ] G.24 **Two pre-existing defects in `utils/weaviate_service.py`, reported by the G.10 pass and deliberately not
       fixed there.** (1) `delete_objects_by_property` and `list_and_delete_objects_by_property_contains` log
       `f"Failed to delete {obj.uuid}: {e}"` — **raw exception text in an f-string, the exact R22 shape C1.9 fixed
@@ -811,6 +813,35 @@ resolved; the merge commit records them and E fixes them.
       **This is a copilot-mro slice, not a utils one.** It needs an owner decision on shape before it is
       built: wrap the three tenancy functions, or instrument at each of the 26 sites, or push callers onto
       the traced class.
+
+- [ ] G.29 **What the independent G.10 review found, beyond the un-tick. Four P1s, none fixed.**
+      **(a) Five proven blind spots survive in the guard**, and one is the shape of the file's own flagship
+      method: a public method delegating to an exempt private body touches none of the matched names, and
+      **`hybrid_search` IS exactly that shape** — the reviewer re-derived the scan and `touching` does not
+      contain it. **An undecorated twin of the flagship method is invisible**, surviving only because a
+      C1-era test pins that one name by hand. Also missed: `backup`, a real v4 sub-API left out when five
+      others were added; a call through the public `get_client()` accessor; and `getattr(h, "query")`.
+      **A one-line `instrumented <= touching` assertion would surface the delegation class today.**
+      **(b) Two more swallowed-truncation paths report `success`** — `export_data_to_csv` catches "maximum
+      results exceeded", warns, breaks and writes a **short CSV** as `success`/OK; `drop_properties_from_schema`
+      consults only `errors`, so a run stopped by a result cap is `success`. The implementer found three sites
+      of this pattern **and stopped at three.**
+      **(c) A SECOND class of caller-side error, and it is NEW with G.10** — a `ValueError` raised **before the
+      first `get_collection`** is now a Weaviate ERROR span. G.24(2) records only the tenancy class and calls it
+      pre-existing; **this one is not, and the radius went from 1 door to 20.**
+      **(d) `weaviate.vector_search` encloses an Azure OpenAI round trip with NO child span anywhere** —
+      `utils/embedding_service.py` has **zero** OTel instrumentation. So a `db.system="weaviate"` p95 contains a
+      third-party SaaS call with nothing to drill into.
+      **Sharpest P2:** one production call emits **two** `db_system="weaviate"` CLIENT spans on first use
+      (`weaviate.connect` as a child of `weaviate.query_objects`), so the connect's ~215 ms is sampled **twice in
+      the same p95** and counted as two calls — **and the new one-span-per-door assertion cannot see it**, because
+      the fixture pre-sets the client. And the raw-exception surface is **~22 sites, not the 2 recorded** (19
+      `traceback.format_exc()` + 3 `{e}`), with a full tenancy message carrying the caller's tenant string
+      captured live. Folds into G.24.
+      **Out of tree, and it falsifies the guard's headline sentence:** Weaviate round trips outside the class —
+      six in the same repo (`utils/migrate_weaviate_collection.py`) and tenant-partition creation in copilot-mro
+      (`weaviate_tenancy.py:722/738/741`), **whose own docstring says the raw-client bypass is deliberate.**
+      *"Every door into Weaviate"* is true of the class and false of the dependency.
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
