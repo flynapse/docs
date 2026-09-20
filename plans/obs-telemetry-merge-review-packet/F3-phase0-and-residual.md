@@ -29,6 +29,8 @@ opt-out flip; the read API's RBAC; anything touching tenancy or RLS). Tier 0 req
 
 ---
 
+> **PACKET-WIDE CORRECTION, 2026-09-20.** This file is the packet's designated "start here", and three of its rows below were contradicted by later slices — an independent assembler found the contradiction, not a reader. Each is struck in place rather than rewritten, so the disagreement stays visible. The rule it produced: **a claims file records what was true at its own assembly, and the packet needs a reconciliation pass whenever a later slice lands.**
+
 ## Claims
 
 | # | Subject | Where (repo + file:line, or plan §) | Decision taken | Why | Evidence it is right | Guard test | Mutation-proved? | Tier | Claim state |
@@ -136,10 +138,10 @@ rows are judgment calls the owner may overturn — their guards pin the *outcome
 ### Tier 1 — consequential but reversible (25 OPEN)
 
 - **#4 M-SCOPE**, **#5 M-REVIEW**, **#14 M-SCOPE's struck backfill clause** — process/scope rulings with no guard by nature.
-- **#6 M-FALLBACK** and **#53/#54 the dashboard B2 items** — unexecuted; `dashboard-obsm` is unmerged.
+- **#6 M-FALLBACK** and **#53/#54 the dashboard B2 items** — ~~unexecuted; `dashboard-obsm` is unmerged~~ **SUPERSEDED 2026-09-20: Phase B2 merged at `dashboard-obsm 3afd524`.** M-FALLBACK shipped as a three-valued `DashboardOffer`, and the review corrected its "no widening" claim to half-true — it does not widen *capability* but **does** widen past a tenant's own narrowed profile. #54's dead-code finding is retired by the same change. See `claims-B2-dashboard.md`.
 - **#8 M-FRONTEND's 18-panel retention** — only the grafted panel's state note is guarded; no panel-count guard exists.
-- **#9 M-LOCK** — unexecuted.
-- **#26/#27 P0-INERT and the owner-blocked SHA-pinned scope guard** — still present, still RED.
+- **#9 M-LOCK** — ~~unexecuted~~ **SUPERSEDED 2026-09-20: executed and verified in Phase C2** (`claims-C2-api.md`, rows C2-18/19/20), with the content-hash and pin-delta evidence recorded. **M-WARN is SETTLED there with named mutation proofs**, not outstanding.
+- **#26/#27 P0-INERT and the owner-blocked SHA-pinned scope guard** — ~~still present, still RED~~ **SUPERSEDED 2026-09-20: the scope guard is REPOINTED and GREEN** (`copilot-mro-obsm 60f40a9f`; `tests/unit/observability` 179 passed/2 failed → **181 passed/0 failed**, re-run by the controller). The owner ruled repoint-not-delete; the hard-coded revisions, the stale path list and the branch-name disarm are all gone, and a **fourth** defect was found in the same file — it resolved `utils` through the workspace and was reading the **pre-merge sibling checkout**.
 - **#29 Clients omitting `event_id`** — no metric, no test, no expiry.
 - **#31 `profile_version` `or` coercion** — unreachable today, guarded only by a DB CHECK.
 - **#33 `BaseException` escapes both storage spans as UNSET.**
