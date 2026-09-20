@@ -636,7 +636,19 @@ two-contract architecture or duplicate ownership already assigned to Phase 3.
       and accepted-versus-duplicate reporting while preserving old-client compatibility.
 - [x] 11.2 Add a server-owned per-client Flynapse UI dashboard profile. Effective panels are the configured
       client panels intersected with supported panels, tenant features and authenticated role permissions.
-- [ ] 11.3 ~~After Gate M + Task R,~~ **after Task R**, close the Phase 3.7 `chat_turn_facts` writer and prove
+- [ ] 11.3 ~~After Gate M + Task R,~~ ~~**after Task R**~~ **— the Task R precondition is STALE for the WRITER
+      half and is struck 2026-09-20 (owner question Q3, answered).** Task R is a read-only audit whose every
+      deliverable is a document; it touches none of `blocks.py`, `save_block`, `block_data`, `metadata`,
+      `routing_scoreboard` or the projection's columns, and **the writer emits no span, metric, attribute or
+      cardinality surface, so R.2 has nothing to approve.** The merge plan's widened R.3 and R.4 both ran
+      read-only on 2026-09-20 and **mention `chat_turn_facts` zero times.** The live half of the constraint was
+      the §1 conflict-zone freeze, retired by Gate M on 2026-09-14/15. **Honest caveat carried:** the MASTER
+      plan's R.4 *does* name this writer (*"re-check phases 5 and 7 items that touch the conflict zone"*), and
+      **the master's R.3/R.4 are DIFFERENT TASKS from the merge plan's widened ones** — but both things a
+      re-check could change are already settled: whether it should exist (the owner dropped the backfill
+      schedule on 2026-09-19, making the online writer the sole populator) and what shape it projects (pinned
+      by the DDL, the 2026-09-05 backfill and the drift pin). **The precondition stands on the PARITY-PROOF
+      half, which is what 11.3 actually is.** close the Phase 3.7 `chat_turn_facts` writer and prove
       Agent SDK/LangGraph fact, ledger and telemetry parity without adding a second writer. The writer is
       carried as G.5 in `docs/plans/observability-telemetry-merge-and-completion.md`; the backfill **schedule**
       was dropped by the owner 2026-09-19, so the online writer is the sole populator and there is nothing to

@@ -598,7 +598,15 @@ resolved; the merge commit records them and E fixes them.
       name the drift pin already asserts equal — and `FACTS_UPSERT_SQL` is **string-identical** to the
       backfill's. Landed at `FACTS_VERSION = 1`; Q1 untouched. **The `department` equality claim is verified and
       is STRONGER than the spec stated** — the lock gate is necessary but not sufficient; the second fact is that
-      **`chats.department` is never updated anywhere** (three `UPDATE chats` sites across four repos, none
+      **`chats.department` is never updated by any RUNTIME code path — CORRECTED 2026-09-20, the original
+      wording was FALSE as literally stated.** Two estate-resident statements DO update it, both via a
+      **dynamically composed `INSERT … ON CONFLICT … DO UPDATE SET`** that a grep for `UPDATE chats` can
+      never see — `scripts/seed_test_estate.py` (builder at `:81-97`, chats row at `:388`) and
+      `tests/fixtures/tenancy/second_tenant.py`. **I verified the builder myself:** it emits
+      `DO UPDATE SET … department = EXCLUDED.department` for every non-key column. Both write a
+      **constant**, so no divergence exists today — but they are **re-runnable**, and editing that constant
+      between two seed runs would move `chats.department` while already-projected facts rows kept the old
+      value: precisely the divergence the docstring says cannot happen. Narrowed claim stands** (three `UPDATE chats` sites across four repos, none
       touching it, and no hard `DELETE FROM chats`). Without that, equality would hold at save time and the
       backfill could later disagree. **Exactly nine panels confirmed** (9 of 46), one of them half-dark.
       Five mutation proofs and **two vacuity attacks that both fired** — one caught an equality check that stayed
@@ -879,6 +887,43 @@ resolved; the merge commit records them and E fixes them.
       and the namespace package spanning both checkouts.
       Two documented residual costs: core's unit suite now needs an `api` checkout beside it, and **a sibling
       holding a genuinely stale copy reddens core.**
+
+- [ ] G.32 **G.5's writer sits exactly where the ruling it CITES says an analytics write must not sit.**
+      The review's sharpest finding. `blocks.py:552-563` cites AD-3 Ruling 5 as the precedent for the
+      savepoint — and **Ruling 5's own reason runs the other direction**, stated verbatim in
+      `tests/unit/metering/test_ledger_write_point.py:247-256`: *"every turn whose block was never persisted
+      (a 500 before the save, a stream whose background save timed out, an automation whose block was
+      rejected) would go unbooked."* **The facts writer is sited exactly there and inherits exactly that.**
+      **Operator consequence:** the Quality and Reliability panels compute failure rates over a denominator
+      that **structurally excludes failures.** And the docstring's mitigation — *"a gap shows as a dip in the
+      series rather than as quietly plausible numbers"* — is **FALSE for this class**: those turns never had a
+      block, so they are **invisible, not a dip**, and the backfill cannot fill them because it reads
+      `chat_blocks`. Needs an owner decision: accept the bias and document it honestly, or site a second write
+      where a turn is settled rather than where a block is saved.
+- [ ] G.33 **Three unvalidated fields cost the row; a fourth CORRUPTS it. All live-proved.**
+      One `save_block` per case against real Postgres: `tool_count = 2**40` → block kept, **row missing**;
+      `tool_count = "two"` → **row missing**; **`query_type = {"a":1}` → row missing (not previously flagged)**;
+      and **`query_type = ["a","b"]` → row WRITTEN as `'{a,b}'`, the Postgres array literal — corruption, not
+      absence, and not previously flagged.** Also `confidence = 1e308` writes a **309-digit numeric** into a
+      column documented "0..1". Live DDL confirms the integer columns and that every varchar is unbounded, so
+      **type and range are the hazard, not length.** `answer_found` has a CHECK *and* a vocabulary gate; these
+      four have neither.
+- [ ] G.34 **A chat delete breaks parity permanently AND retains user data in a relation that is READ.**
+      Live-proved: after `delete_chat`, `chat_blocks.deleted = true`, the backfill's `WHERE cb.deleted = false`
+      yields nothing for that block, and **the facts row survives carrying `user_id`, `session_id` and
+      `cited_documents`** — the titles the answer cited. **The panels carry no `deleted` filter** (zero grep
+      hits), so a deleted conversation is still counted. **Unlike `chat_blocks`, which is retained for audit and
+      filtered out of every read, this relation is retained AND read.** The implementer flagged only the
+      panel-counting half. This is a retention question, not just a parity one.
+- [ ] G.35 **The owner's savepoint ruling has no guard against a real connection.** It is proved only against a
+      hand-written cursor raising a plain `RuntimeError` and a connection whose `commit()` is a counter — **a
+      stub that cannot model Postgres aborting a transaction.** The db lane's four cases are **all happy
+      paths.** The reviewer proved the property live (nine consecutive saves, three failing the projection, all
+      nine blocks committed); **the repo does not.** Also: three mutation-proved holes survive in the parity
+      guard, the structural cause being that the constants test compares `FACTS_COLUMNS`, `FACTS_VERSION`, the
+      vocabulary and the upsert SQL **but never `facts_upsert_params` against the backfill's `_as_params`** —
+      so dropping a field from the json-serialised tuple survives every test while the two builders produce
+      **different rows.**
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
