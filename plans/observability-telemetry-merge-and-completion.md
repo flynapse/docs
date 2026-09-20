@@ -855,6 +855,12 @@ was false. Mutation-proven against the mutation that could not happen. Fixed in 
   backlog (~60 sites), not a new defect, but neither sweep reached it.
 - C1.5's first clause (`WEAVIATE_GRPC_PORT` into the copilot-mro env and compose files) is still
   owed: 0 hits across all six. Phase E.
+- **Nothing enforces the dynamic-loader convention.** CLAUDE.md names a module-scope
+  `from copilot_mro.app...` import in a copilot-mro test as an anti-pattern, and it cost ten failures
+  this phase from one of their files — plus one more from a file I wrote myself, fixed the same way.
+  `tests/unit/infra` already carries the layout and depth guards; this belongs beside them, as an AST
+  check that no test module imports `copilot_mro.app.main` (or any `copilot_mro.app.services.*`) at
+  module scope without an exemption naming its reason.
 - `config.py` still declares `tool_io_archive_enabled` after M-TOOLIO-2. Load-bearing for one good
   test (`test_agent_sdk_claude_content_feeders` asserts `archive is None` even when the flag is
   True), so keeping it is defensible — but `tests/e2e/run_explain_latency_e2e.py` still prints it
@@ -1120,10 +1126,15 @@ was reported before the lane that produced it had finished. The completed count 
 
 Of the 20: **4 were real defects**, all fixed in-phase; 2 are Phase E work (E.0a, E.0d); 2 are the
 owner-blocked branch-hygiene guard; 1 is an ERROR id the FAILED-only filter never counted; and the
-remaining ~10 pass standalone and fail only in the full `unit` lane — import pollution, reproducible
-in 19 s by COLLECTING `tests/unit` and running only the affected tests, which proves it is
-import-time. Bisect in progress at close; it is not a merge defect in those files, and per-directory
-runs are all green.
+remaining **10 were import pollution from ONE merge-added file** —
+`tests/unit/observability/test_nonagent_lifecycle_spans.py` did `import copilot_mro.app.main` at
+module scope, which runs during COLLECTION and lands the real `copilot_mro.app.services.*` packages
+in `sys.modules`, so every test that loads its subject by path binds the real module instead of its
+fake. Fixed (`6dc3160e`): `main` is a fixture. Found in 19 s rather than 22 minutes by collecting all
+of `tests/unit` and RUNNING only the ten — and the fact that deselecting every test in the offending
+file still broke them is what proved it was import-time rather than state.
+
+**All 20 are now accounted for; only the 2 Phase E items and the 2 owner-blocked ones remain open.**
 
 The four real ones, none visible to any targeted run this phase made:
 - the tenancy route sweep did not list the 12th router their merge mounts (`e3e31e14`);
