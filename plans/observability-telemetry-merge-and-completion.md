@@ -784,7 +784,19 @@ resolved; the merge commit records them and E fixes them.
       "the board's named consumer gets nothing for S3" was already answered by C1.8. **Nothing is owed here.**
       **G.23(1) stands, confirmed independently:** `peer.service` promoted at `tempo.yaml:61`, asserted at
       `test_tempo_span_metrics.py:34`, **zero production emitters across all four repos.**
-- [ ] G.24 **Two pre-existing defects in `utils/weaviate_service.py`, reported by the G.10 pass and deliberately not
+- [x] G.24 / G.29 **DONE 2026-09-20 (`utils-obsm 1cdebad` + a 692-line uncommitted production diff).** Lane
+      **1252 → 1316 collected and passed**; consuming copilot-mro suites 297/297. **The raw-exception surface
+      was 29 sites, not the ~22 I briefed** (22 `traceback.format_exc()` + 7 `{e}`), and three of the seven
+      were in a **returned health body**, not a log. **A CREDENTIAL LEAK was found inside the hunk the
+      previous diff had already edited** — `logger.info(f"Successfully connected to Weaviate at
+      {settings.weaviate_url}")`, **three lines above that helper's own docstring saying never to log the
+      URL** (verified: present at `HEAD~1:257`, gone now). Also **the user's query logged verbatim** by
+      `bm25_search`, and **tenant document content logged AND `print()`ed** per object in a dry-run delete.
+      **The allowlist finding is worse than recorded:** the sibling sweep's module list resolves against
+      copilot-mro's repo root, so this file **could never have been in it**. **The default was inverted** —
+      the sweep now walks every `utils/**/*.py`, a leaking module must be named with a reason, and **a
+      backlog module that has been CLEANED also fails, so the list only shrinks.** Proved by dropping in a
+      brand-new leaking module: it failed on its first run with no list to edit. ORIGINAL ITEM FOLLOWS., reported by the G.10 pass and deliberately not
       fixed there.** (1) `delete_objects_by_property` and `list_and_delete_objects_by_property_contains` log
       `f"Failed to delete {obj.uuid}: {e}"` — **raw exception text in an f-string, the exact R22 shape C1.9 fixed
       elsewhere in this same file.** Two lines; wants `failure_fields`. (2) A `WeaviateTenancyError` from
@@ -955,6 +967,40 @@ resolved; the merge commit records them and E fixes them.
       **disagree for three reasons**, because the bell's payload carries no error category — and the bell's
       ordering puts an **echoed token ahead of the backend's authored sentence**, which is the principle this
       work just established, left unapplied on the other surface.
+
+- [ ] G.37 **The log backlog this work created, and it names the file its own design copied.**
+      Inverting the sweep's default surfaced **106 leaks across ten `utils` modules**, each now in
+      `LEAK_BACKLOG` with a dated reason. Two matter more than the rest:
+      **(a) `utils/embedding_service.py:428` logs `f"Truncated text: {text[0:500]}"` — FIVE HUNDRED CHARACTERS
+      OF THE USER'S QUERY** — plus four `traceback.format_exc()`, and it is called from inside `hybrid_search`
+      and `vector_search`, **i.e. on the hot retrieval path.** Verified present.
+      **(b) `utils/s3_service.py` is in the backlog — the very file whose span-outcome vocabulary this design
+      took as its precedent.**
+- [ ] G.38 **A half-completed delete was reported as complete, and it is the sharpest defect of the slice.**
+      Five doors treated a **default `limit`** as the caller's limit. `delete_objects_by_property` derives
+      `total_objects` from the **capped page**, so `deleted_count == total_objects` is **always true at the
+      cap**: deleting 10,000 of 50,000 matching objects returned `10000`, logged a completion, and reported
+      `success`. Fixed here, but **the pattern — a default cap read as an answer — is worth sweeping for
+      estate-wide.**
+      **A vocabulary correction the reviewer forced, and it generalises:** the first pass made truncation
+      `partial` → ERROR. That is the client-error mistake in the other direction — **a server enforcing its
+      configured maximum is the dependency doing exactly what it is configured to do**, and putting it on the
+      error-share panel makes the error rate a function of how often somebody exports a large collection.
+      Split into **`truncated`** (non-error, for a stop nobody asked for) and **`partial`** (ERROR, only a
+      swallowed per-object failure).
+- [ ] G.39 **Four deferred findings with their elegant solutions named — record as Future Improvements.**
+      **`WeaviateTenancyError` messages still interpolate the tenant and operator ids**, and copilot-mro
+      deliberately re-raises them into the retrieval path, so **any handler up there rendering `str(exc)`
+      re-materialises the identity this pass deleted from the logs.** Fix: carry the ids as structured
+      attributes on the exception and keep the message generic — **cross-repo, and a message-contract ruling.**
+      · The detector **only walks `except` handler bodies**, so a same-module helper taking the exception as a
+      parameter is invisible. · A handle **stashed on `self`** evades the door scan; closing it needs
+      intra-class dataflow. · The hybrid→BM25 fallback still reports `success` — now at least **visible as
+      `weaviate.vector_fallback`, where previously NOTHING anywhere recorded that a retrieval had been served
+      without its vector half.**
+      **Owner-owed, outside that tree:** a dashboard exclusion for `span_name="weaviate.connect"` — and the
+      check that makes it possible is that **`span_name` IS a promoted Tempo label while `db.operation` is
+      not**, so it is a panel edit with no code change.
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
