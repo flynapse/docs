@@ -17,8 +17,8 @@ The four repositories use the same branch label but remain independent Git histo
 |---|---|---|---|
 | `copilot-mro` | `obs-non-agent` | `ac680bf2` from `langgraph-merge` | MRO lifecycle and stable job boundaries |
 | `utils` | `obs-non-agent` | `9f74a11` from `langgraph-merge` | Shared S3 and Weaviate client spans |
-| `core` | `obs-non-agent` | Phase 8.1 commit `03e15db` | Product-event ingestion; no Phase 1c production edit |
-| `dashboard` | `obs-non-agent` | Phase 8.1 commit `9233b99` | Flynapse UI product events; no Phase 1c production edit |
+| `core` | `obs-non-agent` | Phase 11.1 commit `03e15db` | Product-event ingestion; no Phase 1c production edit |
+| `dashboard` | `obs-non-agent` | Phase 11.1 commit `9233b99` | Flynapse UI product events; no Phase 1c production edit |
 
 The approved production-path manifest is exactly:
 
@@ -173,10 +173,10 @@ parser runtime, cloud-vendor delivery or multi-host operation. `agent_shared/**`
 | Check | Result |
 |---|---|
 | Target history recheck at phase start | PASS — no approved path changed after the recorded audit baseline |
-| Phase 8.1 Core unit contract | PASS — 27 focused tests |
-| Phase 8.1 Core isolated DB/API contract | PASS — 14 tests against a disposable PostgreSQL 16 database; scratch database and container removed |
-| Phase 8.1 dashboard typecheck | PASS |
-| Phase 8.1 dashboard unit contract | PASS — 13 focused tests |
+| Phase 11.1 Core unit contract | PASS — 27 focused tests |
+| Phase 11.1 Core isolated DB/API contract | PASS — 14 tests against a disposable PostgreSQL 16 database; scratch database and container removed |
+| Phase 11.1 dashboard typecheck | PASS |
+| Phase 11.1 dashboard unit contract | PASS — 13 focused tests |
 | Phase 1c storage-client contract | PASS — 6 focused tests; initial run failed all 6 before implementation |
 | Utils observability regression | PASS — entire `tests/unit/observability` suite; loopback tests rerun with sandbox permission |
 | Utils Weaviate tenancy regression | PASS — entire focused file |

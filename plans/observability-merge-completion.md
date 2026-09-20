@@ -1,6 +1,15 @@
 # Observability Merge Completion Plan
 
-**Governing plan:** `docs/plans/observability-rebuild-phase-8-audit-followups.md`
+**Governing plan:** `docs/plans/observability-rebuild-phase-11-audit-followups.md` (renumbered from "Phase 8"
+at the 2026-09-20 fold — master plan §11e).
+
+**Status at the fold, 2026-09-20.** This is the colleague's execution plan for `obs-telemetry-merge`, kept as
+the record of what that branch did and why. It is **not** the live plan: the branch is being merged under
+`docs/plans/observability-telemetry-merge-and-completion.md`, whose §4 rulings overrule several decisions
+recorded below — most visibly Task 5's removal of the Grafana `flynapse-postgres` datasource and the two
+`fn-llm-agents` exact-spend panels (**M-GRAFANA** keeps all three and refuses `deleteDatasources`), and Task 1's
+acceptance harness (**M-ACCEPT** drops it). Task 4's conclusion that Gate M "remains closed" is wrong: Gate M
+was declared 2026-09-14/15, on a mainline this branch predates.
 
 **Goal:** close the implementation gaps found in the `obs-telemetry-merge` audit without changing the accepted observability architecture or interfering with unfinished agent-runtime migration work.
 
@@ -35,13 +44,13 @@
 
 **Repositories:** `copilot-mro`, `docs`
 
-**Files:** `copilot-mro/deployment/otel/`, its Collector profile tests and documentation, plus the Phase 8 plan and current-state research notes.
+**Files:** `copilot-mro/deployment/otel/`, its Collector profile tests and documentation, plus the Phase 11 plan and current-state research notes.
 
 - [x] Add failing profile tests proving New Relic configuration and production durability fragments exist, validate without secrets, route traces/metrics/logs, and do not enable the optional content lane.
 - [x] Add the missing New Relic overlay and environment example using deployment-supplied endpoint and secret values.
 - [x] Add bounded retry, memory limiting, file-backed queue/storage, and documented disk/overflow behavior for production profiles without changing application images.
 - [x] Validate OSS, AWS, Azure, and New Relic profile composition with the repository-native non-container static validation suite.
-- [x] Correct Phase 8 implementation notes so configuration-only evidence, live provider canaries, and unsupported provider paths are accurately separated.
+- [x] Correct Phase 11 implementation notes so configuration-only evidence, live provider canaries, and unsupported provider paths are accurately separated.
 
 **Acceptance:** checked-in files match the plan's configuration claims; static validation passes; live provider retrieval and restart proof remain visibly pending until owner-run credentials and infrastructure are available.
 
@@ -49,7 +58,7 @@
 
 **Repositories:** `core`, `dashboard`
 
-**Files:** Core analytics profile, endpoint, registry, schema, table definitions, migrations and tests; dashboard analytics API client, panel registry, page, and tests listed by Phase 8 Task 8.2.
+**Files:** Core analytics profile, endpoint, registry, schema, table definitions, migrations and tests; dashboard analytics API client, panel registry, page, and tests listed by Phase 11 Task 11.2.
 
 - [x] Write Core resolver tests for configured-versus-supported panels, feature gates, role/capability intersection, fail-closed unknown panels, sensitive-panel control, and deterministic ordering.
 - [x] Write database tests for tenant isolation and the safe default profile.
@@ -65,7 +74,7 @@
 
 **Repositories:** `copilot-mro`, `core`, `docs`
 
-**Files:** current Agent SDK/LangGraph completion and persistence boundaries, Phase 3.7 projection work, `chat_turn_facts` backfill/tests, and the Phase 8 gate record.
+**Files:** current Agent SDK/LangGraph completion and persistence boundaries, Phase 3.7 projection work, `chat_turn_facts` backfill/tests, and the Phase 11 gate record.
 
 - [x] Re-run the file-level Gate M and Task R assessment against the merged branch, including both runtime persistence paths and the post-merge signal catalogue.
 - [x] If any prerequisite remains incomplete, update the plan with exact blocking files/owners and do not alter the runtime or add a writer.
@@ -95,7 +104,7 @@
 - [x] Run the focused backend/unit/integration checks accumulated by Tasks 1–5 without starting containers or UI processes.
 - [x] Run two-tenant product-event and dashboard-profile automated tests, metric-cardinality contract tests, and destination-swap static tests; record fixture-level blockers separately from passing assertions.
 - [x] Record owner-run checks separately: Flynapse UI rendering, Grafana live population, Phoenix traces, single-host Docker runs, provider canary retrieval, and queue restart proof.
-- [x] Update the master and Phase 8 status ledgers using only fresh evidence.
+- [x] Update the master and Phase 11 status ledgers using only fresh evidence.
 - [x] Run one whole-change GPT-5.6 Sol Extra High architecture/code review and resolve all Critical and Important findings before completion.
 
 **Acceptance:** all locally executable assertions either pass or have an explicit pre-assertion environment blocker with recorded commands and outputs; every unexecuted live check remains clearly pending; the final review finds no unresolved Critical or Important issue.

@@ -1,8 +1,8 @@
-# Observability Rebuild — Phase 8 Detail Plan: Audit Follow-ups and Production Readiness
+# Observability Rebuild — Phase 11 Detail Plan: Audit Follow-ups and Production Readiness
 
 > **For agentic workers:** use `superpowers:executing-plans` or
 > `superpowers:subagent-driven-development`. Complete one task at a time, write the test first, and pause for
-> owner review at every gate. Master plan: `docs/plans/observability-rebuild.md`, Phase 8. Audit basis:
+> owner review at every gate. Master plan: `docs/plans/observability-rebuild.md`, Phase 11. Audit basis:
 > `docs/plans/observability-rebuild-audit.md` plus the owner decisions recorded below.
 
 **Goal.** Close the remaining audit gaps without changing the accepted architecture: two application
@@ -12,6 +12,22 @@ through the existing OpenTelemetry Collector, and deployment-owned destination a
 **Deployment boundary.** The current target is one Docker host per client deployment. This phase must not
 introduce Kubernetes. The design may later be replicated across hosts because application containers continue
 to emit the same OTLP contract to a configured Collector endpoint.
+
+**Renumbered 8 → 11 on 2026-09-20, at the `obs-telemetry-merge` fold.** This plan arrived from
+`origin/obs-telemetry-merge` as "Phase 8"; that number was already taken by
+`docs/plans/observability-rebuild-phase-8-satellite-services.md`, which landed on our mainline while this
+branch was live. Every task id here moved 8.x → 11.x, the file moved with it, and every reference in the
+master plan, research 08, the Phase 1c plan and the merge-completion plan was updated in the same change. The
+text is otherwise theirs.
+
+**One finding of theirs is corrected, not deleted: Gate M was DECLARED 2026-09-14/15** (master plan §2 and the
+§15 ledger — owner: "langraph migration is done. so we can build and moerge now."). This branch was cut before
+that date and could not see it, so every "Gate M is not declared / remains closed" sentence below is wrong as
+of the fold and is struck in place where it appears. What Task 11.3 is actually waiting on is **Task R**, which
+is unblocked and unstarted. The online `chat_turn_facts` writer is owned by Phase 3.7, carried as G.5 in
+`docs/plans/observability-telemetry-merge-and-completion.md`; the `chat_turn_facts` **backfill schedule** was
+dropped by the owner on 2026-09-19, so any reconciliation this plan asks for is against a script that is run
+once by hand, never on a timer.
 
 ## 1. Decisions this phase must preserve
 
@@ -32,7 +48,7 @@ to emit the same OTLP contract to a configured Collector endpoint.
 7. **Keep the current Docker-native POC stack.** Phoenix becomes optional. Evaluation of a consolidated
    `otel-lgtm` container is deferred and is not an implementation task in this phase.
 
-## 2. Data and control flow after Phase 8
+## 2. Data and control flow after Phase 11
 
 | Concern | Producer | Boundary and storage | Consumer |
 |---|---|---|---|
@@ -49,29 +65,30 @@ operational telemetry from its selected telemetry store with only the approved P
 ## 3. Sequencing and ownership
 
 **Branch strategy (updated 2026-09-08):** use the local `obs-non-agent` branch name independently in Core,
-dashboard, copilot-mro and utils. Core/dashboard retain the existing uncommitted Phase 8.1 work and 8.2 follows
-it sequentially because their analytics files overlap. Copilot-mro/utils carry Phase 1c; MRO-only 8.4 and the
-configuration portion of 8.5 follow as separate commits. A common name is a coordination label, not a shared Git
+dashboard, copilot-mro and utils. Core/dashboard retain the existing uncommitted Phase 11.1 work and 11.2 follows
+it sequentially because their analytics files overlap. Copilot-mro/utils carry Phase 1c; MRO-only 11.4 and the
+configuration portion of 11.5 follow as separate commits. A common name is a coordination label, not a shared Git
 history or permission to mix the operational-telemetry and product-event contracts.
 
 | Task | May start | Depends on | Owns |
 |---|---|---|---|
-| 8.0 Current-state reconciliation | immediately | latest checked-out branches | status and contract baseline only |
-| 8.1 Product-event reliability | after 8.0 | current Phase 4/5 event path | event identity, versioning and deduplication |
-| 8.2 Per-client Flynapse UI profiles | after 8.0 | current Core panel registry and dashboard registry | server-owned effective view contract |
-| 8.3 Turn-fact/runtime completion gate | after Gate M and Task R | Phase 3.2, 3.3 and 3.7 | parity and reconciliation; no second writer |
-| 8.4 Optional Phoenix packaging | after 8.0 | current Docker compose profiles | optional POC footprint only |
-| 8.5 Production destination readiness | after 8.0; live sends require client credentials | Phase 2 Collector boundary | deployment adapters, durability and canaries |
-| 8.6 Final acceptance | last | 8.1–8.5, Phase 1c and required Stream L work | cross-repository proof and plan closeout |
+| 11.0 Current-state reconciliation | immediately | latest checked-out branches | status and contract baseline only |
+| 11.1 Product-event reliability | after 11.0 | current Phase 4/5 event path | event identity, versioning and deduplication |
+| 11.2 Per-client Flynapse UI profiles | after 11.0 | current Core panel registry and dashboard registry | server-owned effective view contract |
+| 11.3 Turn-fact/runtime completion gate | ~~after Gate M and Task R~~ → **after Task R** (Gate M declared 2026-09-14/15) | Phase 3.2, 3.3 and 3.7 | parity and reconciliation; no second writer |
+| 11.4 Optional Phoenix packaging | after 11.0 | current Docker compose profiles | optional POC footprint only |
+| 11.5 Production destination readiness | after 11.0; live sends require client credentials | Phase 2 Collector boundary | deployment adapters, durability and canaries |
+| 11.6 Final acceptance | last | 11.1–11.5, Phase 1c and required Stream L work | cross-repository proof and plan closeout |
 
-Tasks 8.1, 8.2, 8.4, Phase 1c and configuration-only parts of 8.5 may run independently. Phase 1c is limited to
-the stable non-agent paths and safety guard defined in the master plan. Task 8.3 must not bypass Gate M or Task R.
-Task 8.6 cannot close while Phase 1c, the gated Phase 0 chat cleanup, Phase 1b runtime handoff or required Phase 3
+Tasks 11.1, 11.2, 11.4, Phase 1c and configuration-only parts of 11.5 may run independently. Phase 1c is limited to
+the stable non-agent paths and safety guard defined in the master plan. Task 11.3 must not bypass Task R (Gate M
+is declared; Task R is not done).
+Task 11.6 cannot close while Phase 1c, the gated Phase 0 chat cleanup, Phase 1b runtime handoff or required Phase 3
 work is unfinished, or while a required provider is represented only by configuration validation.
 
 ## 4. Tasks
 
-### Task 8.0 — Reconcile the plan with the current branches
+### Task 11.0 — Reconcile the plan with the current branches
 
 **Files:** update `docs/plans/observability-rebuild-research/08-post-migration-rescoping.md`; update the master
 plan's status ledger. Do not change application code in this task.
@@ -79,16 +96,19 @@ plan's status ledger. Do not change application code in this task.
 - [x] Re-run the focused inventory against current `api`, `core`, `copilot-mro`, `dashboard`, `utils` and
       `iac` branches. Record observed implementation separately from planned work.
 - [x] Confirm whether Gate M can be declared. If it cannot, identify the remaining merge dependency and leave
-      Task 8.3 blocked without blocking the other Phase 8 tasks.
+      Task 11.3 blocked without blocking the other Phase 11 tasks. **Answered "no" on 2026-09-08 and wrong by
+      2026-09-14/15**, when the owner declared it. This step is not repeatable as written — it asks a branch to
+      observe a declaration recorded on a mainline it was cut from; the check belongs on the current mainline
+      ledger (master §2, §15), not on the branch's own tracked docs.
 - [x] Pin the current Product Analytics API, product-event wire, table keys, Collector overlays, Docker services,
       Phoenix coupling, dashboard registries and both agent runtimes.
 - [x] Reconcile stale master-plan checkboxes and links. Historical implementation notes remain historical and
       must not be rewritten as current facts.
 
-**Acceptance:** every Phase 8 task begins from a file-level current-state table; no item is marked implemented
+**Acceptance:** every Phase 11 task begins from a file-level current-state table; no item is marked implemented
 solely because it exists in an older plan.
 
-### Task 8.1 — Make product-event delivery idempotent and versioned
+### Task 11.1 — Make product-event delivery idempotent and versioned
 
 **Files:** modify `dashboard/lib/telemetry/product-events.ts`,
 `dashboard/tests/unit/telemetry/product-events-client.test.ts`,
@@ -127,7 +147,7 @@ migration runner only if the failing migration test proves it is required.
 **Acceptance:** retrying a batch cannot double-count a product event; existing deployed clients still receive a
 successful response; the endpoint reports duplicates; RLS and cross-tenant tests remain green.
 
-### Task 8.2 — Add a per-client Flynapse UI dashboard profile
+### Task 11.2 — Add a per-client Flynapse UI dashboard profile
 
 **Files:** create `core/core/resources/analytics/dashboard_profiles.py`; modify
 `core/core/resources/analytics/{analytics_endpoints.py,panel_service.py,registry.py,schemas.py}` and
@@ -166,11 +186,12 @@ under `dashboard/tests/unit/analytics/`.
 **Acceptance:** a server-side per-client change alters the next Flynapse UI dashboard response without a
 frontend rebuild; unsupported or unauthorized panels never appear; direct panel calls remain protected.
 
-### Task 8.3 — Close `chat_turn_facts` and dual-runtime coverage
+### Task 11.3 — Close `chat_turn_facts` and dual-runtime coverage
 
-**Ownership:** Phase 3.7 remains the only online `chat_turn_facts` writer task. Phase 8 must not add a second
-writer or a second projection implementation. Begin only after Gate M, Task R and the refreshed backend signal
-catalogue.
+**Ownership:** Phase 3.7 remains the only online `chat_turn_facts` writer task. Phase 11 must not add a second
+writer or a second projection implementation. Begin only after ~~Gate M,~~ Task R and the refreshed backend
+signal catalogue. **Gate M was declared 2026-09-14/15**, so the only remaining precondition is Task R, and the
+writer itself is G.5 in the merge plan rather than work this phase performs.
 
 **Likely files after Task R:** the shared Agent SDK/LangGraph completion and persistence boundary under
 `copilot-mro/copilot_mro/app/services/agent_shared/`, runtime adapters under `agent_claude/` and `lang_agent/`,
@@ -179,7 +200,7 @@ the block-save path, `agent_shared/telemetry.py`, `agent_shared/model_call_ledge
 
 - [ ] Let the original Stream L owners complete the gated Phase 0 chat cleanup, Phase 1b runtime handoff and
       Phase 3 against
-      the post-merge call graph. Task 8.3 coordinates the Phase 3.2, 3.3 and 3.7 parity/reconciliation proof;
+      the post-merge call graph. Task 11.3 coordinates the Phase 3.2, 3.3 and 3.7 parity/reconciliation proof;
       it must not create competing implementations.
 - [ ] Persist the facts row in the same transaction as the successful block save and make the write idempotent
       on the tenant/block key.
@@ -194,7 +215,7 @@ the block-save path, `agent_shared/telemetry.py`, `agent_shared/model_call_ledge
 failed turns follow the ruled persistence behavior; backfill and online projection agree; mapped operational
 panels are queryable with real data.
 
-### Task 8.4 — Make Phoenix optional in the current Docker POC
+### Task 11.4 — Make Phoenix optional in the current Docker POC
 
 **Files:** modify the applicable Docker compose files and `copilot-mro/deployment/otel/README.md`; add a
 Phoenix-specific compose override if that is the smallest clean separation; extend
@@ -219,7 +240,7 @@ Default root and POC Docker stacks now load only `base.yaml + backend-oss.yaml`;
 root/POC compose config passed for default and Phoenix variants; live default OSS smoke passed 4 tests without
 Phoenix; live optional Phoenix smoke passed the content-copy test. `otel-lgtm` remains deferred.
 
-### Task 8.5 — Complete production destination adapters and durability
+### Task 11.5 — Complete production destination adapters and durability
 
 **Files:** create `copilot-mro/deployment/otel/backend-newrelic.yaml` and its environment example; create or
 extend a production durability fragment under `copilot-mro/deployment/otel/`; modify
@@ -259,7 +280,7 @@ owner-run provider trace/metric/log retrieval, Azure production support re-check
 and production-mounted queue restart survival remain open. Configuration evidence must not be treated as live
 provider evidence.
 
-### Task 8.6 — Cross-phase acceptance and closeout
+### Task 11.6 — Cross-phase acceptance and closeout
 
 - [ ] Run a two-tenant product-event replay: one logical event per tenant, duplicate retries, correct accepted
       and duplicate counts, and no cross-tenant reads.
@@ -296,7 +317,7 @@ entered scope.
 
 ## 6. Review checklist
 
-- [x] Current versus planned wording is accurate after Task 8.0.
+- [x] Current versus planned wording is accurate after Task 11.0.
 - [ ] No task merges the operational and product-event contracts.
 - [ ] No frontend profile exposes vendor configuration or weakens backend authorization.
 - [ ] No provider is called production-supported from static configuration alone.
@@ -310,7 +331,7 @@ entered scope.
 
 _(Append dated evidence, deviations, test results and owner rulings as the phase is executed.)_
 
-- **2026-09-08 — Task 8.0 complete (documentation-only).** The current six-repository baseline is recorded in
+- **2026-09-08 — Task 11.0 complete (documentation-only).** The current six-repository baseline is recorded in
   `docs/plans/observability-rebuild-research/08-post-migration-rescoping.md`. Both runtimes exist behind the
   deployment selector, but Gate M is **not declared**: migration Batch 5, its post-Batch-5 parity slice and the
   owner's stability declaration remain. Product-event reliability, per-client Flynapse UI profiles, optional
@@ -321,7 +342,7 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   Batch 5 and post-Batch-5 parity blockers: the Copilot MRO S4 ledger records the conversion gates closed and
   the runtime divergence register records R-PAR-2 closed. Gate M is still **not declared** because the owner has
   not recorded the required conflict-zone stability declaration, and Task R has not produced the refreshed
-  runtime inventory or signal catalogue. Phase 8.3 therefore remains blocked. The selected Claude/LangGraph
+  runtime inventory or signal catalogue. Phase 11.3 therefore remains blocked. The selected Claude/LangGraph
   runtimes converge before route persistence through `get_agent_pipeline()`: non-streaming `/rag` saves the
   chat block synchronously before return, while `/rag/stream` sends `final` before its timeout-bounded background
   `save_block` and does not change the client response if that save fails. Phase 3.7 remains the only online
@@ -333,34 +354,34 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   lane's grant fixture hit `permission denied for table tenants`. This is a scratch-lane/test-harness privilege
   blocker, not evidence of a backfill logic failure. No runtime, schema, dashboard or duplicate writer change was
   made.
-- **2026-09-08 — Task 8.1 complete in isolated worktrees.** Dashboard now assigns a UUID and schema version 1
+- **2026-09-08 — Task 11.1 complete in isolated worktrees.** Dashboard now assigns a UUID and schema version 1
   when a validated event enters its in-memory queue and reuses that envelope for retries. Core accepts both
   the legacy shape and the versioned shape, supplies compatibility values for omitted fields, and performs one
   tenant-scoped batch insert with conflict-ignore and returned accepted keys. The endpoint reports `accepted`
   and `duplicates` separately and emits operational product-event logs only for accepted rows. PostgreSQL adds
   `schema_version` through the existing registry migration path; no migration-runner change, IndexedDB, outbox
   or Collector route was added.
-- **Task 8.1 rollout order and compatibility gate.** Apply the Core registry migration first, deploy Core
+- **Task 11.1 rollout order and compatibility gate.** Apply the Core registry migration first, deploy Core
   second, and deploy the Flynapse UI third. Core must keep generating missing event IDs and version 1 for old
   clients until deployment evidence shows the supported Flynapse UI population always sends both fields.
   Removing those defaults is a separate owner-approved breaking-contract change; browser-generated IDs remain
   non-durable across reloads by this task's explicit scope.
-- **Task 8.1 verification.** Dashboard: 69 telemetry unit tests and TypeScript typecheck passed. Core: 27
+- **Task 11.1 verification.** Dashboard: 69 telemetry unit tests and TypeScript typecheck passed. Core: 27
   focused schema/table tests, 14 scratch-Postgres API/store tests under a non-bypass RLS role, and 189 broader
   analytics/error-contract tests passed. The standard registry migration also upgraded a disposable database
-  created from the pre-8.1 schema, adding the version column, default, `NOT NULL` and named check constraint
+  created from the pre-11.1 schema, adding the version column, default, `NOT NULL` and named check constraint
   without a migration-runner edit. All scratch databases and temporary test roles were removed. The broad
   Core run excluded only `test_chat_turn_facts_drift_pin.py`, which cannot locate its required sibling
   `copilot-mro` repository from the isolated worktree. Dashboard's repository-wide changed-file lint remains
   blocked by two pre-existing `prefer-const` findings in `hooks/pdf-viewer/use-pdf-search.ts`; the modified
   files typecheck and their tests pass.
-- **2026-09-17 — Task 8.2 acceptance refresh in `obs-telemetry-merge`.** Fresh Task 6 checks passed the Core
+- **2026-09-17 — Task 11.2 acceptance refresh in `obs-telemetry-merge`.** Fresh Task 6 checks passed the Core
   dashboard-profile resolver/table/API lane as part of the `167 passed, 1 skipped` Core analytics/API command,
   the isolated dashboard-profile scratch database lane (`3 passed`), Dashboard mounted/profile tests inside the
   `42 passed` native Node command, Dashboard typecheck, and touched-file Dashboard lint. The same run kept
   destination and Collector behavior separate through the explicit profile-composition lane (`31 passed`). No
   browser/UI process was started, so Flynapse UI rendering and profile switching remain owner-run acceptance.
-- **2026-09-17 — Task 8.6 partial backend acceptance refresh.** The bounded non-container matrix passed startup,
+- **2026-09-17 — Task 11.6 partial backend acceptance refresh.** The bounded non-container matrix passed startup,
   partition, lifecycle, agent evaluation, OTel/Collector, Grafana dashboard JSON, alert layout, metric
   cardinality, destination/profile composition, Dashboard product-event envelope, Dashboard profile rendering
   unit tests, TypeScript checking, touched-file lint, Copilot MRO lock metadata, and `validate.sh` shell syntax.
@@ -373,7 +394,7 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   from this run. Live UI, Grafana, Prometheus/Tempo retrieval, Phoenix traces/evaluations, pinned Collector
   Docker validation, single-host Docker runs, provider canaries/field paths, Azure support refresh and
   production queue restart proof remain owner-run. Gate M remains closed and Task R remains unrun.
-- **2026-09-17 — Task 8.6 final review closeout.** The whole-change GPT-5.6 review found no Critical, one
+- **2026-09-17 — Task 11.6 final review closeout.** The whole-change GPT-5.6 review found no Critical, one
   Important AWS Query Studio catalogue contradiction, and one non-blocking Minor API degraded-state
   observation. Copilot MRO commit `4838cfc` normalized the complete AWS catalogue to CloudWatch brace
   selectors with original dotted OTLP names and widened the static guard. The focused test passed, the full
@@ -382,3 +403,17 @@ _(Append dated evidence, deviations, test results and owner rulings as the phase
   degraded Weaviate state but does not publish the helper's returned flag through health state. The database
   fixture blockers and every owner-run live check listed above remain pending and must not be represented as
   validated runtime behavior.
+
+- **2026-09-20 — correction at the merge fold (not a new implementation note).** Three notes above conclude
+  that Gate M is not declared / remains closed: the Task 11.0 note of 2026-09-08, the Task 4 gate-reassessment
+  note of 2026-09-17, and the Task 11.6 partial-acceptance note of 2026-09-17. All three are **false as of
+  2026-09-14/15**, when the owner declared Gate M (master plan §2 and §15). They are left in place because
+  each is dated evidence of what that branch could observe, and because the mechanism of the error matters:
+  each note looked for the declaration in *tracked docs reachable from the branch*, and the declaration was
+  recorded on a mainline the branch was cut before. The consequence is that Task 11.3's deferral, and research
+  08's deferral of the sole `chat_turn_facts` writer, both rest on a condition that no longer holds. What
+  remains genuinely owed is **Task R**. Two further corrections: the master plan's §11.5 summary claims
+  "Azure is marked production `NO-GO`" — no `NO-GO` marker exists anywhere in `copilot-mro`, whose
+  `deployment/otel/README.md` says `backend-azure.yaml` is "authored + validated, not deployed"; and Task 5's
+  removal of the Grafana `flynapse-postgres` datasource was **reversed by ruling M-GRAFANA** in the merge plan
+  (the datasource and the two `fn-llm-agents` exact-spend panels stay; `deleteDatasources` is not adopted).

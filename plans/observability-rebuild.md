@@ -63,8 +63,8 @@ Branch names: `obs-infra` (copilot-mro, deployment/ only, from `langgraph-merge`
 `langgraph-merge`), `obs-api` (api, from `langgraph-merge`), `obs-analytics` (core from `master`; dashboard
 from `agent_sdk`), `obs-frontend` (dashboard from `agent_sdk`) and `obs-iac` (iac from `main`). The pre-migration
 audit/application work uses the common label `obs-non-agent` in each independent repository: the existing Core
-and dashboard branches retain Phase 8.1 and continue into 8.2; copilot-mro and utils carry Phase 1c, with MRO
-deployment-only 8.4/8.5 changes added as separate commits. Runtime-dependent work branches from
+and dashboard branches retain Phase 11.1 and continue into 11.2; copilot-mro and utils carry Phase 1c, with MRO
+deployment-only 11.4/11.5 changes added as separate commits. Runtime-dependent work branches from
 `langgraph-merge` **after** the gate as `obs-agent`. Phase 1c uses one implementer across its two repositories,
 rebases before each task and never shares a production file with the migration owner.
 
@@ -110,7 +110,7 @@ conflict zone; A's and L's runtime tasks still wait for Gate M and Task R.
 | **L — agent runtime** | 0 (chat/runtime hygiene), Phase 1b runtime remainder, 3, `chat_turn_facts` writer, content capture | copilot-mro (`obs-agent`), utils `llm.py` | **Gate M + Task R** | after gate |
 | **D — dashboards & alerts** | 6 | copilot-mro `deployment/`, iac | catalogue (R.2) for LLM/agent views; instrumentor names for service views | service views now; agent views after R |
 | **E — evals** | 7 | copilot-mro `tests/e2e` (harness), deployment (Phoenix) | optional Phoenix activation (I); content copy needs L | harness now; Phoenix wiring after L |
-| **A — audit follow-ups** | 8 | core, dashboard, copilot-mro `deployment/`, and later iac | current-state reconciliation; runtime work also needs Gate M + Task R | non-runtime tasks after 8.0; runtime task after gate |
+| **A — audit follow-ups** | 11 (§11e; written as "8") | core, dashboard, copilot-mro `deployment/`, and later iac | current-state reconciliation; runtime work also needs Task R (Gate M declared 2026-09-14/15) | non-runtime tasks after 11.0; runtime task after Task R |
 
 Merge order for the dashboard repo: `obs-analytics` first (settings page + analytics client), then
 `obs-frontend` rebased on it (they share `package.json` and `lib/api/*`).
@@ -224,6 +224,17 @@ verified by the smoke; no user text in the identified memory/Weaviate/chat log c
 
 ### 1c — stable non-agent application telemetry (Stream N, now; independent of Gate M)
 
+**Phase 1c is a re-cut of our own gated 1b.7 and 1b.8 (recorded at the fold, 2026-09-20).** It keeps its
+number — nothing of ours ever claimed "1c" — but it is not new scope. Our 1b.7 and 1b.8 held, behind Gate M,
+exactly what 1c carved out and built before the gate: the MRO lifecycle bootstrap, the S3 and Weaviate wrapper
+spans, the six dead `document_hub_qna_*` constants, the parser `__main__` service names, and the document-hub /
+improvement / data-discovery background roots. Their insight was that none of those files sit in the conflict
+zone, so the gate never applied to them; they proved it with a path manifest and a drift guard rather than by
+argument. What the gate really covered is what is now "1b-mro — runtime handoff remainder" below. Two items of
+ours did **not** come across and remain owed: the **Weaviate connection-factory** span (1b.7's wrapper, carried
+as G.10 in the merge plan) and the removal of `prometheus-client` from `copilot-mro/pyproject.toml` (their
+0.6b, still declared in the merged tree — the `/metrics` route itself is gone).
+
 **Planning status:** approved scope only; no application code was changed when this phase was added. Before
 implementation, write `docs/plans/observability-rebuild-phase-1c-stable-nonagent.md` with the exact signal slice
 and tests below, then obtain owner approval. Audit baseline: copilot-mro `ac680bf2` and utils `9f74a11` on
@@ -328,7 +339,7 @@ outcome and correlated content-free log; disabled OTel preserves behavior; forbi
 scans pass; the production diff contains only the allowed paths. A local Collector canary must retrieve at least
 one memory, Document Hub, Data Discovery, improvement and parser trace before the phase is called complete.
 
-### 1b-mro — runtime handoff remainder (Stream L, after Gate M + R)
+### 1b-mro — runtime handoff remainder (Stream L, ~~after Gate M + R~~ after Task R; Gate M declared 2026-09-14/15)
 
 The original 1b-mro bucket mixed stable application seams with the changing agent runtime. Those stable tasks are
 now Phase 1c. After Task R, this subsection owns only context handoff gaps that cross from the application shell
@@ -363,7 +374,7 @@ CI job `otelcol-validate`.
       (traces carrying bodies → Phoenix only). CI: `otelcol validate` for base + each overlay.
 - [ ] 2.2 `backend-oss.yaml`: `prometheusremotewrite` → Prometheus (with `deltatocumulative` before it),
       `otlp` → Tempo, `otlphttp` → Loki `/otlp` with the tenant header, and `otlphttp` → Phoenix for `content`
-      only when the optional content fragment is enabled (Phase 8.4);
+      only when the optional content fragment is enabled (Phase 11.4);
       full `service:` block restated. Compose: Prometheus `--web.enable-remote-write-receiver`, scrape config
       reduced to self.
 - [ ] 2.3 Compose smoke test (`copilot-mro/tests/integration/otel/test_oss_profile_smoke.py`, marker-gated):
@@ -382,7 +393,7 @@ CI job `otelcol-validate`.
       the log group receives it (owner-run; documented in `iac/README`).
 - [ ] 2.6 **Deployment deferred:** Terraform module `iac/modules/otel-gateway` for a later client-account
       rollout (ECS task definition + service, task role, log groups, SSM parameters for the overlay env);
-      `examples/` with a plan test. Existing artifacts may remain, but Phase 8 does not deploy or expand this
+      `examples/` with a plan test. Existing artifacts may remain, but Phase 11 does not deploy or expand this
       topology while the approved target is one Docker host per client deployment.
 - [ ] 2.7 Probes (spec §12, infra-side): CloudWatch OTel-metrics endpoint GA + temporality; Logs OTLP stored
       field paths; PromQL alarm support in the pinned AWS provider (fallback `awscc`). Results recorded in §9.
@@ -526,7 +537,7 @@ Loki path is gone; `product_events` rows arrive from the frontend (with phase 4)
 
 - [ ] 7.1 Phoenix container available as an **optional** addition to the `oss` profile (existing Postgres, auth
       on, retention env, one project per tenant + `internal`); client-account variant in the `otel-gateway`
-      module remains optional. Phase 8.4 owns removal of the current mandatory compose coupling.
+      module remains optional. Phase 11.4 owns removal of the current mandatory compose coupling.
       Test: compose smoke sends one `invoke_agent` trace through the `content` pipeline and finds it in Phoenix.
 - [ ] 7.2 Attribute-mapping probe (spec §12): our `gen_ai.*` span → Phoenix renders model, tokens, cost, tools;
       add OpenInference aliases to `transform/genai_aliases` where needed.
@@ -542,40 +553,6 @@ Loki path is gone; `product_events` rows arrive from the frontend (with phase 4)
 - [ ] 7.6 Sampled production copy honouring the opt-out (from 3.6) reaches the tenant's Phoenix project only in
       the same account (data residency, spec §6.5). Test: cross-account exporter config is refused by the
       overlay validation.
-
----
-
-## Phase 8 — Audit follow-ups and production readiness (Stream A)
-
-Detail plan: `docs/plans/observability-rebuild-phase-8-audit-followups.md`. This phase contains only the
-remaining audit deltas and cross-phase proof. It does not reopen the accepted two-contract architecture or
-duplicate ownership already assigned to Phase 3.
-
-- [x] 8.0 Reconcile the master plan and audit against the latest checked-out branches; declare Gate M only from
-      current evidence and write the post-migration rescoping record.
-- [x] 8.1 Add stable browser-created product `event_id`, `schema_version`, tenant-scoped idempotent insertion,
-      and accepted-versus-duplicate reporting while preserving old-client compatibility.
-- [x] 8.2 Add a server-owned per-client Flynapse UI dashboard profile. Effective panels are the configured
-      client panels intersected with supported panels, tenant features and authenticated role permissions.
-- [ ] 8.3 After Gate M + Task R, close the Phase 3.7 `chat_turn_facts` writer and prove Agent SDK/LangGraph fact,
-      ledger and telemetry parity without adding a second writer.
-- [x] 8.4 Make Phoenix optional in the current single-host Docker POC. Keep the separate native services;
-      `otel-lgtm` evaluation is deferred.
-- [ ] 8.5 Add the New Relic Collector profile, production queue/retry persistence, retrieved canaries for every
-      provider claimed supported, and an explicit Azure production-support go/no-go gate.
-      Config-only implementation and the provider catalogue matrix are complete in `copilot-mro` branch
-      `obs-telemetry-merge`; fresh non-container tests passed profile composition, env documentation,
-      destination-swap/static contracts and metric-cardinality checks. Live provider canaries, provider-specific
-      field-path evidence and file-queue restart proof remain. Azure is marked production `NO-GO` while
-      Microsoft's Collector OTLP path remains Preview.
-- [ ] 8.6 After Phase 1c plus the gated Phase 0 chat cleanup, Phase 1b runtime handoff and required Phase 3 work
-      are complete, run the final tenant-isolation, dashboard-profile, runtime-parity, Docker-resource and
-      destination-swap acceptance matrix; close only claims backed by runtime evidence.
-
-**Acceptance for phase 8:** product-event retries do not double-count; the same Flynapse UI build renders a
-server-controlled view set per client; ordinary clients never need an external observability UI; Phoenix is
-optional; a supported production destination is selected without application business-code changes; every
-production-support claim includes a retrieved trace, metric and log canary.
 
 ---
 
@@ -632,6 +609,54 @@ preflight. Six Opus streams (V10 dashboard, W10 chat write path, K10 oss alertin
 service version, L10 RLS lane), an Opus adversarial review each, then Fable chunks R12–R16 with a merge after each
 verdict. Detail plan: `observability-rebuild-phase-10-owner-follow-ups.md` (item register §0, pins §2).
 
+## 11e. Phase 11 — Audit follow-ups and production readiness (Stream A; arrived as "Phase 8", renumbered 2026-09-20)
+
+Detail plan: `docs/plans/observability-rebuild-phase-11-audit-followups.md`. Written on
+`origin/obs-telemetry-merge` as **Phase 8** and renumbered to **11** at the 2026-09-20 fold: §11b's Phase 8
+(satellite services) landed on our mainline while that branch was live, so two phases carried the same number
+and two detail plans carried the same filename stem. Their Phase **1c** keeps its number — see §5 — because
+nothing of ours claims 1c; it is a re-cut of our gated 1b.7/1b.8, recorded there.
+
+This phase contains only the remaining audit deltas and cross-phase proof. It does not reopen the accepted
+two-contract architecture or duplicate ownership already assigned to Phase 3.
+
+- [x] 11.0 Reconcile the master plan and audit against the latest checked-out branches; declare Gate M only from
+      current evidence and write the post-migration rescoping record. **Its answer ("Gate M cannot be
+      declared") was wrong by 2026-09-14/15** — see §2, §14 and §15.
+- [x] 11.1 Add stable browser-created product `event_id`, `schema_version`, tenant-scoped idempotent insertion,
+      and accepted-versus-duplicate reporting while preserving old-client compatibility.
+- [x] 11.2 Add a server-owned per-client Flynapse UI dashboard profile. Effective panels are the configured
+      client panels intersected with supported panels, tenant features and authenticated role permissions.
+- [ ] 11.3 ~~After Gate M + Task R,~~ **after Task R**, close the Phase 3.7 `chat_turn_facts` writer and prove
+      Agent SDK/LangGraph fact, ledger and telemetry parity without adding a second writer. The writer is
+      carried as G.5 in `docs/plans/observability-telemetry-merge-and-completion.md`; the backfill **schedule**
+      was dropped by the owner 2026-09-19, so the online writer is the sole populator and there is nothing to
+      reconcile a timer against.
+- [x] 11.4 Make Phoenix optional in the current single-host Docker POC. Keep the separate native services;
+      `otel-lgtm` evaluation is deferred.
+- [ ] 11.5 Add the New Relic Collector profile, production queue/retry persistence, retrieved canaries for every
+      provider claimed supported, and an explicit Azure production-support go/no-go gate.
+      Config-only implementation and the provider catalogue matrix are complete in `copilot-mro` branch
+      `obs-telemetry-merge`; fresh non-container tests passed profile composition, env documentation,
+      destination-swap/static contracts and metric-cardinality checks. Live provider canaries, provider-specific
+      field-path evidence and file-queue restart proof remain. ~~Azure is marked production `NO-GO` while
+      Microsoft's Collector OTLP path remains Preview.~~ **Corrected 2026-09-20:** no `NO-GO` marker exists in
+      the merged tree; `deployment/otel/README.md` records `backend-azure.yaml` as "authored + validated, not
+      deployed", which is §2.8's status and not a support ruling. The go/no-go gate is still owed.
+- [ ] 11.6 After Phase 1c plus the gated Phase 0 chat cleanup, Phase 1b runtime handoff and required Phase 3 work
+      are complete, run the final tenant-isolation, dashboard-profile, runtime-parity, Docker-resource and
+      destination-swap acceptance matrix; close only claims backed by runtime evidence.
+
+**Acceptance for phase 11:** product-event retries do not double-count; the same Flynapse UI build renders a
+server-controlled view set per client; ordinary clients never need an external observability UI; Phoenix is
+optional; a supported production destination is selected without application business-code changes; every
+production-support claim includes a retrieved trace, metric and log canary.
+
+**Where the merge overruled them.** Phase 11's Task 5 removed the Grafana `flynapse-postgres` datasource and
+the two `fn-llm-agents` exact-spend panels; ruling **M-GRAFANA** keeps both and refuses `deleteDatasources`.
+Phase 11's acceptance harness (`deployment/observability-acceptance/**`) is dropped by **M-ACCEPT**. The
+rulings live in `docs/plans/observability-telemetry-merge-and-completion.md` §4.
+
 ## 12. Review protocol (every phase)
 1. Detail plan written at phase start (test-first tasks); owner reviews it.
 2. Implementer agent per worktree (Opus for mechanical/enumerated work, Fable for design-heavy or merge-sensitive
@@ -664,32 +689,58 @@ verdict. Detail plan: `observability-rebuild-phase-10-owner-follow-ups.md` (item
 
 ## 14. Rescoping notes (filled at Task R)
 
-**Pre-gate Task 8.0 baseline (2026-09-08):**
-`docs/plans/observability-rebuild-research/08-post-migration-rescoping.md` records the current branches and the
-Phase 8 starting state. It finds both runtime adapters present but does **not** declare Gate M: migration Batch 5,
-the post-Batch-5 fuse/judge parity slice and the owner's explicit stability declaration remain. This is not R.1
-completion; R.1-R.4 remain unchecked and must refresh the runtime inventory after Gate M.
+**Task R's starting baseline is research 08, with its central finding corrected (folded 2026-09-20).**
+`docs/plans/observability-rebuild-research/08-post-migration-rescoping.md` is the file-level inventory Task R
+starts from: branch/HEAD table, the operational-telemetry and product-record current state, and a per-phase
+status reconciliation. It arrived from `origin/obs-telemetry-merge` and **its central finding is wrong** —
+see the correction banner at the head of that file. Read it as a current-state inventory, not as a gate ruling.
 
-**Task 4 reassessment (2026-09-17, documentation-only):**
+**Correction: Gate M is DECLARED.** Both notes below conclude Gate M is closed. It was declared by the owner on
+**2026-09-14/15** — "langraph migration is done. so we can build and moerge now." — recorded in §2, in the §15
+ledger and in `observability-rebuild-phase-10-owner-follow-ups.md`. Their branch was cut before that date and
+looked for the declaration only in docs reachable from the branch, which is why it could not find it. Every
+deferral below that rests on "Gate M is closed" is void; what is genuinely owed is **Task R**, which is
+unblocked and unstarted, and which the merge plan carries as **G.1**, widened to an estate-wide coverage audit.
+
+**Correction: the `chat_turn_facts` backfill schedule is DROPPED.** The owner dropped it on 2026-09-19. The
+online writer (merge plan G.5) is the sole populator; `core/scripts/backfill_chat_turn_facts.py` remains
+available for a one-off reconciliation and is scheduled nowhere. Anything below that treats the backfill as
+"the current writer" or asks for online/backfill agreement on a timer is describing a schedule that no longer
+exists.
+
+**Their pre-gate Task 11.0 baseline (2026-09-08), as written:**
+research 08 records the current branches and the Phase 11 starting state. It finds both runtime adapters
+present but does ~~not declare Gate M: migration Batch 5, the post-Batch-5 fuse/judge parity slice and the
+owner's explicit stability declaration remain~~ — **corrected above; Gate M was declared 2026-09-14/15**. This
+is not R.1 completion; R.1-R.4 remain unchecked and must refresh the runtime inventory.
+
+**Their Task 4 reassessment (2026-09-17, documentation-only), as written:**
 The old Batch 5 and post-Batch-5 parity blockers are stale: the Copilot MRO S4 status now records Phase 5 closed
 with tools 56/56, skills 18/18 and manifest 0, and the runtime divergence register records R-PAR-2 closed and
-merged. Gate M still remains **closed** because the required owner declaration has not been recorded: no tracked
-doc states that no further batch is expected to touch the conflict zone during Stream L. Task R also remains
+merged. ~~Gate M still remains **closed** because the required owner declaration has not been recorded: no
+tracked doc states that no further batch is expected to touch the conflict zone during Stream L.~~ **Wrong —
+the declaration exists, dated 2026-09-14/15, on a mainline this branch predates.** Task R also remains
 unrun: R.1-R.4 are still unchecked, and no approved post-merge runtime signal catalogue exists. Current owners:
-the runtime migration owner owns the Gate M declaration; the observability workstream owner owns Task R runtime
+~~the runtime migration owner owns the Gate M declaration;~~ the observability workstream owner owns Task R runtime
 inventory/catalogue execution and approval; the Phase 3.7 writer implementation owner owns the sole online
 `chat_turn_facts` writer. Current code evidence also keeps Phase 3.7 pending: the selected Claude/LangGraph
 runtimes converge before the route persistence boundary through `get_agent_pipeline()`, non-streaming `/rag`
 saves the built chat block synchronously before return, and `/rag/stream` queues `final` before starting a
 timeout-bounded background `save_block` whose failure does not change the client response. A future sole writer
 inside `save_block` can cover both database transactions, but the block-save transaction does not yet insert or
-upsert a facts row. Next decision point: record Gate M explicitly, then dispatch Task R before any writer
-implementation; otherwise keep Task 8.3 and Phase 3.7 blocked.
+upsert a facts row — **re-verified 2026-09-20 on the merged tree: `copilot_mro/app/db/chat_history/blocks.py`
+still holds no `chat_turn_facts` write.** Next decision point: ~~record Gate M explicitly, then~~ dispatch
+Task R before any writer implementation.
+
+**Attribute and outcome vocabulary, for R.2.** The catalogue R.2 has to approve now has two competing outcome
+spellings and a set of span attributes no document named before this merge. Both are enumerated, with the
+ruling and its reasoning, in
+`docs/plans/observability-rebuild-research/09-outcome-and-span-attribute-reconciliation.md`.
 
 ## 15. Implementation notes / Learnings (per phase, filled as work lands)
 
 The task checkboxes in the original phase sections preserve their planned scope and sequencing. For current
-status, use the dated ledger below and the Task 8.0 file-level baseline rather than inferring implementation from
+status, use the dated ledger below and the Task 11.0 file-level baseline rather than inferring implementation from
 an old unchecked box or from plan text alone.
 
 **2026-09-05 — execution kicked off (planning step).** Owner rulings: all four app-independent streams
@@ -1057,27 +1108,28 @@ is inline and marked, not deleted.
   master. It preserves the existing two application contracts and owns the remaining deltas: product-event
   idempotency/versioning, per-client Flynapse UI dashboard profiles, post-gate runtime/facts reconciliation,
   optional Phoenix packaging, New Relic/provider readiness and the final cross-phase acceptance matrix.
-  `otel-lgtm`, multi-host orchestration and Kubernetes remain deferred. Phase 8.0 is the next planning gate;
+  `otel-lgtm`, multi-host orchestration and Kubernetes remain deferred. Phase 11.0 is the next planning gate;
   it must refresh current branch facts before implementation checkboxes are trusted.
 
-- **2026-09-08 — Task 8.0 current-branch audit COMPLETE.** Static evidence was refreshed across `api`
+- **2026-09-08 — Task 11.0 current-branch audit COMPLETE.** Static evidence was refreshed across `api`
   `a19a931`, `core` `988571b`, `copilot-mro` `ac680bf2`, `dashboard` `b87ced0`, `utils` `9f74a11` and `iac`
   `5996e5a`; all six worktrees were clean. The authoritative file-level table is research 08. Key result:
   operational OTLP, the Collector boundary, PostgreSQL product analytics, the native 42-panel Flynapse UI and
   both runtime adapters exist. Product-event idempotency/versioning, the per-client UI profile, New Relic,
   production Collector queues, application content capture and the online `chat_turn_facts` writer do not.
-  Root/POC Docker currently hard-wire Phoenix. Gate M is **not declared** because Batch 5 and its subsequent
-  parity slice remain; only Task 8.3 stays blocked. No runtime probe was rerun, so the 2026-09-05 browser/OSS
+  Root/POC Docker currently hard-wire Phoenix. ~~Gate M is **not declared** because Batch 5 and its subsequent
+  parity slice remain;~~ **corrected 2026-09-20: Gate M was declared 2026-09-14/15 (§2, §14)** — only Task 11.3
+  stays blocked, on Task R. No runtime probe was rerun, so the 2026-09-05 browser/OSS
   results remain historical evidence rather than a claim about today's running services.
 
-- **2026-09-08 — Task 8.1 product-event reliability COMPLETE in isolated worktrees.** The Flynapse UI assigns
+- **2026-09-08 — Task 11.1 product-event reliability COMPLETE in isolated worktrees.** The Flynapse UI assigns
   a stable queue-time UUID and schema version 1; Core retains old-client compatibility values, stores the
   version, ignores duplicate `(tenant_id, event_id)` inserts, reports accepted and duplicate counts, and
   re-logs accepted rows only. The registry migration must precede Core, then the same Flynapse UI bundle may
   deploy. Compatibility defaults remain until supported-client adoption is evidenced and a separate breaking
   change is approved. Focused and broader frontend/Core suites passed, including scratch-Postgres RLS,
-  duplicate-replay, cross-tenant and pre-8.1-to-current registry migration tests; exact evidence and the one
-  isolated-worktree collection limitation are recorded in the Phase 8 detail plan.
+  duplicate-replay, cross-tenant and pre-11.1-to-current registry migration tests; exact evidence and the one
+  isolated-worktree collection limitation are recorded in the Phase 11 detail plan.
 
 - **2026-09-08 — Phase 1c stable non-agent scope ADDED; implementation not started.** A current-code review of
   copilot-mro `ac680bf2` and utils `9f74a11` separated stable lifecycle/job/client boundaries from the active
@@ -1098,7 +1150,7 @@ is inline and marked, not deleted.
 
 ## 16. Future Improvements
 
-- Evaluate a single-container `otel-lgtm` POC only after the current Docker-native Phase 8 baseline is accepted.
+- Evaluate a single-container `otel-lgtm` POC only after the current Docker-native Phase 11 baseline is accepted.
   This is a footprint experiment, not a prerequisite and not a change to the application OTLP contract.
 - Design a multi-host Collector topology only when load, availability or client deployment requirements justify
   it. The current scope remains one Docker host per client deployment.
