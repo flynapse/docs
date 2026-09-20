@@ -23,7 +23,9 @@ endpoints + `sigv4auth` (aws); Next.js 15.2.4 + OTel JS 2.x; Postgres with RLS; 
 Terraform.
 
 **Spec:** `docs/superpowers/specs/2026-09-05-observability-rebuild-design.md` (rev 4, rulings 1–20 in §11).
-**Research:** `docs/plans/observability-rebuild-audit.md`, `docs/plans/observability-rebuild-research/01..08`.
+**Research:** `docs/plans/observability-rebuild-audit.md`, `docs/plans/observability-rebuild-research/01..09`
+(08 = Task R's starting baseline, folded from `obs-telemetry-merge` with its Gate M finding corrected;
+09 = the outcome/span-attribute reconciliation that merge left owed to R.2).
 
 ## Global constraints (from the spec; every task inherits them)
 - Application code never learns the backend: OTLP/HTTP-protobuf, standard `OTEL_*` env only, no vendor SDKs.

@@ -55,7 +55,7 @@ for a standalone process.
 
 | Boundary | Span name and kind | Allowed attributes | Outcomes | Primary consumer |
 |---|---|---|---|---|
-| S3 PDF download | `s3.download`, `CLIENT` | `rpc.system=aws-api`, `rpc.service=S3`, `rpc.method=DownloadFile`, `operation.outcome`; downloaded byte count only on success | `success`, `not_found`, `unavailable`, `error` | `fn-dependencies` latency/error and trace drill-down |
+| S3 PDF download | `s3.download`, `CLIENT` | `rpc.system=aws-api`, `rpc.service=S3`, `rpc.method=DownloadFile`, `server.address`, `operation.outcome`; downloaded byte count only on success | `success`, `not_found`, `unavailable`, `error`, **`miss`** | `fn-dependencies` latency panel only — see the correction note below |
 | Weaviate hybrid search | `weaviate.hybrid_search`, `CLIENT` | `db.system=weaviate`, `db.operation=hybrid_search`, `tenant.id`, `search.mode`, requested/result counts, `operation.outcome` | `success`, `error` | `fn-dependencies` latency/error and trace drill-down |
 | MRO startup/shutdown | `mro.lifecycle.startup` and `mro.lifecycle.shutdown`, `INTERNAL` | phase, bounded dependency/check name, `operation.outcome` | `success`, `degraded`, `error` | `fn-platform-health` and correlated startup logs |
 | Memory collection/index | `memory.collection.ensure`, `memory.index.upsert`, `memory.index.delete`, `INTERNAL` | `tenant.id`, bounded memory type/scope/action, `operation.outcome` | `success`, `skipped`, `error` | background-operation trace drill-down |
@@ -71,6 +71,25 @@ Never attach prompt, response, query, retrieved text, document text, S3 bucket/k
 identity, event/result body or credentials. Do not add user, session, chat, document or request identifiers. Tenant
 identity is permitted on spans/logs, not added as a metric label by this phase. Exception type may be recorded;
 exception text is kept out unless the existing content-free logging policy already permits it.
+
+> **Corrections at the `obs-telemetry-merge` fold, 2026-09-20 (this table is a plan, and the code moved past
+> it).** Two things in the table above are not what the merged tree does.
+>
+> 1. **The S3 outcome set has five values, not four.** `utils/utils/s3_service.py` returns **`miss`** on the
+>    `quiet=True` cache-fallback path — a 404 its only caller treats as expected — and `miss` is one of the two
+>    values in `_S3_NON_ERROR_OUTCOMES` that deliberately keep the span status OK. A reader working from the
+>    four-value set would read a cache miss as unreachable. Added above.
+> 2. **The "primary consumer" column is aspirational for almost every row.** Measured across the whole of
+>    `copilot-mro/deployment/`: no Grafana panel, alert rule, recording rule, collector transform or catalogue
+>    row names `operation.outcome` or any of the sixteen span names in this table. What `fn-dependencies`
+>    actually reads is Tempo span-metrics, whose promoted dimensions are fixed at `db.system`, `peer.service`,
+>    `server.address`, `rpc.service`, `url.template`. So `weaviate.hybrid_search` reaches the board through
+>    `db.system`; `s3.download` reaches only the latency panel, because the calls and error panels group by
+>    `db_system` and an S3 span has none; and the other fourteen spans reach nothing but Tempo search. That is
+>    a legitimate end state — trace-search-only signals are useful — but it is not what this column says.
+>
+> The full catalogue, the outcome-vocabulary reconciliation and the open questions for Task R.2 are in
+> `docs/plans/observability-rebuild-research/09-outcome-and-span-attribute-reconciliation.md`.
 
 Returned failures must set `operation.outcome` and ERROR status explicitly. Raised exceptions are recorded and
 re-raised unchanged. Successful spans set an explicit success outcome. Disabled OTel remains a behaviorally
