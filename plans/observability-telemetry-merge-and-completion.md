@@ -791,6 +791,81 @@ which is what will enumerate the wrappers.
 
 ---
 
+### Phase D adversarial review — findings taken, 2026-09-20
+
+An independent Opus reviewer over `e26be7dd..HEAD`. Four P1s, all confirmed; two fixed in the
+phase, two escalated below. Its strongest result was structural: **the ordinary-log privacy guard
+had two implementations** and the file's own self-tests called the copy, so the tests that prove
+the guard works were exercising code that guarded nothing. Fixed (one body, `b112f860`), along
+with a splat dict mutated after its literal, a structural suffix that exempted a whole keyword
+from value inspection, and `.env.sample` documenting the exact inverse of M-CAPTURE.
+
+It also found the sharper half of a defect **and the guard that was blind to it, in one**:
+`drain_captures` was wired into copilot-mro's OWN lifespan, which Starlette never runs for a
+mounted sub-app — and the guard reads that file FROM DISK, so it stayed green while the property
+was false. Mutation-proven against the mutation that could not happen. Fixed in `api-obsm`
+(`4da716f`), where the hook actually fires, with a test that drives the real gateway lifespan.
+
+**Owner decisions these raise:**
+
+- [ ] **Capture is ON by default and nothing purges it.** D.4 flipped the deployment default and
+      core's column is `DEFAULT true NOT NULL`, which Postgres backfills onto every existing
+      tenant. `expires_at` is stamped per row, but the DELETE is `scripts/purge_llm_turn_content.py`
+      — no scheduler, no automation row, no cron, no compose or iac reference. So "30-day
+      retention" is a claim nothing implements, on a store that now holds prompts, model answers
+      and tool I/O for every tenant. M-CAPTURE already makes the Appendix A contract clause a
+      go-live prerequisite; this is the concrete form of it. Either schedule the purge or ship
+      capture off until it is scheduled.
+- [ ] **M-EVALS' "the rest does not merge" never happened, and no phase owns it.** §5.8 rules
+      REJECT-as-workbench and names three things to salvage. The merged tree carries the whole
+      suite — `agent_evaluation/{phoenix_adapter,runner,session_runner}.py`, the CLI, the runbook,
+      the compose overlay, the collector fragment, a 389-line test — plus an `evaluation` poetry
+      group pulling `arize-phoenix-client`, `arize-phoenix-evals` and `litellm`. E.1's reject list
+      is only M-ACCEPT and M-PINS; G.8 is a BUILD item, not a rejection. **M-RESIDENCY is
+      unenforced**: grep for an allowlist across the runner and the CLI returns nothing, and the
+      ruling says no eval run touches real traces until it is. The group is `optional = true`, so
+      a plain `poetry install` is unaffected and `poetry check --lock` passes.
+
+**Recorded, not fixed:**
+
+- `tests/architecture/.../test_langchain_ambient_surface_policy.py` is RED and was red before the
+  merge: it scans for `deployment/observability-local/otel-collector-config.yaml`, a path that
+  exists in none of base, ours or theirs. Pre-existing on our mainline, in no phase's lane, and
+  worth naming now so a later fast-forward does not mistake it for merge damage.
+- **D.6's saving is smaller than claimed.** `accumulator.snapshot` — the redaction and
+  serialisation walk, and the bulk of the cost — is still awaited on the settle path; what moved
+  off it is one indexed INSERT. And there is no S3 put to move: `content_s3_key` is always None,
+  object-backed overflow is future work, and `purge_llm_turn_content.py`'s `RETURNING
+  content_s3_key` is dead. The module docstring and the D.6 commit both overstate this.
+- **The late-bootstrap fix restores the HELPER, not the composition.** `get_agent_pipeline` is
+  still `@lru_cache(maxsize=1)` and freezes `runtime_telemetry` — and with it `post_tool_observer`
+  and `suppress_legacy_agent_sdk_spans` — into the composed objects at first use. A process that
+  composes before it bootstraps is still permanently untraced. The new test's docstring overstates
+  what it proves.
+- **The D.2 repoint narrows the blindness without closing it.** The harness reader checks the
+  DEPLOYMENT switch only; a fixture tenant with no `tenants` row fails closed at the per-tenant
+  gate and degrades to the same SKIP, with a better reason string but no up-front named
+  unavailability.
+- `llm_content_capture_tasks._PENDING` has no cap: with capture on by default and off the request
+  path, a wedged Postgres accumulates one hanging task per turn with no backpressure. The awaited
+  version at least throttled. `chat_block_saves` has the same shape, so this is
+  precedent-consistent rather than novel.
+- `copilot_mro/app/api/llm_observability.py:191` — a file the merge brought in — logs
+  `error_type=type(exc).__name__`, the §2.3 "strictly weaker" form. Part of the estate-wide B-R1
+  backlog (~60 sites), not a new defect, but neither sweep reached it.
+- C1.5's first clause (`WEAVIATE_GRPC_PORT` into the copilot-mro env and compose files) is still
+  owed: 0 hits across all six. Phase E.
+- `config.py` still declares `tool_io_archive_enabled` after M-TOOLIO-2. Load-bearing for one good
+  test (`test_agent_sdk_claude_content_feeders` asserts `archive is None` even when the flag is
+  True), so keeping it is defensible — but `tests/e2e/run_explain_latency_e2e.py` still prints it
+  as a diagnostic that can now only ever say False.
+
+**What the review could NOT break**, checked and reported as such: D.1's graft (every acceptance
+site intact, and independently pinned by a silent merge of THEIR test asserting the exact
+`AgentPipeline` parameter list); M-TOKENUSAGE's instrument-type guard; D.10; the composition-root
+silent merge; and the two tests this phase relaxed, both of which pin the property more tightly
+than the shape they replaced.
+
 ### Deferred from Phase D, 2026-09-20
 
 - **`record_subagent` has no production call site anywhere.** `RuntimeTelemetry.record_subagent` and its
@@ -996,6 +1071,29 @@ inspected. It now resolves a splat three ways, including one hop through a param
 - the privacy guard's content-name list knew `query` but not `queries`, so a planted
   `"first_query": queries[0]` went through untouched.
 
+#### D.13 — the gate, measured
+
+Per-directory lanes over both trees, set-differenced on failing IDs (§2.4). Final state after the
+phase's fixes:
+
+| | |
+|---|---|
+| pre-merge failing ids | 20 |
+| merged failing ids | 19 |
+| **new on the merged tree** | **2**, both Phase E work — `test_panel_datasources_are_allowed_and_declared` (E.0a) and `test_dark_panel_notes_are_present` (E.0d) |
+
+Two more appeared in the first reading and were fixed inside the phase (`e3e31e14`): the tenancy
+route sweep did not list the 12th router their merge mounts, and D.11's `reason` -> `reason_code`
+rename reached an assertion in a file named for stream persistence rather than block saves. Both
+were invisible to every targeted run this phase made, which is the whole argument for the gate.
+
+**A lane rule learned the hard way: never run two per-directory lanes concurrently against the
+same test database.** Both lanes hit `copilot_mro_test`, and the DB-backed directories reported 34
+errors on one tree and 15 on the other — `tests/db/tenancy/test_writer_paths_land_tenanted_rows.py`
+passes 19/19 run on its own. The errors were contention, and the set difference over them was
+meaningless; five ids read as "fixed by the merge" that nothing had fixed. Re-run DB-backed
+directories serially, or give each lane its own database.
+
 ### Phase D — not done, and why
 
 - **D.7's third clause is BLOCKED.** `tests/unit/observability/test_phase1c_nonagent_scope_guard.py`
@@ -1054,6 +1152,15 @@ largely is not: the item was specified when nothing was instrumented, and our ow
 calls it would have caught, so installing it would double-count exactly as the spec's botocore ban predicts.
 **Rule: before reporting an unimplemented plan item as owed, check whether later work made it redundant. "No
 one built it" is not the same as "it is still needed."**
+
+**A guard with two bodies is a guard with none (2026-09-20).** The ordinary-log privacy guard
+had a file-walking implementation and a tree-walking copy, and the file's own self-tests called
+the copy. They drifted: D.8's splat resolution landed in one of them, so the tests that prove
+that guard works were exercising code that guarded nothing, and an adversarial probe measured
+the copy and reported a hole the real path had already closed. Both directions of the same
+error, in one file. **Rule: a guard has exactly one body. If a test needs to drive it over
+synthetic source, the file-walking entry point becomes a wrapper over the tree-walking one —
+never a second implementation that happens to agree today.**
 
 **A green lane after a merge measures the tests, not the merge (2026-09-20).** Phase D's three
 worst findings were all invisible to the suite. `main.py` carried an undefined name that only
