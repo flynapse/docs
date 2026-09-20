@@ -603,7 +603,20 @@ resolved; the merge commit records them and E fixes them.
       The online writer (G.5) becomes the sole populator; `core/scripts/backfill_chat_turn_facts.py` stays
       available for a one-off reconciliation but is scheduled nowhere. Panels reading facts show data from the
       writer's landing forward, not historically.
-- [ ] G.10 The Weaviate connection-factory span owed from C1.6, and the span-metrics dimensions the dependency
+- [~] G.10 **SPAN HALF DONE 2026-09-20 (`utils-obsm 431aefc` + an uncommitted 299/48 diff); the DIMENSIONS
+      half is NOT fully closed and two residuals are now G.23.** The span work lives in `utils`, not
+      copilot-mro — a correction from the G-APP pass. **Nineteen untraced doors, not six**: one shared factory
+      `_weaviate_span` (`weaviate_service.py:71`, name `f"weaviate.{operation}"` at `:108`) now covers **20
+      operations**, with `hybrid_search` — previously the only traced one — re-homed onto it. **Seven of the
+      nineteen were named in no document at all**, and **three artefacts disagree with the docstring's own
+      content**: it names five methods plus "the delete and schema paths", while `claims-C1-utils-B1-core.md:44`
+      and this plan's C1.6 line both said "six". Outcome vocabulary mirrors `s3_service`'s precedent —
+      `miss`/`degraded`/`conflict` are non-errors, an empty result set is `success` with a zero row count, and
+      **`partial` is an ERROR** for three bulk operations whose loops swallowed per-object failures and handed
+      the caller a number. 13 mutation proofs, all md5-verified restores; the implementer's own attack found and
+      closed **three** guard holes, including an AST scan blind to a body that binds the handle first.
+      **Its self-commissioned reviewer never returned, so the controller commissioned the review directly.**
+      ORIGINAL ITEM FOLLOWS. The Weaviate connection-factory span owed from C1.6, and the span-metrics dimensions the dependency
       board actually promotes — as instrumented, the board's named consumer gets nothing for S3.
 - [ ] G.11 **L-GRAFANA-UID.** A healthcheck on the Grafana service, so an exit-0 crash loop stops reading as
       "Up 9 seconds". The existing `test_grafana_provisioning_smoke.py` already asserts the four datasource
@@ -713,6 +726,27 @@ resolved; the merge commit records them and E fixes them.
       the value was unsafe, and the disclosure path was API JSON → browser DOM regardless.** Both verified.
       With a category prefix the panel can map each category to actionable copy the way `RUN_REASON_COPY`
       already maps `reason`. Needs the `dashboard` writer, after G.21.
+- [ ] G.23 **The dimensions half's two surviving residuals, found while closing G.10's span half.**
+      (1) **`peer.service` is promoted by `tempo.yaml`'s `span_metrics.dimensions` AND asserted as expected by
+      `copilot-mro-obsm/tests/integration/otel/test_tempo_span_metrics.py:34` — while ZERO production code in
+      `utils-obsm`, `copilot-mro-obsm` or `core-obsm` sets it.** A promoted dimension nothing emits, with a test
+      that certifies the promotion rather than the emission.
+      (2) **`s3.download` still has no `db.system`**, so on the two panels grouping by `(db_system, server_address)`
+      it remains an empty-`db_system` series. **That is the literal complaint in G.10's own plan line** ("the board's
+      named consumer gets nothing for S3"). C1.8's `server.address` fixed the *collapse*; it never gave S3 a
+      `db_system`. An S3-side edit, deliberately out of the span half's scope.
+      **Also corrected here: my own arithmetic.** I briefed "without `server.address` the span is excluded from three
+      of the four dependency panels". Measured from the exact expressions it is **one** — the panel filtering
+      `db_system=""`, which excludes a Weaviate span **regardless** of `server.address`; one panel is unaffected and
+      two collapse into an empty-label series. The instruction was right; the count was not.
+- [ ] G.24 **Two pre-existing defects in `utils/weaviate_service.py`, reported by the G.10 pass and deliberately not
+      fixed there.** (1) `delete_objects_by_property` and `list_and_delete_objects_by_property_contains` log
+      `f"Failed to delete {obj.uuid}: {e}"` — **raw exception text in an f-string, the exact R22 shape C1.9 fixed
+      elsewhere in this same file.** Two lines; wants `failure_fields`. (2) A `WeaviateTenancyError` from
+      `get_collection` — **a caller-side bad-tenant bug that never reaches the server** — is marked an ERROR client
+      span, so **caller bugs inflate the Weaviate dependency error rate**. Pre-existing behaviour of `hybrid_search`;
+      the implementer kept it rather than invent a divergence, which was right, but it wants a ruling.
+
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
 secrets and the AWS deferral.
