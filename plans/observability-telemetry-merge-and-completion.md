@@ -392,26 +392,26 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
 - [x] **D.13 DONE.** Relock (resolve `pyproject.toml` to the union, then lock — never hand-merge). Run the app lane.
 
 ### Phase E — copilot-mro, deployment half
-- [ ] E.1 Reject-list first (M-ACCEPT, M-PINS), so nothing downstream depends on it.
-- [ ] E.2 Collector profiles: take the New Relic overlay, the four durability fragments, the env examples and
+- [x] E.1 Reject-list first (M-ACCEPT, M-PINS), so nothing downstream depends on it.
+- [x] E.2 Collector profiles: take the New Relic overlay, the four durability fragments, the env examples and
       the validate script. Their fragments are correctly exporter-only with no `service:` block, so a profile
       cannot inherit another's exporter. Reword the queue's "outage budget" claim — a five-minute retry cap
       survives a restart, not an outage — and drop the unearned "memory limiter" claim.
-- [ ] E.3 Document that production must bind-mount the file-storage dir: a demo box with tmpfs `/tmp` plus a
+- [x] E.3 Document that production must bind-mount the file-storage dir: a demo box with tmpfs `/tmp` plus a
       durability fragment gets a "durable" queue that evaporates on restart.
-- [ ] E.4 Compose: take the Phoenix split, the loopback browser receiver and the tmpfs mode. **Immediately**
+- [x] E.4 Compose: take the Phoenix split, the loopback browser receiver and the tmpfs mode. **Immediately**
       fix the otel conftest — the base compose loses the Phoenix service while our smoke override still defines
       one with no image, and the overlay requires an API key the compose env does not set. This is the most
       dangerous auto-merging interaction in this half.
-- [ ] E.5 Alert rules: ours for browser alerts (theirs lacks the grouping fix that makes three Web-Vitals rules
+- [x] E.5 Alert rules: ours for browser alerts (theirs lacks the grouping fix that makes three Web-Vitals rules
       armable, and the sample guards). Adopt their rewritten agent-rule guard — it catches *stale* dark wording,
       not just missing wording — and retire ours, which fails outright on their descriptions.
-- [ ] E.6 Grafana per M-GRAFANA / M-FRONTEND; keep both phase-8 satellite boards.
-- [ ] E.7 Catalogue: ours as base, graft their panel-to-source inventory, and apply their CloudWatch
+- [x] E.6 Grafana per M-GRAFANA / M-FRONTEND; keep both phase-8 satellite boards.
+- [x] E.7 Catalogue: ours as base, graft their panel-to-source inventory, and apply their CloudWatch
       brace-selector normalisation to our aws blocks — our current spellings mix Prometheus suffixes with
       dotted OTLP names and will not resolve.
-- [ ] E.8 Tests last, resolving the two that share the dark-note vocabulary together.
-- [ ] E.9 Non-container lane. Gate per §2.4 against the **measured** pre-merge baseline, re-confirmed on
+- [x] E.8 Tests last, resolving the two that share the dark-note vocabulary together.
+- [x] E.9 Non-container lane. Gate per §2.4 against the **measured** pre-merge baseline, re-confirmed on
       2026-09-20 at `417df303`: **135 collected, 111 passed, 24 skipped**. Collected must not decrease, passed
       must not decrease, and every new skip must be named. (The old "87/0, expect 100–112" gate was a *gated
       container* run and could not fail.) Then the
@@ -423,46 +423,46 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
 Everything below is already IN the merged tree and wrong. None of it conflicted, so none of it was
 resolved; the merge commit records them and E fixes them.
 
-- [ ] **E.0a M-GRAFANA, `datasources.yml`.** Auto-merged to theirs: the `flynapse-postgres` entry is
+- [x] **E.0a M-GRAFANA, `datasources.yml`.** Auto-merged to theirs: the `flynapse-postgres` entry is
       GONE and `deleteDatasources: [{name: Flynapse Postgres, orgId: 1}]` is PRESENT. Restore the
       entry, drop the deletion block. Until this lands, our `fn-frontend` panels 7 and 8 and both
       exact-spend panels point at a uid that does not exist.
-- [ ] **E.0b M-GRAFANA + M-TOKENUSAGE, `llm-agents.json`.** Auto-merged to theirs: both exact-spend
+- [x] **E.0b M-GRAFANA + M-TOKENUSAGE, `llm-agents.json`.** Auto-merged to theirs: both exact-spend
       panels deleted, and five token queries rewritten `gen_ai_client_token_usage_sum` → `_total`.
       The emitter is a Histogram as of Phase D, so `_total` now matches nothing at all. Also fix
       "Tool attempts and failures": its B target queries `tool_outcome="error"` on BOTH sides'
       history and the merged emitter emits `"failure"` (`telemetry.py`), so that panel has never
       matched a series. Their catalogue inventory has this right; the board does not.
-- [ ] **E.0c M-GRAFANA, `oss-profile.md`.** Auto-merged to theirs, losing three things: the
+- [x] **E.0c M-GRAFANA, `oss-profile.md`.** Auto-merged to theirs, losing three things: the
       `POSTGRES_READONLY_PASSWORD` rotation row (the credential the kept datasource logs in with),
       the pointer to the `fn-llm-agents` exact-spend panels, and the sentence saying the datasource
       is EXPECTEDLY unhealthy in the standalone observe stack — without which the first person to
       run the smoke files a false bug. Their two true clauses (the agent spans land with this merge)
       are worth keeping. §2.2a guessed this file would lose the exact-spend SECTION; it did not.
-- [ ] **E.0d The dark-note vocabulary is RED right now.** `llm-agents.json` silently took their
+- [x] **E.0d The dark-note vocabulary is RED right now.** `llm-agents.json` silently took their
       `"STATIC-MAPPED, live retrieval pending:"` descriptions, so our
       `test_dark_panel_notes_are_present` — which demands `DARK until ` or a dated `LIVE since …` on
       every `gen_ai[._]`/`agent_` panel — fails on the merged tree. `CATALOGUE.md` already carries
       BOTH vocabularies after D's hand-merge. Resolve the three boards, the two tests and the
       catalogue in ONE pass (E.8), not file by file.
-- [ ] **E.0e The positive guard §2.2a asked for.** `test_flynapse_postgres_datasource_is_declared_
+- [x] **E.0e The positive guard §2.2a asked for.** `test_flynapse_postgres_datasource_is_declared_
       kept_and_used`: the datasource is declared, `deleteDatasources` is empty, and all four
       M-GRAFANA panels still read it. It fails on all three limbs today, which is the point — it is
       the guard that would have caught this silent merge, and neither side's existing pair can
       satisfy it.
-- [ ] **E.0f M-FRONTEND's graft.** Their "Slowest Pages" panel is the only additive thing on their
+- [x] **E.0f M-FRONTEND's graft.** Their "Slowest Pages" panel is the only additive thing on their
       3-panel board; append it as id 19 at `{h:8,w:12,x:0,y:72}`. Its description needs a
       `DARK until ` / dated `LIVE since …` note or our D6 guard fails it on arrival. Verified: the
       `browser.app.boot` emitter IS live in our dashboard, and the collector allow-list already
       passes `load_complete_ms` and `entry_route_pattern`, so nothing else is owed for it.
-- [ ] **E.0g M-TOKENUSAGE's board half.** `CATALOGUE.md` lines with `_total` (5 sites) and
+- [x] **E.0g M-TOKENUSAGE's board half.** `CATALOGUE.md` lines with `_total` (5 sites) and
       `iac/dashboards/llm-agents.json.tftpl`. Phase D deliberately left these so the file is
       rewritten once.
-- [ ] **E.0h `test_compose_image_pins.py` no longer covers the Phoenix split.** `COMPOSE_FILES`
+- [x] **E.0h `test_compose_image_pins.py` no longer covers the Phoenix split.** `COMPOSE_FILES`
       scans the original four stacks; theirs' split moved a pinned image into
       `deployment/docker-compose.phoenix.yml` and `deployment/poc/docker-compose.phoenix.yml`.
       Both are correctly pinned TODAY, and nothing would notice if they stopped being.
-- [ ] **E.0i The adopted agent-rule guard is an allow-list, not a rule.** Theirs' `PENDING_RULE_
+- [x] **E.0i The adopted agent-rule guard is an allow-list, not a rule.** Theirs' `PENDING_RULE_
       SERIES` / `EMITTED_RULE_SERIES` are two hand-maintained tuples, so a NEW rule on an unemitted
       `agent_*` / `gen_ai.*` series falls through both and is checked by nothing. Ours' regex caught
       that class generically. The elegant fix is a derived emitted-series inventory.
@@ -1154,6 +1154,124 @@ passes 19/19 run on its own. The errors were contention, and the set difference 
 meaningless; five ids read as "fixed by the merge" that nothing had fixed. Re-run DB-backed
 directories serially, or give each lane its own database.
 
+### Phase E — copilot-mro deployment half, 2026-09-20, DONE (worktree `copilot-mro-obsm`)
+
+Commits `2e965ea0`, `2e4bbeb8`, `0d0b752d`, `1eec7c49`, `438c6a5d`, plus `35c7e87` on a NEW
+`obs-merge` branch in the **iac** repo (that repo had no branch for this work; `main` is untouched).
+
+**The gate.** `tests/integration/otel` went **135 collected / 111 passed / 24 skipped** (pre-merge
+baseline at `417df303`) → **151 / 126 / 25** on the merged tree with Phase E applied, 0 failed.
+Collected and passed both rose, so §2.4's gate holds. With `OTEL_RULES_CHECK=1` (promtool): 152 /
+140 / 12. The merged tree BEFORE Phase E was 145 / 119 / 25 with one failure — `test_dark_panel_
+notes_are_present`, naming 13 panels across three boards, which is E.0d exactly.
+
+**What the plan got wrong, and where the work actually was.**
+
+- **E.0b's `tool_outcome` half was already fixed.** The plan says the B target queries
+  `tool_outcome="error"` and the emitter emits `"failure"`. Ours had `"error"`, theirs had
+  `"failure"`, and the merge took theirs — correctly. Nothing was owed. What WAS owed is the
+  histogram family: the merge rewrote five token-usage sites `_sum` → `_total`, and under
+  M-TOKENUSAGE `_total` matches nothing at all.
+- **E.2's "memory limiter" claim does not exist.** Not in the merged tree, not in either parent,
+  not in any of the colleague's otel commits. The phrase occurs only in this plan. No-op. The
+  "outage budget" half was real and is reworded against the `max_elapsed_time: 5m` the fragments set.
+- **E.4's conftest was already correct.** It layers the Phoenix overlay between base and smoke
+  (`conftest.py:89-91`) and supplies `PHOENIX_API_KEY` (`:32`). The plan calls this "the most
+  dangerous auto-merging interaction in this half"; it had already been handled. What IS stale is
+  `smoke/docker-compose.smoke.yml`'s own header, which still documents the pre-split two-file
+  invocation — run as written, compose refuses the project.
+- **M-FRONTEND's "take ours wholesale" was already satisfied.** `frontend.json` is byte-identical to
+  `417df303`. And the P0-INERT "exactly three panels" test never reached the merged tree at all —
+  it, and two sibling tests that depend on the same constant, exist only on `c2fc8bb1`. The correct
+  action was to NOT port them. Only the graft was owed.
+- **E.5's "adopt their rewritten agent-rule guard" is superseded by E.0i.** Adopting a guard whose
+  known defect is the next plan item is the wrong order. Their two tuples were replaced outright.
+  Their browser half never won the merge: ours kept the grouping fix and the sample guards.
+- **E.0d's stated contract was imprecise.** It says the test "demands `DARK until ` or a dated
+  `LIVE since …`". On the Stream-L half the code demanded the fixed substring `DARK until Stream L`
+  with no LIVE alternative at all. The `DARK until `/`LIVE since` pair is the BROWSER half (M9.6).
+
+**The design decision E.0d needed and the plan did not anticipate.** Nine of the thirteen offending
+panels are emitted by the merged tree; four are not, for three different reasons. So restoring
+`DARK until Stream L` would have been a lie on nine panels, and adopting their "STATIC-MAPPED, live
+retrieval pending" would have kept a third vocabulary no test enforced. Neither vocabulary could
+express the state the merge created. There are **three** states:
+
+| state | meaning | grammar |
+|---|---|---|
+| `dark` | nothing emits it | `DARK until <what would arm it>` |
+| `wired` | a production call site reaches the recorder; no probe has confirmed retrieval | `WIRED <YYYY-MM-DD>, retrieval unproved: <what emits it>` |
+| `live` | a probe saw the data | `LIVE since <probe> (<YYYY-MM-DD>)` |
+
+`DARK until ` and the dated `LIVE since …` are M9.6's, unchanged, so the browser panels keep passing
+the contract they always did. `WIRED` is what M9.6 never needed.
+
+**The mechanism, and why it is not a third allow-list.** `tests/integration/otel/_emitted_series.py`
+holds ONE inventory; the board lint and the alert lint both classify against it; and
+`test_emitted_series_inventory.py` proves it against `agent_shared/telemetry.py` by AST — the
+instrument exists in BOTH construction paths, its kind matches its constructor, its unit matches
+(the unit is part of the exported NAME: `s` → `_seconds`), it is handed to `_safe_add`/`_safe_record`,
+and its public recorder has a production call site **exactly when** the inventory says the series is
+not dark. That last limb is the only thing that separates `agent.subagent.*` from the rest: those
+instruments are declared, AND recorded inside the facade, and `record_subagent` has no caller
+anywhere — so a reader who greps for the instrument name concludes the opposite of the truth.
+
+E.0i closes generically as a side effect: a panel or rule naming a series the inventory has never
+heard of now FAILS. The old tuples named four series between them, so a rule on any fifth was
+checked by nothing — the allow-list *was* the hole.
+
+**Mutation proofs (§2.3a) — twelve, each caught by the right test.** Counter/Histogram flip in one
+construction path and in both; a new instrument nobody inventoried; `record_subagent` wired, making
+a dark series live; a WIRED panel described as DARK; the `_total` regression put back; a panel on an
+uninventoried series; a DARK rule described as WIRED; the datasource entry deleted; `deleteDatasources`
+re-added; the exact-spend panels deleted again; and — against the real pinned image — a
+`compaction.directory` on the read-only mount, where `validate` answers **ok** and the start fails
+with `failed to build extensions … mkdir …: read-only file system`. That last one is the
+P0-COLLECTOR signature, and only the new start pass sees it.
+
+**E.9, the half nobody had ever run.** `validate.sh` now STARTS each profile on the pinned image and
+polls `health_check`, in both compositions, with the queue directory bind-mounted so the run also
+proves `create_directory: true` creates the COMPACTION directory (a README claim nothing checked).
+Result: 4 profiles × 2 compositions = 8 validates + 8 starts, all healthy — the first run of the New
+Relic overlay and of all four durability fragments. A ninth composition was added: **aws+phoenix**,
+which `iac/demo_ec2_setup.sh` layers on the demo box and which `validate.sh` never built, because it
+appends the fragment only for profiles whose own env example sets `PHOENIX_ENDPOINT` and
+`env/aws.env.example` names no `PHOENIX_*` at all. It loads and starts; it was unproven, not broken.
+
+**Found in Phase E, not named by the plan.**
+
+1. `test_compose_port_bindings.py` carried the SAME stale four-file tuple as
+   `test_compose_image_pins.py`. Both widened; Phoenix publishes loopback-only in both overlays.
+2. The shipped default is a durable-looking queue on a RAM disk: every stack tmpfs-mounts `/tmp`
+   and every env example pins `OTEL_FILE_STORAGE_DIR` inside it. Documented (E.3), and the doc names
+   the guard that blocks fixing it in the four in-repo composes (`test_collector_profiles.py`
+   forbids a collector volume naming `otelcol-storage` there) — a production compose is a NEW file.
+3. The README implied backend overlays need not name the storage extension; every one of them does,
+   which is why it starts on every profile and why `otelcol validate` cannot see P0-COLLECTOR.
+4. `CATALOGUE.md` carried a third, orphaned vocabulary — `DARK-L` — in the alarm table, whose
+   defining bullet the merge had deleted; and a stale "fn-frontend three-panel layout" paragraph
+   that contradicted §5. Both retired.
+5. Fourteen `aws` selectors in OUR §7/§8/alarm sections still mixed a dotted OTLP name in plain
+   quotes with a Prometheus suffix. CloudWatch keeps the dotted name and appends nothing, so not one
+   of them resolved. All fourteen normalised (E.7).
+6. `tests/unit/observability/test_phase1c_nonagent_scope_guard.py` names four paths that do not
+   exist (`docker-compose.phoenix-smoke.yml`, `oss-phoenix.env.example`, `*-production.env.example`,
+   `production-queue-*.yaml` — the real files are `durability-production-*.yaml`) and its two tests
+   are RED on the merged tree. It is a branch-diff guard scoped to the colleague's branch, now
+   pointed at our whole merged tree. **This is the file whose deletion the auto-mode classifier
+   refused as a "Security Test Removal" — still owner-owed, and still red.**
+
+### Phase E — not done, and why
+
+- **The `oss_profile_smoke` container lane** (`OTEL_COMPOSE_SMOKE=1`, 8 tests) was not run to
+  completion here. The Grafana provisioning smoke — the one that proves the RESTORED
+  `flynapse-postgres` datasource provisions on a cold container — was run; see the commit trail.
+- **`iac` is on a branch, unpushed, and holds exactly one commit.** `cloudwatch_dashboards.tf` and
+  `alarms.tf` carry the aws dialect of everything renamed here; only `llm-agents.json.tftpl` was in
+  M-SCOPE. The rest of the aws parity is the deferred follow-up §5 already names.
+- **`gen_ai.client.operation.duration` is emitted and charted by nothing.** Inventoried, noted in
+  the catalogue's signals list, no panel authored. Phase G if the owner wants one.
+
 ### Phase D — not done, and why
 
 - **D.7's third clause is BLOCKED.** `tests/unit/observability/test_phase1c_nonagent_scope_guard.py`
@@ -1260,6 +1378,35 @@ conflicted hunks of `user_feedback.py` left `failure_fields(e)` against an `exce
 their side had renamed in a NON-conflicted region three lines up. Git resolved the file; the file did
 not work. **Rule: after every "take ours" on a file the other side also edited, run a linter over that
 file specifically — the failure is a name, and names are exactly what a textual merge cannot see.**
+
+**A plan item can be stale in the direction of MORE work, not just less (2026-09-20).** Four Phase E
+items described work that was already done or had never existed: the `tool_outcome` fix (the merge
+took theirs, correctly), the otel conftest (already layering the overlay and supplying the key), the
+frontend board (byte-identical to ours), and a "memory limiter" claim present in no tree at all. The
+existing rule says to check whether later work made an item redundant. This is the mirror: an item
+written from a REVIEW of someone else's branch describes that branch, and the merge may already have
+resolved it in our favour. **Rule: before executing a plan item that describes a defect, reproduce
+the defect on the tree you are about to edit. "The plan says it is broken" is a hypothesis.**
+
+**When two plan items disagree, execute the later one (2026-09-20).** E.5 said to adopt their
+rewritten agent-rule guard; E.0i said that guard is an allow-list with a generic hole. Adopting it
+first and fixing it second would have produced one commit that installs a known defect and another
+that removes it. **Rule: read the whole phase before starting it, and when a later item names the
+defect in what an earlier item tells you to adopt, skip the adoption.**
+
+**A vocabulary argument is usually a missing state (2026-09-20).** Ours said DARK, theirs said
+"STATIC-MAPPED, live retrieval pending", and the merge left the guard from one side over the
+descriptions from the other. Both sides were right about different things: the emitter IS real and
+retrieval IS unproven. Picking a winner would have shipped a lie either way. **Rule: when two sides
+have incompatible wording for the same fact, check whether they are describing two different states
+that one vocabulary cannot hold — and if so, add the state rather than choosing a side.**
+
+**A check that cannot fail is not a check, and `rc=0` is not evidence (2026-09-20).** `otelcol
+validate` returns 0 on a config whose collector dies at startup, because it never builds a
+component; CI had been green over that for the whole phase-8 work. The proof is not reading the
+subcommand's docs — it is mutating the config so the two disagree and watching `validate` say "ok"
+while the start says `failed to build extensions`. **Rule: for any verification step, construct the
+defect it exists to catch and confirm it fails. If you cannot make it fail, it is not verifying.**
 
 **Never `git checkout --` to undo a mutation test (2026-09-20).** During C1's mutation checks I restored each
 mutated file with `git checkout -- <file>`. That restores the **committed** state, so it silently discarded
