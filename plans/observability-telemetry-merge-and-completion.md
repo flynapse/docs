@@ -750,7 +750,18 @@ resolved; the merge commit records them and E fixes them.
       wild, a raw `ImportError` naming internal module paths. A migration cannot tell a safe legacy
       string from an unsafe one; "no prefix ⇒ do not render the detail" is correct for every row without
       inspecting any.
-- [ ] G.22 **The dashboard can now render a real sentence per category — and it has been shipping the
+- [x] G.22 **DONE 2026-09-20 (`dashboard-obsm fdf7487` + 3 uncommitted production files).** Lane
+      **2510 → 2533 passed / 0 failed / 0 skipped**, typecheck and lint clean. **Copy is CATEGORY-driven and
+      the stored sentence is DISCARDED ENTIRELY** — because the backend's half is a diagnostic, not advice;
+      because its `internal` guidance says *"contact support with the run id"* and **the panel never renders
+      a run id**; because only six frontend-authored sentences can reach the reading flow, so the day a write
+      site interpolates a variable nothing changes here — **and four sites ALREADY do**, one embedding
+      `automation.params!r`, a Python repr of the owner's config dict; and because `RUN_REASON_COPY` is the
+      sibling mechanism and does exactly this. `data-run-error` now carries the **category**, in three states
+      — the token, an `unrecognised` sentinel, or absent — because *"no error"* and *"an error I could not
+      read"* are different facts to whoever reads a support screenshot. **Its adversarial reviewer found 4
+      HIGH and 7 MEDIUM, all real, including TWO of the implementer's own guards passing vacuously**; all
+      fixed but the two that are owner decisions. ORIGINAL ITEM FOLLOWS. — and it has been shipping the
       raw value to the browser all along.** `dashboard-obsm/components/features/automations/RunHistoryPanel.tsx:176`
       puts the raw column into a `data-run-error` DOM attribute, while
       `runOutcomeCopy.ts:147` **deliberately never renders it as prose** and its own comment says why —
@@ -924,6 +935,26 @@ resolved; the merge commit records them and E fixes them.
       vocabulary and the upsert SQL **but never `facts_upsert_params` against the backfill's `_as_params`** —
       so dropping a field from the json-serialised tuple survives every test while the two builders produce
       **different rows.**
+
+- [ ] G.36 **What G.22 found in the sibling column, and it is this phase's defect class again.**
+      **(a) A SECOND fiction-pinning test my grep could not see.** Beyond the one I named,
+      `tests/unit/automations/automationsResponsive.test.tsx:394` located its element **by searching the
+      rendered markup for the raw error string** — so it **depended on the leak it should have caught**, and
+      its comment described a two-paragraph layout the panel does not have.
+      **(b) A live blank-line bug.** `RUN_REASON_COPY[reason]` was a bare object-literal lookup, so a reason
+      token naming something on `Object.prototype` returned `Object`, spread to `{known: true}` with **no
+      text**, and the panel rendered a **blank line while reporting the outcome as known** — against a module
+      header claiming *"no unhandled shape … each lands on a readable sentence"*. Fixed, mutation-proven.
+      **(c) `RUN_REASON_COPY` is stale, and its test asserts a fiction.** The scheduler also writes
+      `params_invalid`, `requires_worker_mode` and `ad_materialize_failed` — and one site forwards **any**
+      error's reason, so **the set is genuinely open** — while the test pinned a 9-token list as exact. The
+      test was narrowed to what is true and the three pinned as known-unmapped; **the copy itself is a wording
+      decision the owner owns.** The precedence change repairs the user-visible symptom meanwhile.
+      **(d) Owner decisions left open:** `data-run-reason` still ships an **unbounded backend-owned varchar**
+      into the DOM in the same JSX expression that was just hardened; the notification bell and the panel now
+      **disagree for three reasons**, because the bell's payload carries no error category — and the bell's
+      ordering puts an **echoed token ahead of the backend's authored sentence**, which is the principle this
+      work just established, left unapplied on the other surface.
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
