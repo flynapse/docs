@@ -7,9 +7,14 @@ Governing documents (do not duplicate them here):
 - `docs/superpowers/specs/2026-09-05-observability-rebuild-design.md` — the ruled design (rev 4), §11 = the 20 owner rulings.
 - `docs/plans/observability-rebuild.md` — master plan + dated ledger (§15) + resume brief (§18).
 - `docs/plans/observability-rebuild-phase-{0-2,1,4,5,6,8,9,10}*.md` — per-phase detail, notes, Future Improvements.
-- Their plans, on `origin/obs-telemetry-merge` in this repo: `plans/observability-merge-completion.md`,
-  `plans/observability-rebuild-phase-8-audit-followups.md`, `plans/observability-rebuild-phase-1c-stable-nonagent.md`,
-  `plans/observability-rebuild-research/08-post-migration-rescoping.md`.
+- `docs/plans/observability-rebuild-research/09-outcome-and-span-attribute-reconciliation.md` — written by F.4
+  at this fold: the two outcome vocabularies reconciled, and the span attribute keys no document names.
+- Their plans, merged into this repo by F.1: `plans/observability-merge-completion.md`,
+  `plans/observability-rebuild-phase-11-audit-followups.md` — it arrived claiming phase number 8, which collides
+  with our satellite-services phase, and **F.2 renumbered it to 11** —
+  `plans/observability-rebuild-phase-1c-stable-nonagent.md`, and
+  `plans/observability-rebuild-research/08-post-migration-rescoping.md`, which **F.3 folded in as Task R's
+  starting baseline** with its central Gate M finding corrected in place.
 
 ---
 
@@ -125,6 +130,18 @@ And the guard cannot save us on the first row: our dashboard test allows `flynap
 uid; theirs asserts it is **absent**. That file *is* conflicted, so whichever side wins, the lane is green.
 Two mutually contradictory guards, both passing. Pin the outcome with a guard that asserts the **positive**.
 
+**The docs repo's own rows, audited by F, 2026-09-20.** Six files, and only the first conflicted — the other
+five arrived theirs-only, which is the silent case in a repo where no test can fail.
+
+| file | what it decides, and the ruling |
+|---|---|
+| `plans/observability-rebuild.md` | Both sides changed it; **5 conflicting hunks**; **base of record is OURS.** Their side was written from a base cut before phases 8, 9 and 10 landed, so "take theirs" would have deleted three phases and the Gate M declaration itself. |
+| `plans/observability-rebuild-phase-11-audit-followups.md` | Theirs-only. Claims phase number **8**, colliding with our satellite-services phase. **Renamed to 11** (F.2). |
+| `plans/observability-rebuild-phase-1c-stable-nonagent.md` | Theirs-only. Declares a span/attribute contract **no guard enforces**, and names primary-consumer boards that do not consume it. **Corrected in place.** |
+| `plans/observability-rebuild-research/08-post-migration-rescoping.md` | Theirs-only. Rules **Gate M closed** and defers the sole `chat_turn_facts` writer on that basis. **Corrected in place** (F.3). |
+| `plans/observability-merge-completion.md` | Theirs-only. Records deleting the Grafana postgres datasource — **contradicts M-GRAFANA** — and an acceptance harness — **contradicts M-ACCEPT**. Kept as the record of what their branch did; **status banner added naming both**. |
+| `plans/observability-rebuild-phase-1-utils-api.md` | Theirs-only, a historical note. Audited, accurate, **taken unchanged**. |
+
 ### 2.3 Resolution doctrine
 
 - The merge commit carries **conflict resolution only**. Every fix lands as its own commit immediately after,
@@ -171,6 +188,43 @@ judgment rather than mechanics, plus the deferred register.
 file:line → decision taken → evidence → the guard test that protects it. Fable adjudicates claims and
 spot-checks only what it disbelieves, instead of re-reading the code. That inversion, not chunk arithmetic, is
 where the 3–5× reduction comes from.
+
+#### The claims table is a phase-exit gate, not an intention
+
+Written as an intention it would be built after the fact, which is where packets go to die. So it is a gate:
+**a phase does not close until its claims table exists.**
+
+- **The reviewer emits it, not the implementer.** The implementer carries exactly the confirmation bias the
+  adversarial review exists to defeat; a table written by the agent that took the decisions records intent,
+  not evidence.
+- **The controller verifies it before the phase closes.** Every `file:line` must resolve in the tree as it
+  stands, and every named guard test must exist. An unverified table is a longer way of saying "trust me".
+
+Row format: **Repo | File:line | Decision taken | Why | Evidence | Guard test | Mutation-proved? | Tier |
+Chunk | Claim state.** The last column is the one that decides how much attention a row is owed:
+
+| claim state | meaning |
+|---|---|
+| `SETTLED` | a guard exists **and** has been shown to fail when the property is removed |
+| `ASSERTED` | a guard exists; no mutation proof is recorded |
+| `OPEN` | no guard — the claim rests on judgment |
+
+**Tier 0 requires SETTLED**, by the same rule the tier table states: a guard that has not been mutation-checked
+is evidence of intent, not of behaviour, so `ASSERTED` cannot buy a row out of review.
+
+Two prohibitions, both bought by the 35 inert tests:
+
+- **Never name a guard without verifying it resolves.** A guard named by a source document and not found in the
+  tree is recorded as `CLAIMED BUT NOT FOUND` — that is a finding, not a blank cell.
+- **Never record a mutation proof without the specific mutation and the test that failed.** "Mutation-checked"
+  with nothing named is an assertion about an assertion.
+
+**Measured, 2026-09-20.** The backfill over phases 0 – E produced **186 claims — 41 SETTLED, 60 ASSERTED,
+85 OPEN — and zero tier 0, in all four files independently.** Tier 0 came out empty for a structural reason
+worth keeping: work mechanical enough to qualify is work nobody records a decision about, so it never becomes a
+claim at all; anything that *is* a claim embodies a decision, which lands it at tier 1 or 2. So the saving does
+not come from tier 0 excluding the bulk of the corpus — it comes from a SETTLED claim being adjudicable from
+one row. The packet is `plans/obs-telemetry-merge-review-packet/`.
 
 ### 2.4 Per-repo verification lanes
 
@@ -254,14 +308,16 @@ only there, so the phase cannot close otherwise), and dashboard moves **after** 
 summaries card is mounted unconditionally against a copilot-mro route). D and E share one worktree and
 therefore never run in parallel.
 
-### Status, 2026-09-20 — A, C1, B1 CLOSED; nothing pushed
+### Status, 2026-09-20 — A, C1, B1, D, E and F CLOSED; nothing pushed
 
-Execution reached **Phase D**. A (prep), C1 (utils) and B1 (core) are merged in their own `<repo>-obsm`
-worktrees on branch `obs-merge`, each followed by a fresh adversarial Opus review whose findings were triaged
-into the same phase. No mainline has moved and nothing is pushed. `copilot_mro_test` has already been
-migrated with the merged core definitions, so **the pre-merge baselines in the SDD ledger cannot be
-reproduced** and the DB step must be re-run after D. Per-phase outcomes are in §7; deferred items with their
-reasons are in §6.
+Execution has passed the DB step. A (prep), C1 (utils), B1 (core), D (copilot-mro application half), E
+(copilot-mro deployment half, plus a new `obs-merge` branch in **iac**) and F (docs) are merged in their own
+`<repo>-obsm` worktrees on branch `obs-merge` — copilot-mro's tip is `ea0ac559` — each phase followed by a
+fresh adversarial Opus review whose findings were triaged into the same phase. The **DB step is complete**:
+the all-registry migration and the RLS run both landed after D, as §2.2 sequences them. **C2 (api) and B2
+(dashboard) are in flight.** No mainline has moved and nothing is pushed. `copilot_mro_test` has been migrated
+with the merged definitions, so **the pre-merge baselines in the SDD ledger cannot be reproduced.** Per-phase
+outcomes are in §7; deferred items with their reasons are in §6.
 
 ### Phase A — Preparation
 - [x] A.1 Commit the six uncommitted observability docs in this repo by named path, including the untracked
@@ -467,16 +523,29 @@ resolved; the merge commit records them and E fixes them.
       `agent_*` / `gen_ai.*` series falls through both and is checked by nothing. Ours' regex caught
       that class generically. The elegant fix is a derived emitted-series inventory.
 
-### Phase F — docs
-- [ ] F.1 Merge docs with our master plan as the base; graft their new sections.
-- [ ] F.2 Resolve the phase-numbering collision: their "Phase 8 — audit follow-ups" becomes Phase 11; their
+### Phase F — docs — **DONE**, six commits `1f9ee8e`..`1d4f13e`
+- [x] F.1 Merge docs with our master plan as the base; graft their new sections.
+- [x] F.2 Resolve the phase-numbering collision: their "Phase 8 — audit follow-ups" becomes Phase 11; their
       Phase 1c keeps its name and is recorded as a re-cut of our gated 1b.7.
-- [ ] F.3 Fold their research 08 in as the Task R starting baseline, correcting its central finding: **Gate M
+- [x] F.3 Fold their research 08 in as the Task R starting baseline, correcting its central finding: **Gate M
       was declared 2026-09-14** — their branch could not see it, so their gate reassessment concludes "still
       closed" and defers the sole `chat_turn_facts` writer on that basis.
-- [ ] F.4 Reconcile the two outcome vocabularies: their `operation.outcome` against the spec's
+- [x] F.4 Reconcile the two outcome vocabularies: their `operation.outcome` against the spec's
       `agent.outcome` / `tool.outcome`, and catalogue the attribute spellings their spans introduce that no
       document names.
+      **The ruling is `<subject>.outcome`, where the subject is the noun the span or metric is about, and
+      neither spelling is renamed.** The agent runtime's subjects — `agent`, `tool`, `subagent` — are ruled by
+      spec §6.3 and are not merely span attributes: they are exported Prometheus label names consumed by two
+      Grafana boards, the agent alert rules and `iac/dashboards/llm-agents.json.tftpl`, so they cannot move
+      without breaking consumers in three repos. Everywhere else the subject is the generic `operation`,
+      because a parser is not an agent, and because one key is exactly what lets a single "which operations
+      failed in the last hour" query span all eleven non-agent boundaries at once.
+      **The real defect is the values, not the prefix.** `error`, `failure` and `failed` are three spellings of
+      one outcome — the code already carries a set literal in `agent_shared/telemetry.py` that normalises them,
+      which is the tell — and `operation.outcome` carries **16 values across 49 call sites with no declared set
+      anywhere.** Every such normaliser is a place where the next value is silently non-failing. The detail,
+      the full attribute catalogue and the open questions for Task R.2 are in
+      `plans/observability-rebuild-research/09-outcome-and-span-attribute-reconciliation.md` (new, written by F).
 
 ### Phase G — close the gaps (scope M-SCOPE)
 - [ ] G.1 **Task R, widened: post-migration rescoping AND an estate-wide signal-coverage audit.** R as originally
@@ -492,8 +561,18 @@ resolved; the merge commit records them and E fixes them.
         and every panel, alarm and alert rule whose signal nothing emits. Plus attribute and cardinality
         compliance against the registry's allow-list.
       Runs against the MERGED tree — auditing a tree we are about to change would measure the wrong thing.
-- [ ] G.2 Phase 0.5 / 0.6 residue their sweep misses; the AST guard for user content in logs as a permanent
-      rule; delete the copilot-mro `/metrics` route and its dependency.
+- [ ] G.2 **Half-satisfied — verified on the merged tree 2026-09-20, and what is left is one line.** As
+      written this item asked for the Phase 0.5 / 0.6 residue, a permanent AST guard, and the deletion of the
+      copilot-mro `/metrics` route and its dependency. Three of the four are done and an executor should not go
+      hunting for them: **0.5a is done** (the memory and Weaviate logs carry bounded metadata, no raw query);
+      **0.5b is done** — both "Enhanced chat request received" call sites in
+      `copilot-mro/copilot_mro/app/api/chat_management.py` (≈ lines 1086 and 1449) log `message_chars`, not the
+      raw query, which is what master 0.5b asked for under a different field name; the **`/metrics` route is
+      already gone** from the merged tree; and the **AST guard is in the tree and is ours** (D.8 made their
+      privacy guard honest enough to adopt, scoped to the four served-surface roots).
+      **What remains is 0.6b alone:** the orphaned direct `prometheus-client` declaration at
+      `copilot-mro/pyproject.toml` ≈ line 91, with **zero imports anywhere in the repo**. Remove it and refresh
+      the lock — never hand-merge the lock.
 - [ ] G.3 Phase 3.3 — **demoted from "build it" to "Task R decides".** The item was written when nothing was
       instrumented; now every LangGraph model call goes through our own gateway, so the genai instrumentor
       would largely duplicate what we already emit — which is the same double-counting the spec bans the
@@ -740,13 +819,18 @@ complete solution would look like.)*
 (correctly — every user emits product events). So any authenticated member writes into a tenant-wide id
 namespace, and a member who knows or predicts another member's `event_id` suppresses that event
 permanently and silently: no row, no log line, `202 {"duplicates": 1}`. Not fixed now because the mint is
-`crypto.randomUUID()` (122 bits) and the change is a primary-key migration whose `ON CONFLICT` target is
-guarded by nothing in either repo — core has no conflict-target test and copilot-mro's scans only its own
-tree, so a PK/target mismatch would raise on every product-event POST with no test catching it. The complete
-solution is `(tenant_id, user_id, event_id)` — `user_id` is server-stamped and unforgeable, so it closes the
-class for free — plus a conflict-target guard in core. **Sequence it with B2.1**, which fixes the same mint
-throwing on non-secure-context origins: any lower-entropy fallback introduced there turns this from latent
-into live.
+`crypto.randomUUID()` (122 bits) and the change is a primary-key migration whose `ON CONFLICT` target is only
+**partly** guarded. **Premise corrected 2026-09-20:** core does have a conflict-target test —
+`core-obsm/tests/unit/db/test_tenanted_write_paths.py:59` rglob-scans the whole of `core` and would catch a
+regression to a bare `ON CONFLICT (event_id)`, because it requires every target list to *lead* with the
+table's tenancy columns. What it does not do is pin the **full** key: a target that leads correctly and then
+omits or reorders the rest passes, which is precisely the mismatch a `(tenant_id, user_id, event_id)`
+migration could introduce. So the deferral survives on the narrower reason — the prefix is guarded, the key is
+not, and copilot-mro's own scan covers only its own tree. The complete solution is
+`(tenant_id, user_id, event_id)` — `user_id` is server-stamped and unforgeable, so it closes the class for
+free — plus widening core's existing conflict-target guard from the tenancy prefix to the full key.
+**Sequence it with B2.1**, which fixes the same mint throwing on non-secure-context origins: any
+lower-entropy fallback introduced there turns this from latent into live.
 
 **A client that omits `event_id` gets no idempotency and no signal (B1, 2026-09-20).** `rows_for` mints a
 fresh server-side id per attempt, so a batch retried after a network timeout double-inserts, `duplicates`
@@ -778,6 +862,13 @@ frozenset next to them. A new failure outcome defaults correctly to ERROR; a new
 solution is not a bigger frozenset — it is the F.4 reconciliation: `operation.outcome` collides with the
 spec's `agent.outcome` / `tool.outcome`, and this merge shipped five more values into that unreconciled
 namespace. Fix it once, as an enum with a registry entry, when F.4 decides the vocabulary.
+**F.4 has decided (2026-09-20):** the key is `<subject>.outcome`, `operation` stays the subject for every
+non-agent boundary, and the value set is what gets declared — so the enum-plus-registry-entry shape above is
+the right fix and now has a name to hang on. One number worth pinning while it is here: the S3 span carries
+**five** outcome values, not the four the Phase 1c signal table declared. The fifth is `miss`, the quiet
+cache-fallback outcome on the `quiet=True` path, and it is one of the two values the non-error frozenset
+deliberately keeps at OK status — so a reader working from the four-value set reads a cache miss as
+unreachable. The Phase 1c table has been corrected in place.
 
 **`BaseException` escapes both storage spans as UNSET (C1, 2026-09-20).** Both spans set
 `set_status_on_exception=False` and both bodies catch `Exception`, so a `KeyboardInterrupt`, `SystemExit` or
@@ -1243,8 +1334,9 @@ P0-COLLECTOR signature, and only the new start pass sees it.
 **E.9, the half nobody had ever run.** `validate.sh` now STARTS each profile on the pinned image and
 polls `health_check`, in both compositions, with the queue directory bind-mounted so the run also
 proves `create_directory: true` creates the COMPACTION directory (a README claim nothing checked).
-Result after the review response: 4 profiles × 2 compositions × **2 start modes** = 8 validates +
-16 starts, plus the aws+phoenix composition's 1 validate + 2 starts — **18 healthy starts**, all
+Result after the review response: **9 validates and 18 container starts** — 4 profiles × 2
+compositions = 8 validates, × **2 start modes** = 16 starts, plus the aws+phoenix composition's
+own 1 validate + 2 starts. All 18 healthy, and all
 creating both storage directories where the mounted mode checks. The first run of the New Relic
 overlay and of all four durability fragments. A ninth composition was added: **aws+phoenix**,
 which `iac/demo_ec2_setup.sh` layers on the demo box and which `validate.sh` never built, because it
@@ -1355,10 +1447,13 @@ shape §8's "a guard with two bodies is a guard with none" lesson names.
 
 ### Phase E — not done, and why
 
-- **The `oss_profile_smoke` container lane** (`OTEL_COMPOSE_SMOKE=1`, 8 tests) was not run to
-  completion here. The Grafana provisioning smoke — the one that proves the RESTORED
-  `flynapse-postgres` datasource provisions on a cold container — was run; see the commit trail.
-- **`iac` is on a branch, unpushed, and holds exactly one commit.** `cloudwatch_dashboards.tf` and
+- ~~**The `oss_profile_smoke` container lane** (`OTEL_COMPOSE_SMOKE=1`, 8 tests) was not run to
+  completion here.~~ **Stale — struck 2026-09-20.** It contradicted this file's own gate paragraph
+  two sections up: `test_oss_profile_smoke` **8 passed** and `test_grafana_provisioning_smoke`
+  **2 passed**, both run explicitly under `OTEL_COMPOSE_SMOKE=1`, and the adversarial reviewer
+  re-ran both independently. Nothing is owed here.
+- **`iac` is on a branch, unpushed, and holds two commits** — `35c7e87` and `3068b47`, not the one
+  this line first claimed. `cloudwatch_dashboards.tf` and
   `alarms.tf` carry the aws dialect of everything renamed here; only `llm-agents.json.tftpl` was in
   M-SCOPE. The rest of the aws parity is the deferred follow-up §5 already names.
 - **`gen_ai.client.operation.duration` is emitted and charted by nothing.** Inventoried, noted in
@@ -1381,6 +1476,45 @@ shape §8's "a guard with two bodies is a guard with none" lesson names.
   decision belongs where the consumer is.
 - **E.1 was pulled FORWARD into D**, out of phase order: the restored M-PINS guard fails while the
   floating tag is in the tree, and the M-ACCEPT suite would otherwise be collected by D's own lane.
+
+### Phase F — the reconciliation against the original rebuild plan, 2026-09-20
+
+F's last act was to walk the master plan's own checkboxes against the merged tree, because a plan that records
+work as open after it has landed is a plan nobody can resume from. **181 open checkboxes**, dispositioned:
+**119 DONE-UNTICKED** (the work exists in the tree; the box was never ticked), **41 already covered** by a live
+plan item here, **18 owed-and-uncovered**, **2 superseded**, **1 unresolved**.
+
+The 18 fall into four groups, and each one is a hole rather than a backlog item:
+
+1. **Phase 11.6's cross-phase acceptance matrix — 16 boxes, and it is the designated close-out gate for the
+   whole rebuild.** Tenant isolation, the dashboard-profile matrix, runtime parity, the Docker resource budget
+   and the destination swap, each closable only on runtime evidence. **No live plan owns it** — not this one,
+   which stops at the merge, and not the phase plans, which are each scoped to their own slice. Two of its
+   checks are additionally blocked on a fixture grant (`permission denied for table tenants` on the
+   product-event replay lane, and the same blocker on the facts-backfill lane).
+2. **The Azure production-support go/no-go.** The master plan carried it as settled — "Azure is marked
+   production `NO-GO`". **No `NO-GO` marker exists anywhere in the merged tree.** What exists is
+   `deployment/otel/README.md` recording `backend-azure.yaml` as "authored + validated, not deployed", which is
+   a BUILD status, not a support ruling. Corrected in the master plan; the gate itself is still owed.
+3. **Phase 6 never received its independent adversarial review.** Six Grafana boards, 15 alert rules, six
+   CloudWatch bodies and three runbooks closed without one, because that implementer's session brief forbade
+   spawning subagents — recorded honestly in its own T13 checkbox, and never picked up since. Master §12 states
+   that every phase closes with an independent adversarial review, so this is the estate's largest single
+   unreviewed surface, and it is the one that decides what every operator sees.
+4. **`copilot-mro/.env.sample:11` still declares the legacy `OTEL_ENDPOINT`** — dead since A14 retired the
+   `utils.config` indirection; nothing reads `settings.otel_endpoint` anywhere in the estate. (Line 12's
+   `OTEL_SERVICE_NAME` is **not** dead: it is read at boot and by every `get_tracing_service` call site, so
+   only the one line is owed here.)
+
+**And 16 further pieces of owed work exist in the tree with no checkbox anywhere.** That is the finding worth
+keeping, because it is structural rather than clerical: **a deferral recorded only as prose in a phase note is
+a sentence someone has to re-read, not tracked work.** Every one of the 16 was written down honestly, in the
+right file, by an agent doing the right thing — and none of them can be counted, sequenced or resumed, because
+a paragraph has no state. The full list is in the SDD ledger.
+
+**A path drift found in the same pass.** Master 6.5 places the runbooks at `docs/runbooks/observability/`.
+They are at **`copilot-mro/docs/runbooks/observability/`** — there is no `runbooks/` directory in this repo at
+all. Anyone following the master plan to the on-call surface finds nothing.
 
 ### Environment rules confirmed this phase
 - **Worktree lanes MUST set `PYTHONPATH`, or they test the wrong tree (found 2026-09-20).** The shared `api`
