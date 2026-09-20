@@ -613,6 +613,30 @@ resolved; the merge commit records them and E fixes them.
 - [ ] G.12 **L-COMPOSE-ENV.** Give `deployment/` its own `.env.sample` naming the three required variables, or
       default them so the stack starts; add a smoke that `docker compose config` resolves with only the
       documented sample present.
+- [ ] G.13 **M-RESIDENCY, judge side — the provider allowlist. ADDED 2026-09-20, and its absence was a P0.**
+      The owner ruled on 2026-09-19 "**enforce NOW, in this merge**", and no Phase G item was ever written for
+      it — so the control sat in a gap between two plans, each pointing at the other. The evals plan
+      (`agent-evaluation-completion.md`) states as settled fact that residency landed here and therefore
+      declines to build it; G.8 named only the **exporter** half, which that same plan elsewhere calls
+      unclaimed and takes for its own Phase 8. The merge plan's own §5.8 note above says it outright:
+      *M-RESIDENCY is unenforced*.
+      **Verified in the merged tree 2026-09-20:** zero matches for residency / allowlist / allowed-provider
+      anywhere under `copilot_mro/app/services/agent_evaluation/`; `provider` is a free-form string passed
+      straight into `LLM(provider=self._provider, model=self._model)` at `phoenix_adapter.py:289` and `:399`;
+      and `docs/runbooks/observability/phoenix-evaluations.md:121` and `:137` document `--provider openai`.
+      The suite is **already merged**, so the code that would send it is in the tree today.
+      **The exposure:** a judge receives the user's question, the model's answer and retrieved manual text.
+      Spec §6.5 and ruling 11 say client production content never leaves the client's own account and never
+      reaches a SaaS in the data path. If Phase G closes and the evals project starts on its stated
+      precondition, the first live run sends all three to OpenAI.
+      **Build:** an in-account-only provider allowlist enforced where the judge LLM is constructed — not in
+      the CLI, which is one caller of several — failing closed on an unlisted provider, with the refusal
+      naming the provider and the ruling. Mutation-prove it: set the provider to `openai`, show the run
+      refuses; restore, show it proceeds. Then correct the runbook's two documented `--provider openai`
+      invocations, which currently teach the forbidden path.
+      **Exporter side stays with the evals project** (its Phase 8) — this item is the judge side only, and
+      the two must not both claim it again. G.8 is REMOVED from Phase G and that removal is what left this
+      hole; closing it here is the repair.
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI

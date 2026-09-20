@@ -106,11 +106,24 @@ follow the loader rule, and Phase 0 measures whether that costs anything.
 
 ### 2.2 Precondition inherited from the merge — the provider allowlist / residency
 
+> **STATUS CORRECTION, 2026-09-20 — read this before relying on the paragraph below.**
+> The owner's ruling is real and unchanged: residency enforcement lands in the merge, not here. **But no
+> Phase G item existed for it until today**, so the ruling had no owner and nothing was built. The control
+> sat in a gap between the two plans, each of which pointed at the other. Verified in the merged tree on
+> 2026-09-20: **zero** matches for residency / allowlist / allowed-provider anywhere under
+> `copilot_mro/app/services/agent_evaluation/`; `provider` is a free-form string passed straight into
+> `LLM(provider=self._provider, model=self._model)` at `phoenix_adapter.py:289` and `:399`; and the runbook
+> documents `--provider openai` at `phoenix-evaluations.md:121` and `:137`. The merge plan now carries
+> **G.13** for exactly this, and **this project must not start until G.13 is closed and mutation-proved.**
+> Treating the sentence below as already true is what would send a user's question, the model's answer and
+> retrieved manual text to a third-party vendor on the first live run.
+
 **The owner ruled that residency enforcement lands in the CURRENT merge, not here.** This project therefore
 treats it as a precondition and does not implement it. It does, however, depend on it completely: the ruling
 is that **no eval run touches real traces until it is enforced**, and every phase of this project past the
 Phoenix probe wants to run against real traces.
 
+What the precondition must guarantee, stated plainly so the gap is checkable:
 What the precondition must guarantee, stated plainly so the gap is checkable:
 
 - The judge receives **the user's question, the model's answer, and retrieved manual text**. That is customer
