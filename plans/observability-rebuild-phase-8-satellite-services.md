@@ -58,13 +58,102 @@ the gate).
 - [x] PA8 — built, reviewed, fixed, re-verified: `core-obs8` 6c97af7, `dashboard-obs8` bb78344 (46 panels)
 - [x] D8 — built, reviewed, fixed, re-verified: `copilot-mro-obs8` ba14daa3, `iac-obs8` 094869d
 - [x] T — built, reviewed, fixed twice: `telegram-bot-obs8` 0c55122
-- [ ] Fable R0 — design review of §8a (D-1…D-12); any "change" → fix pass on the affected stream first
-- [ ] Fable R1 → merge O (then `poetry lock` + `poetry install` in `api/`, boot check, shared-env suites)
-- [ ] Fable R2 → merge S (optimizer `main`, api `langgraph-merge`)
-- [ ] Fable R3 → merge PA8 (core `master`, dashboard `agent_sdk`)
-- [ ] Fable R4 → merge T (bot `main`; hand-carry `api/compose.yaml` `additional_contexts`)
-- [ ] Fable R5 → merge D8 (copilot-mro `langgraph-merge` `deployment/**`, iac `main`)
-- [ ] §10 live probe (session lead; one Telegram turn from the owner's phone)
+- [x] Fable R0 — design review DONE 2026-09-13 (reviewer Fable 5; brief in §11, full text
+      `copilot-mro/.dev_runs/obs8-fable-gate/R0-design-review.md`): D-1…D-9 KEEP, each re-verified at source;
+      D-10 CHANGE (§8b mechanics amended — post-merge lanes + moved-base rule); D-11 RULED (a) metric-only,
+      fix in R2, exclusions revert in R5; D-12 RULED (a) gateway strip+inject, fix in R2, panel re-entry
+      stays deferred; findings F-1…F-10 dispositioned in the brief
+- [ ] R0 fix passes (before the affected chunk's review). DONE flynapse-otel @ `25dc158` (Opus 5; 164 passed;
+      propagators needed `set_global_textmap` too — `opentelemetry.propagate` builds its composite at its own
+      import, so the env setdefault alone was dead letters; mutation-proven). DONE telegram-bot-obs8 @
+      `909510e` (Opus 5; F-1 type-keyed: any `telegram.Update` among a record's args → `Update(update_id=…)`
+      stand-in in the OTLP copy only, the sole INFO+ model-object log site in PTB 22.8, mutation-checked,
+      telemetry lane 75 passed; F-7b mypy override dropped, same 4 pre-existing errors; F-6 DEFERRED — see
+      the deferred list). DONE api-obs8 @ `92a9006` (Fable 5; D-11a seam (a) held — subclass at the sole
+      install site re-times both semconv histograms at upstream's own final-send condition, F-10 folded in
+      (`active_requests` decrements at response end too), never-completing responses keep upstream behavior;
+      D-12a strip+inject at `OptimizerPermissionMiddleware.dispatch`, identity = Cognito `sub` — the same
+      value the gateway publishes as `X-Auth-User-ID`, deliberately not the `internal_user_id` surrogate;
+      middleware lane 273, mutation-checked both fixes; known environmental: `test_pool_instrumented`
+      connection-refused, local Postgres down; bundle `flynapse_utils.pth` still points at deleted
+      `utils-obs` — main `utils` on `PYTHONPATH` is the workaround). DONE D8 trees @ `c29cc24a` /
+      `36a982e` (Opus 5; true revert — alert rule byte-identical to pre-mitigation; F-4 line in CATALOGUE
+      §7; no guard-test edits needed — the guards pin structure, not query text; otel lane 64/7, promtool
+      live, terraform validate clean). ALL R0 FIX PASSES COMPLETE.
+- [x] Fable R1 → MERGE-READY 2026-09-13 (no P0/P1/P2; three P3s → deferred list; brief:
+      `copilot-mro/.dev_runs/obs8-fable-gate/R1-review.md` + §11): re-ran package 164 + utils 1023,
+      independent estate-wide shim sweep with a live attribute-level probe, propagator import-order
+      reasoning re-verified against installed SDK source, `py.typed` proven in wheel+sdist by rebuild;
+      base unmoved. MERGED: utils `langgraph-merge` @ `718db0a` (`--no-ff`; only the 17 Stream O files;
+      owner's uncommitted `utils/dev/.claude/CLAUDE.md` edit untouched); `flynapse-otel` stays `main` @
+      `25dc158` (unpushed — GitHub copy lags at ed5f739 until owner pushes). Postconditions ALL GREEN
+      2026-09-13: shared `api/.venv` refreshed (SDK 1.44.0 / contrib 0.65b0, flynapse-otel path dep; the
+      repaired poetry.lock committed as api `langgraph-merge` `702c54f`); boot check from inside
+      `flynapse_api/` (the `config` import resolves from there, not the repo root) → "Telemetry
+      configured", service_name=api, six instrumentors [psycopg2, httpx, requests, urllib3, redis,
+      threading]; utils 1023 + api middleware 253 (mainline baseline; 260 included Stream S's 7) from the
+      shared env; OTLP connection-refused warnings = local collector down, environmental. BUNDLE ENV
+      (`wt-obs-u`) RETIRED.
+- [x] Fable R2 → MERGE-READY 2026-09-13 (no P0/P1/P2; three P3s; brief:
+      `copilot-mro/.dev_runs/obs8-fable-gate/R2-review.md` + §11) and MERGED: shift-optimizer `main` @
+      `23d3f2e`, api `langgraph-merge` @ `58a5c3b` (both `--no-ff`; api base drift = only the accounted
+      `702c54f` relock). F-2 post-merge lanes on the MERGED trees: middleware 273, optimizer telemetry 23,
+      both green from the shared env. Reviewer independently reproduced the D-11a mutation check, ran
+      overlap + mid-body-exception probes (no cross-request bleed; gauge balanced on all four terminal
+      paths), verified the D-12a identity byte-identical to `X-Auth-User-ID` at source, and found no route
+      into the sub-app that skips the seam. P3s recorded: contrib trailers divergence (upstream's, subclass
+      more correct than the span), proxy surface pinned to contrib version, ContextVar set/reset on
+      excluded URLs (negligible). §11 S residual "run route duration includes the solve" RETIRED by
+      `27c2351`; R5 still owes the exclusion reverts (already committed on the R5 branch).
+- [x] Fable R3 → MERGE-READY 2026-09-13 (no P0/P1/P2; two P3s — future-status silence note + stale plan
+      numbers, both plan spots fixed; brief: `copilot-mro/.dev_runs/obs8-fable-gate/R3-review.md` + §11)
+      and MERGED: core `master` @ `a1a5f6c`, dashboard `agent_sdk` @ `6483a08` (both `--no-ff`, bases
+      unmoved). Reviewer verified gating at three layers (mis-gated panel cannot register; per-capability
+      deny matrix ran tonight; no route checks fewer capabilities), tenancy fail-closed in BOTH deployment
+      shapes (`assert_rls_enforced` un-wrapped at boot + explicit `tenant_id` predicates in all four panel
+      SQLs), D-12 grep-clean, fixtures byte-identical at 46. Suites: dashboard 51/51 + `tsc` clean; core
+      121 passed / 127 skipped — every skip proven postgres-unreachable (DB down). OWED lanes CLEARED
+      2026-09-13 after the owner restarted Postgres (container needed a second `docker start`; healthy on
+      5432): db/analytics + api/analytics on merged core `master` = 156 ran, 0 failed, 0 skipped — R3's
+      post-merge verification is complete.
+      F-2 post-merge lanes on the MERGED trees (session lead): core unit/analytics + infra 119 green;
+      dashboard `tsc` clean; analytics lane 51/51 — invocation note: the dashboard lane MUST use the
+      repo's `test:unit` flags (`tsx --tsconfig tsconfig.test.json --test …`); a bare `tsx --test` fails
+      the render tests with a phantom "React is not defined" (merged tree proven byte-identical to the
+      reviewed branch before diagnosing — the 11 reds were invocation, not content).
+- [x] Fable R4 → MERGE-READY 2026-09-13 (no P0/P1; five P3s → deferred list; brief:
+      `copilot-mro/.dev_runs/obs8-fable-gate/R4-review.md` + §11; suite 2284/1, ruff clean, mypy same 4
+      pre-existing; redaction attacked at all four places incl. live probes on the F-1 stand-in;
+      propagation wire probe: traceparent in, baggage withheld) and MERGED: bot `main` @ `c6ee959` —
+      preceded by the owner-approved WIP commit `f83f2fb` (owner's digest header-copy edit + wave6 notes;
+      digest.py then auto-merged cleanly, delta verified = exactly the WIP). Hand-carry DONE: api
+      `langgraph-merge` @ `7cd192f` (`additional_contexts: {otel: ../flynapse-otel}`). Bot env relocked +
+      installed against the merged package (lockfile unchanged — the branch's committed lock was already
+      right); full suite on merged `main`: 2284 passed / 1 skipped (4:51). Docker image rebuilt through
+      the new additional context: `flynapse-telegram-bot:latest` Built, exit 0 — the D-1 build-context
+      design and the poetry-export path pin are proven on the merged tree. R4 CLOSED.
+- [x] Fable R5 → MERGE-READY AFTER FIXES 2026-09-13 (P1-1 runbook volume-guard wording + P2 phantom
+      `manuals_poll`, both landed as `f03cb979`; three P3s → deferred list; brief:
+      `copilot-mro/.dev_runs/obs8-fable-gate/R5-review.md` + §11; name check CLEAN — every queried
+      series/label derived from emitter source + pipeline normalization; both dialects; lane 64/7 twice)
+      and MERGED: iac `main` @ `7690c8d` (base unmoved; terraform validate + 8 templates parse post-merge);
+      copilot-mro `langgraph-merge` @ `18909ee0` via the F-2 moved-base procedure — base had moved TWICE
+      (owner's S4 gate merges: e421643c, then 5ddf0ba3): e421643c merged into the branch (`0be06fa3`,
+      zero file overlap, otel lane 64/7 on the combination), e421643c..5ddf0ba3 verified to touch zero
+      D8 paths, then `--no-ff`. Post-merge otel lane on the merged primary: first run failed
+      `test_legacy_single_config_is_gone` on an EMPTY ROOT-OWNED DIRECTORY at
+      `deployment/observability-local/otel-collector-config.yaml` — a stale docker bind-mount artifact
+      of the crash-looping local stack, not the merge; `rmdir`'d, then 64/7 GREEN. (A stale container
+      restarting with the old mount spec would recreate it — the owner's stack cleanup fixes it for
+      good.)
+- [ ] §10 live probe (session lead; one Telegram turn from the owner's phone) — OWNER RULING 2026-09-13:
+      DEFERRED to the end of the whole gate ("no live test for now — we do that once everything is
+      done"), batched with phase-9's extended re-probe. Stack prep for that pass: recreate the old
+      `deployment` compose project from the current spec (its loki/tempo containers predate the
+      `${VAR:-default}`/expand-env config style and crash-loop against the new files; the dead
+      `deployment-otel-collector-1` still mounts the deleted legacy config and recreates the root-owned
+      dir), and tear down the leftover `flynapse-otel-probe` overlay in the same pass. `down` without
+      `-v` — volumes survive.
 - [x] `flynapse-otel` pushed to GitHub 2026-09-11 — `github.com/flynapse/flynapse-otel` (private, repo created by the
       owner); `main` @ ed5f739 = a merge of GitHub's one-line README stub (e70f089) on top of the reviewed f0c6432, tree
       identical to f0c6432 (local SHAs preserved for the briefs); the push did not publish (the workflow publishes only
@@ -137,8 +226,9 @@ env (`Telemetry configured` line with the same six instrumentors); `grep` finds 
 ## 3. Signal catalogue (pinned so D8 builds in parallel)
 
 Names are final for this phase; D8's reviewer diff-checks them against T and S once those land (phase-6 pattern).
-All metrics go through the registry (unit allow-list: `seconds`, `USD`, `ratio`, else count; identity keys are
-forbidden as metric attributes).
+All metrics go through the registry (registry unit allow-list as implemented: `1`, `s`, `ms`, `By`, `{USD}`,
+`{token}`, `{request}`; identity keys are forbidden as metric attributes). The words `seconds`/`USD`/`ratio`
+are the PA8 *panel-spec* vocabulary, not registry units — handing them to the registry is rejected (R0 F-8).
 
 ### 3.1 Telegram bot (`service.name=telegram-bot`, `service.instance.id`, `deployment.environment` from env)
 
@@ -155,7 +245,7 @@ forbidden as metric attributes).
 | counter | `telegram.turns` | `lane`, `carrier`, `outcome`, `refund` (mirrors the existing `count()` key set) |
 | histogram, seconds | `telegram.turn.duration` | `lane`, `outcome`; buckets 1…600 s |
 | histogram, seconds | `telegram.turn.phase.duration` | `phase` ∈ {gate, auth, backend, render, photos}; buckets 0.1…120 s |
-| counter, `{USD}` | `telegram.turn.cost` | `lane` (from the backend's `cost_usd`; token counts are not available to the bot); Prometheus name `telegram_turn_cost_total` (a braced unit gets no suffix) |
+| counter, `{USD}` | `telegram.turn.cost` | `lane` (from the backend's `cost_usd`; token counts are not available to the bot); Prometheus name `telegram_turn_cost_total` (a braced unit gets no suffix); **client-side mirror of backend-ledgered spend** — the api ledger's `agent.model` cost family counts the same dollars, so the two must never be summed (R0 F-4; CATALOGUE carries the same line) |
 | counters | `telegram.uploads`, `telegram.provisionings`, `telegram.refusals` | the same attribute keys the matching `count()` lines carry today (as built: refusals carry `carrier`/`chat_type` and no `lane` on stale/maintenance/group/invite refusals; provisionings carry `created`); `user`, `age_seconds`, `citations`, `cost_usd`, `*_ms` never become labels |
 | counter | `telegram.jobs` | `name`, `outcome` ∈ {ok, error, cancelled} |
 | logs | stdlib root → OTLP | INFO and above; the `httpx` logger stays pinned to WARNING; as built: a never-raising filter on the OTLP handler ships a scrubbed COPY of each record (body, `exception.*` from `exc_info`, string and string-sequence extras — token shapes and URL queries removed); stdout format unchanged; trace/span ids attached by the handler |
@@ -256,7 +346,8 @@ context (smoke stage imports the telemetry module); live probe (§10) shows a tr
 
 ## 6. Stream PA8 — optimizer product tab (core + dashboard)
 
-**core (`core-obs8`):** `resources/analytics/panels/optimizer.py` (five `PanelSpec`s, registered via
+**core (`core-obs8`):** `resources/analytics/panels/optimizer.py` (four `PanelSpec`s — five as drafted,
+minus `optimizer_active_planners` per D-12 — registered via
 `panels/__init__.py`), `registry.py` (`optimizer` tab, `OPTIMIZER_REQUIRES`), `tests/fixtures/analytics_seed.py`
 (seed `optimizer_jobs`/`optimizer_runs` for two tenants), `tests/db/analytics/test_panels_optimizer_db.py`
 (exact rows for tenant A, isolation for tenant B, empty window → `[]`), `tests/unit/analytics/
@@ -354,11 +445,11 @@ nothing is pushed. Branch tips the gate reviews (a chunk's reviewer starts from 
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
 |---|---|---|---|
 | R0 | this plan §8a (D-1…D-12) | spec §3/§4/§7/§9/§10 | — (design review) |
-| R1 | `/home/aditya/Code/flynapse-otel` `main` @ f0c6432 (pushed as ed5f739 — GitHub README stub merged, tree unchanged); `/home/aditya/Code/utils-obs8` `obs8-utils` @ c8efbe3 | new repo; utils `langgraph-merge` 9f74a11 | package 160; utils 1023 (bundle env) |
-| R2 | `/home/aditya/Code/shift-optimizer-obs8` `obs8-optimizer` @ f2591ef; `/home/aditya/Code/api-obs8` `obs8-api` @ f8ff271 | `main` 6a70135; api `langgraph-merge` a19a931 | optimizer telemetry lane 23 (+ 683/1/62 pre-existing RLS setup errors); api middleware 260 |
+| R1 | `/home/aditya/Code/flynapse-otel` `main` @ 25dc158 (= f0c6432 + the R0 F-5/F-7 fix; f0c6432 was pushed as ed5f739 — GitHub README stub merged, tree unchanged); `/home/aditya/Code/utils-obs8` `obs8-utils` @ c8efbe3 | new repo; utils `langgraph-merge` 9f74a11 | package 164; utils 1023 (bundle env) |
+| R2 | `/home/aditya/Code/shift-optimizer-obs8` `obs8-optimizer` @ f2591ef; `/home/aditya/Code/api-obs8` `obs8-api` @ 92a9006 (= f8ff271 + D-11a `27c2351` + D-12a `92a9006`) | `main` 6a70135; api `langgraph-merge` a19a931 | optimizer telemetry lane 23 (+ 683/1/62 pre-existing RLS setup errors); api middleware 273 |
 | R3 | `/home/aditya/Code/core-obs8` `obs8-core` @ 6c97af7; `/home/aditya/Code/dashboard-obs8` `obs8-dashboard` @ bb78344 | core `master` 988571b; dashboard `agent_sdk` b87ced0 | core analytics + infra 275/0; dashboard 51/51, `tsc` clean |
-| R4 | `/home/aditya/Code/telegram-bot-obs8` `obs8-telegram` @ 0c55122 | `main` 1961778 | 2282 passed / 1 skipped (own env); ruff clean; docker build OK |
-| R5 | `/home/aditya/Code/copilot-mro-obs8` `obs8-dashboards` @ ba14daa3 (`deployment/**` only); `/home/aditya/Code/iac-obs8` `obs8-iac` @ 094869d | copilot-mro `langgraph-merge` 07c2d4ee; iac `main` 5996e5a | otel lane 64/7 incl. promtool; validate-rules; terraform validate; 8 bodies parse; Grafana cold-boot 2 |
+| R4 | `/home/aditya/Code/telegram-bot-obs8` `obs8-telegram` @ 909510e (= 0c55122 + the R0 F-1/F-7b fix) | `main` 1961778 | 2282 passed / 1 skipped at 0c55122 + telemetry lane 75 at 909510e (full lane re-runs at the R4 review); ruff clean; docker build OK |
+| R5 | `/home/aditya/Code/copilot-mro-obs8` `obs8-dashboards` @ c29cc24a (= ba14daa3 + D-11 exclusion reverts + F-4 catalogue line; `deployment/**` only); `/home/aditya/Code/iac-obs8` `obs8-iac` @ 36a982e (= 094869d + aws-dialect revert) | copilot-mro `langgraph-merge` 07c2d4ee; iac `main` 5996e5a | otel lane 64/7 incl. promtool re-run at c29cc24a (alert rule byte-identical to its pre-mitigation blob); terraform validate + 8 bodies parse re-run at 36a982e; Grafana cold-boot 2 |
 
 **Merge mechanics per chunk (session lead, after each Fable verdict):** `--no-ff` merge into the base branch named
 above (flynapse-otel is already on its own `main`); R1 additionally: in `api/` run `env -u VIRTUAL_ENV poetry lock`
@@ -371,24 +462,73 @@ committed). Owner-side later: GitHub secrets on the new `flynapse-otel` repo, it
 source flip at publish time (§9 / D-1). Then the §10 live probe. If a Fable verdict changes a design row in §8a, the
 affected chunk gets a fix pass BEFORE its review, in this session on whatever model is available.
 
+**R0 amendments to these mechanics (F-2, 2026-09-13):** (i) EVERY chunk's merge is followed by that chunk's suite
+lane(s) run on the merged result — R2: optimizer telemetry + api middleware lanes; R3: core analytics/infra + the
+dashboard targeted lane with `tsc`; R4: the bot suite in its own env; R5: otel lane + promtool + `terraform
+validate`. A chunk is done when the merged base is green, not when the branch was — the estate has already eaten
+one silent merge drop (the TanStack trial's seven `meta.telemetry` keys). (ii) Moved-base rule: the gate runs
+after the owner's LangGraph merge, so a base tip may no longer equal the SHA pinned above (`langgraph-merge`
+bases are the likely movers). If it moved: merge the current base into the branch, re-run that chunk's lane,
+then `--no-ff` — a verdict does not transfer to an unverified combination.
 
-- **Gateway duration recorded after background work (D-11).** Every route that queues a Starlette `BackgroundTask`
-  reports its HTTP duration including that task. Deferred to the R0 ruling; the complete fix is a gateway-side
-  hook that closes the request duration at the final response send, with a test on a background-task route.
+
+- **Gateway duration recorded after background work (D-11) — RULED at R0 (2026-09-13): (a), metric-only.** The
+  SERVER span already ends at the final body send (upstream-guaranteed); only the duration histogram records
+  after the background task. Fix in R2 (api tree): the histogram records at the final response send; R5 then
+  reverts the run-route panel/alert exclusions. Fallback (c) — keep the exclusions — only if the api implementer
+  finds no clean seam short of forking upstream code.
 - **CloudWatch `attributes.tenant.id` path.** The log bridge renames `tenant_id → tenant.id`; Logs Insights parses
   dots as nesting, so the D8 queries' `attributes.tenant_id` is probably wrong — already RE-VERIFY-flagged for B1b.
-- **Registry forbidden-attribute list does not include identity ids** (`run_id`, `job_id`, `tenant_id`/`tenant.id`) —
-  only session/user/url keys. Streams enforce their own attribute sets at emission; widening the package list is an
-  R1 follow-up once every existing metric's attributes are audited.
-- **PTB logs the full `Update` repr at CRITICAL when context-building fails** (`_application.py`), which carries
-  the user's message text into the log stream (pre-existing on stdout; now also on the OTLP route). The T scrubber
-  removes token shapes and URL queries only; a message-text scrub for that one PTB site is a follow-up.
-- **Optimizer run attribution is spoofable / empty** (D-12): `X-User` is client-supplied and unsent; the gateway
-  should inject the authenticated identity. `optimizer_active_planners` re-enters the tab after that.
+- **Registry forbidden-attribute list does not include per-entity ids** (`run_id`, `job_id`, `chat_id`,
+  `block_id`, …) — only session/user/url keys. Widening it is a follow-up once every existing metric's
+  attributes are audited — and the widened list must NOT include `tenant.id`: spec §6.3 deliberately puts
+  `tenant.id` on the `agent.model.*` metrics (tenant count is in the tens), so a blanket identity ban would
+  break spec-legal metrics at registration (R0 F-3 reword).
+- **PTB logs the full `Update` repr at CRITICAL when context-building fails** — deferral OVERTURNED at R0
+  (2026-09-13, F-1): the stdout exposure predates phase 8, but the OTLP route to the log store is what this
+  phase created, and the no-user-content constraint is absolute. Fixed in the R4 fix pass: the never-raising
+  scrubbed-copy filter replaces the `Update` arg with its `update_id` in the OTLP copy; stdout unchanged.
+- **Optimizer run attribution (D-12) — RULED at R0 (2026-09-13): (a).** The gateway's optimizer seam strips any
+  inbound `X-User` and injects the authenticated id (trusted-proxy pattern; fix in R2). `optimizer_active_planners`
+  re-enters the tab as a small follow-up once attribution has accumulated real data — not tonight (it would render
+  over a history that is 100% `system`).
+- **Standalone shift-optimizer is uninstrumented** (R0 F-9): this phase covers only the gateway-mounted
+  deployment (bootstrap lives in the api process; the anchored health regexes assume the mount and would also be
+  defeated by a uvicorn `root_path`). Correct as scoped, but the standalone path must not be assumed covered.
 - **`panels/optimizer.py` imports private helpers from sibling panel modules** (`_stamp_times` from `quality`,
   `_float` from `usage`); the elegant home is a `panels/_shared.py` — deferred to keep the PA8 diff minimal.
 - **Telegram `lane` is single-valued today** (`copilot` is the only `count(TURNS…)` call site); the by-lane panels
   become useful when other lanes emit.
+- **R1 review P3s (Fable, 2026-09-13; none block anything):** (P3-1) bootstrap's `operator_set` check for
+  `OTEL_PROPAGATORS` is key-presence, so an EMPTY value both keeps baggage live (the SDK treats empty as
+  unset) and suppresses the corrective swap — no estate config sets the variable today; fix by testing
+  truthiness when next in the file. (P3-2) the `py.typed` exclude-guard is substring-based and would miss a
+  wildcard exclude; the complete guard builds to a tmpdir and asserts wheel membership. (P3-3) the
+  no-baggage pin is skipped on the `OTEL_SDK_DISABLED` path — harmless (no instrumentors inject there) but
+  the invariant is per-mode, not structural.
+- **R4 review P3s (Fable, 2026-09-13; none block anything):** (P3-1) `record_failure` renders
+  `str(error)`/`format_exception` unguarded on the span route — an exception whose `__str__` raises would
+  escape the recording path (the log route guards the same renders); (P3-2) a foreign-bootstrapped process
+  (`configured_by_this_call` false) gets log pins re-applied but no `UrlRedactingSpanProcessor` —
+  unreachable via the bot's own `main()`; (P3-3) a hand-built log record with `list`-typed args carrying
+  an `Update` bypasses the stand-in (impossible via `Logger._log`); (P3-4) the HandlerStop and
+  context-build-return paths lack explicit span-closure assertions (structurally guaranteed, source
+  verified); (P3-5) a future `block=False` handler's failure lands after span close — safely ignored, not
+  mis-marked; contract noted for when one appears.
+- **R5 review P3s (Fable, 2026-09-13):** (P3-1) panel/CATALOGUE text credits a contrib `url_filter` that
+  doesn't exist at 0.65b0 — the mechanism is `UrlRedactingSpanProcessor.on_start`; fix the wording on next
+  touch. (P3-2) refusals: CATALOGUE presents `lane` as unconditional but the emitter drops it on
+  invite/stale/maintenance/group refusals (sum-over-lane deliberately < total) — the query is honest, the
+  text should say so; `created` is a real provisionings dimension the CATALOGUE omits. (P3-3) the aws
+  dotted text-dialect carries two unit-suffix conventions (inherited from phase 6, instances added both
+  sides) inside probe-gated widgets — B1 falsifies one family, sweep then; CATALOGUE's aws severity
+  example omits `FATAL`.
+- **`service.version` is `unknown` estate-wide, not just from the bot image** (R0 F-6, examined and deferred at
+  the R4 fix pass 2026-09-13): the only in-tree lever is a whole-variable `OTEL_RESOURCE_ATTRIBUTES`, which
+  compose's `env_file` replaces with no merge (`.env.sample` documents that same variable for
+  `deployment.environment.name`), and the compose build path lives in `api/compose.yaml` — another tree. The
+  correct fix is a merge seam in `flynapse_otel.resource` (compose-provided attributes merged with
+  code-provided ones), done once for every service; no service in the estate sets `service.version` today.
 
 ## 10. Live probe (after all merges; session lead runs it)
 Smoke overlay collector (`flynapse-otel-probe` compose project, loopback remaps) + api via the shared env + the bot
@@ -401,6 +541,93 @@ presigned URL anywhere (grep the raw stream). Teardown by port + `compose down -
 ## 11. Review briefs (Phase A output; input to Phase B)
 _(one subsection per stream, written by each Opus reviewer, with the session lead's rulings folded in)_
 
+### R0 — Fable gate design review (reviewer Fable 5, 2026-09-13; chunk CLOSED)
+
+Full text: `copilot-mro/.dev_runs/obs8-fable-gate/R0-design-review.md`. Every load-bearing fact was re-verified
+at source (installed contrib 0.65b0, Starlette 0.48.0, PTB 22.8, httpx 0.28.1), not inherited from the Opus
+briefs. Verdicts: **D-1…D-9 KEEP** — highlights: PTB's `process_update` control flow proves a negative-group
+handler can never close a per-update span (D-3); contrib httpx has no `url_filter`, its own redaction misses
+`X-Amz-Signature` and path segments, URL attributes are set once at span creation, and the instrumentor's
+failure path adds only `error.type` — so the three-place scrub is necessary and complete for the routes that
+exist (D-5); Starlette ends the SERVER span at the final body send before background tasks run, which makes the
+Link the only honest relationship (D-6); bonus: bootstrap's semconv opt-in means the httpx client histogram the
+Telegram board reads should exist, downgrading that §10 VERIFY risk. **D-10 CHANGE** — the §8b mechanics
+amendments above (post-merge lanes for every chunk; moved-base rule). **D-11 RULED (a)**, narrowed to
+metric-only (the span is already right; only the histogram lies) — fix in R2, exclusions revert in R5, fallback
+(c) only if no clean seam. **D-12 RULED (a)** — gateway strip+inject at the `OptimizerPermissionMiddleware`
+seam; the hole as built is spoofable attribution, not just an empty column; panel re-entry stays deferred.
+Findings: F-1 PTB-CRITICAL `Update` repr = message text on the OTLP route, deferral overturned → R4 fix; F-2 =
+the §8b amendments; F-3 registry-widening reword (never `tenant.id`); F-4 `telegram.turn.cost` mirror rule
+(§3.1 + CATALOGUE in R5); F-5 `OTEL_PROPAGATORS` setdefault `tracecontext` in bootstrap → R1; F-6
+`service.version` from the bot image → R4 if cheap; F-7 `py.typed` → R1 (+ bot override drop); F-8 §3 unit
+vocabulary corrected; F-9 standalone shift-optimizer named as uncovered; F-10 `active_requests` shares D-11's
+distortion (R2 assesses). Residual risks: Prometheus-side post-normalisation names (§10 probe), live RLS state
+on the optimizer tables (R3 may re-probe via the owner), CloudWatch dotted-field semantics (B1b), the
+`auth_context` user-id shape (R2's tests prove it), Docker rebuild of the path pin (R4 merge step), base drift
+(handled procedurally by the moved-base rule). Rescope summary: R2 and R4 get pre-review fix passes; R5's fix
+pass follows the D-11 outcome; R3 unchanged.
+
+### R1 — Fable gate review (reviewer Fable 5, 2026-09-13; verdict **MERGE-READY**; MERGED as utils `718db0a`)
+
+Full brief: `copilot-mro/.dev_runs/obs8-fable-gate/R1-review.md`. Suites re-run (package 164, utils 1023
+from the bundle env — needs `POSTGRES_DB=copilot_mro_test`, a pre-existing guard); independent estate-wide
+shim sweep incl. a live attribute-level probe proving shim objects are identical to package objects; the
+R0 fix commit's propagator reasoning verified against installed SDK source (composite built at
+`opentelemetry.propagate` import → the `set_global_textmap` swap is necessary; swap has no victim — zero
+baggage/textmap consumers estate-wide; contrib binds `inject` by function, so the swap takes effect);
+`py.typed` proven in wheel+sdist by empirical rebuild. No P0/P1/P2; three P3s recorded in the deferred
+list. Moved-base check: utils base unmoved at `9f74a11`. Reminder it flagged: `flynapse-otel` `25dc158`
+is unpushed — the GitHub/CodeArtifact copy lags until the owner pushes.
+
+### R2 — Fable gate review (reviewer Fable 5, 2026-09-13; verdict **MERGE-READY**; MERGED as shift-optimizer `23d3f2e` + api `58a5c3b`)
+
+Full brief: `copilot-mro/.dev_runs/obs8-fable-gate/R2-review.md`. Suites from the shared env: api-obs8
+middleware 273, optimizer telemetry 23 (full optimizer suite 597/145-skipped — every skip is
+postgres-unreachable, collection arithmetic exact: +23 vs base). The two post-Opus fix commits attacked
+hardest: D-11a seam verified line-by-line against installed contrib 0.65b0, mutation check independently
+reproduced, live overlap + mid-body-exception probes (no cross-request bleed, gauge balanced on all four
+terminal paths); D-12a strip proven over raw ASGI byte pairs for every casing/duplicate, injected identity
+verified byte-identical to `X-Auth-User-ID` at source, no bypass route into the sub-app. Stream S
+re-derived against §3.2: catalogue exact, closed vocabularies enforced at emission, health exclusion
+regexes literal-pinned with nothing wrongly silenced. Three P3s in the deferred list (trailers divergence
+— upstream's; proxy surface pinned to contrib version; ContextVar on excluded URLs). D-12 acceptance (2)
+proven at the exact-Header-contract level; the real DB row lands in the §10 probe. Base drift = only the
+accounted `702c54f` relock.
+
+### R3 — Fable gate review (reviewer Fable 5, 2026-09-13; verdict **MERGE-READY**; MERGED as core `a1a5f6c` + dashboard `6483a08`)
+
+Full brief: `copilot-mro/.dev_runs/obs8-fable-gate/R3-review.md`. Re-derived the whole surface: gating
+attacked at three layers with the deny matrix running DB-free tonight; tenancy fail-closed verified in
+code (boot refuses an unpolicied DB in both deployment shapes; every panel SQL carries its own
+`tenant_id` predicate — safe even with RLS off); panel SQL checked against the authoritative
+shift-optimizer DDL; D-12 grep-clean; drift fixtures byte-identical (46). Suites: dashboard 51/51 + `tsc`
+clean; core 121/0 with 127 skips positively identified as postgres-unreachable (the db-lane conftest's
+closed skip vocabulary means no real failure can hide as a skip). Two P3s: future status values render
+silently (closed vocabulary today); stale plan numbers (fixed). Owed: the 154 DB-bound tests on merged
+`master` when Postgres returns, before §10.
+
+### R4 — Fable gate review (reviewer Fable 5, 2026-09-13; verdict **MERGE-READY**; MERGED as bot `c6ee959`)
+
+Full brief: `copilot-mro/.dev_runs/obs8-fable-gate/R4-review.md`. Suite 2284/1 (= Phase A + the 2 fix
+tests), ruff clean, mypy unchanged. The P0 redaction surface attacked at all four places with live probes
+(subclassed `Update`, mapping-form args, poisoned mapping, hostile repr — all held); PTB source re-walked
+to confirm `process_update` is the only INFO+ site handing an `Update` to a log call; propagation proven
+at the wire (traceparent injected, baggage withheld even when deliberately set). D-3's three control-flow
+paths source-confirmed leak-free; every Phase-A ruled fix re-verified present. Five P3s → deferred list.
+Merge preceded by the owner-approved WIP commit `f83f2fb` (digest header copy); `digest.py` auto-merged,
+delta verified = exactly the WIP. Hand-carry: api `7cd192f`.
+
+### R5 — Fable gate review (reviewer Fable 5, 2026-09-13; verdict **MERGE-READY AFTER FIXES**, landed; MERGED as copilot-mro `18909ee0` + iac `7690c8d`)
+
+Full brief: `copilot-mro/.dev_runs/obs8-fable-gate/R5-review.md`. The name check — the chunk's whole
+point — came back clean: every queried series/label derived from emitter source plus the collector's
+name-normalization rules (forced `flynapse` namespace, `{USD}` no-suffix, semconv opt-in), checked
+against the landed S/T/O code including the 11-word turn-outcome vocabulary and anchored-matcher
+semantics. Tonight's revert commits verified as true reverts (alert rule byte-identical to
+pre-mitigation; zero `jobs/[^/]` or `D-11` leftovers). Fixes: P1-1 runbook volume-guard wording and the
+P2 phantom `manuals_poll` — landed as `f03cb979` pre-merge. Three P3s → deferred list. Lane 64/7 (twice
+on the branch, once post-merge after removing a stale docker-created directory); iac `terraform validate`
++ 8 templates parse post-merge.
 
 ### Stream O — review brief (reviewer Opus 5, 2026-09-10; verdict **MERGE-READY** for chunk R1)
 **Scope.** `flynapse-otel` `main` f058771 → f0c6432 (P2-7 parallel per-provider shutdown landed, 160 tests); `utils-obs8` `obs8-utils` 4602211 → c8efbe3
@@ -591,8 +818,8 @@ shift-optimizer table definitions, their `<table>_isolation` FOR ALL policies (`
 current_setting('app.tenant_id', true)`) are live on both `copilot_mro_test` and `copilot_mro` with
 `relforcerowsecurity=t`. core: `panels/optimizer.py` (five specs), `registry.py` (`optimizer` tab,
 `OPTIMIZER_REQUIRES`), two-tenant seed, 30 db tests, registry/gate tests, endpoint contract tests (403 without
-`optimizer`, 200 with); dashboard: five `PANEL_REGISTRY` entries, tab/label/types, 51 analytics tests, `tsc` clean;
-the settings page is registry-driven and unchanged. Drift fixture `EXPECTED_PANELS` = 47 on both sides (phase-5
+`optimizer`, 200 with); dashboard: four `PANEL_REGISTRY` entries (post-D-12), tab/label/types, 51 analytics tests, `tsc` clean;
+the settings page is registry-driven and unchanged. Drift fixture `EXPECTED_PANELS` = 46 on both sides (phase-5
 approach: transcribed, core compares per-tab sets, dashboard keeps order). Deviations accepted: bucketed rows use
 `bucket_start` (the FE time-series variant reads it); run moment = `COALESCE(started_at, finished_at)` (a run that
 fails before inputs resolve has no `started_at` and would vanish from the failure ratio); `optimizer_top_jobs`

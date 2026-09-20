@@ -14,21 +14,24 @@ Global inference profile (`global.*`), Standard tier. This is the tier we run on
 
 | Model | Input | Output | Cache read | Cache write 5m | Cache write 1h |
 |---|---|---|---|---|---|
+| Fable 5.1 (not subscribed — offer card) | $10.00 | $50.00 | **$0.25** | $12.50 | $20.00 |
 | Fable 5 | $10.00 | $50.00 | $1.00 | $12.50 | $20.00 |
 | Opus 5 | $5.00 | $25.00 | $0.50 | $6.25 | $10.00 |
 | Opus 4.8 | $5.00 | $25.00 | $0.50 | $6.25 | $10.00 |
 | Opus 4.7 | $5.00 | $25.00 | $0.50 | $6.25 | $10.00 |
 | Opus 4.6 | $5.00 | $25.00 | $0.50 | $6.25 | $10.00 |
 | Opus 4.5 | $5.00 | $25.00 | $0.50 | $6.25 | $10.00 |
-| **Sonnet 5** | **$2.00** ⚠️ | **$10.00** ⚠️ | $0.20 | $2.50 | $4.00 |
+| **Sonnet 5** | **$2.00** | **$10.00** | $0.20 | $2.50 | $4.00 |
 | Sonnet 4.6 | $3.00 | $15.00 | $0.30 | $3.75 | $6.00 |
 | Sonnet 4.5 | $3.00 | $15.00 | $0.30 | $3.75 | $6.00 |
 | Sonnet 3.5 / 3.5v2 / 3.7 (apac) | $3.00 | $15.00 | — | — | — |
 | Haiku 4.5 | $1.00 | $5.00 | $0.10 | $1.25 | $2.00 |
 | Haiku 3 (legacy, apac) | $0.25 | $1.25 | — | — | — |
 
-⚠️ **Sonnet 5 is on introductory pricing that ends 2026-08-31.** From 2026-09-01 it reverts to
-**$3.00 / $15.00** — i.e. parity with Sonnet 4.6. Anything sized against $2/$10 must be re-costed then.
+**Sonnet 5's $2/$10 is the PERMANENT standard price.** It launched as introductory pricing through
+2026-08-31, but Anthropic cancelled the scheduled increase: "the previously scheduled increase to
+$3/$15 per million input/output tokens on September 1, 2026 will not occur"
+(platform.claude.com/docs/en/about-claude/pricing, retrieved 2026-09-02). Nothing needs re-costing.
 
 ### Modifiers
 
@@ -36,14 +39,16 @@ Global inference profile (`global.*`), Standard tier. This is the tier we run on
 |---|---|
 | Batch tier | **−50%** on input and output (e.g. Opus $2.50 / $12.50) |
 | Regional endpoint instead of global | **+10%** on everything (Opus becomes $5.50 / $27.50, cache read $0.55) |
-| Cache read | 0.1× input rate |
+| Cache read | 0.1× input rate — **0.025× on Fable 5.1 / Mythos 5.1** (the 5.1 generation only; agreement-confirmed 2026-09-02, see §5a) |
 | Cache write, 5-minute TTL | 1.25× input rate |
 | Cache write, 1-hour TTL | 2× input rate |
 
 **Always prefer `global.*`.** It is 10% cheaper than the regional endpoint, and in ap-south-1 it is the
 only option for the current-generation models anyway (no in-region, no APAC geo profile).
 
-Fable 5 has **no regional dimension at all** — global only.
+Fable 5's **accepted agreement** carries no APS1 regional dimension — global only — though its
+Marketplace *offer* card does list one ($11 input regional). Fable 5.1's offer card has no APS1
+regional dimension at all. Either way, in ap-south-1 you run `global.*`.
 
 ### Tier availability
 
@@ -67,6 +72,7 @@ than a crash.
 | Opus 4.6 | `global.anthropic.claude-opus-4-6-v1` |
 | Opus 4.5 | `global.anthropic.claude-opus-4-5-20251101-v1:0` |
 | Fable 5 | `global.anthropic.claude-fable-5` |
+| Fable 5.1 | `global.anthropic.claude-fable-5-1` (ACTIVE in catalog, agreement NOT accepted) |
 | Sonnet 5 | `global.anthropic.claude-sonnet-5` |
 | Sonnet 4.6 | `global.anthropic.claude-sonnet-4-6` |
 | Sonnet 4.5 | `global.anthropic.claude-sonnet-4-5-20250929-v1:0` |
@@ -223,8 +229,49 @@ $3/$15. `utils/tests/test_llm_usage_totals.py` updated to match, with a new regr
 (`test_resolve_bedrock_pricing_separates_current_from_legacy_generations`) pinning each generation
 boundary — including that `sonnet-5` must not swallow `sonnet-4-5`. 14/14 pass.
 
-**Diary note:** the `sonnet-5` intro rate is hardcoded and expires 2026-08-31. On 2026-09-01 delete the
-`sonnet-5` entry so it falls through to `sonnet` ($3/$15).
+**Diary note — RESOLVED 2026-09-02, the opposite way.** This note originally said to delete the
+`sonnet-5` entry on 2026-09-01 so it would fall through to `sonnet` ($3/$15). That was executed
+(utils `a70cfc1`) and REVERTED the same day (`141bb44`): Anthropic cancelled the scheduled increase
+and made $2/$10 the permanent standard price (pricing page, retrieved 2026-09-02). The `sonnet-5`
+row stays. Lesson: a dated price-change instruction is a claim about the future — re-verify against
+the published source at execution time, never execute the note. **Billing channel CONFIRMED same
+day** after an SSO refresh: the account's accepted Marketplace agreement
+`agmt-qjmol0orhb598q0fbk4zq3sl` (product `prod-4ezhkeia6k2cs`, accepted 2026-08-07) bills APS1
+global-standard at input 2.0 / output 10.0 / cache_write 2.5 (1h TTL 4.0) / cache_read 0.2 per 1M —
+exactly the restored row. Also agreement-confirmed: the opus-shape agreements at 5/25/6.25/0.5,
+fable at 10/50/12.5/1.0, and the sonnet-4-5 (2026-07-31 agreements, old-convention dims) at
+3/15/3.75/0.30.
+
+**Follow-up CLOSED 2026-09-02 — Fable 5.1 cache-read 4× overcharge, fixed in utils `langgraph-merge`.**
+The follow-up left open by the verification above is now closed **against the billing source**, not
+against the pricing page. Both halves were re-derived from Marketplace on 2026-09-02:
+
+- **Fable 5 is correctly priced at $1.00 cache read.** Accepted agreement
+  `agmt-2z5vz5t1jom91ry5ssn3pm1et` (product `prod-h6swdfybvty7y`, accepted 2026-08-07) bills APS1
+  global-standard 10 / 50 / 12.5 / **1.0** (1h write 20). The `utils` `fable` row was **already
+  correct** — no price was edited, which is the point: the 0.025× note was about a *different model*.
+- **Fable 5.1 genuinely bills $0.25.** `anthropic.claude-fable-5-1` is ACTIVE in the ap-south-1
+  catalog (`global.anthropic.claude-fable-5-1`) but **not subscribed** on this account
+  (`agreementAvailability = NOT_AVAILABLE`), so there is no accepted agreement to read — the
+  authoritative artifact is its Marketplace *offer* card, which binds on subscribe:
+  `APS1_cache_read_tokens_global_standard = 0.25`, everything else identical at 10 / 50 / 12.5 / 20.
+
+`resolve_bedrock_pricing` matched the bare substring `"fable"`, so a 5.1 id resolved to the Fable 5
+row and would have been charged cache reads at 4×. Fixed by adding a `fable-5-1` row and splitting
+on the `-5-1` version infix inside the fable/mythos branch (which also catches a future Mythos 5.1),
+mirroring how `opus` already separates current from legacy. The boundary test in
+`utils/tests/unit/metering/test_llm_usage_totals.py` now pins both directions and was mutation-proved
+to fail without the resolver branch.
+
+Still latent, not live: no config default or call site names a 5.1 id, and the model cannot be
+invoked until the agreement is accepted **and** its TPM quota is raised off zero (see §3).
+
+**No `pricing_version` bump.** The string `utils-bedrock-ap-south-1-2026-09-02` already carries this
+date, and the profiles stamped with it certify only haiku-4-5 / sonnet-4-5 / opus-4-6 — none of which
+is Fable. No certified rate changed.
+
+**Mythos is not on Bedrock.** `list-foundation-models` in ap-south-1 returns no `mythos` id at all;
+the resolver's `"mythos"` match is forward-looking only.
 
 ### 5b. Sonnet 5 migration is blocked on more than the model string
 

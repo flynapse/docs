@@ -63,6 +63,11 @@ work branches from `langgraph-merge` **after** the gate as `obs-agent`.
 **Gate M — owner declares "migration landed"**: the LangChain batches the owner is running are merged into
 `langgraph-merge` and no further batch is expected to touch the conflict zone for the duration of Stream L.
 
+**GATE M DECLARED 2026-09-14 by the owner** — "langraph migration is done. so we can build and moerge now." — given
+while ruling phase 10's `/rag/stream` item (copilot-mro `langgraph-merge` @ `a24189ee`; S4 pushed at `4ba3c7f0`). The
+§1 conflict-zone freeze is lifted. Task R below is UNBLOCKED but starts only on its own owner go; phase 10 does not
+start it.
+
 **Task R — rescoping (after Gate M, before any Stream L task)**
 - [ ] R.1 Re-run the backend inventory of research 01 §2.1–2.4 (metrics, spans, log families, LLM call paths)
       against the merged code; write the diff to `docs/plans/observability-rebuild-research/08-post-migration-rescoping.md`
@@ -446,6 +451,18 @@ local integration tree that also retires the frontend board's DARK labels. Fable
 the phase-8 chunks. Detail plan: `observability-rebuild-phase-9-dashboard-telemetry-completion.md` (gap register §0,
 pinned catalogue §2, decisions D9-1…D9-16 in §8a).
 
+## 11d. Phase 10 — Owner follow-ups (opened 2026-09-14)
+
+Owner request after the post-gate "what's left" answer: pick nine items, "design and plan them. we build and review
+using opus and post that fable reviews". Items: response validation at the dashboard API layer; the `/rag/stream`
+final-before-save race (built AND merged — Gate M declared, §2); alert thresholds + real Slack/email targets; the
+Document Hub double `document_opened`; the CloudWatch alarm dialect (ruled: `hashicorp/aws ~> 6.42`); the worktree
+`next build` trap (a config guard — research showed `outputFileTracingRoot` does not close it); per-project smoke
+networks; `service.version` estate-wide; the RLS re-run on `shift_optimizer_test` plus a self-healing test-DB
+preflight. Six Opus streams (V10 dashboard, W10 chat write path, K10 oss alerting + smoke, A10 aws alarms, S10
+service version, L10 RLS lane), an Opus adversarial review each, then Fable chunks R12–R16 with a merge after each
+verdict. Detail plan: `observability-rebuild-phase-10-owner-follow-ups.md` (item register §0, pins §2).
+
 ## 12. Review protocol (every phase)
 1. Detail plan written at phase start (test-first tasks); owner reviews it.
 2. Implementer agent per worktree (Opus for mechanical/enumerated work, Fable for design-heavy or merge-sensitive
@@ -588,8 +605,9 @@ PromQL widget console export, Stream L counter hand-off.
   `shift_optimizer_test` DB (utils' `rls_boot_check` fails on stale memory-item policies → 62 optimizer `tests/api`
   setup errors, pre-existing).
   **Owner rulings open:** phase-8 D-11 (the gateway records HTTP duration after BackgroundTasks) and D-12 (optimizer
-  run attribution from an unsent, spoofable `X-User` header) — Fable R0 recommends, owner rules; hub-citation
-  double-surface (one gesture = two `document_opened` rows); Gate M
+  run attribution from an unsent, spoofable `X-User` header) — Fable R0 recommends, owner rules; ~~hub-citation
+  double-surface (one gesture = two `document_opened` rows)~~ CLOSED 2026-09-15 by phase 10 Task 2 (D10-6: the preview
+  dialog owns the fact for every opener; merged into dashboard `agent_sdk` as `0bc5429` after Fable gate R13); Gate M
   declaration when LangGraph lands → Task R rescoping → Stream L (phase 0 app half, 1b-mro, phase 3, the
   `chat_turn_facts` writer, content capture) + phase 7 eval harness; Stream L must also confirm the
   `agent_outcome="error"` spelling + doc-hub/automation counters the dark phase-6 panels assume.
@@ -753,6 +771,81 @@ PromQL widget console export, Stream L counter hand-off.
   - **New owner decision:** 14 known per-call callbacks across both teams report a landed write as failed if a response
     field is absent. Their complete answer is response validation at the API layer (phase-9 plan §9).
 
+**2026-09-13/14 — The phase-8 Fable gate ran end-to-end, merged and pushed; phase 9's gate opened and paused
+at the owner's request.** Session model set to Fable 5; chunks one at a time, a fresh Fable reviewer each,
+per D-10. R0 (design): D-1…D-9 KEEP, D-10 mechanics amended (post-merge lanes every chunk + moved-base
+rule), D-11 RULED (a) metric-at-final-send (narrowed: the span was already right), D-12 RULED (a) gateway
+X-User strip+inject; ten adversarial findings, four fix passes landed the same night (flynapse-otel
+`25dc158` — `py.typed` + tracecontext-only pin, which needed `set_global_textmap` because
+`opentelemetry.propagate` builds its composite at its own import; api `92a9006` — both rulings, F-10
+folded in, mutation-checked; bot `909510e` — the PTB CRITICAL `Update`-repr scrub, type-keyed; D8
+`c29cc24a`/`36a982e` — true reverts of the D-11 exclusions + the F-4 mirror line). R1–R5 all
+MERGE-READY (R5 after two one-line text fixes `f03cb979`) and merged with green post-merge lanes: utils
+`718db0a`, api relock `702c54f` (shared `api/.venv` refreshed, `wt-obs-u` retired; boot check =
+"Telemetry configured", six instrumentors), shift-optimizer `23d3f2e` + api `58a5c3b`, core `a1a5f6c` +
+dashboard `6483a08`, bot `c6ee959` (owner WIP `f83f2fb` committed first by owner choice; compose
+hand-carry api `7cd192f`; image rebuilt through the `otel` additional context), copilot-mro `18909ee0`
+(moved-base procedure — the owner's S4 merges moved that base twice mid-gate, zero overlap) + iac
+`7690c8d`. Environmental finds, all resolved: the dashboard lane needs the repo's canonical
+`--tsconfig tsconfig.test.json` flags (bare `tsx --test` = phantom "React is not defined"); a stale
+docker bind-mount kept recreating the deleted legacy collector config as a root-owned dir (removed; the
+old `deployment`-project loki/tempo crash-loop because their containers predate the expand-env config
+style — recreate that project from the current spec at the live pass); Postgres needed a second
+`docker start`. R3's owed DB lanes then cleared: 156 ran, 0 failed on merged core `master`. PUSHED
+2026-09-14: all eight repos fast-forwarded (flynapse-otel, utils, shift-optimizer, api, core, dashboard,
+telegram-bot, iac); copilot-mro deliberately NOT pushed — its `langgraph-merge` carries ~85 unpushed S4
+commits with that session's own tag-riding push protocol. Phase 9: R6 (design) — every D9 decision KEEP,
+§8b mechanics amended (the R11 C9.2-vs-`0fa9765` conflict ruling, RC re-pin procedure, R10 base-merge fix
+pass, the owner §2.1 look scheduled before R8's merge, extended post-R11 re-probe, I-7 skip-is-not-a-pass
+rule); RC-D/RC-1/RC-2 ran in the owner's parallel chat (tip moved to `fec72f2`+, RC-2 fix pending); R7
+(F9) reviewed MERGE-READY (dashboard 1853/1853 canonical lanes, api 322, both moved bases re-verified
+disjoint; one P2: bare `npx eslint` is a silent no-op in this repo — `next lint` is the only valid
+invocation) — merge HELD behind RC and the pause. Owner rulings tonight: live probes (phase-8 §10 + the
+extended re-probe) DEFERRED to one batch at the end of the gate; gate briefs durably in
+`copilot-mro/.dev_runs/obs8-fable-gate/` and `obs9-fable-gate/`.
+
+**2026-09-14 (day) — every gate review closed; the merge sequence nearly done.** Reviews R8 (E9), R9 (N9),
+R10 (M9), R11 (C9) all returned MERGE-READY on Fable 5 (briefs in `copilot-mro/.dev_runs/obs9-fable-gate/`).
+Notable review products: R9 root-caused and defused the worktree `next build` standalone trap after it wiped
+the shared dashboard `node_modules` (restored via `npm ci`; §1c now carries the rm-before-build rule; the
+RC session was warned about the 12-minute invalid-lane window); the two base `prefer-const` lint reds fixed
+on `agent_sdk` (`c7b9eb9`); R10 ran the two-way allow-list↔catalogue diff mechanically (zero missing keys)
+and caught nine guard mutations; R11 verified the F-R6-1 conflict ruling, AMENDED it (F-R11-1: take
+master's contract file WHOLESALE — the dangerous pin auto-merges silently; keep-both demonstrated 9-red)
+and was merged as core `master` @ `8571373` (full core `tests/api` exit-0 post-merge). The RC session then
+handed off: all nine RC chunks closed; core-side RC merged @ `e10a9ce` (C9-first held); dashboard-side RC
+merged @ `40b2c7f` after a 2136/2136 + tsc-clean lane at the final tip `915078a`. R7 merged: api side
+`fc35d08` (F-R6-4 followed, 342 green combined), dashboard side `505ca7a` — merged-tree lane initially red
+with 15 failures in three F9×RC semantic clusters, ALL resolved test-side by a Fable fix pass (zero
+production changes; commits `98e9130`/`590f2b2`/`cf1d0cb`; lane 2210/2210; a renamed log sentinel had left
+12 files of global-handler assertions silently vacuous — re-armed). R10 merged while R8 was blocked:
+copilot-mro `2cd98bde` + iac `3b5f414`, otel lane 79/8 + terraform validate green post-merge. Owner
+approvals in-session: **§2.1 catalogue APPROVED** ("§2.1 OK", with the products-vs-mechanism clarification
+recorded); the NewPasswordView challenge fix declared finished and committed by the session lead as
+`2af8239` (auth lane 208/208 against it) — unblocking R8's `NewPasswordView.tsx` overlap. The R8 merge
+launch then hit Fable's session limit (reset 05:50 PT) and was relaunched on Fable at 05:51 on the owner's
+word. Remaining after R8: the R9 (N9) dashboard merge, then only the live batch (stack recreate, probe
+teardown, phase-8 §10 probe, extended re-probe F-R6-6, the compose smokes' clean 87-run). One new
+owner/backend item out of RC-8: `/rag/stream` emits `final` before the block save (migration-zone file —
+waits for Gate M or an owner ruling).
+
+**2026-09-14/15 — phase 10 opened; Gate M declared.** After the post-gate housekeeping, the owner picked nine
+follow-ups and asked for design + plan (Opus build and review, then Fable). Five read-only Opus 5 research agents
+reported; findings that changed the recorded picture: response validation has 8 callback flip sites + 6 post-await
+reads (not 3 + 11), and two AD-review routes plus core `POST /operators` declare no response model; `/rag/stream`
+also races follow-up turns and a 300 s history-cache write-back, and no out-of-zone fix closes it; the Document Hub
+double count was already fixed by F10 `1f2aa95`, but inline Hub chips now emit zero opened rows (the §15 "hub-citation
+double-surface" ruling line above is stale — it was ruled at F10); `outputFileTracingRoot` does not close the worktree
+build trap (the start-of-build `cleanDistDir` delete and every `next dev` start follow the planted symlink); two smoke
+overrides carry fixed network names; api/worker report a fake `0.1.0` version (not `unknown`), the bot `unknown`, the
+browser a hard-coded `1.0.0`; `shift_optimizer_test` policies stale since the 2026-08-17 sentinel predicate change;
+following the alert rollout checklist as written turns a guard red, and delivery failures are silent; the aws 5→6
+raise would replace both EC2 instances unless `user_data` moves to `user_data_base64`. **Owner rulings:** narrow zod
+contracts at the API layer; "langraph migration is done. so we can build and moerge now." (= **Gate M declared**, §2);
+real Slack + email targets now — prod and dev Slack channels, email for prod critical only, the platform's SMTP relay;
+CloudWatch dialect = raise `hashicorp/aws` to `~> 6.42`. Plan v1 written (`observability-rebuild-phase-10-owner-follow-ups.md`);
+an independent Opus plan review runs before the owner's plan review; nothing built yet.
+
 ## 16. Future Improvements
 _(empty)_
 
@@ -774,12 +867,20 @@ the ONLY env with the new OTel pins until the owner runs the shared-venv refresh
 install` in `api/`, only when the parallel LangGraph session is idle); until then run utils/api tests from
 the bundle with PYTHONPATH pinned to the MAIN checkouts. Everything is local/unpushed per workspace norm.
 
-**Phase 8 (added 2026-09-10/11):** Telegram bot + Shift Optimizer telemetry, the `flynapse-otel` package extraction,
-the optimizer product tab and both-dialect dashboards are BUILT and Opus-reviewed in nine worktrees (`flynapse-otel`,
-`utils-obs8`, `shift-optimizer-obs8`, `api-obs8`, `core-obs8`, `dashboard-obs8`, `copilot-mro-obs8`, `iac-obs8`,
-`telegram-bot-obs8`) — **merges HELD for the Fable gate Sunday night 2026-09-13**, run as chunks R0 (design) → R1 → R2
-→ R3 → R4 → R5 with a merge after each; agenda, tips and mechanics in the phase-8 plan §8b, briefs in §11. The shared
-`api/.venv` refresh happens at the R1 merge (`poetry lock` + `poetry install` in `api/`).
+**Phase 8 — FABLE-GATED AND MERGED 2026-09-13.** All six chunks closed the same night: R0 design (D-1…D-9
+KEEP; D-11 ruled (a) metric-at-final-send, D-12 ruled (a) gateway X-User strip+inject, D-10 mechanics
+amended) with four fix passes; then R1–R5 each reviewed by a fresh Fable agent and merged: utils
+`langgraph-merge` `718db0a` (+ api relock `702c54f`; shared `api/.venv` refreshed — new OTel pins,
+`wt-obs-u` bundle RETIRED), shift-optimizer `main` `23d3f2e` + api `58a5c3b` (D-11a/D-12a fixes in), core
+`master` `a1a5f6c` + dashboard `agent_sdk` `6483a08`, bot `main` `c6ee959` (owner WIP committed first as
+`f83f2fb`; compose hand-carry api `7cd192f`; image rebuilt through the `otel` additional context), and
+copilot-mro `langgraph-merge` `18909ee0` + iac `main` `7690c8d` (R5 fixes `f03cb979` landed pre-merge;
+moved-base procedure used — the owner's S4 merges moved that base twice mid-gate). Every post-merge lane
+green (bot 2284/1, middleware 273, otel 64/7 after removing a stale docker-created legacy-config dir).
+Briefs: phase-8 plan §11 + `copilot-mro/.dev_runs/obs8-fable-gate/`. PUSHED 2026-09-14 (all eight repos;
+copilot-mro withheld — S4 freight + its tag protocol). R3's owed DB lanes CLEARED (156/0 on merged
+`master` once Postgres came back). STILL OWED phase-8: only the §10 live probe — owner-DEFERRED to one
+live batch at the end of the whole gate, together with phase-9's extended re-probe.
 
 **Phase 9 (added 2026-09-11) — built, reviewed, trial-merged; WAITING ON THE FABLE GATE (state as of 2026-09-13).**
 Dashboard telemetry completion covers every gap from the 2026-09-11 dashboard audit except Rostering, which is demo-only.
@@ -794,20 +895,97 @@ results):
 - **N9:** `dashboard-obs9n` `obs9-server` @ `7fc2bcc`.
 - **M9:** `copilot-mro-obs9` `obs9-deploy` @ `83f4a8f7` + `iac-obs9` `obs9-iac` @ `b72307b`, stacked on phase-8 D8.
 - **C9:** `core-obs9` `obs9-core` @ `8e3c3ce`.
-- **RC (owner's TanStack conversion, session code-26):** `dashboard-tanstack` `tanstack-conversion` @ `173706c` +
-  `core-tanstack` `tanstack-dept-delete` @ `401c2a6`. Never merge the `tanstack-t11…t18`, `tanstack-guard` or
-  `tanstack-phase3-fix` refs — all are absorbed into `tanstack-conversion`.
+- **RC (owner's TanStack conversion, session code-26):** `dashboard-tanstack` `tanstack-conversion` — the
+  `173706c` pin is STALE: RC-D/RC-1/RC-2 ran 2026-09-13 in the owner's parallel review chat and landed fix
+  commits (observed `fec72f2`; RC-2 fix pending, the tip moves again). RE-PIN at the tip that closes RC-8
+  (R6 F-R6-2); the changed-file set is stable (159), so chunk ownership stands. Core side still
+  `core-tanstack` `tanstack-dept-delete` @ `401c2a6`. Never merge the `tanstack-t11…t18`, `tanstack-guard`
+  or `tanstack-phase3-fix` refs — all are absorbed into `tanstack-conversion`.
 - **Trial trees (reference, not for merging):** `dashboard-obs9x` `obs9-trial-merge` @ `dc7a043` (2333 of 2333) and
   `core-obs9x` `obs9-trial-merge` @ `694113a`. Reports: `copilot-mro/.dev_runs/obs9-phaseA/phase9-trial-merge-*.md`.
 
-**Gate order:**
-1. Phase 8 R0–R5.
-2. Phase 9 R6, the design.
-3. RC in its own nine chunks: RC-D, then RC-1 through RC-8.
-4. R7 F9, R8 E9, R9 N9, R10 M9, R11 C9, merging after each.
+**Gate order (status as of the 2026-09-14 pause):**
+1. Phase 8 R0–R5 — DONE, merged, pushed.
+2. Phase 9 R6, the design — DONE (all KEEP; §8b amendments in the phase-9 plan).
+3. RC — COMPLETE AND MERGED 2026-09-14: all nine chunks closed in the owner's parallel chat (final tips
+   `915078a` dashboard / `401c2a6` core); merged as dashboard `40b2c7f` (2136/2136 at the tip first) and
+   core `e10a9ce` (after C9).
+4. **THE GATE IS COMPLETE (2026-09-14, morning).** Every review chunk closed on Fable, every merge
+   landed: dashboard `agent_sdk` @ `0a4dbec` = RC (`40b2c7f`) + R7 F9 (`505ca7a` + fix `cf1d0cb`) + the
+   auth challenge fix (`2af8239`) + R8 E9 (`1d7326c`: TS1117 combines at the trial's exact 20/19/13
+   reference, six wrapper→hook moves, floor 70, upload exemption, A-2 PASSES, the challenge outcome now
+   EMITS) + R9 N9 (`0a4dbec`, zero conflicts, 2368/2368, build evidence clean); api `langgraph-merge` @
+   `fc35d08`; core `master` @ `e10a9ce` (R11 `8571373` before RC, per the ruling); copilot-mro
+   `langgraph-merge` @ `2cd98bde`; iac `main` @ `3b5f414`. Phase-9 merges are LOCAL AND UNPUSHED (the
+   owner authorized pushing phase 8 only). Remaining: (a) the live batch — recreate the `deployment`
+   compose project from the current spec, tear down the `flynapse-otel-probe` overlay, phase-8 §10
+   probe (one Telegram turn from the owner's phone), the extended re-probe F-R6-6 (checks 2/4/5 + one
+   settings mutation + one Document-Hub write + the M9.6 panel-12 flip), the compose smokes' one clean
+   87-run; (b) owner decisions/items: push phase 9, response validation at the API layer (§9), the
+   /rag/stream final-before-save race (migration zone → Gate M), worktree cleanup (nine absorbed
+   tanstack trees + the obs8/obs9 trees), the durable worktree-build fix (`outputFileTracingRoot`),
+   and the long-standing §15 owner checklist.
+5. **Post-gate housekeeping DONE 2026-09-14 (owner-ordered):** phase 9 PUSHED — all five repos
+   fast-forwarded (dashboard `0a4dbec`, api `fc35d08`, core `e10a9ce`, iac `3b5f414`, copilot-mro
+   `46e3aa83` incl. S4's ledger commits). The `flynapse-otel-probe` overlay TORN DOWN (its shared smoke
+   network removed with it — the §9 isolation defect's live trigger is gone). The `deployment` project's
+   observability services RECREATED from the current spec (collector/prometheus/alertmanager/loki/
+   grafana/tempo; grafana's admin password carried from the old container without display; tempo needed
+   its bind-mounted `tempo_data` chowned to the new image's 10001 uid — the old crash-loop's config
+   half was cured by the recreate, the ownership half by the chown; legacy config dir NOT recreated; all
+   six Up). WORKTREES REMOVED: all 30 gate trees (obs8/obs9/tanstack/t11–t18/guard/trials) + the retired
+   `wt-obs-u` bundle; the nine absorbed task branches deleted; `obs*`/`tanstack-conversion` branch refs
+   and the S4 session's `copilot-mro-s44pm` kept; the RC gate ledger (103 files) backed up to
+   `copilot-mro/.dev_runs/tanstack-gate/` before removal. Owner then ordered the remaining tanstack
+   refs gone too: `tanstack-conversion`, `tanstack-phase3-fix` (dashboard) and `tanstack-dept-delete`
+   (core) safe-deleted 2026-09-14 — git's `-d` confirmed each fully merged; no remote tanstack branch
+   ever existed. The TanStack estate now lives only in the mainline history, the merged plan doc, and
+   the `.dev_runs/tanstack-gate/` archive. Then ALL obs branch refs too (owner "yes", 2026-09-14):
+   every `obs8-*`/`obs9-*` branch across the eight repos safe-deleted as merged (plus a stray older
+   `obs-api`); the two `obs9-trial-merge` throwaways force-deleted (never merged by design — their
+   reports live in `.dev_runs/obs9-phaseA/`). Zero gate branches remain anywhere; the gate exists only
+   in mainline history, the plan files, the `.dev_runs` archives, and memory. The SHAs recorded in the
+   plans' historical tables refer to commits still reachable through the merge commits. STILL OWED from the live batch: the phase-8
+   §10 probe (one Telegram turn from the owner's phone) and the extended re-probe F-R6-6 (checks 2/4/5 +
+   settings + Document-Hub records + the panel-12 flip; needs P9's probe-only forcing edits for check
+   4); the smokes' clean 87-run LANDED right after the teardown: **87 passed / 0 skipped in one run** on the
+   merged tree (compose smokes + rules + masking proof included) — that residual is CLOSED. The live
+   batch is now ONLY the two probes needing the owner: the phase-8 §10 probe (one Telegram turn) and
+   the extended re-probe F-R6-6.
+5. One live batch at the end: phase-8 §10 probe + the extended re-probe (F-R6-6) — recreate the old
+   `deployment` compose project from the current spec first; tear down the leftover
+   `flynapse-otel-probe` overlay in the same pass.
 
-**Exception in core:** R11 merges into core `master` BEFORE RC's core commit (tests-only and disjoint; it cures 9 red
-contract tests). After R11, re-probe P9 checks 2, 4 and 5.
+**Phase 10 (opened 2026-09-14) — owner follow-ups; EXECUTING since 2026-09-15 (plan v5, SDD, agent cap 10).** The
+Fable plan review and its scoped re-verify are folded; the owner gave the go. L10.0 done (Postgres stale-mount incident
+resolved by an owner restart; `shift_optimizer_test` migrated + reprovisioned, optimizer tests/api 130 passed). Tasks 9
+and 14 complete; Task 7 re-planned to a generation-versioned cache key after its stop condition hit; checkpoint #3 (same
+day): Tasks 5, 7, 9, 14, 18 complete; 10, 17, 20 in scoped re-review; 19 in task review; 3, 4, 6, 15 implementing;
+lane-close reviews running for `stream` and `cache`; 1, 2, 8, 13 queued; 11→12, 16, 21 follow their lanes. No Fable
+chunk requested yet; nothing merged or pushed. **PHASE 10 PHASES A + B COMPLETE 2026-09-15:** all 22 tasks complete, all 15 lanes closed, all ten Fable chunks (R12–R21) MERGED — dashboard `agent_sdk` 4a2898b, copilot-mro `langgraph-merge` 81965357, api `langgraph-merge` 087e298, utils 6ba3ab5→a9ca707, shift-optimizer `main` 88e9803, telegram-bot 3102fcc, flynapse-otel 1cafda2, iac `main` f35ec20. PUSHED 2026-09-15 on the owner's word (all eight repos; shift-optimizer's remote is named `main`); all 24 obs10 worktrees + branches removed; utils 0.1.39 / flynapse-otel 0.1.1 / api NOT published (api publishes from main/develop only). Remaining = §10 live batch (owner present; the R19 relative plan gate is step 1 of the iac apply — control `3b5f414` by SHA vs `main`, valid under state drift) + owner-owed §13 rulings + worktree cleanup on the owner's word. Ledger tail = the record. Earlier resume text:
+`.superpowers/sdd/observability-rebuild-phase-10-owner-follow-ups/progress.md` (task table + agent ids). Nothing merged
+or pushed; merges only after each Fable chunk verdict (handoff dir `copilot-mro/.dev_runs/obs10-fable-gate/`, Fable chat
+`code-a9`). v3 re-laid execution as SDD with 15 parallel lanes (Opus controller + Opus implementers and
+reviewers here; Fable reviews in a separate Fable chat via handoff files + a SendMessage doorbell; lane locks for heavy
+commands). v4 folds in the owner's Fable plan review (READY AFTER CHANGES, 1 P1 / 5 P2): the provider raise now leaves
+`user_data` untouched — the earlier `user_data_base64` move was itself the replacement risk.
+Nine owner-picked items, designed from five Opus research reports; owner rulings recorded in the phase plan header and
+§15; **Gate M DECLARED** (§2 — Task R unblocked, not started); alert literals supplied (`#prod-alerts`, `#dev-alerts`,
+email `aditya@flynapse.ai`, the platform's SMTP relay). The independent Opus plan review returned READY AFTER CHANGES
+(4 P1 / 11 P2), all folded into v2 (triage table §10a): the chat-blocks cache is removed rather than guarded, no backend
+response models, the save task survives disconnect and drains in the gateway lifespan, a null-target Alertmanager config
+until the owner's secret files exist, `hashicorp/aws ~> 6.43`, and an owner read-only `terraform plan` gate before the iac merge (R19 in v3 numbering).
+Next: owner go → L10.0 (RLS re-run, session lead) → 15 parallel SDD lanes on Opus (task reviews + lane reviews) → Fable
+chunks R12–R21 with a merge after each verdict → the live batch (alert receipt, stream reopen, versions, plus the
+carried phase-8 §10 and F-R6-6 probes). Detail: `observability-rebuild-phase-10-owner-follow-ups.md` §1a. **Post-phase follow-ups 2026-09-15 (PUSHED the same day; first `otel-tests` CI run green, 106 passed / 25 skipped):** api `3c45dff` (psycopg instrumentor in the dev group — the `poetry lock --regenerate` route could not add it, see phase-10 §13); copilot-mro `langgraph-merge` → `070f72c3` (SSE `error` frame = constant + trace id; `otel-tests.yml` CI lane; contract doc); shift-optimizer `main` → `5ee3f45` (`shift_optimizer` refused by the test guard for every kind). Owner rulings FU-GUARD/FU-SSEFRAME/FU-SSM/FU-SENDAS taken; FU-MOVED deferred to the first apply. **Second follow-up batch, same night (Fable gate R22 CLOSED MERGE-READY 2026-09-16 after two fix rounds; PUSHED 2026-09-16 in order — final tips utils `289ba71` → copilot-mro `417df303` → api `44bd8d1`, shift-optimizer `1ba897e`; record `copilot-mro/.dev_runs/obs10-fable-gate/R22-merged.md`):** utils `c4c6cef`→`289ba71` (`failure_fields`: type + frames, never the message; `pg_primary` class-gated; human sink `diagnose=False`; the stdlib→loguru intercept now carries `extra=`; health probes return class names), copilot-mro `c27a8fcf`→`2bd36558` (in-repo git-ignored Alertmanager secrets dir; the exception-text sweep of the chat routes/store/health/pipeline/scheduler with a 50-shape AST guard; sync `/rag` honours a refused save + logs the resolved chat id; all health legs status + `error_type`; POC api grace 110 s), api `bedd4ab`→`73da119` (shutdown budget 108 s: uvicorn `--timeout-graceful-shutdown 25`, bounded clock stops + unwinds, bounded drains, bounded OTel flush called last; grace 110 s). MERGE ORDER utils → copilot-mro → api. App Runner window ≥ 110 s (owner). **Stream L (Task R + phase-0 app half 0.5/0.6 + 1b-mro + phase 3) has NOT started — the chat routes still log `query=request.message`; 0.5 is the recommended immediate hotfix.**
+
+**Exception in core:** R11 merges into core `master` BEFORE RC's core commit — the order stands, but the
+old reason ("cures 9 red contract tests") is STALE: master is green since R3's `0fa9765` (2026-09-13), and
+that fix CONFLICTS with C9.2 (same file, same time-bomb, opposite mechanism). R6 ruled the resolution:
+take master's `recent_anchor()` seed mechanism, drop C9.2's autouse pin entirely — never keep both (phase-9
+plan §8b R6 amendments, F-R6-1). The core trial's "zero conflicts" was measured on the old base and does
+not transfer. After R11, the EXTENDED re-probe (F-R6-6): checks 2/4/5 + one settings mutation + one
+Document-Hub write in Loki + the M9.6 flip for panel 12.
 
 **Rules for the real merge, learned on the trial tree:**
 - Run `tsc --noEmit` BEFORE the unit lane. TS1117 on a resolved file means two `meta:` keys: combine the literals, never

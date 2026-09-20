@@ -70,7 +70,7 @@ checkout, then removes the worktree.
       `materialize_ad_corpus` for one (tenant, operator) WITHOUT `--retract`; the review page
       gains "Materialise" (enqueue + status); endpoint + FE + tests. Depends on the automations
       executor surface — coordinate with item 12's owner (api repo).
-- [ ] **14 — Phase D notifications + retire the fetch-time gated path** (copilot-mro, LAST —
+- [x] **14 — Phase D notifications + retire the fetch-time gated path** (copilot-mro, LAST —
       biggest, and deliberately after the production rollout proves the pipeline). Two halves:
       (a) the evaluate sweep (CLI + in-app recompute) emits notifications for verdict
       transitions into the existing dispatcher (which then honors 13a's effective state);
@@ -288,24 +288,215 @@ stack/SMTP session; rule FAA 2023-15-05 on `/mro/airworthiness`.
 Outstanding for the owner: rule FAA 2023-15-05 on `/mro/airworthiness` (AIXL, unknown
 filter); the pre-existing estate-vs-cluster entitlement contention
 (`test_every_counted_partition_is_an_entitled_one` + 5 siblings) remains on the ruling
-register, unchanged by the rollout.
+register, unchanged by the rollout. **Added 2026-08-17/18 by the §6+§7 batch** (block below): decide
+the two deferred items named there. (The F-21 displacement finding on `user_feedback:GET
+/chats/response/feedback/{block_id}` was on this list and is now RULED AND FIXED — 2026-08-18, see
+the block below.)
+
+**Register status 2026-08-16/17.** All 11 items above are closed (item 14's checkbox was
+ticked 08-16 to match its notes). The copilot-mro register (`copilot-mro/docs/plans/open-items.md`)
+was re-read against this file and six stale-unchecked lines marked closed; the still-open
+owner list lives in its "Register refresh (2026-08-16)" block. A sequel batch closed the
+register's §5 "Data leftovers" on 08-17 (`copilot-mro/docs/plans/data-leftovers-attribution-memory-gc.md`:
+`chunks`/fleet attribution fail-closed, IFIM `_FROM_DOCUMENT` join provable + owner-run
+repair, memory GC sweep + api daily task) — it adds ~20 uncommitted production edits to the
+commit pile above (list in that plan's Review section) and one live sanity ingest to the
+owner's paste-list.
+
+**Register status 2026-08-17 (later, same session).** Two more batches closed off the
+register: `copilot-mro/docs/plans/tenant-grain-writes-and-memory-operator.md` (§9 ruling —
+`__ALL__`'s two meanings; `memory_items` + `memory_item_events` declare tenant-grain writes, no
+zero-grant guard by ruling; memory rows attributed to their evidence's operator, fail-closed;
+owner-run backfill script) and `copilot-mro/docs/plans/signup-hardening-queue.md` (§4 residues —
+`tenants.domain` immutable via the API instead of DNS/mail verification; dashboard flag-on bundle
+with two rulings: network blip proceeds / refusals block; share dialog keeps its company check).
+Also closed: the Cognito IAM grant is written (`iac/apprunner_iam.tf`, committed by the owner in
+`69fadc1` together with the DynamoDB removal), the "32 core automations RLS failures" were already
+fixed (core `c0fa25a`, register corrected), `db_guard` machine list closed as superseded, seam
+Phase 8 residues closed/ruled. **Owner-run today:** promoted `copilot_mro` re-provisioned with the
+new memory policies (8 expected stale clauses, then clean). **Adds to the owner's list:** restart
+api / copilot-mro / shift-optimizer; backfill dry-run → per-class ruling → live; `TURNSTILE_SITE_KEY`
+in Amplify + flag-on Phase 3 (server Turnstile verification reading `cf-turnstile-response`) +
+`terraform apply` for the `amplify.tf` flag line before flipping `DOMAIN_SIGNUP_ENABLED`; commit
+~40 production edits (utils 2, copilot-mro 28, core 3, dashboard 7, iac 1) and then delete the four
+backup branches; decide the `TenantUpdate` model fix for the dead Settings → Organization save.
+
+**Rulings 2026-08-17 (evening)** — the items this file still carried as "ruling owed" were put as
+questions and answered (`copilot-mro/docs/plans/register-rulings-batch.md`): the estate-vs-cluster
+entitlement contention → a READ-ONLY corpus door in `fixtures/tenancy/rls_connections.py` (built,
+copilot-mro lane); `cost_usd` on timeout/pipeline-exception closes → charge the ledger figure (built,
+api lane); F6 `result jsonb` and the non-LLM exemption from the $5 reservation floor → BUILT (api +
+core + copilot-mro + dashboard lanes); `attributed_to`'s settings-singleton mutation → the owner
+declined the explicit-threading refactor; it stays fenced by the runner lock + worker-mode guard and
+stays under Future improvements. FAA 2023-15-05 remains the one ruling still owed here.
+
+**Phase 7 of the test-infrastructure batch — CLOSED 2026-08-17** (record:
+`copilot-mro/docs/plans/phase7-root-finder-and-layout.md`). Not one of this file's eleven items,
+but the last unstarted phase of the batch this register tracks, and it was taken off hold and run
+in the same session. Across all six python repos: `tests/_root.py` replaced **213 depth-coupled
+path computations** across 191 files, **152 test files** moved to two levels under `tests/`, and
+`--strict-markers` went on everywhere (gtm needed its first pytest config at all). Both house rules
+are now enforced by tests rather than convention. copilot-mro's failure set came back identical to
+its baseline test id by test id; the other five repos green or unchanged. Adversarially reviewed —
+2 blockers + 4 gaps, all fixed. Adds ~14 uncommitted files to the owner's commit pile in
+copilot-mro (10 of them one-line repoints of references to moved test paths).
+
+**Register §6 + §7 — CLOSED 2026-08-17/18** (record:
+`docs/plans/boot-ddl-endgame-and-resolver-collision.md`). Also not one of this file's eleven items,
+and also picked up in the same sweep: the two last CODE items on the copilot-mro register.
+
+**§6 — the boot-DDL endgame, wider than it was filed.** `core` now declares schema and executes
+none. `bootstrap_automations_tables` → `verify_automations_tables` (catalog reads only, no DDL on
+any branch, never raises; the two boot callers differ deliberately — the core API logs and serves
+on, the automations worker refuses), and `bootstrap_rbac_tables`,
+`bootstrap_notifications_tables` and `bootstrap_operators_table` went with it — the last had no
+callers at all. `core.resources.ddl_convergence` deleted; `run_db_lane.py` provisions from the
+migration instead of a mechanism only the lane used; the estate-wide boot-DDL property went from
+banning ONE name to banning the retired vocabulary and asserting those functions no longer exist.
+Two retired-index DROPs deleted after checking all three live databases hold neither.
+
+**§7 — the resolver-name collision.** The AWIC form's `_resolve_identity` is now
+`_resolve_form_identity`, and the pin is whole-repository, AST-read and one-definition-per-name,
+resolving each name's authoritative file from the LIVE function object. Bite-proven three ways
+(a `scripts/` assignment, an `async def` inside `app/api/`, and a duplicate beside the real `def` —
+the old pin missed all three). F-20 stays a DECISION, restated on the register with new evidence:
+the port made copilot-mro's copy the better of the two, since core still uses the depth-coupled
+anchor its own guard bans.
+
+**Four defects nobody had reported, found on the way:** the worker's notifications refusal named a
+core bootstrap as those tables' creator and asserted the migration does not create them (both are
+in core's `ALL_TABLES`); the remedy printed off a privilege-filtered `information_schema` read named
+the migration alone, which issues zero GRANTs — telling an operator to re-run what they had just
+run; the DB lane wrote a `pg_dump` of a just-created empty database into `core/`'s working tree on
+every run; and the RBAC boot gate refused over relations its subject never opens. Four adversarial
+reviewers then found more, including two string-literal misreads in the new DDL parser (in both
+directions — inventing a constraint, and LOSING a real one) and a set-comparison that made the
+pin's "exactly one definition per name" claim not quite true.
+
+**Lanes:** core 2460 passed / 0 failed, api 364 / 0, copilot-mro tenancy+techpub 338 passed / 0
+failed — the one PRE-EXISTING failure this batch left standing (the F-21 displacement rule on
+`user_feedback:GET /chats/response/feedback/{block_id}`) was ruled and fixed on 2026-08-18. The
+route's supervisor-oversight feature is real and the claim never selected a row, so nothing leaked;
+but the fallback `or claimed_user_id` contradicted the route's own docstring and could not change an
+answer (it fires only when the record is absent, and then the absent department refuses first), so
+the gate is handed the stored owner alone. Behaviour-identical; the 14 supervisor-read tests pass
+unchanged and the old expression bite-proves the pin. **Adds to the owner's list:** commit one new test file plus
+~20 production edits across core/api/copilot-mro; and decide two deferred items — a measured
+parser→structural-accessor refactor (≈ −200 lines, removes the primary-key defect class by
+construction, but reshapes `ALL_TABLES` entries three repos consume) and the fact that the
+migration's `automation_id` NOT NULL drop has no tests anywhere. The core db lane is red for a
+PRE-EXISTING, now-measured reason: every error is `InsufficientPrivilege` because the lane has never
+run `provision_rls.py` and cannot (its write phases want `llm_usage`); the deleted bootstraps issued
+zero GRANTs, so the grant role never held a privilege there under either mechanism.
 
 ## Future improvements
 
-- **F6 (accepted nit)** — the completed materialise note overclaims when targets=0, and the
+**Status 2026-08-17 (evening):** F6 and the $5 floor below are BUILT (`copilot-mro/docs/plans/register-rulings-batch.md`
+— `automation_runs.result` jsonb, runner summary stored on the completed close, surfaced by the
+materialise status route and rendered honestly at 0 targets; non-LLM kinds skip `_reserve`).
+`attributed_to` stays as written — the owner declined the explicit-threading refactor.
+
+**Superseded 2026-08-17 (later the same day) — `attributed_to` is CLOSED, the hazard REMOVED
+rather than fenced.** Record: `copilot-mro/docs/plans/attributed-to-explicit-attribution.md`. The
+decline above was conditioned on the AD production rollout being the live pressure on
+`scripts/ad/materialize_ad_corpus.py`; that rollout **completed 2026-08-14**, so the condition it
+rested on had already lapsed and the item was taken. `ingest_tenant_key` and `ingest_document` each
+take the operator whose document they are writing (ambient fallback kept, so the ten parser call
+sites and the S3 Lambda are untouched), Phase C passes its pair explicitly, and its context manager
+— renamed `bound_to_pair` — opens the pair's `db_tenancy` bind and mutates
+`copilot_mro.app.config.settings` not at all. Two materialise runs sharing one process can no
+longer cross-attribute. The automations runner's execution lock and worker-mode guard are **kept
+deliberately**: they now bound per-process materialise concurrency and keep a full Weaviate +
+Postgres ingest out of the gateway rather than defending attribution, and relaxing either changes
+the worker's concurrency and where the work may run — its own decision, with its own review,
+recorded rather than answered.
+
+**CLOSED 2026-08-18, verified — the paragraph above was written mid-flight, before the two
+adversarial reviews and the fix round that were still owed.** Final record: that plan's
+`## Final status — 2026-08-18`. Nothing mechanical in the account above changed: attribution
+travels as an argument at all three seams, `attributed_to` → `bound_to_pair` whose body is the
+`db_tenancy` bind ALONE, and `grep -E "settings\.(tenant_id|operator_id)\s*="` over
+`scripts/ad/materialize_ad_corpus.py` returns NOTHING — the process global the runner's lock and
+the worker-mode guard were written to fence is never written at all. What is new is the
+verification the 08-17 text could not carry: **795 passed** on a quiet tree with bytecode cleared,
+across `tests/unit/ingest`, `tests/unit/ad`,
+`tests/unit/retrieval/test_weaviate_tenant_fanout.py`, `tests/ingestion/consistency` and
+`tests/integration/ad` (live cluster), against a measured baseline of **776 + 5**. Two corrections
+to the wording above: "the ten parser call sites and the S3 Lambda" miscounts twice over (11 call
+sites, 10 ambient, 8 actually parsers — the code now says "every other call site" rather than a
+number that rots), and the lock and worker-mode guard being "recorded rather than answered" is now
+literally true — the question is a **Future improvement in the plan file**, with what relaxing each
+would take, instead of living only inside three docstrings where nobody picks it up cold.
+
+**Two adversarial review rounds, different lenses, and the second one changed the outcome.**
+Round 1 (correctness + tenancy-safety) restored every production file byte-for-byte and could not
+break the core property on any axis — specifically it could **not** construct a state in which the
+deleted guard axis would have caught something the surviving comparison misses (the two differ only
+in operator normalisation, and every spelling on which they could diverge is refused upstream by
+`db_tenancy._validated` / `weaviate_tenant_key`). It did find one real defect of this session's own
+making: the consistency-lane stub repair was incomplete and its mutation proof still owed. Round 2
+(plan-completeness + simplicity) approved the code and **refused to close the plan** — the right
+call: it found a docstring that was FALSE on the production worker path (a dropped `db_tenancy`
+bind is caught by the unbound refusal only in the CLI shape; under the worker's outer same-tenant
+bind the gate passes silently — what is lost there is the entitlement narrowing, not the
+attribution, proven with a live probe rather than argued), plus a record missing notes for the
+three tasks that changed behaviour. Both rounds' findings are fixed and the owed proof discharged.
+
+**Adds 10 files to the owner's commit pile above — every production edit UNCOMMITTED per the house
+rule.** copilot-mro (8): `copilot_mro/app/services/weaviate_tenancy.py`,
+`copilot_mro/app/services/llama_index/llama_index_ingestion.py`,
+`scripts/ad/materialize_ad_corpus.py`, `copilot_mro/app/services/ingest_operator.py`,
+`copilot_mro/app/db/row_tenancy.py`, `copilot_mro/app/api/ad_review.py`,
+`copilot_mro/app/services/ad_review_service.py`,
+`copilot_mro/app/services/operator_corpus_seed.py`. api (2):
+`flynapse_api/automations/ad_materialize.py`, `flynapse_api/automations/executor.py`. Tests and
+records ARE committed — copilot-mro `24b60412`, `c992dcdb`, `d4f8e2ec`, `f4d89a4f`, `5193cc30`,
+`cafa166c`, `8ceccca1`; api `391f8c5`.
+
+**Adds to the owner's list — three findings surfaced by this work, none caused by it:**
+
+- **`AD_FAA_2024-13-02:1`'s copy in one Weaviate partition hashes differently from the other two
+  partitions' copies.** This is the one worth attention: AD copies are deliberately byte-identical
+  and share a UUID so retrieval's cross-partition dedupe collapses them into a single hit, so a
+  diverging copy undermines the identity that dedupe rests on.
+- **`copilot_mro_test`'s attribution snapshot is stale** — 16.6% coverage against the gate's 90%
+  floor, outgrown by the 2026-08-14 production materialisation. Remedy already named in-repo:
+  re-take via `scripts/seed_corpus_attribution.py`. It reddens 3 tests in
+  `tests/integration/tenancy/test_weaviate_isolation.py`, reproducible with that lane alone.
+- **`copilot_mro_test`'s `ManualsMT` partitions were never provisioned for its synthetic tenants**,
+  so Phase C's `--verify` smoke refuses every pair in `Corpus.present` — UPSTREAM of the
+  attribution gate — and needs a scratch collection pointed at by `WEAVIATE_CLASS_NAME` to reach
+  that gate at all.
+
+**A correction, because this batch first reported it the other way round and neither register had
+recorded it yet.** Four raw `connection()` openers — `copilot_mro/app/api/improvement.py`'s
+`list_improvement_runs`, `list_improvement_findings` and `triage_improvement_finding`, and
+`copilot_mro/app/services/improvement/runner.py`'s `run_improvement` — were reported as UNBOUND on
+the strength of `test_every_raw_connection_caller_binds_the_tenancy_context` failing over them.
+**They are not unbound.** Each delegates to the improvement DAO layer
+(`copilot_mro/app/db/improvement/`), whose every cursor comes from `_shared.bound_cursor`, which
+calls `apply_session_tenancy` before the statement runs. It is a blind spot in the structural guard
+— it requires the bind in the SAME function body — not a tenancy defect, and nothing on the
+improvement surface needs changing. **Guard fix IN FLIGHT** (separate agent), so treat that lane's
+single red as expected until it lands rather than as a finding to re-raise.
+
+- **F6 (BUILT 2026-08-17; text kept for history)** — the completed materialise note overclaims when targets=0, and the
   runner's summary counts (materialized / unmaterialisable / retraction_candidates — stale
   not_applicable docs still in the corpus) exist only as a worker log line; the run row has
   no field for them. Complete fix: a small `result jsonb` on `automation_runs` the runner
   fills, surfaced by the status endpoint and rendered on the page. Deferred: retraction is
   CLI-owned by recorded decision, and the counts are visible in worker logs today.
-- **$5 reservation floor per materialise run** (`reservation_for` deliberately floors at the
+- **$5 reservation floor per materialise run — BUILT 2026-08-17 (`NON_LLM_KINDS` skip the reserve)** (`reservation_for` deliberately floors at the
   default): harmless at dev scale, but a bulk-materialise UI would drain a tenant's $50/day
   on free jobs. Complete fix: exempt non-LLM kinds from `_reserve` — a deliberate money-path
   change needing its own review.
-- **`attributed_to`'s settings-singleton mutation** is still the underlying hazard the
-  runner's lock and worker-mode guard fence off. The elegant fix is threading explicit
-  attribution through `row_tenancy.tenancy_values` so Phase C never mutates process globals
-  — deferred until after the production rollout retires the pressure on that script.
+- **`attributed_to`'s settings-singleton mutation — CLOSED 2026-08-18 (first marked 08-17; text kept for history)**
+  was the underlying hazard the runner's lock and worker-mode guard fenced off. The elegant fix is
+  threading explicit attribution through `row_tenancy.tenancy_values` so Phase C never mutates
+  process globals — deferred until after the production rollout retires the pressure on that
+  script. *That rollout completed 2026-08-14; the fix described here is exactly what was built —
+  `copilot-mro/docs/plans/attributed-to-explicit-attribution.md`. The lock and the guard stay, for
+  concurrency rather than for attribution.*
 
 ## Lessons
 

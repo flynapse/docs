@@ -139,10 +139,161 @@ intentional → §9); the reviewer writes the stream's brief into §10.
 - [ ] C9 — core ingest: a client disconnect answers 499 with one INFO line, not a 500 + ERROR traceback (P9 finding (a); `/home/aditya/Code/core-obs9` → `obs9-core` off `master` `988571b`); built 2026-09-11 (`88bbca5`; fail-before 4 failed, after 9/9; lanes 203 passed); Opus review MERGE-READY (6 P3: 4 in a mini pass, including the sibling product-events route; 2 recorded); mini pass landed (tip `bd18984`: both disconnect shapes, and the same fix on `POST /analytics/events`); re-verified MERGE-READY (11/11 mutations); C9.2 landed `7264e2e` — the analytics contract test's seed-date time-bomb, red on core `master` since about 2026-09-08, fixed by pinning the service's existing `now` to the seed's time; 20/20 at the real clock, +30 and +366 days; re-verified MERGE-READY; N3 `8e3c3ce` adds a unit test for the real-clock default (four mutants fail it). **C9 Phase A done** (tip `8e3c3ce`)
 - [x] Phase A closed 2026-09-11 — §8b gate agenda with every branch tip; merges held for Fable
 - [x] Post-close additions (2026-09-12, each reviewed — all done): F9.9 one precedence for the server's sentence (done, tip `279df2f`); M9.7 the settings-side refusal split (done, tips `0259fd8d` / `a0059f9`); M9.8 the refusal wording done (tips `83f4a8f7` / `b72307b`; a new guard fails on all five false claims); E9.9 done (tip `c2f2025`: the throw goes out of band, and one settle record per mutation); E9.9b done (`64a6fa0`: all five timing wrappers emitted their success record inside the try they catch) and E9.10 done (`bc9fbcc`: the guards, and 18 files moved off literal event names); F9.10 done (tip `01a3882`; every rewritten test shown catching a breakage its original passed); N9.6 done (tip `7fc2bcc`; four of its seven breakages passed at the old tip, two of them fully green); an E9 guard batch after E9.9
-- [ ] Owner look at the §2.1 catalogue delta (non-blocking)
+- [x] Owner look at the §2.1 catalogue delta — **APPROVED 2026-09-14 ("§2.1 OK")** after reading the
+      condensed table in-session; no renames or vetoes. F-R6-5 discharged; R8's merge unblocked. One
+      clarification given with the approval: these are product analytics in PURPOSE but OTel log records
+      to Loki in MECHANISM — they are not `product_events` Postgres facts (that ruled phase-5 set is
+      unchanged; D9-14 keeps chat attachments out of `upload_finished`).
 - [x] Guard audit (§8c, D9-20) and its fixes F9.10, N9.6, E9.10 — 2026-09-12
 - [x] RC finished (owner's TanStack conversion; `tanstack-conversion` `173706c`, core `401c2a6`) and a trial integration merge of everything — dashboard `dc7a043` 2333/2333, core `694113a` exact (§8b "trial merge result") — 2026-09-12
-- [ ] Fable R6 (design) → RC in nine chunks (RC-D, RC-1…RC-8; merged into `agent_sdk` first) → R7 F9 → R8 E9 → R9 N9 → R10 M9 → R11 C9, merge after each; in core, R11 merges BEFORE RC's core commit
+- [x] Fable R6 (design) DONE 2026-09-13 (reviewer Fable 5; brief:
+      `copilot-mro/.dev_runs/obs9-fable-gate/R6-design-review.md`): **every D9 decision KEEP** (D9-8's
+      deferred narrowing RULED: keep (b)+(d), do not narrow; D9-3 KEEP with the owner-look scheduling
+      condition F-R6-5; D9-18's stacking conditional TRIGGERED); §8b mechanics **CHANGE** — the pins and
+      premises predate tonight's phase-8 merges. Findings I-1…I-8 + fix tasks F-R6-1…F-R6-7 folded into
+      §8b amendments below. Headline items: (I-1, P1) R11's C9.2 now CONFLICTS with R3's opposite-direction
+      fix `0fa9765` on core `master` — same file, same time-bomb; resolution ruled = take master's
+      `recent_anchor()` mechanism, drop C9.2's autouse pin (the trial's "zero conflicts" was measured on a
+      base that no longer exists, and "cures 9 red" is stale — master is already green); (I-2, P1) RC's
+      pin is stale by production code — tip `fec72f2`, RC-D/RC-1/RC-2 already ran in the owner's parallel
+      chat with fix commits tonight, RC-2 fix pending → re-pin at the RC-8-closing tip and re-run the
+      meta arithmetic against it; (I-3, P1) obs9-deploy still carries the pre-R5 FALSE D-11 caveat + the
+      reverted exclusion from its stack base → base merges into obs9-deploy/obs9-iac before R10.
+- [x] Fable R7 (F9 review) DONE 2026-09-13 — **MERGE-READY**, merge HELD (queues behind RC; gate PAUSED
+      by the owner 2026-09-14). Brief: `copilot-mro/.dev_runs/obs9-fable-gate/R7-review.md`. Dashboard
+      1853/1853 (canonical flags) + tsc + `next lint` clean; api 322; both moved bases re-verified
+      disjoint; the F9.1 scrub held under attack at both exits with presence controls; F9.9's
+      protected-status claim reproduced on an independent 154-row matrix (40 changes, zero at
+      401/429/5xx); both F9.10 guard-rewrite claims reproduced exactly. One P2 (procedural, fixed in
+      §1c): bare `npx eslint` is a silent no-op in this repo. Four P3s → §9.
+- [x] Fable R8 (E9 review) DONE 2026-09-14 — **MERGE-READY**, merge HELD (queues behind RC + the owner
+      §2.1 look). Brief: `copilot-mro/.dev_runs/obs9-fable-gate/R8-review.md`. Unit 1866/1866 (canonical
+      flags; arithmetic reconciled per commit) + tsc + `next lint` clean; base disjointness re-verified;
+      D9-17 guard attacked (checker-transitive, fixture self-test exact); E9.9 WeakSet dedupe survived
+      retries / two QueryClients / GC / out-of-band-throw attacks; all five E9.9b wrappers verified at
+      source; both E9.10 guard-rewrite claims reproduced; catalogue row-for-row incl. §2.3 no-event
+      check; A-2 judged complementary (merged-tree test owed at merge). Five P3s → §9. Merge-time carry:
+      trial-tree artifacts (floor 70, EXEMPT entries, `withSettingsMutation` deletion), F-R6-2(ii)
+      re-runs, A-2 test.
+- [x] F-R6-3 fix pass DONE 2026-09-14 (Opus 5): base merges `61b20cee` (copilot-mro `langgraph-merge` @
+      `66d3764d` in — disjointness verified on the actual 166-file delta, zero M9-scope overlap beyond
+      the shared-ancestry D8 files; D-11 hunks resolved to the mainline's corrected versions, reason
+      verified not assumed) + `9005787` (iac `main` @ `7690c8d` in); stale-wording fix `233fa8a4` /
+      `06e4c3c` at 4 sites across both dialects (frontend.json panels, CATALOGUE §5 prose + row, aws
+      twin; no guard pinned the old text — one test docstring aligned). Acceptance: all greps 0; M9
+      additions intact; validate_dashboards 8/8; terraform validate Success; static lane + rules 79/8.
+      Compose smokes BLOCKED-environmental: the smoke override hardcodes network
+      `flynapse-otel-smoke-net` and the leftover P9 probe stack sits on it — docker DNS round-robins a
+      share of smoke exports into the probe's backends (proven from inside the network; every smoke
+      input byte-identical to the pre-merge tip, so not caused by this change). All 87 observed green
+      across runs; ONE clean 87-run owed at the live batch after the probe teardown — **CLEARED
+      2026-09-14 post-merge: after the probe-overlay teardown, the full otel lane with rules check AND
+      both compose smokes on merged copilot-mro `langgraph-merge` = 87 passed / 0 skipped in one run
+      (2:07), the pinned-`redaction` masking proof included; the §9 per-project-network fix stays the
+      durable follow-up.** New tips:
+      `obs9-deploy` @ `233fa8a4`, `obs9-iac` @ `06e4c3c`.
+- [x] Fable R9 (N9 review) DONE 2026-09-14 — **MERGE-READY**, merge HELD (queues per agenda). Brief:
+      `copilot-mro/.dev_runs/obs9-fable-gate/R9-review.md`. Unit 1877/1877 + tsc + `next lint --file`
+      clean + `next build` exit 0; baggage structurally unforwardable (behavioral probe on the real
+      route); 19-case canary sweep through real handlers in all three envs with per-case presence counts;
+      both N9.6 inert-guard claims reproduced; E9.4 withdrawal honoured (zero server-side product
+      events). Findings: F-R9-1 (P1, environment) the worktree `next build` standalone trap WIPED the
+      shared node_modules 01:37 PDT — restored via `npm ci`, defused, runbook rule now in §1c, other
+      sessions' 01:37–01:49 PDT dashboard lanes invalid; F-R9-2 (P2) `npm run lint` reds on two base
+      `prefer-const` lines in `use-pdf-search.ts` — session lead fixes on `agent_sdk`; two P3s → §9.
+- [x] Fable R10 (M9 review) DONE 2026-09-14 — **MERGE-READY**, zero P0/P1/P2, merge HELD (queues per
+      agenda). Brief: `copilot-mro/.dev_runs/obs9-fable-gate/R10-review.md`. Two-way
+      allow-list↔catalogue diff mechanical, zero missing keys (A-1's silent strip cannot bite a phase-9
+      event); fix-pass merge delta verified byte-for-byte (5 files/15 lines in scope); wording fix
+      accurate against `304c985`; nine guard mutations all caught; DARK/LIVE census matches P9 row for
+      row (no premature flip); static lane + rules 79/8 twice; terraform validate + 8 templates. Three
+      P3s → §9. Compose smokes' single clean 87-run stays owed at the live batch.
+- [x] Fable R11 (C9 review) DONE 2026-09-14 — **MERGE-READY** and **MERGED**: core `master` @ `8571373`.
+      Brief: `copilot-mro/.dev_runs/obs9-fable-gate/R11-review.md`. F-R6-1 verified and AMENDED
+      (F-R11-1): only the import line conflicts — C9.2's autouse pin AUTO-MERGES SILENTLY, so naive
+      marker-resolution produces the 9-red keep-both shape (demonstrated as a negative control); the
+      resolution is *take master's contract file wholesale* — executed exactly that way (`--ours`,
+      byte-identity to `a1a5f6c` verified, diff 0). `recent_anchor()` determinism CONFIRMED with its
+      boundary stated (day-buckets live in the db lane's fixed NOW; the one edge = a future `1d`
+      api-lane test, F-R11-2); nothing orphaned (N3 holds the default-clock layer; the parameter path
+      keeps 16 db-lane sites). Reviewer's materialized merge: 440/0/0; fail-before 10 red vs master's
+      unfixed routes; both N3 mutants reproduced. Session lead's post-merge lanes on the REAL merged
+      primary: five dirs exit 0; full tests/api re-run recorded below. This satisfies
+      R11-before-RC's-core-commit. Post-merge close-out: the FULL core `tests/api` tree ran exit-0 on
+      the merged primary (supersets the disclosure sweep). Three P3s → §9. ALL ELEVEN REVIEW CHUNKS OF
+      THE GATE ARE NOW CLOSED.
+- [x] RC GATE COMPLETE 2026-09-14 (owner's parallel chat; all nine chunks RC-D…RC-8, ~29 findings, 37
+      gate commits, every fix round re-reviewed). Final tips: dashboard `tanstack-conversion` @
+      `915078a` (160 files over `b87ced0`; six gate CODE commits in NO prior lane figure), core
+      `tanstack-dept-delete` @ `401c2a6` (untouched by the gate). Merge checklist = the RESUME block in
+      `dashboard-tanstack/.superpowers/sdd/tanstack-mutation-conversion/progress.md`; owner/backend FI
+      riding out of RC-8 recorded in §9 below (/rag/stream final-before-save race). CORE-SIDE RC MERGED:
+      core `master` @ `e10a9ce` (after C9 per the agreed order; department fail-closed path + 294-line
+      test; post-merge full core `tests/api` exit 0 at `e10a9ce`). DASHBOARD-SIDE RC MERGED 2026-09-14:
+      full lane at the tip FIRST per the gate rule — **2136/2136 + tsc clean at `915078a`** — then
+      `tanstack-conversion` → `agent_sdk` `--no-ff` = **`40b2c7f`**; the four uncommitted auth-WIP files
+      in the primary verified untouched (no RC overlap); `tsc --noEmit` clean on the merged tree (no
+      TS1117 possible yet — phase-9 metas arrive at R8). Merged-tree baseline for R8's combine
+      procedure: all seven named optimizer hooks live in `hooks/api/useOptimizer.ts`, `meta:` 12,
+      `telemetry:` 0 — at the R8 merge TS1117 fires per duplicated hook, combine the literals, then
+      confirm `telemetry:` per-site survival by count. Merged-tree full lane + canonical lint running.
+- [x] R7 MERGE CLOSED 2026-09-14. Api side: F-R6-4 followed (base into `obs9-api` = `ecf3e28`,
+      combined lanes 342 green incl. R2's two suites; merged as api `langgraph-merge` `fc35d08`,
+      post-merge lanes exit 0). Dashboard side: merged as `agent_sdk` `505ca7a` (four
+      `lib/api/settings-api.ts` hunks resolved to RC's post-gate fail-closed structure; F9's
+      auto-merged hunks kept); merged-tree lane initially RED — 15 failures in three F9×RC semantic
+      clusters — Fable fix pass resolved ALL as TEST-SIDE reconciliations (zero production changes;
+      both reviewed contracts stand): (A) RC's comment-refusal toast pins predated F9.9's
+      server-sentence transport → pins updated to the server's own sentence; (B) RC's
+      global-handler console sniffer keyed on the pre-F9.3 `'API error:'` line → sentinel updated to
+      the constant `'API request failed'`, which RE-ARMED 12 files of silently-vacuous
+      `globalHandlerRuns()===0` assertions, all green; (C) F9.7's attachment probe predated RC's
+      `useQueryClient()` requirement → probe mounted under a provider, all three D9-14 MUST
+      assertions unchanged. Commits `98e9130`/`590f2b2`/`cf1d0cb`; **full lane 2210/2210**, tsc +
+      lint clean. R8 watch-outs recorded in the fix report (the sentinel is load-bearing).
+- [x] owner §2.1 look — DONE (approved above)
+- [x] R10 MERGE CLOSED 2026-09-14 (independent repos, merged while R8 was blocked): copilot-mro
+      `langgraph-merge` @ `2cd98bde` (18 files, clean — the F-R6-3 base merges made it trivial), iac
+      `main` @ `3b5f414`; post-merge otel lane 79/8 green on the merged primary, terraform validate
+      Success, all templates parse. Compose smokes' clean 87-run stays a live-batch item.
+- [x] NewPasswordView challenge fix COMMITTED as dashboard `agent_sdk` @ `2af8239` (owner: "that work
+      is finished now i think" — the other session had committed only its tests `c7998b2`/`b51a102`;
+      the four source files verified first: tsc clean, zero TODO/console smells, auth lane 208/208
+      against the edits). Unblocks R8's `NewPasswordView.tsx` overlap.
+- [x] R8 MERGE CLOSED 2026-09-14 (Fable 5; first launch killed by the 05:50 PT session limit before
+      any work, relaunched on the reset): `agent_sdk` @ `1d7326c` (merge `be483d8` + guard artifacts
+      `fc3d4be` + tests `1d7326c`). Eight conflict files resolved per §1b; SEVEN TS1117 sites (five
+      silent sibling-keys + two marker conflicts) combined before the first tsc; counts landed at the
+      trial's exact reference — `useOptimizer.ts` meta: 20 / telemetry: 19 / suppressGlobalError 13;
+      sweep 77 sites / 69 declaring / 8 bare all EXEMPT-reasoned; floor 45→70 (blind-to-
+      `hooks/settings` fails it); six wrapper→hook moves counted-stays-counted with wrappers removed
+      same-commit; `withUploadTelemetry` exemption (not a literal); `withSettingsMutation` deleted
+      with its callers. **A-2 test PASSES** (caller-onSettled throw on a landed write → one success
+      settle record, no error record, one constant log line). **NewPasswordView: the recorded
+      challenge-indeterminable non-emission is RETIRED** — the fix's `?flow=sign-in` lane makes it
+      determinable; `new_password` submit now emits with outcomes success/challenge/failure, proven
+      via the real-SDK SRP test. Lanes: tsc clean ×2, **2284/2284 ×2** (arithmetic reconciled:
+      2210+73−2+3), all named guards green, lint clean over 58 files. One in-lane test
+      reconciliation (E9.10's preflight-silence pin → RC's advisory-catch shape, test-side). R9
+      watch-outs in the R8 fix report (re-derive N9 trial files against `1d7326c`; expect ~2295;
+      re-read the `logger.ts` body; `next build` in the PRIMARY only).
+- [x] R9 MERGE CLOSED 2026-09-14 — **THE GATE'S MERGE SEQUENCE IS COMPLETE.** `agent_sdk` @ `0a4dbec`
+      (one merge commit — zero conflicts, zero test edits needed). Verified, not trusted: `logger.ts`
+      diff vs mainline parent = exactly N9's server-branch hunk, vs branch parent = exactly F9's
+      material; all 30 other files byte-identical to the reviewed branch tip (nothing came from the
+      trial tree); the load-bearing sentinel intact. Lanes: tsc clean; **2368/2368** (arithmetic
+      corrected: R8's "+11" had misattributed E9's branch figure as N9's base — N9's merge-base
+      measures 1793, so 2284 + 84 new tests = 2368, measured exactly, confirmed three ways); N9's ten
+      suites 84/84 in isolation; lint 0 over all 31 files; `next build` exit 0 in the primary with
+      bundle evidence (sink in 3 server chunks, 0 client; instrumentation.js present; standalone
+      real-dir checked before AND after). Dashboard `agent_sdk` now carries RC + F9 + E9 + the auth
+      challenge fix + N9. NOTHING of the gate remains except the live batch and the standing owner
+      items. Phase-9 merges are LOCAL — nothing pushed without the owner's word. (+ A-2 merged-tree test
+      for `e45cacc` × E9.9) → R9 N9 → R10 M9 (F-R6-3 base-merge fix pass first) → R11 C9 (F-R6-1
+      resolution; Postgres must be up or the skipped analytics lanes are recorded by name, I-7), merge
+      after each; in core, R11 still merges BEFORE RC's core commit (order stands; the reason is now
+      hygiene/disjointness, not curing reds) → extended re-probe (F-R6-6: checks 2/4/5 + one settings
+      mutation + one Document-Hub write + the M9.6 flip for panel 12)
 - [ ] Owner decision: response validation at the API layer for the 14 per-call callbacks that report a landed write as failed (§9)
 
 ### 1b. Files more than one stream touches (each stream owns one hunk)
@@ -458,6 +609,32 @@ Further notes from code-26 (2026-09-12):
     asserts. They are recording that as its own work.
 
 ### 1c. Test environments
+
+**Amendments (2026-09-13, gate night):** the shared `api/.venv` was refreshed at phase-8 R1 (new OTel
+pins; the `wt-obs-u` bundle env is RETIRED — every Python lane runs `env -u VIRTUAL_ENV DEBUG=false
+POSTGRES_DB=copilot_mro_test poetry -C /home/aditya/Code/api run pytest <absolute paths>`). Dashboard:
+the unit lane MUST use the repo's canonical flags (`npm run test:unit`, i.e. `tsx --tsconfig
+tsconfig.test.json --test …`) — a bare `tsx --test` fails render tests with a phantom "React is not
+defined". Eslint: `next lint` (`npm run lint`, or `next lint --file …` for a subset) is the ONLY valid
+invocation — bare `npx eslint <files>` under eslint v9 + the legacy `.eslintrc.json` prints a migration
+banner and exits 0 having linted NOTHING (R7 F-R7-1); never accept its green. Lint-scope map (R9
+F-R9-2): `npm run lint` = `scripts/lint-changed.mjs`, linting the whole `origin/main...HEAD` diff (on a
+phase-9 branch that is ~595 files, so base defects red it); plain `next lint` = default directories only
+(not `hooks/`, not `tests/`); `next lint --file <paths>` = exactly the subset. **BUILD TRAP (R9 F-R9-1,
+P1): before ANY `next build` in a dashboard WORKTREE, delete `.next/standalone` (or all of `.next`).**
+Worktrees symlink the shared `node_modules`; a standalone build plants
+`.next/standalone/node_modules → <shared>`, and the NEXT build's `recursiveDelete` follows the symlink
+and WIPES the shared `node_modules` for all 15 worktrees (it happened 2026-09-14 01:37 PDT; restored by
+`npm ci` in the primary, artifact defused — but every standalone worktree build RE-ARMS the trap).
+**Durable fix LANDED (phase 10 Task 1, merged into `agent_sdk` 2026-09-15 as `26a882c` after Fable gate R12):**
+`next.config.mjs` imports `scripts/standalone-guard.mjs`, a pure `lstat`-only predicate resolved from the config
+file's own location; standalone output is emitted only when `node_modules` is a real directory and no
+`.next/standalone/node_modules` link is planted, and a planted link makes the config load THROW — so
+`next build` and `next dev` both refuse before any delete, from any cwd, and nothing is repaired on load
+(D10-7: refuse, not repair; the remedy is `unlink '<path>'`). Pinned by `tests/unit/build/standalone-guard.test.ts`
+(both wipe routes reproduced against Next 15.2.4's compiled `recursiveDelete`; the installed Next version is
+asserted against the pin, so an upgrade fails deterministically until re-verified). The manual rule above stays as
+belt-and-braces for a build on a Next version the pin has not been re-verified against.
 - **Dashboard (all three trees):** `npx tsx --tsconfig tsconfig.test.json --test <files>` while building, the full unit
   lane (`npm run test:unit`) before review; `npm run typecheck`; `npx eslint` on every touched file. Tests use the
   phase-4 harnesses (`tests/fixtures/telemetry-harness`, `tests/fixtures/dom-harness`) and the two-level layout
@@ -998,6 +1175,66 @@ merged mainlines.
 
 ### 8b. Phase A close — gate agenda (drafted 2026-09-11; all tips filled)
 
+**R6 AMENDMENTS (Fable, 2026-09-13; brief: `copilot-mro/.dev_runs/obs9-fable-gate/R6-design-review.md`).**
+The chunk ORDER below stands; the pins and premises predate tonight's phase-8 merges and are amended:
+- **Bases moved (all five):** dashboard `agent_sdk` → `6483a08` (R3), core `master` → `a1a5f6c` (R3),
+  api `langgraph-merge` → `7cd192f` (R1 relock `702c54f` + R2 `58a5c3b` + R4 hand-carry), copilot-mro
+  `langgraph-merge` → `18909ee0` (R5; plus the owner's S4 merges), iac `main` → `7690c8d` (R5). Every
+  "fails on <old base>" claim below is historical; every lane count is stale by tonight's increments
+  (I-8) — recompute on the tree at hand, never treat a ≠quoted total as a regression by itself.
+- **F-R6-1 (R11, P1):** `tests/api/analytics/test_chat_quality_endpoint_contract.py` now CONFLICTS with
+  R3's `0fa9765` on core `master` — same seed-date time-bomb, fixed the opposite way. Resolution RULED:
+  take master's `make_seed_estate_fixture(now=recent_anchor())` mechanism; DROP C9.2's autouse pin, its
+  `NOW` import and docstring sentence entirely (never keep both — a fixed pin over a real-clock seed
+  re-reds all 9). Keep C9's N3 unit test and every other C9 file (disjoint, verified). The
+  R11-before-RC-core order stands, but its "cures 9 red contract tests" reason is stale — master is
+  green since `0fa9765`. The R11 reviewer re-verifies `recent_anchor()`'s hour-snap determinism claim
+  before adopting. The core trial merge's "zero conflicts" was measured against `988571b` and does NOT
+  transfer.
+- **F-R6-2 (RC + R7/R8):** RC's pin is stale by production code — RC-D/RC-1/RC-2 ran 2026-09-13 in the
+  owner's parallel chat; observed tip `fec72f2` (wizard chain fingerprint + Resume gating `77fe8da`/
+  `20673f2`; `useAppMutation` onSettled guard + 267-line test `e45cacc`); RC-2's fix pass pending, the
+  tip will move again. Re-pin RC here and in master §18 at the tip that closes RC-8. The changed-file
+  set is stable (159 = 159), so chunk ownership stands. Before R7's merge: re-run the duplicate-`meta:`
+  arithmetic and the counted-stays-counted check for `ReviewStep.tsx`/`CanvasHeader.tsx` against that
+  tip (the trial rehearsed a `ReviewStep.tsx` that has since changed). At R8: one merged-tree test that
+  a caller-`onSettled` throw on a successful write yields exactly one settle record (success), no error
+  record, one `browser.log` line (`e45cacc` × E9.9 have never run together under review).
+- **F-R6-3 (before R10's review):** the D9-18 stacking conditional is TRIGGERED — obs9-deploy still
+  carries the pre-R5 FALSE D-11 caveat and the reverted run-route exclusion from its stack base. Merge
+  current copilot-mro `langgraph-merge` into `obs9-deploy` and current iac `main` into `obs9-iac`;
+  re-run the otel static lane + both compose smokes + rules check + `terraform validate` on the merged
+  trees. Acceptance greps: zero `http_route!~".*/jobs/[^/]+/run$"`, zero "records … AFTER" caveat text,
+  M9's additions intact. Same pass: fix the failures-panel description — fetch network failures ARE
+  ERROR since F9 `304c985`; delete the "once F9's fix lands" sentence (it was supposed to ride F9's fix
+  pass and never did).
+- **F-R6-4 (R7):** merge current api `langgraph-merge` into `obs9-api`, then run the api middleware +
+  infra lanes INCLUDING R2's two new suites (`test_response_end_metrics.py`,
+  `test_optimizer_identity_injection.py`) on the merged result. Env note: the shared `api/.venv` was
+  refreshed at R1 tonight (new pins; `wt-obs-u` retired) — run every Python lane from it.
+- **F-R6-5 (between R7 and R8's merge):** the owner reads the §2.1 catalogue delta (one table). Merging
+  R8 without it is an owner-recorded risk call, not a default (spec §7.4).
+- **F-R6-6 (after R11):** extend the re-probe beyond checks 2/4/5 — drive one settings mutation and one
+  Document-Hub write (exercisable post-RC), confirm the records in Loki, run the M9.6-grammar flip for
+  panel 12 (14/17B/18 only if observed). The re-probe needs P9's probe-only uncommitted forcing edits
+  for check 4.
+- **I-7 (R11):** the analytics api/db lanes module-skip without Postgres; a skip is not a pass (§8c). If
+  Postgres is still down at R11's merge, record the skipped lanes by name in §1a with a named re-run
+  owner — never report the merge green on a lane that never ran.
+- **Base still moving (session lead, 2026-09-14):** dashboard `agent_sdk` gained `c7998b2` (NewPasswordView
+  NEW_PASSWORD_REQUIRED challenge test + plan doc) past the R3 merge, with the page fix itself sitting
+  UNCOMMITTED in the primary checkout — another session's in-flight work. At the R7 and R8 merges:
+  re-run the moved-base disjointness check against the then-current tip, and specifically reconcile the
+  sign-in branch's new challenge timing with the auth instrumentation (F9.4's correlation surface, E9.7's
+  `browser.auth.flow` steps) — the memory ledger's instruction is "the obs9 merge must reconcile the
+  auth.flow timing with the sign-in branch". Also (from the RC session's ledger): the RC gate's fix
+  commits are in NO lane figure — the trial's 2333/2333 predates them — so the full dashboard lane runs
+  before the real RC merge, not just the targeted lanes.
+- **Rulings confirmed at R6:** D9-8 stays (b)+(d) — do not narrow to (c); the refusal class stays ONE
+  class; rollback/compensating requests emit nothing (count-is-exactly-one assertions); E9.9's WeakSet
+  dedupe + E9.9b's drop-vs-strip asymmetry; the trial-tree rulings (floor 70, `markRead` exemption, the
+  vacuous-guard deletion, one exact `EVENT_NAMES` pin). No §0 disposition or §9 deferral overturned.
+
 Branch tips the Fable chunks review — each chunk's reviewer starts from its §10 brief plus this table:
 
 | Chunk | Tree → branch @ tip | Base | Suite evidence (last run) |
@@ -1188,6 +1425,67 @@ warn-path, mutation-meta, optimizer canvas, session lifecycle, network-failure, 
 server-log-sink and every N9 server-route sweep.
 
 ## 9. Future Improvements
+- **R7 review P3s (Fable, 2026-09-13; none block anything):** (F-R7-2) `fetch-utils.describeApiError` is
+  a fourth reader of the server sentence with its own `detail → message → error` order and a hardcoded
+  300 — no leak (the status ladder still cans 401/429/5xx), divergence needs a body with two disagreeing
+  keys; fold into `serverErrorText` later or narrow the plan sentence. (F-R7-3) `scrubSpan` copies
+  `span.name` unscrubbed — clean for every current instrumentation, but D9-7's added-later argument has
+  this one seam; one `scrubUrls(span.name)` closes it (same class: `status.message` gets `scrubUrls`,
+  not the fuller `scrubMessage`). (F-R7-4) the relative-URL scrub rule matches root-relative only; no
+  producer of a scheme-less non-root URL exists in the exercised surface. (F-R7-5) two dead empty
+  `if (!response) {}` blocks in `fetch-utils.ts`; the older helpers merge headers by object spread and
+  would silently drop a `Headers` instance — correct for every current caller.
+- **R8 review P3s (Fable, 2026-09-14; none block anything):** (F-R8-1) the double-emission guard's
+  memo recursion cut can permanently cache false under mutual recursion — no instance in the app; fix by
+  fixpoint iteration when next in the guard. (F-R8-2) `emitRecord`'s never-throws has one seam for
+  untyped callers (strip loop before the internal try); one `try` widening closes it. (F-R8-3)
+  `withSettingsMutation`'s error path uses raw `error.name` without `errorTypeOf` — moot when the
+  post-RC deletion lands; otherwise route it through. (F-R8-4) the coverage test's comment claims two
+  presence controls, asserts one — align at the merge when the exemptions return. (F-R8-5) hook
+  recognition reads a file's own imports, so an aliased re-exported mutation hook would hide from both
+  guards (silent direction; zero instances) — add to the guard's documented limits.
+- **`/rag/stream` emits `final` before persisting the block (owner/backend item out of RC-8,
+  2026-09-14).** copilot-mro `chat_management.py:1583` queues the `final` event before the block save
+  launches at `:1650`, so a client that reopens immediately can read history that lacks the turn it
+  just watched — the reopen races the save. Recorded with fix shapes in the RC gate's findings; the
+  real fix is backend-side and the file sits in the frozen migration conflict zone, so nothing moves
+  before Gate M without an owner ruling.
+- **R11 review P3s (Fable, 2026-09-14; none block anything):** (F-R11-2) future api-lane analytics
+  tests must not request `time_range="1d"` expecting seeded rows — `recent_anchor()` sits one day back
+  by design. (F-R11-3) N3's docstring still says "the endpoint contract pins the same seam" — false now
+  the pin is dropped; one-sentence edit at the next touch. (F-R11-4) `recent_anchor()`'s snap/margin
+  properties have no unit test of their own — add one before any future geometry assertion leans on
+  them.
+- **R10 review P3s (Fable, 2026-09-14; none block anything):** (P3-1) the M9.8 wording guard lacks a
+  D9-20 presence control — a rewrite dropping the "refus" words while keeping a false claim passes
+  vacuously; add the one-line `assert seen` when next in the file. (P3-2) the near-cap alert's
+  DESCRIPTION hardcodes 80000/100000 while the guard pins only the expr — annotation can go stale on a
+  cap change. (P3-3) `markNetworkFailure` exempts ANY `AbortError`; the boards' "only a user-initiated
+  abort stays unmarked" is exact today but breaks if an abort-based timeout is ever added — recorded
+  condition.
+- **R9 review P3s + the worktree build trap (Fable, 2026-09-14):** (F-R9-3) the literal-body static rule
+  covers numeric-literal ≥400 statuses and catch blocks only; pass-through status expressions are held by
+  the behavioural sweeps alone (scope stated in the rule's comment). (F-R9-4) `upstreamErrorCode` parses
+  the first 4 KiB — a JSON error body cut at the bound loses its code; fail-closed in the safe direction.
+  (F-R9-1 durable half) the worktree `next build` standalone trap needs a config fix
+  (`outputFileTracingRoot` or standalone-only-in-primary) — until then the rm-before-build rule in §1c is
+  the only protection and it re-arms on every standalone worktree build.
+- **The compose-smoke network name is fixed, so smokes are not isolated from a co-resident stack
+  (found at the F-R6-3 fix pass, 2026-09-14).** `deployment/otel/smoke/docker-compose.smoke.yml` names
+  its network `flynapse-otel-smoke-net` literally; any other stack started from that override (the P9
+  probe project) shares it, and docker DNS round-robins the service aliases, silently splitting smoke
+  exports between the two stacks — the test then times out querying its own backends.
+  `OTEL_SMOKE_PORT_PREFIX` isolates host ports only. Complete fix: derive the network name from the
+  compose project (per-project name), making every smoke run network-isolated by construction.
+- **Production attribute-strips are silent (R6 A-1, 2026-09-13).** `emitRecord` strips an off-list key and
+  keeps the record in production with no counter; the collector's allow-list strip is equally silent. A
+  prod-only attribute bug loses data invisibly on both exits. Complete solution: count strips into a
+  `browser.telemetry.dropped` counter under an allow-listed reason key, charted beside the ingest panels.
+  Dev reporting + the test lane catch every reachable case today, which is why this is not a tonight
+  change.
+- **`browser.export.requested` under-describes its semantics (R6 A-4 nit).** It fires at request but
+  carries settle attributes (`outcome`, `duration_ms`). A mid-series rename costs more than it buys; the
+  CATALOGUE row documents the actual semantics. Rename only if the series is ever reset.
 - **SSR OTLP export (G9-18).** Missing: route-handler spans and server logs in Tempo/Loki. Deferred by spec §3.4 until
   Amplify WEB_COMPUTE can reach a private endpoint (master §13 probe). Complete solution: `instrumentation.ts`
   `register()` starts a Node OTel SDK exporting to the api's authenticated ingest with a service credential (or a
