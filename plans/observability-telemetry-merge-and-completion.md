@@ -591,7 +591,18 @@ resolved; the merge commit records them and E fixes them.
       botocore/anthropic/openai instrumentors, and the spec §8 content-flag CI check on the env templates,
       which no phase ever implemented and which goes live the moment any genai instrumentor does.
 - [ ] G.4 Phase 3.4 Claude Code CLI built-in telemetry — missing on both sides.
-- [ ] G.5 Phase 3.7 the sole `chat_turn_facts` writer on the block-save path, same transaction, idempotent at
+- [~] G.5 **copilot-mro HALF DONE 2026-09-20 (`copilot-mro-obsm c80c686d` + 2 uncommitted production files); the
+      `core` half is owed as G.25.** The writer sits inside `save_block`'s `rowcount == 1` branch, on the same
+      cursor, before the commit, wrapped in `SAVEPOINT chat_turn_facts` per M-SAVEPOINT. **Projection parity is
+      literal, not argued:** a body-level diff against the backfill shows exactly ONE difference — a constant
+      name the drift pin already asserts equal — and `FACTS_UPSERT_SQL` is **string-identical** to the
+      backfill's. Landed at `FACTS_VERSION = 1`; Q1 untouched. **The `department` equality claim is verified and
+      is STRONGER than the spec stated** — the lock gate is necessary but not sufficient; the second fact is that
+      **`chats.department` is never updated anywhere** (three `UPDATE chats` sites across four repos, none
+      touching it, and no hard `DELETE FROM chats`). Without that, equality would hold at save time and the
+      backfill could later disagree. **Exactly nine panels confirmed** (9 of 46), one of them half-dark.
+      Five mutation proofs and **two vacuity attacks that both fired** — one caught an equality check that stayed
+      green while comparing near-empty dicts. ORIGINAL ITEM FOLLOWS. Phase 3.7 the sole `chat_turn_facts` writer on the block-save path, same transaction, idempotent at
       the backfill's facts version — unblocked by Gate M, and the reason three panel families are empty.
 - [ ] G.6 `agent.ledger.write_failures`; subagent span and metric call sites; tenant and department on tool
       metrics; M-TOKENUSAGE.
@@ -746,6 +757,42 @@ resolved; the merge commit records them and E fixes them.
       `get_collection` — **a caller-side bad-tenant bug that never reaches the server** — is marked an ERROR client
       span, so **caller bugs inflate the Weaviate dependency error rate**. Pre-existing behaviour of `hybrid_search`;
       the implementer kept it rather than invent a divergence, which was right, but it wants a ruling.
+
+- [ ] G.25 **G.5's `core` half — and its FIRST item is a live defect, not new work.**
+      **(a) The drift pin is pinning the WRONG TREE.**
+      `core-obsm/tests/unit/analytics/test_chat_turn_facts_drift_pin.py:24` resolves
+      `sibling_repo(__file__, "copilot-mro")` → `/home/aditya/Code/copilot-mro`, **the main checkout, on
+      branch `langgraph-merge`** — not `copilot-mro-obsm`, which is a **git worktree of it**
+      (`copilot-mro-obsm/.git` is a file pointing at `copilot-mro/.git/worktrees/copilot-mro-obsm`).
+      **Verified by the controller:** the main checkout's only `facts_from_block_data` hit is a COMMENT at
+      line 43; the definition is at `copilot-mro-obsm/…:195`. So the behavioural limb would fail with
+      `AttributeError`, **and today's constant limbs are silently pinning a different branch.**
+      `sibling_repo`'s own docstring warns about exactly this. **Fix the resolution before adding anything.**
+      **(b) Add the behavioural limb** — `facts_from_block_data` equality over the fixed shapes, plus
+      `FACTS_UPSERT_SQL == backfill._UPSERT_SQL`. **No loader change needed.** copilot-mro already pins the
+      identical comparison from its own side, so core's limb is a **second independent witness**, not the
+      only one.
+      **(c) One sentence, not a rewrite.** The backfill's docstring still says the production writer mints
+      rows "**once it lands**" and "Until then nothing writes the relation online". **Both are now false.**
+      The gap-fill framing, the dropped-schedule paragraph and the depth-coupling fix are **already done** in
+      core's working tree.
+- [ ] G.26 **The namespace-package hazard — a THIRD instance of reading the pre-merge sibling.**
+      `copilot_mro` is a **namespace package spanning both checkouts**: measured,
+      `_NamespacePath(['…/copilot-mro-obsm/copilot_mro', '…/copilot-mro/copilot_mro'])`, **obsm first ONLY
+      because of the PYTHONPATH pin.** Without the pin, an import resolves to the **pre-merge sibling** — and
+      for G.5 that sibling has no `facts_from_block_data`, so **the writer's own savepoint would swallow the
+      `ImportError` into a missing row**: a silent no-op wearing a green suite. G.5's guard pins the module by
+      dotted name and asserts `module.__file__`; **every future cross-module guard in this estate needs the
+      same assertion.** Companion instances: my own pytest lane (CHECKPOINT 12), and the phase-1c scope
+      guard's `_utils_root` resolving the workspace rather than the tree under test.
+- [ ] G.27 **A test-loader defect that made a monkeypatch never fire, in a suite reporting green.**
+      `copilot-mro-obsm/tests/unit/chat_history/_chat_history_store_loader.py` **popped** four modules from
+      `sys.modules` instead of restoring what was there. Ordered after a test that imports the app for real,
+      the live `ChatHistoryDB` was built from a `chats` module the dotted name no longer resolved to, so the
+      next `import_module` got a **second copy** — and a delete-race monkeypatch patched a module the live
+      object never consulted. **The hook simply never fired.** Fixed at the root (restore, don't pop), found
+      only because a new file sorted last in its directory. **Invisible to the sanctioned per-directory lane:**
+      each directory was green alone and the combined run failed. Worth a sweep for the same shape elsewhere.
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
