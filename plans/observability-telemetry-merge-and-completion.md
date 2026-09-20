@@ -177,6 +177,15 @@ where the 3–5× reduction comes from.
 - **core / copilot-mro / utils / api** — from the shared `api` Poetry env, `DEBUG=false`, and
   `POSTGRES_DB=copilot_mro_test` for DB lanes. Always include `tests/unit/infra` (two-level layout,
   globally-unique basenames, no depth-coupled paths) — their new tests violate the last of these in nine files.
+- **copilot-mro full suite — ONE PYTEST PROCESS PER TEST DIRECTORY, never one process for `tests/`.**
+  Measured 2026-09-20: a single-process `pytest ../copilot-mro/tests` reports **116 failed + 15 errors = 131
+  failing ids**; the same tree run one directory at a time reports **37**. `tests/unit` alone fails 11, against
+  ~95 unit failures inside the full run. So roughly **94 of the 131 are cross-directory test pollution**, not
+  defect — a gate built on the full-suite number would have been measuring import order. The pre-merge
+  baseline of record is the per-directory table in the SDD ledger, and the post-merge gate is the **set
+  difference of failing ids**, not a count. (The pollution itself is a real finding and is Task R / G.2 work:
+  the repo's dynamic-loader convention exists precisely to stop package imports poisoning `sys.modules`, and
+  something is importing packages directly.)
 - **dashboard** — `npm run typecheck` **before** the unit lane; `npm run test:unit` with the canonical
   `--tsconfig tsconfig.test.json` flags; lint **only** via `next lint`. Never `next build` in a worktree.
 - **copilot-mro otel** — the non-container lane `tests/integration/otel`. **Measured baseline, run 2026-09-19
@@ -245,25 +254,49 @@ only there, so the phase cannot close otherwise), and dashboard moves **after** 
 summaries card is mounted unconditionally against a copilot-mro route). D and E share one worktree and
 therefore never run in parallel.
 
+### Status, 2026-09-20 — A, C1, B1 CLOSED; nothing pushed
+
+Execution reached **Phase D**. A (prep), C1 (utils) and B1 (core) are merged in their own `<repo>-obsm`
+worktrees on branch `obs-merge`, each followed by a fresh adversarial Opus review whose findings were triaged
+into the same phase. No mainline has moved and nothing is pushed. `copilot_mro_test` has already been
+migrated with the merged core definitions, so **the pre-merge baselines in the SDD ledger cannot be
+reproduced** and the DB step must be re-run after D. Per-phase outcomes are in §7; deferred items with their
+reasons are in §6.
+
 ### Phase A — Preparation
-- [ ] A.1 Commit the six uncommitted observability docs in this repo by named path, including the untracked
+- [x] A.1 Commit the six uncommitted observability docs in this repo by named path, including the untracked
       phase-10 plan (the only durable record of 22 tasks and ten Fable gates).
-- [ ] A.2 Create the six `obs-merge` worktrees and branches.
-- [ ] A.3 Run the tenancy migration against `copilot_mro_test`; confirm the three schema changes.
-- [ ] A.4 Record the pre-merge lane numbers for every repo, so a post-merge delta is measurable.
+- [x] A.2 Create the six `obs-merge` worktrees and branches. Done at `/home/aditya/Code/<repo>-obsm`,
+      `.env` symlinked into api / copilot-mro / dashboard.
+- [x] A.3 **Corrected.** The three schema changes are *theirs*, so they cannot exist before the merge and this
+      step as written belongs to the DB STEP. Pre-merge, A.3 is `--verify-only` against `copilot_mro_test`:
+      prove the migration tool runs clean at the current head, so a post-merge failure is attributable to the
+      merge. The three changes are confirmed at the DB STEP, after copilot-mro lands.
+- [x] A.4 Record the pre-merge lane numbers for every repo, so a post-merge delta is measurable. Table in the
+      SDD ledger. **They are no longer reproducible** — `copilot_mro_test` has since been migrated.
 
 ### Phase B — core, then dashboard
 
 **B1 core**
-- [ ] B1.1 Merge (clean). Repair our `_Sink` test double for the new `ProductEventInsertResult` return type and
-      its `{"accepted": 1}` assertion — without this the merged handler dereferences `None` and 500s.
-- [ ] B1.2 Add the missing tenant-admin gate on `GET /analytics/dashboard-profile`; it is the only route on
-      that router without one.
-- [ ] B1.3 Log the widen-to-all-panels branch in the profile loader, so "no row" and "corrupt row" stop failing
-      in opposite directions silently.
-- [ ] B1.4 Extract the feature-gate check so the profile resolver and the panel service stop carrying two
-      copies of one rule.
-- [ ] B1.5 Run the migration, then the analytics/db/api/tenancy/infra lanes.
+- [x] B1.1 Merge (clean). Repair our `_Sink` test double for the new `ProductEventInsertResult` return type and
+      its `{"accepted": 1}` assertion — without this the merged handler dereferences `None` and 500s. Done via
+      an `_InsertSink` subclass, so the double that must return a result is distinct from the one that must not.
+- [x] B1.2 Add the missing tenant-admin gate on `GET /analytics/dashboard-profile`; it is the only route on
+      that router without one. Confirmed by enumerating the router: two GET routes, one gated.
+- [x] B1.3 Log the widen-to-all-panels branch in the profile loader, so "no row" and "corrupt row" stop failing
+      in opposite directions silently. `_coerce_panel_ids` now returns `None` for a non-list (corruption, warn,
+      fall back to the offer) and `()` for an empty list (a legitimate "offer nothing").
+- [x] B1.4 Extract the feature-gate check so the profile resolver and the panel service stop carrying two
+      copies of one rule → `registry.feature_enabled`.
+- [x] B1.5 Run the migration, then the analytics/db/api/tenancy/infra lanes. **2866 / 2 / 2 vs 2829 / 2 / 2.**
+- [x] B1.6 **(added during the phase)** Apply **M-CAPTURE on the core side**: the column is an opt-OUT
+      defaulting to `true`, not their opt-IN defaulting to `false`. The plan had assigned M-CAPTURE only to
+      D.4 (copilot-mro's policy reader); that alone would have flipped the reader against a column whose every
+      row said false.
+- [x] B1.7 **(added during the phase)** `schema_version` is stamped by the server, not taken from the client.
+      `extra="forbid"` means every stored row matched this model, so a client-supplied value would write a
+      claim the server cannot stand behind into a NOT NULL column. `event_id` stays the client's — that one
+      exists to make a browser retry idempotent.
 
 **B2 dashboard**
 - [ ] B2.1 Merge (clean). Guard the UUID mint with the repo's existing idiom and move it inside the never-throw
@@ -279,16 +312,38 @@ therefore never run in parallel.
 ### Phase C — utils, then api
 
 **C1 utils** (first: the three consumers pass `distribution=`, so utils always leads)
-- [ ] C1.1 Merge (clean). Replace the four hand-rolled `error_type=` log kwargs with `failure_fields`; keep the
-      semconv `error.type` on the spans.
-- [ ] C1.2 Drop the two fabricated exceptions built only so the span helper could read a type name.
-- [ ] C1.3 Stop marking a quiet cache miss as span ERROR — its only caller treats misses as normal flow, and it
-      would inflate the dependency board's error rate.
-- [ ] C1.4 Add the missing no-op-tracer test for the Weaviate wrapper (S3 has one).
-- [ ] C1.5 Mirror `WEAVIATE_GRPC_PORT` into every repo that deploys it; make `grpc_secure` follow the URL
-      scheme rather than staying hard-coded false.
-- [ ] C1.6 Record the connection-factory span as still owed: the spec put the Weaviate wrapper on
-      `weaviate_connection()` deliberately, and `hybrid_search` is not the only door.
+- [x] C1.1 Merge (clean). Replace the four hand-rolled `error_type=` log kwargs with `failure_fields`; keep the
+      semconv `error.type` on the spans. **Done, and the conversion is mutation-proven** — the adversarial
+      review showed it was initially inert (reverting to the bare kwarg passed the whole lane), because the
+      estate's two R22 AST guards sweep fixed module lists that contain neither `s3_service` nor
+      `weaviate_service`. Both R22 tests now assert `stack` is present, not just that the message is absent.
+- [x] C1.2 Drop the two fabricated exceptions built only so the span helper could read a type name.
+- [x] C1.3 Stop marking a quiet cache miss as span ERROR — its only caller treats misses as normal flow, and it
+      would inflate the dependency board's error rate. Premise re-verified across all ten repos:
+      `ad_parser._download_from_s3` is the only `quiet=True` caller.
+- [x] C1.4 Add the missing no-op-tracer test for the Weaviate wrapper (S3 has one).
+- [x] C1.5 **Second clause only.** `grpc_secure` now follows the URL scheme via `urlsplit`, with a
+      `WEAVIATE_GRPC_SECURE` override for the one topology the heuristic gets wrong (a proxy terminating TLS in
+      front of a plaintext gRPC backend). **The first clause — mirroring `WEAVIATE_GRPC_PORT` into every repo
+      that deploys it — is NOT done and is owed by later phases**, at these exact sites:
+      `copilot-mro/.env.sample`, `copilot-mro/copilot_mro/app/.env.example`, the four copilot-mro compose files
+      and `deployment/weaviate-local/weaviate-docker-compose.yml` (Phase D/E), `api/.env.example` (C2), and
+      `iac/apprunner.tf:41` / `iac/lambda.tf:108` (repo files, not an apply — same precedent as M-TOKENUSAGE).
+      Every current `WEAVIATE_URL` in the estate is `http://`, so nothing is broken today; the gap is that an
+      operator has no declared knob.
+- [x] C1.6 Record the connection-factory span as still owed: the spec put the Weaviate wrapper on
+      `weaviate_connection()` deliberately, and `hybrid_search` is not the only door. Recorded in
+      `_initialize_connection`'s docstring, naming the six untraced query methods; the work is G.10.
+- [x] C1.7 **(added by the review)** `record_exception=False` had zero coverage on both spans — flipping it to
+      `True` passed all 1203 tests while shipping `exception.message` and a rendered `Type: message` stacktrace
+      to Tempo. The privacy helper read only log records. It now reads span attributes and span events too, and
+      both failure-path tests assert no `exception` event.
+- [x] C1.8 **(added by the review)** `server.address` added to both spans. The collector promotes it as a
+      span-metrics dimension and the catalogue's "Client call rate by dependency" and "DB client p95 by system"
+      panels both name S3 — without it S3 was excluded from one and in the empty-label bucket of the other.
+- [x] C1.9 **(added by the review)** The one `traceback.format_exc()` log call inside the function C1.5 edited
+      now uses `failure_fields`. A rendered traceback's last line is `Type: message`, and a Weaviate connect
+      failure's message quotes the endpoint.
 
 **C2 api** — **must not merge before copilot-mro**: their `main.py` imports five symbols that exist only on
 their copilot-mro branch, so api alone fails at import and the gateway will not boot.
@@ -356,7 +411,10 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
       brace-selector normalisation to our aws blocks — our current spellings mix Prometheus suffixes with
       dotted OTLP names and will not resolve.
 - [ ] E.8 Tests last, resolving the two that share the dark-note vocabulary together.
-- [ ] E.9 Non-container lane (baseline 87/0, expect ≈100–112; anything below 87 is a finding), then the
+- [ ] E.9 Non-container lane. Gate per §2.4 against the **measured** pre-merge baseline, re-confirmed on
+      2026-09-20 at `417df303`: **135 collected, 111 passed, 24 skipped**. Collected must not decrease, passed
+      must not decrease, and every new skip must be named. (The old "87/0, expect 100–112" gate was a *gated
+      container* run and could not fail.) Then the
       container lanes and both validate scripts — the only thing that has ever proved the New Relic overlay and
       the four durability compositions actually load. Neither side has run it.
 
@@ -409,6 +467,14 @@ their copilot-mro branch, so api alone fails at import and the gateway will not 
       writer's landing forward, not historically.
 - [ ] G.10 The Weaviate connection-factory span owed from C1.6, and the span-metrics dimensions the dependency
       board actually promotes — as instrumented, the board's named consumer gets nothing for S3.
+- [ ] G.11 **L-GRAFANA-UID.** A healthcheck on the Grafana service, so an exit-0 crash loop stops reading as
+      "Up 9 seconds". The existing `test_grafana_provisioning_smoke.py` already asserts the four datasource
+      uids — but it boots a **cold container on a tmpfs data dir**, so it proves the YAML parses and can never
+      see a uid drift in a persisted `grafana.db`. The missing check is against the *running* stack, not
+      another cold boot. Do **not** reach for `deleteDatasources` (M-GRAFANA).
+- [ ] G.12 **L-COMPOSE-ENV.** Give `deployment/` its own `.env.sample` naming the three required variables, or
+      default them so the stack starts; add a smoke that `docker compose config` resolves with only the
+      documented sample present.
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
@@ -471,7 +537,7 @@ secrets and the AWS deferral.
 - **M-RESIDENCY → provider allowlist, in-account only** (applying spec §6.5 and ruling 11, not a new decision).
   No eval run touches real traces until it is enforced.
 
-### 4e. P0 register from Phase 0 — the merge does not start until these are answered
+### 4e. P0 register from Phase 0 — **ANSWERED 2026-09-20** (dispositions below the table)
 
 | id | Finding | Why it is P0 |
 |---|---|---|
@@ -482,7 +548,19 @@ secrets and the AWS deferral.
 | **P0-GUARD** | An existing guard — written verbatim to catch a call site reverting to `type(exc).__name__` — **fails on merge**, because they did exactly that at all three call sites and left the helper as dead code. Verified live: it passes on our tree today. | They shipped over a live guard without running it. It is also the cleanest proof that their sweep was hand-rolled rather than routed through `failure_fields`. |
 | **P0-INERT** | 35 inert tests, including three that now *assert* a defect (requiring `grafana:latest`, requiring the destructive `deleteDatasources` entry, requiring exactly three frontend panels). | Restoring correct behaviour now reads as breaking a test, which is how a defect becomes permanent. |
 
-### 4d. REOPENED — owner decisions the Phase 0 reviews surfaced
+**Dispositions, settled 2026-09-20 — §4e is ANSWERED; it no longer gates the start of the merge.** Each P0 is
+a finding with a named owner in a phase, not an open question:
+
+| id | Where it is fixed |
+|---|---|
+| P0-COLLECTOR | E.2/E.3 (config + the bind-mount doc) and E.9 (a real container start added to `validate.sh`, since `validate` never builds extensions). |
+| P0-499 | B1 — core keeps **ours** for the `ClientDisconnect` → 499 path; their edits are grafted inside it, never over it. |
+| P0-ABORT | B1.1 — both causes: the `None`-returning `_Sink` double **and** the 202 body gaining `duplicates`. |
+| P0-PARTITION | M-WARN, applied in C2.3/C2.4 — gate `warn` so it cannot be selected in a deployed environment. |
+| P0-GUARD | D.8 — route all three call sites through `failure_fields`; the existing guard then passes rather than being weakened. |
+| P0-INERT | D.7 and E.1/E.5/E.6 — M-PINS kills the `grafana:latest` assertion, M-GRAFANA kills the `deleteDatasources` assertion, M-FRONTEND kills the three-panel assertion. Every remaining inert test is mutation-checked before it earns tier 0 (§2.3a). |
+
+### 4d. REOPENED — **CLOSED 2026-09-19**, superseded by §4d-resolved above; kept for the reasoning
 
 | id | Decision | Why it is now open |
 |---|---|---|
@@ -586,12 +664,81 @@ Keep `contracts.py`, the runner's failure-isolation skeleton, the collector alia
 work. Rewrite `citation_coverage` against structured citation offsets. Enforce the provider allowlist first.
 7.3 and 7.4 confirmed absent. Their `"dry_run"` mode still pays for every judge call.
 
+### 5.9 Local stack defects found while fixing a dead stack, 2026-09-20 (our mainline, not the branch)
+
+Found outside the branch review: the local observability stack was down and nobody knew. Both are our-side
+defects and in scope under M-SCOPE.
+
+| rank | id | Finding |
+|---|---|---|
+| P1 | **L-GRAFANA-UID** | Grafana crash-looped 26 times on `Datasource provisioning error: data source not found`: the persisted `grafana_data/grafana.db` held `Tempo` with an auto-generated uid while `datasources.yml` pins `uid: tempo`. Provisioning **aborts at the first failing datasource**, so `Flynapse Postgres` was never created and every exact-spend panel (§7.1 money rule) had been silently absent. Grafana exits **0** on this failure, so `restart: unless-stopped` loops it forever and `docker ps` shows a plausible "Up 9 seconds". |
+| P1 | **L-COMPOSE-ENV** | `deployment/docker-compose.yml` requires `PHOENIX_SECRET`, `PHOENIX_ADMIN_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` with `:?`, but there is no `.env` or `.env.sample` in `deployment/` and `copilot-mro/.env.sample` names none of the three. `docker compose up` fails at interpolation before starting anything, for every service, including ones that do not use those variables. |
+
+A third, environmental, not a defect: after a Docker Desktop / WSL restart, containers created in an earlier
+session hold stale `/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/<hash>` handles and `docker start`
+fails them with **exit 127** and `no such file or directory` on a single-file bind mount. `docker compose up -d
+--force-recreate <svc>` re-binds and fixes it. Same family as the Postgres stale-bind-mount restart trap.
+
 ---
 
 ## 6. Future improvements
 
 *(Filled as items are deliberately deferred, each with what is missing, why it was deferred, and what the
 complete solution would look like.)*
+
+**The product-event idempotency key is tenant-scoped, not user-scoped (B1, 2026-09-20).**
+`product_events` has PK `(tenant_id, event_id)` and `POST /analytics/events` has no capability gate
+(correctly — every user emits product events). So any authenticated member writes into a tenant-wide id
+namespace, and a member who knows or predicts another member's `event_id` suppresses that event
+permanently and silently: no row, no log line, `202 {"duplicates": 1}`. Not fixed now because the mint is
+`crypto.randomUUID()` (122 bits) and the change is a primary-key migration whose `ON CONFLICT` target is
+guarded by nothing in either repo — core has no conflict-target test and copilot-mro's scans only its own
+tree, so a PK/target mismatch would raise on every product-event POST with no test catching it. The complete
+solution is `(tenant_id, user_id, event_id)` — `user_id` is server-stamped and unforgeable, so it closes the
+class for free — plus a conflict-target guard in core. **Sequence it with B2.1**, which fixes the same mint
+throwing on non-secure-context origins: any lower-entropy fallback introduced there turns this from latent
+into live.
+
+**A client that omits `event_id` gets no idempotency and no signal (B1, 2026-09-20).** `rows_for` mints a
+fresh server-side id per attempt, so a batch retried after a network timeout double-inserts, `duplicates`
+reads 0 and the 202 says everything was accepted. The compatibility window has no expiry, no metric and no
+test. The complete solution is to require `event_id` once the dashboard client is known to send it (it does,
+on their branch), and to count omissions until then so the window can be closed on evidence.
+
+**FK-free tenant-classed relations survive tenant teardown (B1, 2026-09-20).** `delete_tenant` relies
+entirely on FK cascade, and `dashboard_profiles` is declared FK-free — deliberately, matching
+`product_events`, which has the same hole today and is swept only by a retention purge, not by teardown.
+So this is a pre-existing estate contract question that the merge extends to one more relation, not a defect
+this merge introduced. The test that would catch it cannot: `test_exactly_the_eight_identity_relations_
+cascade_with_a_tenant` asserts the set of relations *referencing* `tenants`, and a relation with no FK is
+outside its scope by construction. The complete solution is a declared teardown contract for tenant-classed
+relations without FKs — an explicit delete list derived from the registry, asserted against it, so adding a
+relation cannot silently skip teardown. Estate-wide; do it with Task R (G.1), which is what enumerates them.
+
+**`int(row.get("profile_version") or DEFAULT_PROFILE_VERSION)` swallows a stored `0` (B1, 2026-09-20).**
+It becomes `1` instead of raising through `DashboardProfileConfig.__post_init__`'s `version < 1` guard, so
+the dataclass's own validation can never fire on the database path. Unreachable today —
+`dashboard_profiles_version_check CHECK (profile_version >= 1)` — and therefore deferred; the complete
+solution is to stop using `or` for a value whose falsy case is meaningful, and to let the dataclass be the
+single validator rather than having the loader pre-empt it.
+
+**`_S3_NON_ERROR_OUTCOMES` is a hard-coded set with no declared vocabulary (C1, 2026-09-20).** The five
+`operation.outcome` values on the S3 span are bare literals at the call sites, and the non-error set is a
+frozenset next to them. A new failure outcome defaults correctly to ERROR; a new *non-failure* outcome
+(`cached`, `not_modified`) would be wrong until someone remembers the set. Deferred because the complete
+solution is not a bigger frozenset — it is the F.4 reconciliation: `operation.outcome` collides with the
+spec's `agent.outcome` / `tool.outcome`, and this merge shipped five more values into that unreconciled
+namespace. Fix it once, as an enum with a registry entry, when F.4 decides the vocabulary.
+
+**`BaseException` escapes both storage spans as UNSET (C1, 2026-09-20).** Both spans set
+`set_status_on_exception=False` and both bodies catch `Exception`, so a `KeyboardInterrupt`, `SystemExit` or
+`asyncio.CancelledError` unwinding through `download_pdf` or `hybrid_search` ends the span neither OK nor
+ERROR and with no `operation.outcome` at all — invisible to every outcome query and non-error on the
+dependency board. Low likelihood on sync boto3, non-zero for Weaviate under a shutdown drain. The complete
+solution is a `finally` that stamps an `interrupted` outcome when the span is still UNSET, applied to every
+wrapper of this shape rather than to these two by hand; it belongs with the Task R coverage matrix (G.1),
+which is what will enumerate the wrappers.
+
 
 ---
 
@@ -624,7 +771,74 @@ What the lanes did that made them worth their tokens, worth repeating:
   in a cleanly auto-merged file surfaced.
 - **One lane re-ran the acceptance number** the plan asserted, and it was from a different lane entirely.
 
+### Phase C1 — utils, 2026-09-20, MERGED (worktree `utils-obsm`, merge commit on `obs-merge`)
+
+Textually clean merge, 7 files. Lane **1209 passed / 0 skipped** against a pre-merge baseline of **1190 / 0**,
+run from the shared `api` env with `PYTHONPATH` pinned to the worktree and the resolved `utils.__file__`
+printed once before the numbers were trusted.
+
+**What the adversarial review changed.** It found the phase's headline item inert and one uncovered control:
+
+- **`record_exception=False` had no test.** Flipping it to `True` passed all 1203 tests while exporting
+  `exception.message` and a stacktrace ending in `Type: message` to Tempo. The privacy helper iterated log
+  records only, so the entire trace pipe was unexamined — R22 relocated to the one export path nothing
+  inspected. Fixed by folding span attributes and span **events** into the helper and asserting no `exception`
+  event on both failure paths.
+- **C1.1 was inert.** Reverting `failure_fields(error)` to `error_type=type(error).__name__` passed. The two
+  R22 AST guards in the estate sweep fixed module lists (7 copilot-mro paths; `utils/postgres_service.py`
+  alone) and neither contains these modules, and P0-GUARD's sweep is assigned to D.8, which is copilot-mro.
+  Fixed by asserting `stack` is present at both sites. The Weaviate site had **no** R22 test at all — a full
+  f-string leak passed, because the only assertions were about the query and the collection name, neither of
+  which that code path ever logged.
+- Five source guards were then mutation-proven individually (connect-failure log, `server.address` on each
+  span, the `WEAVIATE_GRPC_SECURE` override, `urlsplit` vs `startswith`): each mutation fails exactly one test.
+
+**Rejected from the review:** its P2-7 asked for the bucket name on the S3 failure lines, arguing the bucket is
+configuration rather than customer content. Their own privacy test asserts the bucket is absent from every
+export, and that is a ruling this phase does not get to overturn on its own. The trace id is already on every
+record, which is what makes the line actionable. Recorded, not applied.
+
+### Phase B1 — core, 2026-09-20, MERGED (worktree `core-obsm`, `5d40d70`)
+
+Textually clean merge, 16 files. Lane **2866 passed / 2 skipped / 2 xfailed** against a pre-merge baseline of
+**2829 / 2 / 2** — nothing lost, no new skips — after running the all-registry tenancy migration against
+`copilot_mro_test` with `PYTHONPATH` pinned to the merged worktree (without that the migration reads the
+PRE-merge table definitions and creates none of the new schema).
+
+**The finding that justified the phase: M-CAPTURE was split across two repos and neither half was wrong on its
+own.** Their `tenants.llm_content_capture_enabled` is an opt-IN defaulting to `false`, with a test pinning it.
+The owner's ruling is capture ON by default, tenant opt-OUT. The plan had assigned M-CAPTURE only to D.4, the
+copilot-mro policy reader — so the merge would have flipped the reader to honour a column whose every row said
+`false`, and capture would have been off estate-wide with both repos reading as correct. Column now defaults
+`true`; verified in the database after migration.
+
+**P0-499 needed no action, and that is the result, not an assumption.** The clean auto-merge kept our
+`ClientDisconnect` → 499 path and grafted their `duplicates` change inside the same `try`. Confirmed by
+reading the merged handler rather than by the absence of a conflict.
+
+Verified rather than trusted, on their idempotency work: the primary key really is `(tenant_id, event_id)`, so
+the `ON CONFLICT` target resolves and a replayed id cannot collide across tenants; and `MAX_EVENTS_PER_BATCH`
+is 50, so the widened INSERT binds at most 750 parameters — well clear of the 65535 wire limit that would have
+made a large batch fail at the protocol layer.
+
+Database state after this phase, confirmed by query: `product_events.schema_version integer DEFAULT 1 NOT
+NULL`, `tenants.llm_content_capture_enabled DEFAULT true`, `dashboard_profiles` present with RLS **enabled and
+forced** and a `dashboard_profiles_isolation` policy. `llm_turn_content` is correctly still absent — it is a
+copilot-mro registry table, so `--registry core` was never going to create it and neither did the all-registry
+run against an unmerged copilot-mro.
+
 ### Environment rules confirmed this phase
+- **Worktree lanes MUST set `PYTHONPATH`, or they test the wrong tree (found 2026-09-20).** The shared `api`
+  Poetry env installs `core`, `utils`, `copilot-mro`, `flynapse-otel` and `shift-optimizer` as develop/path
+  dependencies, and the `.pth` files name the **main checkouts** absolutely. So
+  `poetry run pytest ../utils-obsm/tests` collects the worktree's *tests* and imports the **pre-merge**
+  package — a green lane that proves nothing about the merge. Verified both directions:
+  `PYTHONPATH=/home/aditya/Code/<repo>-obsm` wins over the `.pth` entry (`utils.__file__` moves to the
+  worktree). Every merge-phase lane therefore runs as
+  `cd api && DEBUG=false POSTGRES_DB=copilot_mro_test PYTHONPATH=/home/aditya/Code/<repo>-obsm poetry run
+  pytest -q /home/aditya/Code/<repo>-obsm/tests/...`, and each phase asserts the resolved module path once
+  before trusting its numbers. copilot-mro's dynamic-loader tests are path-addressed and already correct;
+  everything that imports a package normally is not.
 - The otel non-container lane: `DEBUG=false POSTGRES_DB=copilot_mro_test poetry run pytest -q
   ../copilot-mro/tests/integration/otel` from `/home/aditya/Code/api`. **135 collected, 111 passed, 24 skipped,
   ~5 s** on `langgraph-merge` `417df303`.
@@ -653,3 +867,11 @@ largely is not: the item was specified when nothing was instrumented, and our ow
 calls it would have caught, so installing it would double-count exactly as the spec's botocore ban predicts.
 **Rule: before reporting an unimplemented plan item as owed, check whether later work made it redundant. "No
 one built it" is not the same as "it is still needed."**
+
+**Never `git checkout --` to undo a mutation test (2026-09-20).** During C1's mutation checks I restored each
+mutated file with `git checkout -- <file>`. That restores the **committed** state, so it silently discarded
+every *uncommitted* edit in the same file — three source fixes from the review triage vanished, and the only
+symptom was five tests failing for reasons that made no sense until `git status` showed the source files
+unmodified. CLAUDE.md already forbids the command; this is the failure mode it forbids it for. **Rule: copy
+the file to the scratchpad first and restore from the copy. Then `git status` after every mutation round, and
+treat "the file I just edited is unmodified" as the alarm it is.**
