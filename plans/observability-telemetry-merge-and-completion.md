@@ -638,6 +638,35 @@ resolved; the merge commit records them and E fixes them.
       the two must not both claim it again. G.8 is REMOVED from Phase G and that removal is what left this
       hole; closing it here is the repair.
 
+- [ ] G.14 **M-AUTHLOGS — pay down the 16 credential-path R22 log sites.** `middleware/auth.py` (13; claims,
+      tenant ids, Redis keys) and `auth/jwks.py` (3; the key-pool URL). Sanctioned shape is
+      `utils.observability.failure_fields`, never deletion of the diagnosis — a log line that loses its
+      value is a worse outcome than the leak, so a site that genuinely needs a detail the shape cannot
+      carry stays recorded with its reason. Tighten `_RECORDED_DEBT`, `_DEBT_WAS_REVIEWED_AS` and
+      `_DEBT_REASONS` in the same commit; the guard asserts equality in BOTH directions, so a repaired
+      site fails it until the record is tightened. The other 133 stay recorded behind the armed sweep at
+      `api-obsm 66868f8`. **IN FLIGHT.**
+- [ ] G.15 **M-DEADROUTER — delete `routers/cache_management.py`.** Verify the import graph before deleting;
+      retires 6 log sites and 6 disclosure sites, and the stale comment at `middleware/auth.py:1314` goes
+      with it. **IN FLIGHT, same implementer as G.14.**
+- [ ] G.16 **M-RUNERROR — sanitise `automation_runs.error`.** ~20 write sites in
+      `api-obsm/flynapse_api/automations/`; the read is `core`'s `AutomationRun.error`. Category plus a
+      safe message. **Spans two repos and needs both trees free.** Neither sweep can see it — the api guard
+      sees a database write and the core guard sees a column read — so it needs its own guard, at the
+      write side, where the category vocabulary is closed.
+- [ ] G.17 **M-CARDINALITY — create the tenant-scoped instrument allow-list.** Not amend: R.4 established
+      there is no allow-list anywhere, only two ten-key DENY-lists (`flynapse_otel/registry.py:27`,
+      `base.yaml:76`), with `tenant.id` on neither in either direction. Tenant identity goes on the
+      closed-vocabulary counters (`agent.turn.calls`, `agent.model.calls`, `agent.model.cost_usd`,
+      `agent.ledger.write_failures`) and **not** on `gen_ai.client.token.usage`. Also rule
+      `subagent.name`, which is today the model's raw `subagent_type` string taken verbatim with no
+      catalogue validation — **one hallucinated name mints a permanent series.**
+- [ ] G.18 **M-LEGACY — port the 27 legacy `MetricsService` families onto the registry.** Bounded attribute
+      set per family, the off switch `get_metrics_service()` lacks, and a derived inventory guard on the
+      `_emitted_series.py` pattern. Retirement is recommended per family, never decided by the
+      implementer. Must settle the raise-vs-drop asymmetry: the registry **raises** and `_safe_add`
+      swallows, so a forbidden key makes the **whole series vanish silently**, while the legacy shim drops
+      the key and warns once. **utils-side IN FLIGHT; call sites in copilot-mro and core follow.**
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
 secrets and the AWS deferral.
@@ -672,6 +701,9 @@ secrets and the AWS deferral.
 | **M-AUTHLOGS** | **Pay down the 16 authentication-adjacent R22 sites now**; leave the other 133 recorded. Owner ruling, 2026-09-20. | `middleware/auth.py` (13 sites) renders exceptions whose text can carry claims, tenant ids and Redis keys; `auth/jwks.py` (3) can carry the pool URL. Those are the only two modules on the estate's credential path. The remaining 133 are background jobs and routers, and the armed sweep committed at `api-obsm 66868f8` stops the debt growing meanwhile. Partially answers B-R1; the rest stays recorded with its dated reasons. |
 | **M-CARDINALITY** | **Tenant identity goes on a short NAMED list of instruments only — not on `gen_ai.client.token.usage`.** Owner ruling, 2026-09-20 (took the recommendation). | The token metric is a histogram with 14 advisory bucket boundaries (`telemetry.py:1344`), so **every distinct label combination costs 17 stored series** (15 buckets + `_sum` + `_count`). Its label set is eight-wide — provider, model, role, purpose, profile, cost_source, graph_node, error.type (`_model_attributes`, `:1784-1798`) — giving roughly 900–2,400 combinations for a busy tenant, i.e. **15,000–41,000 series before tenant identity is added at all.** The cheap counters (`agent.turn.calls`, `agent.model.calls`, `agent.model.cost_usd`, `agent.ledger.write_failures`) are closed-vocabulary and cost ~6–12 series per tenant; those carry it. **R.4 also found the premise behind this item was false: there is no attribute allow-list anywhere.** `flynapse_otel/registry.py:27` and `base.yaml:76` are both ten-key DENY-lists, and `tenant.id` is on no list in either direction. The named list must therefore be created, not amended. |
 | **M-LEGACY** | **Port every legacy `MetricsService` family onto the modern registry.** Owner instruction, 2026-09-20 — *"fix all legacy metrics too, port to new"*. | R.4 found **27 legacy families emitted and consumed by nothing** — `llm_*` ×4, `embedding_*` ×6, `memory_*_latency_ms` ×2, `chat_block_save_failures_total`, and 14 × `document_hub_*` — and `get_metrics_service()` (`utils-obsm/utils/observability/metrics.py:144`) has **no off switch**, so they cost cardinality and ingest forever. Three are unbounded: `chat_block_save_failures_total` reaches ~7,200 per tenant because `error_kind` × `field` are free strings, and the 14 `document_hub_*` helpers forward arbitrary `**attributes`. Porting them onto the registry is what makes them bounded, because the registry lints attributes and the legacy shim does not. **Where a family has no consumer and no plausible one, the pass proposes retirement in the same breath rather than deciding it alone** — porting a metric nothing reads buys only a cheaper way to store something nobody looks at. **One mechanism must be settled by this port, because the two halves currently degrade in opposite directions:** `registry._lint_attributes` **raises** and `RuntimeTelemetry._safe_add` swallows it, so a forbidden key makes the **whole series vanish silently**; the legacy shim drops the key and warns once. Same mistake, opposite outcomes. |
+| **M-RUNERROR** | **Keep the failure reason visible to the automation's owner, but sanitise it** — a category plus a safe message, never the raw exception text. Owner ruling, 2026-09-20. | ~20 sites in `api-obsm/flynapse_api/automations/` (`executor.py`, `loop.py`, `one_shot.py`) write caught-exception text into `automation_runs.error`, and `core` serves that column to authenticated tenant callers as `AutomationRun.error` (`core/resources/automations/models/schemas.py:280`) from `GET /automations/{automation_id}/runs`. **A response-body disclosure with a second hop through the database** — which is why neither sweep caught it: the api guard sees a database write, and the core guard sees a column read. The column is also the ONLY way an automation's owner learns why their run produced nothing, so deleting the channel would remove a real feature; the ruling keeps it and curates what goes in. |
+| **M-DEADROUTER** | **Delete `api-obsm/flynapse_api/routers/cache_management.py`.** Owner ruling, 2026-09-20. | `main.py` imports it nowhere — a workspace-wide search finds it referenced only by a stale comment in `middleware/auth.py:1314` and by the log sweep's own debt list. Deleting it retires **6 recorded R22 log sites and 6 response-disclosure sites in one move**. The disclosure fixes already made to it become moot and are dropped with the file rather than committed. |
+| **M-EVALSGATE** | **The evals project is gated on G.13 (residency) alone.** Owner ruling, 2026-09-20. | Not on G.5's writer, and not on this merge's full close-out. Once the provider allowlist is enforced and mutation-proved, the project starts and builds everything else it needs itself. The STATUS CORRECTION block now at `agent-evaluation-completion.md` §2.2 is therefore the single precondition, and it must be struck by whoever closes G.13 — not by the evals project itself. |
 
 ### 4b-corrections (from the Phase 0 reviews, 2026-09-19)
 
