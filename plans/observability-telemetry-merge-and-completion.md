@@ -638,7 +638,7 @@ resolved; the merge commit records them and E fixes them.
       the two must not both claim it again. G.8 is REMOVED from Phase G and that removal is what left this
       hole; closing it here is the repair.
 
-- [ ] G.14 **M-AUTHLOGS — pay down the 16 credential-path R22 log sites.** `middleware/auth.py` (13; claims,
+- [x] G.14 **M-AUTHLOGS — DONE 2026-09-20 (`api-obsm d6ab632`), 15 of 16 repaired.** — pay down the 16 credential-path R22 log sites.** `middleware/auth.py` (13; claims,
       tenant ids, Redis keys) and `auth/jwks.py` (3; the key-pool URL). Sanctioned shape is
       `utils.observability.failure_fields`, never deletion of the diagnosis — a log line that loses its
       value is a worse outcome than the leak, so a site that genuinely needs a detail the shape cannot
@@ -646,7 +646,7 @@ resolved; the merge commit records them and E fixes them.
       `_DEBT_REASONS` in the same commit; the guard asserts equality in BOTH directions, so a repaired
       site fails it until the record is tightened. The other 133 stay recorded behind the armed sweep at
       `api-obsm 66868f8`. **IN FLIGHT.**
-- [ ] G.15 **M-DEADROUTER — delete `routers/cache_management.py`.** Verify the import graph before deleting;
+- [x] G.15 **M-DEADROUTER — DONE 2026-09-20 (`api-obsm d6ab632`).** — delete `routers/cache_management.py`.** Verify the import graph before deleting;
       retires 6 log sites and 6 disclosure sites, and the stale comment at `middleware/auth.py:1314` goes
       with it. **IN FLIGHT, same implementer as G.14.**
 - [ ] G.16 **M-RUNERROR — sanitise `automation_runs.error`.** ~20 write sites in
@@ -667,6 +667,26 @@ resolved; the merge commit records them and E fixes them.
       implementer. Must settle the raise-vs-drop asymmetry: the registry **raises** and `_safe_add`
       swallows, so a forbidden key makes the **whole series vanish silently**, while the legacy shim drops
       the key and warns once. **utils-side IN FLIGHT; call sites in copilot-mro and core follow.**
+- [ ] G.19 **The log sweep needs the HTTP-exception carve-out its sibling already has. CONTROLLER
+      DECISION 2026-09-20, pending owner review — it is a rule change, not a paydown.** One site
+      survives G.14: `api-obsm/flynapse_api/middleware/auth.py:474`, `except HTTPException as exc:`
+      logging `exc.status_code` and `exc.detail`. **That is not a `str(exc)` leak** — the detail is the
+      refusal **this middleware itself decided and raised**, and the very next statement puts both
+      values into the response body, so the log discloses nothing the caller is not already told.
+      The **response** sweep sanctions exactly this read by name (`<name>.detail` / `<name>.status_code`
+      under a handler catching HTTP exception types only); the **log** sweep has no such carve-out, so
+      its allow-list flags it. Repairing it would delete the only two things the line says, and
+      `failure_fields(exc)` would replace them with `error_type=HTTPException` plus frames — naming
+      neither the status nor the reason. That is the "worse than the leak" outcome the rule exists to
+      avoid. **Grant the carve-out, scoped exactly as the sibling scopes it**, and prove it: a mutation
+      showing a genuine `str(exc)` under the same handler shape still fails.
+- [ ] G.20 **A third guard constrains every remaining R22 repair, and no brief had named it.**
+      `api-obsm/tests/unit/telemetry/test_log_messages_are_not_format_strings.py` fails on an
+      **interpolated message passed alongside structured fields** — loguru then runs `str.format` over
+      runtime text and raises `KeyError` inside the logging call. So the naive reading of "apply the
+      sanctioned shape" (keep the f-string, append `**failure_fields(e)`) is **RED**. Every message must
+      become a constant with its ids moved to bound fields. **This governs the remaining 128 recorded
+      sites** and belongs in the brief of whoever pays down the next tranche.
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
 secrets and the AWS deferral.
