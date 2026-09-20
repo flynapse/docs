@@ -1159,11 +1159,22 @@ directories serially, or give each lane its own database.
 Commits `2e965ea0`, `2e4bbeb8`, `0d0b752d`, `1eec7c49`, `438c6a5d`, plus `35c7e87` on a NEW
 `obs-merge` branch in the **iac** repo (that repo had no branch for this work; `main` is untouched).
 
-**The gate.** `tests/integration/otel` went **135 collected / 111 passed / 24 skipped** (pre-merge
-baseline at `417df303`) → **151 / 126 / 25** on the merged tree with Phase E applied, 0 failed.
-Collected and passed both rose, so §2.4's gate holds. With `OTEL_RULES_CHECK=1` (promtool): 152 /
-140 / 12. The merged tree BEFORE Phase E was 145 / 119 / 25 with one failure — `test_dark_panel_
-notes_are_present`, naming 13 panels across three boards, which is E.0d exactly.
+**The gate, re-measured after the review response.** `tests/integration/otel` went **135 collected
+/ 111 passed / 24 skipped** (pre-merge baseline at `417df303`) → **156 / 130 / 26** on the merged
+tree with Phase E applied, 0 failed. Collected and passed both rose, so §2.4's gate holds. With
+`OTEL_RULES_CHECK=1` (promtool): 143 passed / 13 skipped. With `OTEL_COMPOSE_SMOKE=1`:
+`test_oss_profile_smoke` 8 passed, `test_grafana_provisioning_smoke` 2 passed — the container lanes
+this plan had declared not done. The merged tree BEFORE Phase E was 145 / 119 / 25 with one failure,
+`test_dark_panel_notes_are_present`, naming 13 panels across three boards, which is E.0d exactly.
+
+Every new skip is named: they are all compose-gated (`OTEL_COMPOSE_SMOKE=1`), and the newest is
+`test_prometheus_serves_the_exact_names_the_inventory_computes`, added in the review response.
+
+**A number correction.** An earlier draft of this section recorded the gate as 151/126/25. That was
+measured before the E.0e guard and the review-response tests were added, and it was off by one pass
+even then — the reviewer measured 152/127/25 against the same tree. The figures above are the
+post-response measurement. The §8 rule about never quoting a gate from a partial file has a sibling:
+a gate quoted before the phase finished is also a gate quoted early.
 
 **What the plan got wrong, and where the work actually was.**
 
@@ -1232,8 +1243,10 @@ P0-COLLECTOR signature, and only the new start pass sees it.
 **E.9, the half nobody had ever run.** `validate.sh` now STARTS each profile on the pinned image and
 polls `health_check`, in both compositions, with the queue directory bind-mounted so the run also
 proves `create_directory: true` creates the COMPACTION directory (a README claim nothing checked).
-Result: 4 profiles × 2 compositions = 8 validates + 8 starts, all healthy — the first run of the New
-Relic overlay and of all four durability fragments. A ninth composition was added: **aws+phoenix**,
+Result after the review response: 4 profiles × 2 compositions × **2 start modes** = 8 validates +
+16 starts, plus the aws+phoenix composition's 1 validate + 2 starts — **18 healthy starts**, all
+creating both storage directories where the mounted mode checks. The first run of the New Relic
+overlay and of all four durability fragments. A ninth composition was added: **aws+phoenix**,
 which `iac/demo_ec2_setup.sh` layers on the demo box and which `validate.sh` never built, because it
 appends the fragment only for profiles whose own env example sets `PHOENIX_ENDPOINT` and
 `env/aws.env.example` names no `PHOENIX_*` at all. It loads and starts; it was unproven, not broken.
