@@ -1537,6 +1537,59 @@ all. Anyone following the master plan to the on-call surface finds nothing.
 
 ---
 
+### DB step — 2026-09-20, COMPLETE against the dev database `copilot_mro`
+
+Run after Phase E, with `PYTHONPATH` naming the three merged worktrees. A schema-only `pg_dump` was
+taken before anything; the migration took its own full data+schema snapshot before writing.
+
+**Acceptance, proved by query with a negative control each** — the identical query returned NULL or
+`(0 rows)` before the run:
+
+| object | state after |
+|---|---|
+| `llm_turn_content` | present, RLS **enabled and forced**, `llm_turn_content_isolation` policy, 0 rows |
+| `dashboard_profiles` | present, RLS enabled and forced, isolation policy |
+| `product_events.schema_version` | `integer NOT NULL DEFAULT 1` |
+| `tenants.llm_content_capture_enabled` | `boolean NOT NULL DEFAULT true` |
+
+Applied `1487 statements, committed` — the same count as the rehearsal. The pre→post schema diff is
+100% additive (106 added lines, no real removals; public tables 111 → 113), `backfill: 0 rows`, and
+the statement audit contains no `DROP TABLE`, `TRUNCATE`, `DELETE FROM` or `DROP COLUMN`.
+
+**`--verify-only` is not an acceptance signal for a missing object, and now we know why.** It reports
+"schema properties hold (0 statements)" on a database missing all four of the above, because it calls
+`verify()` and returns 57 lines before `create_missing_tables()` ever runs. It sees the absences only
+in passive counts (109 relations against 114 declared; one index, two NOT NULLs and two column types
+"declared but not present"). Acceptance is proved by query, not by exit code.
+
+**The RLS pass was load-bearing.** `provision_rls.py --verify-only`, run straight after the
+migration, FAILED rc=1: `flynapse_app holds UPDATE, DELETE on llm_turn_content, which is
+append-only.` This is the `ALTER DEFAULT PRIVILEGES` hazard its own docstring names — defaults from an
+earlier run granted the application role full DML on a table the instant the migration created it.
+Skipping the RLS step as a formality would have shipped the tenant-content audit table writable and
+erasable by the application role. The apply run revoked it; `has_table_privilege` now reads
+`SELECT t | INSERT t | UPDATE f | DELETE f | TRUNCATE f`. Both re-verifies are clean.
+
+**Tenant isolation proved behaviourally, not just in the catalogue.** `chunks` holds 475,277 rows
+across two tenants; as `flynapse_app` bound to tenant A, exactly A's 165,413 are visible and B's
+309,864 are denied.
+
+**M-CAPTURE landed on data here.** `ADD COLUMN ... DEFAULT true NOT NULL` backfilled all six existing
+tenant rows to `true`, so capture is ON for every tenant from this run. The store exists, is
+enforced, and is empty — which is what makes the retention ruling (90 days, M-PURGE) live work rather
+than a hypothetical.
+
+**Carried forward:** `data_discovery_jobs` has three columns nullable against a NOT NULL declaration.
+Genuinely pre-existing and structurally unconvergeable by this script, since `add_columns` skips an
+existing column so `enforce_not_null` never sees it. Needs a manual `SET NOT NULL` once the columns
+hold no NULLs.
+
+**A correction to the spec this step ran under.** It told the executor to record the `product_events`
+CHECK mismatch as pre-existing and not ours. It was ours — `product_events_schema_version_check`, the
+named CHECK on this plan's own new column, reported only because the column was absent. Findings went
+2 before → 1 after. **Do not pre-dispose a finding in a spec; state it as a question for the executor
+to resolve.**
+
 ## 8. Lessons
 
 **Review their branch before merging it, not phase by phase afterwards (2026-09-19).** The first draft of this
