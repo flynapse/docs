@@ -968,7 +968,12 @@ resolved; the merge commit records them and E fixes them.
       ordering puts an **echoed token ahead of the backend's authored sentence**, which is the principle this
       work just established, left unapplied on the other surface.
 
-- [ ] G.37 **The log backlog this work created, and it names the file its own design copied.**
+- [~] G.37 **PAID DOWN 2026-09-20 (`utils-obsm 870e75c` + `776ce89`, 9 uncommitted production files):
+      106 leaks → 40, backlog 10 modules → 4.** Lane **1316 → 1344 collected and passed.** Six modules
+      cleaned — `s3_service` 25, `cache_service` 20, `embedding_service` 11, `email_service` 6,
+      `smtp_email_service` 3, `llm.py` 1. Ordered **by exposure, not count**, which the executor made
+      concrete by taking the **highest-count module LAST**. Its reviewer found **no P0**; 8 of 18 findings
+      real, all fixed. ORIGINAL ITEM FOLLOWS., and it names the file its own design copied.**
       Inverting the sweep's default surfaced **106 leaks across ten `utils` modules**, each now in
       `LEAK_BACKLOG` with a dated reason. Two matter more than the rest:
       **(a) `utils/embedding_service.py:428` logs `f"Truncated text: {text[0:500]}"` — FIVE HUNDRED CHARACTERS
@@ -1001,6 +1006,39 @@ resolved; the merge commit records them and E fixes them.
       **Owner-owed, outside that tree:** a dashboard exclusion for `span_name="weaviate.connect"` — and the
       check that makes it possible is that **`span_name` IS a promoted Tempo label while `db.operation` is
       not**, so it is a panel edit with no code change.
+
+- [ ] G.40 **`python -m utils.s3_service` DELETES REAL OBJECTS while printing "Would delete". Pre-existing,
+      not from this merge, and it needs someone's attention.** Verified by the controller at
+      `utils-obsm/utils/s3_service.py:1362-1367`: the comment says *"Delete files containing a keyword (dry
+      run first)"*, the call passes **`dry_run=False`**, and the loop below then prints `f"Would delete
+      {file}"` — against `s3://flynapse-copilot/akasa/mro/AIPC/processed/`. **The output says one thing and
+      the call does the other.** Out of the G.37 mandate and untouched by it; flagged because a destructive
+      default behind a reassuring message is exactly the shape this project has spent the night removing.
+- [ ] G.41 **Two leaks the log sweep structurally cannot see, and one of them was the pass's headline repair.**
+      **(a) The 500-character user-query line had NO GUARD.** The exception-text sweep passed it 21/21,
+      because that sweep reads only what a **caught exception** reaches and the line sits in no handler. **The
+      most consequential repair of the pass was unguarded**, and the fix was to generalise the file-wide
+      constant-message policy (previously weaviate-only) to a `CONSTANT_MESSAGE_MODULES` set.
+      **(b) Repairing a handler would have MOVED a leak, not closed it.** The executor's own runtime proof —
+      not the sweep, not the reviewer — caught `s3_service.py:875` still logging a tenant-scoped object key
+      four lines from the handler being repaired. **A sweep that reads handlers cannot see the line next to
+      the handler.**
+      **And the credential itself:** `s3_service.py:874/906` logged the whole input value of a URL loader — and
+      **on the only reachable failure path that value is an S3 URL, so for a PRESIGNED one it is
+      `X-Amz-Credential` and `X-Amz-Signature`: a usable credential in the log.**
+- [ ] G.42 **Two backlog reasons were FALSE, and one of them prices a live module as a corpse.**
+      **`dynamodb_service.py`'s reason said "DynamoDB is retired; the module survives unused."** The
+      *table-creation* path is retired — but `copilot-mro-obsm/copilot_mro/app/services/parsers/amos_parser.py:2567`
+      still imports it **inside a live work-orders insert** (verified). A failure there can render a botocore
+      validation error **naming the offending work-order attribute**. Still last by exposure, but **the next
+      pass must price it as a live module.** And **`s3_service`'s reason claimed its failure logs already went
+      through the sanctioned shape** — only 4 of 29 did.
+- [ ] G.43 **The branch is green only with an uncommitted sibling pass present — structural to the convention.**
+      Applied to a clean `HEAD`, the `utils` guard registry reports **28 offences, every one in
+      `weaviate_service.py`**, because a `PAID_DOWN` count was committed at HEAD against a file whose repair is
+      **deliberately uncommitted**. **Inherited, not introduced.** It is the cost of "leave production edits
+      uncommitted for owner review" meeting a ratchet that counts them, and **the owner should know the branch
+      does not stand alone until those edits land.**
 
 ### Phase H — out of scope here, recorded
 The live batch, publishing, the iac plan gate and the first apply. Blocked on the owner being present, CI
