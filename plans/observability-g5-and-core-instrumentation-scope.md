@@ -364,7 +364,7 @@ was checked:
 - **No Dockerfile.** `find -maxdepth 3 -iname 'Dockerfile*'` over the workspace finds one for `api`
   (×2), `copilot-mro` (×2), `dashboard`, `telegram-bot` and `lambdas/cognito-lambdas`. **None for
   `core`.**
-- **No iac service.** `core` appears in no `iac/*.tf`. `iac/apprunner.tf` has no `core` reference.
+- **No iac service** — but the supporting claim was WRONG and is corrected 2026-09-20. `core` DOES appear in `iac`: `amplify.tf:76` sets `CORE_PREFIX = "/core/v1"`, and `apprunner_iam.tf:86,110` name core's Cognito needs. **None of them declares a service**, so the conclusion stands — but "appears in no `iac/*.tf`" was false, and a reader checking it would have found the opposite.
 - **No compose service.** The only `core` strings in any compose file are
   `copilot-mro-obsm/deployment/poc/docker-compose.yml:210` (a comment about the browser-forward
   contract) and `:250` (`CORE_PREFIX=/core/v1`, an env var **for the gateway**).
