@@ -403,14 +403,14 @@ outcomes are in §7; deferred items with their reasons are in §6.
 
 **C2 api** — **must not merge before copilot-mro**: their `main.py` imports five symbols that exist only on
 their copilot-mro branch, so api alone fails at import and the gateway will not boot.
-- [ ] C2.1 Take their loguru mechanics on the request-failed line — the bug is real: an already-interpolated
+- [x] C2.1 Take their loguru mechanics on the request-failed line — the bug is real: an already-interpolated
       f-string message plus kwargs makes loguru run `str.format`, so a Pydantic error's braces raise `KeyError`
       *inside* the handler and the request's own exception never reaches the `raise`.
-- [ ] C2.2 Combine it with our R22 policy: bind duration and `failure_fields`, constant message, drop the
+- [x] C2.2 Combine it with our R22 policy: bind duration and `failure_fields`, constant message, drop the
       now-unused traceback import. Add the assertion their test lacks — that no exception text reaches a sink.
-- [ ] C2.3 Apply M-WARN to the partition helper; assign and surface the degraded return value.
-- [ ] C2.4 Harden the relaxed boot-check guard so a handler that returns before its `raise` is still caught.
-- [ ] C2.5 M-LOCK: take our lock. Gate the merge on an actual `import flynapse_api.main`.
+- [x] C2.3 Apply M-WARN to the partition helper; assign and surface the degraded return value.
+- [x] C2.4 Harden the relaxed boot-check guard so a handler that returns before its `raise` is still caught.
+- [x] C2.5 M-LOCK: take our lock. Gate the merge on an actual `import flynapse_api.main`.
 
 ### Phase D — copilot-mro, application half
 - [x] **D.1 DONE.** Resolve the six app-code conflicts. Base of record is **ours** for chat management, user feedback,
@@ -1115,6 +1115,115 @@ NULL`, `tenants.llm_content_capture_enabled DEFAULT true`, `dashboard_profiles` 
 forced** and a `dashboard_profiles_isolation` policy. `llm_turn_content` is correctly still absent — it is a
 copilot-mro registry table, so `--registry core` was never going to create it and neither did the all-registry
 run against an unmerged copilot-mro.
+
+### Phase C2 — api, 2026-09-20, MERGED (worktree `api-obsm`, head `9812f44`)
+
+Eight commits: the merge (`37121a3`, resolution only), the five items, a self-review pass, and the
+response to an independent adversarial reviewer. Lane **1170 passed / 4 skipped / 0 failed / 0
+errors** against a pre-merge baseline of **1134 / 4**, re-measured with all four merged worktrees on
+`PYTHONPATH` after the reviewer pointed out the first run had used pre-merge `utils` and `core`. The
+set difference of failing ids is empty. pyflakes is **51 findings before and 51 after**, identical
+modulo line numbers; ruff 70 → 71, the delta being one `E402` of the same kind as 24 already present.
+
+**M-LOCK's premise was verified, not assumed.** `poetry check --lock` FAILS on their lock — its
+content-hash predates our psycopg dev-group addition — and passes on ours. Git's silent splice had
+kept our content-hash while taking their Poetry-2.4.0 header and two reordered marker lists, which is
+a lock describing a resolution no `poetry` run ever produced. Taken ours wholesale; their one real
+fix was already on our side. `pyproject.toml` and `poetry.lock` are byte-identical to `4da716f`.
+
+**C2.1/C2.2 — the defect was reproduced before it was fixed**, and it was wider than the plan said.
+`logger.error(f"Request failed: {exc}", error=…)` raises `KeyError "'type'"` against the pinned loguru
+when the exception's message is a Pydantic error repr. Their `bind` mechanics were taken; their
+message was not, because keeping the text as a `{}` argument buys back the same re-raise. The same
+defect was live at **two sites their diff never touched** — `main.py`'s general exception handler and
+`middleware/auth.py`'s unhandled-exception handler, the latter being the one that builds the
+CORS-decorable 500 the dashboard depends on. Both fixed, and pinned by a repo-wide AST guard rather
+than by three assertions.
+
+**C2.3 — M-WARN at the gateway.** `warn` is **refused** in a deployed environment, not downgraded,
+and refused *before* the check runs so it does not wait for the day partitions are short. The return
+value is the `/health/ready` entry, recorded on `app.state.degraded_components` and folded into the
+readiness body, lowering `healthy` → `degraded` while still answering 200 — which is the whole point
+of the mode. Two AST cases now pin the call site, because their change had turned
+`assert_partitions_provisioned` from a CALL into an ARGUMENT, invisible to the repo's call-by-name
+boot guard, and nothing in the suite asserted the gateway runs the Weaviate check at all.
+
+#### C2.4 — §5.6 is refuted on the merged tree, and C2.4 was executed instead
+
+§5.6 says "Phase C2: revert to the strict rule", on the premise that nothing in the diff puts
+`assert_rls_enforced` inside a `try`. That is true of their **api** diff and false of their
+**copilot-mro** branch. Measured with both detectors against the merged `copilot_mro/app/main.py`:
+**1 offender under strict, 0 under relaxed** — the merged lifespan legitimately wraps the call to
+stamp the startup span and re-raises. Reverting to strict would have shipped a guard that fails the
+moment copilot-mro's merge reaches the mainline. The later plan item (C2.4) is also the correct one.
+
+The real defect in their relaxation was that `any(isinstance(stmt, ast.Raise))` is satisfied by a
+`raise` that a `return` never reaches. The guard now requires an unconditional top-level `raise` and
+no `return`/`break`/`continue` outside a nested definition, and additionally handles
+`contextlib.suppress`, `return`-in-`finally`, `except*`, and one level of local-helper indirection.
+The remaining limitation — a helper in another module — is pinned by a test asserting it is NOT
+caught, so the coverage is legible instead of assumed.
+
+#### The adversarial reviewer's severest finding: a live database name on an anonymous route
+
+`/health/ready` sits outside `api_prefix` and skips auth. The readiness entry carried the error's own
+`remediation`, which is `REMEDY.format(database=<SELECT current_database()>)` — so an unauthenticated
+caller received a live database name and an internal script path. Three lines above, the same
+function strips `debug` for exactly this reason (G28). The entry now carries a stable `detail` token
+only and the remediation stays on the log.
+
+It also caught three guard holes and one test that passed for the wrong reason: the new real-gateway
+readiness test reached Postgres, S3 and Weaviate **for real** when run in the same process as
+`tests/startup`, because `main.py` imports the health router under the flat spelling
+(`routers.health`) while the test patched the qualified one — two module objects, two
+`_aggregate_probe` globals. Found only because a fingerprint assertion had been added. It now locates
+the module through the route and asserts the fake probe's service-key set, so it cannot pass against
+a live AWS session again.
+
+**18 mutation proofs**, each restored from a scratchpad copy rather than by `git checkout --`.
+
+#### Silent-merge register (§2.2a), api
+
+**Both sides (2):** `flynapse_api/main.py`, auto-merged into a region ours never touched, corrected in
+C2.3; `poetry.lock`, the silent splice, resolved to ours.
+
+**Theirs-only (6), and this is where the risk sat:** `middleware/logging.py` — **no api R22 guard
+swept it**, the repo's only `failure_fields` site being `main.py`, so their `error=str(e)` +
+`traceback=format_exc()` would have merged with nothing to catch it. `startup/weaviate_partitions.py`
+— a new file using `error_type=type(error).__name__`, the exact P0-GUARD anti-pattern, in a file no
+sweep lists. `startup/__init__.py` — adds a bare top-level module name `startup`; checked for
+collision, none. `test_startup_boot_check.py` — OUR guard, edited by them alone.
+`test_weaviate_partition_startup_mode.py` — asserts an exact log tuple containing `error_type`, which
+would have **locked in** the R22 regression. `test_logging_context_middleware.py` — kept, with the
+assertion it lacked added.
+
+#### Corrections to the plan from this phase
+
+- **§5.6's instruction is refuted on the merged tree** (above). Recorded here because it had been
+  living only in a test docstring.
+- §3's C2 says "five symbols that exist only on their copilot-mro branch"; measured, **four**.
+- M-LOCK's stated premise is verified true, including the `poetry check --lock` failure on theirs.
+
+#### Owed out of this phase, not done in it
+
+- **M-WARN is split-brain across two processes.** The gateway now refuses `warn` in a deployed
+  environment and logs the error's own remediation; `copilot-mro`'s own `main.py` honours the
+  identical variable with **no environment gate at all** and logs the `<database>` placeholder
+  constant, so M-WARN clauses 1 and 3 are unimplemented there. Mounted under the gateway copilot-mro
+  gets no lifespan — but it runs standalone in the dev stack and in its own deployment. The elegant
+  fix moves the gate into `weaviate_boot_check.partition_boot_check_mode()` so both callers inherit
+  it, leaving api's helper to shape the readiness entry only. **Phase G item.**
+- **`settings.is_production` (`not DEBUG`) is api's only environment discriminator, and it is wrong in
+  both directions**: a `DEBUG=false` local stack cannot use the mode the feature exists for, and a dev
+  tier running `DEBUG=true` makes `warn` selectable *and* returns 200 from `/health/ready` over a
+  known isolation hole. Mitigating: `DEBUG=true` already disables `SecurityHeadersMiddleware` and
+  flips the telemetry environment, so it is already a severe misconfiguration in a deployment. `iac`
+  has a real `var.environment`; api's settings expose no `ENVIRONMENT` field and App Runner sets no
+  `DEBUG`. Adding one is a deployment-contract change — **owner ruling owed.**
+- **B-R1 stays open in this repo, explicitly:** 11 `error=traceback.format_exc()` sites in
+  `flynapse_api/main.py` and one in `routers/health.py` still ship a rendered traceback whose last
+  line is `Type: message`. The new guard is scoped to the format-string defect and will never see
+  them. Owner-owed under §4c; stated here so it is not implicit.
 
 ### Phase D — copilot-mro application half, 2026-09-20, MERGED (worktree `copilot-mro-obsm`)
 
