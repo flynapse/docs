@@ -221,7 +221,7 @@ moved-base rule (§9).
 | **CollectorTelemetryAbsent** (new, `aws` only) | the collector's own uptime series absent, 15m | critical | new: the self-telemetry rides the same exporter it watches, so an exporter outage silences the three alarms above | PromQL `absent()` alarm |
 | AutomationWorkerSilent | worker series absent, 15m | warning | routed to `dev` on laptop stacks (§2.2) | metric-filter alarm on worker logs, missing data = breaching (relies on the worker's 5-minute liveness log, Task 22) |
 | TempoGeneratorSeriesNearCap | > 0.8 × `max_active_series`, 15m | warning | none | `oss` only (no Tempo in `aws`) |
-| AgentTurnFailureRatioHigh | > 10% with > 10 turns, 15m | critical | none (DARK until Stream L) | PromQL alarm, DARK-marked |
+| AgentTurnFailureRatioHigh | > 10% with > 10 turns, 15m | critical | none (~~DARK until Stream L~~ → **WIRED 2026-09-20, retrieval unproved: `RuntimeTelemetry.record_turn`**) | PromQL alarm; the rule and `CATALOGUE.md` now carry the WIRED note |
 | UnpricedModelCalls | increase > 0, 30m | warning | none (DARK) | same |
 | LedgerWriteFailures | increase > 0, 5m | critical | none (DARK) | same |
 | TenantDailySpendHigh | > $50 per tenant per 24h, 30m | warning | none — owner retunes later (DARK) | same |
