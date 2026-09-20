@@ -21,6 +21,9 @@ discovery the Opus reviewers already paid for.
 | `claims-E-deployment-and-iac.md` | copilot-mro deployment `6dc3160e..ea0ac559` + iac `f35ec20..3068b47` | 39 |
 | `claims-C2-api.md` | api `4da716f..9812f44` — the gateway merge, 8 commits | 35 |
 | `claims-phase6-dashboards.md` | Phase 6 — Grafana boards, Prometheus/Loki rules, runbooks, `iac` boards + `alarms.tf` | 48 |
+| `claims-B2-dashboard.md` | dashboard `42b3380..3afd524` — the merge, B2.1-B2.4 | 45 |
+| `claims-phase6-fixpass.md` | independent review of the Phase 6 fix pass, copilot-mro half | 24 |
+| `claims-phase6-iac-fixpass.md` | independent review of the Phase 6 fix pass, `iac` half | 22 |
 
 ## How to read a row
 
@@ -38,14 +41,14 @@ source document named a guard that does not resolve in the tree — read those f
 
 ## Totals, and the result worth knowing
 
-269 claims. **64 SETTLED · 85 ASSERTED · 120 OPEN.** **0 tier 0.**
+360 claims across **nine** slices. **84 SETTLED · 99 ASSERTED · 177 OPEN.** **0 tier 0.**
 
-Tier 0 is empty in all six files, independently. Work mechanical enough to qualify is work nobody
+Tier 0 is empty in all nine files. Exactly one tier-0 claim was ever filed, in the Phase 6 fix-pass review, and the controller **downgraded it to ASSERTED on 2026-09-20**: the gate says tier 0 requires `SETTLED`, `SETTLED` requires a guard shown to fail when the property is removed, and that row recorded `not recorded`. The bar held. Work mechanical enough to qualify is work nobody
 records a decision about, so it never becomes a claim; everything that *is* a claim embodies a
 decision, which puts it at tier 1 or 2. So the cost saving does not come from tier 0 excluding most
 of the corpus — it comes from a SETTLED claim being adjudicable from one row.
 
-**45% of the corpus is OPEN.** That number is the packet's real output. It was invisible while the
+**49% of the corpus is OPEN** — and the share ROSE as the packet grew, from 45% at six slices to 49% at nine. The three slices added last are the two independent fix-pass reviews and the dashboard merge, and reviews surface judgment calls faster than they surface guards. That number is the packet's real output. It was invisible while the
 same evidence sat in narrative prose, and it is the map of where judgment, not testing, is holding
 this work up.
 
