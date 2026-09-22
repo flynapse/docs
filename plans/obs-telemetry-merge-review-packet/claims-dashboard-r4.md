@@ -1,18 +1,22 @@
-# Claims packet: dashboard r4 (the review r3 fix batch) — PARTIAL (lane B, `tsc`, lint pending)
+# Claims packet: dashboard r4 (the review r3 fix batch) — FINAL
 
-Independent adversarial review (Opus), 2026-09-22, read-only throughout. **PARTIAL: everything below is final except the rows
-marked (pending), which wait on survivors' lane B, `tsc --noEmit` and `next lint`.**
+Independent adversarial review (Opus), 2026-09-22, read-only throughout. **Complete: every check ran, every claim row has a
+state, and the mutation ledger has no pending entry.**
 
 > **Two pauses, one packet.** The first reviewer was killed; a second (this one) resumed from the durable notes, spot-checked
 > the settled rows against the sources again — the three P2-1 sentences at core `7d5144c`, the table-column census, `M21`,
-> the contract fixture, F5/F6, and the range's own diffstat against `claims-dashboard-r3.md` — and **confirmed every one**
-> before being paused in turn (owner cut the agent cap to 1). Nothing below was weakened; P3-4 gained a second half.
-> Resume state, tree state and the remaining checks: `~/.claude/scratch/obs-merge/dash-review-r4/PAUSED.md`.
-> **Survivors lane B finished after the pause notice and is now SETTLED** (see the checks table and the ledger); its two
-> mutants were reverted and the scratch copy re-verified content-clean against `f8c4614`, so only `tsc` and `next lint`
-> are still owed. No real tree was touched. Core moved to `b540596` during the pause;
-> `git diff --stat 8d0df97 b540596 -- core/resources/analytics core/services/analytics` is EMPTY, so every core-dependent
-> row here still reads the same at core HEAD.
+> the contract fixture, F5/F6, and the range's own diffstat against `claims-dashboard-r3.md` — and **confirmed every one**,
+> was paused in turn (owner cut the agent cap to 1), and finished on resume. Nothing was weakened along the way; P3-4
+> gained a second half and the ledger gained its last two full-lane confirmations. Working notes and recipe:
+> `~/.claude/scratch/obs-merge/dash-review-r4/` (`NOTES.md`, `PAUSED.md`, `mutants/`, `mutants.log`, `logs/`).
+> No real tree was ever edited, checked out, committed or pushed; the scratch copy ends content-clean at `f8c4614`.
+>
+> **Core moved three times under this review** — `16cd1ae` (the commit the batch read) → `8d0df97` (r9) → `b540596` →
+> `19403fa` (HEAD as this closed). Each delta was measured, not assumed: `8d0df97` genuinely changed
+> `top_cited_documents` (that is P3-2), and after it `git diff --stat 8d0df97 b540596` and
+> `git diff --stat b540596 19403fa` over `core/resources/analytics` + `core/services/analytics` are both **EMPTY**
+> (`b540596..19403fa` is one file, `docs/plans/g61-comments-survive-tenant-delete.md`). So every core-dependent row below
+> reads the same at core HEAD as it does here.
 
 | range | repo | worktree | branch | commits |
 |---|---|---|---|---|
@@ -42,8 +46,8 @@ own exit status captured; exit 1 was read against the log for the aimed `✖` (a
 | core-contract test against core `8d0df97` | `f8c4614` | 3 / 3 (outcomes SQL and sentinel unchanged since `16cd1ae`) | 0 |
 | survivors lane A (D1 + D6 + C-rewire + C-aggrename, all applied) | `f8c4614` | 2668 / 2667 / 1 fail — a FILE-level runner IPC error ("Unable to deserialize cloned data") in `tenancy/operator-write-mutations.test.tsx`, which re-run alone WITH the mutants applied is 19 / 19, exit 0 → all four survive the full lane | 1 / 0 |
 | survivors lane B (D6c + M12b, both applied) | `f8c4614` | 2676 / 2676 pass / 0 fail, 680 s — no `✖` and no IPC flake → **both survive the full lane** | 0 |
-| `tsc --noEmit` | `f8c4614` | (pending) | |
-| `next lint --file` on the 20 touched source files | `f8c4614` | (pending) | |
+| `tsc --noEmit` | `f8c4614` | clean — not one diagnostic | 0 |
+| `next lint --file` on the 20 touched source files | `f8c4614` | "✔ No ESLint warnings or errors" | 0 |
 
 CI shape (read): `.github/workflows/quality.yml` runs `npm run test:unit` on GitHub (so `GITHUB_ACTIONS=true`); `amplify.yml`
 and the `Dockerfile` run no tests. So the core-contract test is a developer-workspace gate and a loud skip in CI — as ruled.
@@ -89,7 +93,7 @@ reproduce its ledger.
 
 ## Findings, ranked
 
-**Verdict (provisional): MERGE-CLEAN — P0 0 / P1 0 / P2 0 / P3 7.** Every r3 finding is closed in code, each r3 survivor is now
+**Verdict: MERGE-CLEAN — P0 0 / P1 0 / P2 0 / P3 7.** Every r3 finding is closed in code, each r3 survivor is now
 killed, and the rulings are implemented as ruled. The P3s are guard shape (three), copy that lags a core that moved after the
 brief (two), one pre-existing demo-mode gap the batch's own note mis-describes, and process.
 
@@ -271,7 +275,7 @@ reversible; 2 = irreversible or estate-shaping (RBAC). **Chunk:** F1 contract + 
 | DR4-18 | dashboard | `RegisterView.tsx:76-118` | `/register` form keyed by the held token | r3 F6 + ruling 3 | typed fields reset; confirmation left for the form; Cognito account left behind | 3 paste tests | yes: F6-register-unkeyed | 2 (functional) | 1 | F3 | **SETTLED** as ruled; the same-address "account exists" recovery **ASSERTED** (pre-existing path) (closes DR3-2a-20) |
 | DR4-19 | dashboard | `PermissionContext.tsx:130-145`, `:336-372` | A refused body is a failed load: error constant, three fields cleared, first load and refresh | r3 F5 | source-read; nothing renders `error` (FI) | both refusal tests | yes: F5-silent | 1 | 2 | F1 | **SETTLED** for the code (closes DR3-2a-06) |
 | DR4-20 | dashboard | `permissions-endpoint.test.tsx:205-250` (probe `:258-277`) | The probe proves the clearing | r3 F5 | probe reads `hasCapabilityInDepartment` only; `hasRouteAccess` uses `hasCapability` | same | **no — D6 AND D6c both survive the full lane** | 1 | 2 | F1 | **OPEN.** P3-1 |
-| DR4-21 | dashboard | `f8c4614` | Green at HEAD | — | full lane 2675/2676 (the one red is layout; 15/15 with api beside); analytics 77; `tsc` / lint (pending) | the lane | n/a | 3 | 0 | F2 | **SETTLED** for the lane; (pending) `tsc`, lint |
+| DR4-21 | dashboard | `f8c4614` | Green at HEAD | — | full lane 2675/2676 (the one red is layout; 15/15 with api beside); analytics 77/77; `tsc --noEmit` exit 0, no diagnostic; `next lint --file` ×20 "No ESLint warnings or errors" exit 0 | the lane | n/a | 3 | 0 | F2 | **SETTLED** |
 | DR4-22 | dashboard / workspace | plan r3 section; workspace plan G.32/G.34/M-* rows | Reviewer advice, merge order, plan rows | — | see P3-7 | none | n/a | 3 | 1 | F3 | **OPEN.** P3-7 |
 | DR4-23 | dashboard | `f8c4614` plan "20 mutants, all KILLED" | Implementer's ledger | — | 13 re-run here: all KILLED on the aimed `✖` | — | yes | 3 | 0 | F3 | **SETTLED** |
 | DR4-24 | dashboard | `analytics-panel-builders.tsx:343` | A deleted chat's user reads "Deleted chat" | the sentinel names no person | the M-FACTS-ANONYMISE ruling's words are "show it as a deleted user" | user-column test | yes | 3 | 0 | F1 | **SETTLED**, wording noted for the owner |
