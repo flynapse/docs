@@ -1,7 +1,8 @@
-# Claims packet: iac r5 (the post-r4 fix batch `74346bb..d1ebeb1`, plus `234603b`, `013dc89`, `9fda3db`, `5e476e0`) — PARTIAL
+# Claims packet: iac r5 (the post-r4 fix batch `74346bb..d1ebeb1`, plus `234603b`, `013dc89`, `9fda3db`, `5e476e0`)
 
-**PARTIAL (second version — lane 1 reviewer killed, lane 2 reviewer PAUSED by the owner mid-round at the agent-cap cut).**
-Independent adversarial review (Opus), 2026-09-22, read-only throughout. No tree was edited, checked out, stashed or
+**FINAL.** Independent adversarial review (Opus), 2026-09-22, read-only throughout. The round ran in three legs — a first
+reviewer killed mid-lane, a second paused by the owner at the agent-cap cut, and this finish — over one shared durable
+harness; every number below is measured, none is remembered. No tree was edited, checked out, stashed or
 committed; no terraform init/plan/apply against real state, no AWS, no docker, no network, no sub-agent. `iac` is still at
 `d1ebeb1` on `obs-merge`; its untracked files (`poc_ec2_setup_ubuntu.sh` and six `__pycache__/` dirs) are pre-existing and
 were not touched. Durable notes, every log, the clones and the mutation harness:
@@ -13,15 +14,22 @@ were not touched. Durable notes, every log, the clones and the mutation harness:
 | `74346bb..d1ebeb1` | iac | `/home/aditya/Code/iac` | `obs-merge` | 15: `d76c439` P2-1 · `f5b73f3` P3-A · `17a65c1` P3-B · `bac0f33` P3-C · `ac5ab23` P3-D · `6615cb0` P3-E · `0963a3e` P3-F · `a04b9c0` CLI flip · `d417b1a` P3-G · `61c5297` C2 ruling · `4e2a936` IR-25 · `ca095c8` IR-12 · `2965526` IB-03 · `0dda33a` IS-12 · `d1ebeb1` P3-B limit pin |
 | extra | iac | same | same | `9fda3db`, `234603b`, `5e476e0`, `013dc89` (never independently reviewed) |
 
-## Verdict (provisional — the round was paused before the four extra commits' diffs were read end to end)
+## Verdict
 
-- **Part 1, the fix batch `74346bb..d1ebeb1`: MERGE-CLEAN, provisionally P0 0 / P1 0 / P2 5 / P3 3.** Nothing ships broken.
-  All 15 commits are green at their own HEAD, every count in every message is exact, and all four "red before" claims that
-  name a prior sha were re-proved red at that sha. Each r4 finding the batch names is settled by a guard I saw fail. The
-  five P2s are latent coverage gaps in the NEW guards — each one fails OPEN, and each is a shape no tracked file uses today.
-- **Part 2, the four extra commits: PROVISIONAL MERGE-CLEAN, P2 0 / P3 2** on the evidence gathered so far (lanes green,
-  17 of 19 aimed mutants red). Two survivors are settled by later commits in part 1. **Not final**: the diffs of
-  `9fda3db`, `013dc89` and `5e476e0` were not read end to end before the pause.
+- **Part 1, the fix batch `74346bb..d1ebeb1` (15 commits): MERGE-CLEAN — P0 0 / P1 0 / P2 5 / P3 3.** Nothing ships
+  broken. All 15 commits are green at their own HEAD, every count in every message is exact, and all four "red before"
+  claims that name a prior sha were re-proved red at that sha. Every r4 finding the batch names is settled by a guard I
+  saw fail. The five P2s are latent fail-OPEN coverage gaps in the NEW guards — each one a shape no tracked file uses
+  today, none a defect in the HCL or YAML that ships.
+- **Part 2, the four extra commits `9fda3db` / `234603b` / `5e476e0` / `013dc89`: MERGE-CLEAN — P0 0 / P1 0 / P2 0 /
+  P3 4.** All four diffs read end to end. `5e476e0`'s "no behavioural terraform change" is exact (16 changed lines in
+  `alarms.tf`, all of them 8 description pairs; the dashboards change only `markdown` and `title`). `9fda3db`'s PromQL
+  repair is correct and complete on both API alarms. The four P3s are truth-and-process items, all already true or
+  already corrected in the tree; none blocks the merge.
+
+**Controller rulings applied (2026-09-22):** all five fail-OPEN P2s and the P3s go to **Future Improvements** in the iac
+plan, with **P2-2** flagged to the owner as the one worth a ~30-minute test-only fix. The two r4 residuals re-run at HEAD
+(I-X-C6, I-X-L8i) are **closed as contrived**. This is the last iac round.
 
 ## How it was run
 
@@ -64,17 +72,38 @@ Every count matches its message. **Red-before re-proof** (each new test run at i
 
 ## Mutation totals
 
-**82 runs, 81 valid: 53 KILLED, 28 SURVIVED.** One invalid: **I-IB03** (delete `scripts/b1b_metric_filter_probe.sh` and its
-pin entry) exits 1 with *15 errors*, not failures — a collection error is BROKE, not a kill, so IB-03's floor claim is
-**unproved either way** and is listed as REMAINING. Every survivor below was run against the **FULL lane** with the mutant
-applied and passed there. 58 runs were at HEAD `d1ebeb1`; 19 at the four extra commits; 5 are r4 survivors re-run at HEAD.
+**84 runs, 83 valid: 54 KILLED, 29 SURVIVED.** Every survivor below was run against the **FULL lane** with the mutant
+applied and passed there. 60 runs were at HEAD `d1ebeb1`; 19 at the four extra commits; 5 are r4 survivors re-run at HEAD.
 Harness: `runmut2.sh` — refuses a dirty tree (`git status --porcelain --ignored`, which sees `*_override.tf`), applies the
 prep, waits on the load/RAM gate, runs cold under `pytest-slot.sh` with a private `PYTHONPYCACHEPREFIX`, restores with
 `git checkout -- . && git clean -fdx` inside the mutation clone only, and proves the restore empty. Only exit 1 is a kill.
 
-Of the 28 survivors: 6 are controls or stated design; 5 are r4 survivors left open on purpose (I-X-V1/V2/V6 = r4 IR4-21,
-DEFERRED in plan §6; I-X-C6 and I-X-L8i = r4's contrived residuals); 4 are settled by a later commit in this same range;
-13 map to the findings below.
+One run was **invalid and has been replaced**: the first IB-03 mutant (`rm scripts/b1b_metric_filter_probe.sh` + drop its
+pin entry) exited 1 with **15 errors**, not failures — a collection error is BROKE, not a kill. The cause is an overreach,
+not the guard: `tests/unit/observability/test_shared_env_content_flags.py` pins that same file by NAME in its
+env-carrying set, so deleting it raises `FileNotFoundError` in that other guard's fixture before the floor is ever
+evaluated. See **IB-03, settled** below for the valid pair that replaces it.
+
+Of the 29 survivors: 7 are controls or stated design; 5 are r4 survivors left open on purpose (I-X-V1/V2/V6 = r4 IR4-21,
+DEFERRED in plan §6; I-X-C6 and I-X-L8i = r4's contrived residuals, closed by controller ruling); 4 are settled by a later
+commit in this same range; 13 map to the findings below.
+
+### IB-03, settled (`2965526`)
+
+The claim is that the vacuity floor is funded by durable files only — `MINIMUM_DURABLE_MENTIONS = 6`, and "today that
+total is 8". Bracketing the floor settles it in two runs, neither of which touches a file another guard pins:
+
+| mutant | edit | result |
+|---|---|---|
+| **IB03-f9** | `MINIMUM_DURABLE_MENTIONS = 6` → `9` | **KILLED** — `test_the_scan_is_not_vacuous`, `AssertionError: the prose scan found 8 … below the floor of 9`; `assert 8 >= 9` |
+| **IB03-f8** | `MINIMUM_DURABLE_MENTIONS = 6` → `8` | **SURVIVED**, FULL 302 passed |
+
+Together they pin the counted total at **exactly 8**, which is the arithmetic the pin dict states: 30 mentions total, less
+the 22 in `C2_SCOPED_FILES` (`alarms.tf` 6 + the probe 16), leaves 8. The exclusion really excludes. **The message's
+arithmetic is TRUE and the floor still bites.** Worth recording for the C2 lane: of those 8, two are the validator's own
+C2-scoped mentions (the B1b carve-out reasoning and `B1B_OPEN_METRIC_FILTER_SELECTORS`), so when C2 lands the count falls
+to **exactly 6 — the floor itself, with zero slack**. That is by design and the constant's comment says so, but it means
+the next durable mention deleted after C2 turns the floor red, which is the direction a vacuity floor should fail.
 
 ---
 
@@ -216,28 +245,81 @@ elegant fix (a published instrument inventory, with its type) is what closes it.
 
 ---
 
-## Findings (part 2: the four extra commits) — PROVISIONAL
+## Findings (part 2: the four extra commits) — all four diffs read end to end
 
-- **`234603b` — the "fabricated citation" verdict is FALSE, and this round re-confirms it.** Primary copilot-mro
-  (`langgraph-merge` `417df303`, HEAD unmoved since 2026-09-15 per reflog) `agent_shared/telemetry.py:38-41` creates
-  `agent.model.latency_seconds` with `unit="s"`. The obsm checkout at triage time (`1a4791d8`) had 0 hits because
-  `54a01f39` (2026-09-14) deleted it **on obs-merge**, and that commit is not an ancestor of `417df303`. The iac tree at
-  HEAD no longer repeats the error (`ca095c8` rewrote the constant's comment to name the branch each entry is read on).
-  The claim is still repeated in two immutable places: `234603b`'s own message, and the SDD ledger `progress.md:3949-3958`
-  (CP 11b), corrected only by an appended line at `:8139`. **P3, process.**
-- **`5e476e0` — a WIRED citation that was not yet true when it was written.** It cites copilot-mro G.6 emitters
-  (`agent.ledger.write_failures`, the `record_subagent` binding) that were committed only at copilot-mro `3978073b`
-  (2026-09-21 04:19); at `5e476e0`'s time obs-merge `c80c686d` had 0 hits. It is true at `557a178f`. **P3, process** — the
-  note is correct today, and the six mutants aimed at its check-6 grammar are all red (P5-1…P5-6).
-- **`9fda3db` — two survivors, both settled downstream in part 1.** P9-4 (`_word(service).search(text)` → `service in
-  text`) survives at `9fda3db` and is killed at `234603b` by
-  `test_a_gated_service_name_is_matched_as_a_word_not_a_substring`. P9-7 (delete the Pytest step from
-  `terraform-plan.yaml`) survives at `9fda3db` and is killed at HEAD by `4e2a936`'s `LANE` assertion. Five of seven aimed
-  mutants red.
-- **`013dc89` — one survivor, self-test strictness.** P0-3 loosens the test's own membership test
-  (`value not in GENAI_CAPTURE_OFF` → `not value.startswith(("false","no_content"))`) and passes the full 243: the
-  content-flag test's accepted-value SET is not itself pinned, so a later hand could widen it unnoticed. **P3.** P0-1 and
-  P0-2 (the escape-syntax planting) are red.
+**No P0, no P1, no P2.** Four P3s, every one of them a truth-or-process item that the tree has already absorbed.
+
+### What the diffs actually do (read, not inferred)
+
+- **`9fda3db`** (10 files, +740/-104). The substantive change is the PromQL repair of both API alarms, and it is
+  **correct and complete**. `ApiHighErrorRate` now takes its count through `histogram_count()` applied INNERMOST on both
+  limbs (`alarms.tf:291`, `:293`), so nothing above it carries a histogram operand. `ApiP95LatencyHigh` (`:307-320`) is
+  right in the subtler way: the LEFT limb keeps the bare family under `rate()` **inside** `histogram_quantile(0.95, sum
+  by (…) (rate(…)))`, which is the documented native form and needs no `histogram_count()`, while the `and on(…)` RIGHT
+  limb — which must be a float — takes `histogram_count(increase(…))`. `le` is gone from the left limb's grouping. I
+  found no remaining site where a histogram operand sits under arithmetic or a comparison.
+- **`5e476e0`** (8 files, +866/-40). **"No behavioural terraform change: 9 description strings, 0
+  query/threshold/pattern/gate" is exact.** In `alarms.tf` every changed non-comment line is a `description` — 16 lines,
+  8 pairs — and there is not one changed `query`, `threshold`, `pattern`, `treat_missing_data` or gate line. In
+  `dashboards/` only `markdown` (10) and `title` (8) change; no `metrics`, no `query`, no selector. The 595-char widget
+  titles CloudWatch truncates did move into the boards' text panels, as claimed.
+- **`013dc89`** (3 files, +1190/-394). A parser rebuild into `tests/_env_syntax.py` with a planted-defect matrix
+  (`DECOYS`, ~300 lines) far larger than the 13 evasions that prompted it. Two of three aimed mutants are red on that
+  matrix (P0-1 the HCL `$${`/`%%{` escape family, P0-2 the `\uXXXX` escaped key in HCL and JSON). CI's pyyaml install is
+  present and has since moved with the lane into `guards.yaml:36`.
+- **`234603b`** was read closely in an earlier leg; its verdict is below.
+
+### P3-4: `5e476e0` cites emitters that did not exist for another sixteen hours
+
+This is the one finding of substance in part 2. `5e476e0` (2026-09-20 12:00:38 -0700) asserts that copilot-mro's G.6
+"created the counter" for `agent.ledger.write_failures` and "bound `RuntimeTelemetry.record_subagent` as the subagent
+observer on BOTH runtimes", and rewrites nine state notes on that basis. The emitters first land at copilot-mro
+`3978073b`, authored **2026-09-21 04:19:12 -0700** — sixteen hours later. At `5e476e0`'s time the obs-merge tip
+(`c80c686d`) had zero hits for the binding.
+
+The claim is **true today** (verified this round: `557a178f` carries it at `agent_pipeline.py:273` and `:691`, and
+`agent_shared/subagent_runs.py:125`), so the tree at HEAD is correct and nothing needs changing. What makes it worth
+recording is *which* commit it is: `5e476e0` is the commit that BUILDS check 6, the guard whose whole job is to require
+"a code artifact named where it says WIRED". Check 6 passed on an artifact that did not yet exist, because it cannot read
+another repo — a limit the commit message itself states plainly ("What it CANNOT do is stated in the code, in the README,
+and in a test that asserts it… Proving that needs the cross-repo emitter inventory already designed under DEFERRED").
+The declared limit is not theoretical: it was exercised by the commit that declared it. This is the same unowned gap as
+r4's IR4-20, and the same fix closes both — the published emitter inventory.
+
+### P3-5: `9fda3db`'s failure-mode claim was an overclaim, and the tree has already retracted it
+
+`9fda3db`'s message says of the `histogram_count()` bet: "It fails LOUDLY if wrong, and the one edit that flips it is
+written next to it." Neither half survives in the tree. `alarms.tf:288` at HEAD now reads "Whether an unsupported
+function is rejected at PutMetricAlarm or just returns nothing is unestablished, and a query returning nothing sits GREEN
+here, so read this alarm's OK as 'no breaching contributor', never as 'observed healthy'… there is no prepared
+substitute", and the comment at `:274-281` records why the prepared substitute does not work (`histogram_sum()` is from
+the same Prometheus 2.40 cohort as `histogram_count()`, so a subset lacking one lacks the other, and it returns NaN where
+`histogram_count()` returns 0). A later commit outside this range caught it. **No action** — recorded so the correction
+is not lost, since the commit message is immutable and still carries the stronger claim.
+
+### P3-6: `013dc89`'s accepted-value set is not itself pinned
+
+`tests/unit/observability/test_shared_env_content_flags.py:93`, `:108`. **P0-3** loosens the guard's own comparison —
+`item.value.strip().lower() not in GENAI_CAPTURE_OFF` → `not …startswith(("false", "no_content"))` — and passes the full
+243. No decoy carries a value that merely STARTS with an accepted word, so a later hand can widen the gate from equality
+to prefix and nothing says so. Contrived (it needs an edit to the guard itself, and a real value like `false-ish` is
+unlikely), hence P3. One decoy closes it.
+
+### P3-7: the "fabricated citation" verdict on `234603b` is FALSE, and the ledger still says otherwise
+
+Confirmed, with the evidence re-read this round. Primary copilot-mro (`langgraph-merge` `417df303`, HEAD unmoved since
+2026-09-15 per reflog) `agent_shared/telemetry.py:38-41` creates `agent.model.latency_seconds` with `unit="s"`. The obsm
+checkout at triage time (`1a4791d8`) had zero hits because `54a01f39` (2026-09-14) deleted it **on obs-merge**, and that
+commit is not an ancestor of `417df303`. The iac tree no longer repeats the error — `ca095c8` rewrote the constant's
+comment to name the branch each entry is read on. It survives in two immutable places: `234603b`'s own message, and the
+SDD ledger `progress.md:3949-3958` (CP 11b), corrected only by an appended line at `:8139`. **Owner-facing.**
+
+### Two survivors that are settled downstream, not findings
+
+**P9-4** (`_word(service).search(text)` → `service in text`) survives at `9fda3db` and is killed at `234603b` by
+`test_a_gated_service_name_is_matched_as_a_word_not_a_substring`. **P9-7** (delete the Pytest step from
+`terraform-plan.yaml`) survives at `9fda3db` and is killed at HEAD by `4e2a936`'s `LANE` assertion. Both are the ordinary
+shape of a series of commits, not gaps.
 
 ---
 
@@ -277,10 +359,74 @@ elegant fix (a published instrument inventory, with its type) is what closes it.
 - **`_hcl_blocks` one-body:** the BOM and `\u` name-escape shapes (I-U1, I-U2) are red.
 - **The CI gate, honest edits:** removing `needs: guards` (I-G1), and changing the lane's step list (I-G3), are red.
 
-## REMAINING (see `~/.claude/scratch/obs-merge/iac-review-r5/PAUSED.md` for the ordered list and the recipe)
+## Claims table
 
-1. Re-run **IB-03** (`2965526`) with a valid mutant — the current one BROKE the collection.
-2. Read the diffs of `9fda3db`, `013dc89`, `5e476e0` end to end (only `234603b` was read closely) and finalise part 2.
-3. Decide **I-X-C6 / I-X-L8i** (r4 residuals, re-run at HEAD and still surviving): Future-Improvements or closed.
-4. Finish the claims table (rows IR5-01…) and the tier columns, then strip PARTIAL.
+**Severity:** 0 = a content leak that ships · 1 = guard or lock integrity · 2 = a coverage gap · 3 = docs or process.
+**Tier** (§2.3a): 0 = settled by a guard I SAW fail · 1 = consequential but reversible · 2 = irreversible or
+estate-shaping. **Chunk:** F1 contract + privacy · F2 the merge itself · F3 the residual.
 
+| # | Repo | File:line | Decision taken | Why | Evidence | Guard test | Mutation-proved? | Sev | Tier | Chunk | Claim state |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| IR5-01 | iac | `tests/_hcl_blocks.py:44`, `:50-58` | `_LABEL_TOKEN` accepts a quoted label or a bare identifier, so both header forms are read | r4 P2-1 / IR4-03: a bare-labelled resource escaped every per-resource rule | `TRAPS` gain a bare, a mixed, an all-quoted-unspaced resource, a bare `dynamic`, a bare `data` and a bare module | `tests/unit/infra/test_hcl_blocks.py::test_resources_are_found_and_a_commented_one_is_not`, `::test_bare_and_quoted_labels_are_the_same_block` | **yes.** Red-before at `74346bb` (2 failed); A1c, A3, I-B1, I-B2, I-L6e red | 2 | 0 | F1 | **SETTLED for the spellings it names** |
+| IR5-02 | iac | same, `:44` | a bare label needs a preceding space and ASCII only | the house style has no other form | terraform 1.12.2 parses `resource "t"n {` and a unicode bare label; `fmt` rewrites both | none | no: **A1**, **A2** survive, FULL 302 each | 2 | 1 | F1 | **REFUTED in part** (P2-1) |
+| IR5-03 | iac | `test_weaviate_ports_declared_and_admitted.py:178-191` | each client SG's EGRESS is read: a port leaves via `0.0.0.0/0` or a server group, by one rule reader | r4 P3-A / IR4-05: the egress half was named and never read | `lambda.tf` egress; the docstring lists what is NOT counted | `::test_the_weaviate_host_admits_both_ports_from_each_client` | **yes.** E2, E3, E4, E5, I-W10uR, I-W11, I-W11b red | 2 | 0 | F2 | **SETTLED** |
+| IR5-04 | iac | same, `:51`, `:184` | `ANYWHERE in cidrs` — a substring test on `cidr_blocks` as written | the other unreadable shapes fail closed | a ternary's losing branch is still a substring | none | no: **E1** survives, FULL 302 | 2 | 1 | F2 | **REFUTED** (P2-5) — the one direction that inverts |
+| IR5-05 | iac | `test_loguru_diagnose_off_on_compute.py:139-151`, `:330-356` | the script may name `.env` only on the heredoc line and in a `chmod`; any other site fails whatever its verb | r4 P3-B / IR4-07: the guard read one heredoc while compose reads the final file | eight planted shapes (`>>`, `>`, `tee`, `sed -i`, `cp`, a variable path, chmod-chained) | `::test_a_second_write_to_the_dotenv_is_refused` | **yes.** Eight parametrised shapes + I-S2 red | 2 | 0 | F1 | **SETTLED for the verbs it names** |
+| IR5-06 | iac | same, `:141` (`_DOTENV_WORD`), `:150` | the match runs against lexed WORDS | a word is the unit the lexer yields | a quoted command string is ONE word, with `.env` in its middle | none | no: **F1** (`bash -c "… >> .env"`), **F2** (`eval`) survive, FULL 302 each | 2 | 1 | F1 | **REFUTED** (P2-4) |
+| IR5-07 | iac | `tests/_hcl_blocks.py:1-12`, `_env_syntax.hcl_source` | ONE prepared text for both readers: BOM dropped, `\uXXXX` name escapes decoded | r4 P3-C / IR4-02 | `test_a_bom_and_escaped_names_read_as_the_env_scanner_reads_them` | that test | **yes.** Red-before at `17a65c1` (1 failed); I-U1, I-U2 red | 2 | 0 | F2 | **SETTLED** |
+| IR5-08 | iac | `test_loguru_diagnose_off_on_compute.py:228-243` | a local module source must RESOLVE inside the repo and outside any hidden directory | r4 P3-D / IR4-11: `../lambdas/…` is a sibling repo | seven parametrised sources, the real `../..` call included | `::test_nothing_hides_a_resource_from_the_classification` | **yes.** I-L6b, I-L6e red | 2 | 0 | F1 | **SETTLED** |
+| IR5-09 | iac | same, `:286-300` (`forwarder_package`) | the shipped directory is DERIVED: `filename` → an `archive_file` in the same module dir → its literal `${path.module}/<dir>`; anything else fails closed | r4 P3-E / IR4-09: a hardcoded `lambda_src` stayed green | `alerting.tf` `filename` / `source_dir` | `::test_the_forwarder_lambda_really_has_no_loguru` | **yes, both halves.** L8f (`filename` → a static prebuilt zip) and L8g (`source_dir` → `source_file`) KILLED; I-L8s, I-L8x red | 2 | 0 | F1 | **SETTLED** |
+| IR5-10 | iac | `test_cli_metrics_stay_off.py` (the bullet assertion) | the claim is asserted THROUGH `validator.state_notes`, check 6's own reader | r4 P3-F / IR4-16: a backticked mention passed | exactly one note on the bullet | the same test | **yes.** I-D5 red | 1 | 0 | F3 | **SETTLED** |
+| IR5-11 | iac | `dashboards/llm-agents.json.tftpl` (CLI bullet) | flipped `DARK` → `WIRED 2026-09-22, retrieval unproved`, naming the module and both call sites | r4 IR4-15: stale since copilot-mro `557a178f` | `claude_cli_telemetry.py` + two call sites at `557a178f` | the bullet's pin, now through check 6 | n/a (a content flip) | 3 | 1 | F3 | **SETTLED** (r4's owed flip is paid) |
+| IR5-12 | iac | `test_validate_metric_vocabulary.py` (recorder pin) | the pin reads backticked identifiers AND `.py` paths; both boards' files are listed | r4 P3-G / IR4-19: five emitters named by FILE were unpinned | each file-named emitter's emitting line at `557a178f` | `::test_the_legacy_rows_name_the_recorders_that_exist` | **yes.** I-R3 red | 3 | 0 | F3 | **SETTLED** (still a pin on words; the published inventory stays the elegant fix) |
+| IR5-13 | iac | `.github/workflows/guards.yaml`; `terraform-plan.yaml:22-27`; `terraform-apply.yaml:18-23` | ONE reusable guard lane (`on: workflow_call`) that both workflows call, with every terraform job `needs:`-ing it | IR-25: apply ran none of the guards | read at YAML level: both `uses: ./.github/workflows/guards.yaml`, both `needs: guards`, `fetch-depth: 0` | `tests/unit/ci/test_workflows_gate_on_the_guards.py` | **yes.** Red-before at `61c5297` (3 failed); I-G1, I-G3, G10 red | 1 | 0 | F2 | **SETTLED** (the YAML is right) |
+| IR5-14 | iac | `test_workflows_gate_on_the_guards.py:40-65` | presence of the lane's `run` strings + membership in `needs` is the gate | those are the two things the YAML says | neither `if`, nor `continue-on-error` (job or step), nor `with.ref` is read | none | no: **G5** (`if: always()`), **G6**, **G8**, **G9** (`continue-on-error`), **G7** (`ref: main`) all survive, FULL 302 each | 2 | 1 | F2 | **REFUTED** (P2-2) — the owner's flagged fix |
+| IR5-15 | iac | same, `:55-59` | a terraform job is one whose step `run` starts with `terraform ` | the house style writes it first | an env prefix, `cd x && `, `sudo`, or terraform on line 2 of a `run: \|` block all read as "not terraform" | the non-vacuity `assert terraform` | no: **G11b** (a `drift_apply` job, `run: TF_IN_AUTOMATION=1 terraform apply …`, no `needs:`) survives, FULL 302; G10 killed only by the non-vacuity limb | 2 | 1 | F2 | **REFUTED** (P2-3) |
+| IR5-16 | iac | `scripts/validate_metric_vocabulary.py:485-505`, `:1404-1427` | the alarms making no state claim must EQUAL `ALARMS_WITHOUT_STATE_NOTE`, in both directions | IS-12: 11 of 19 alarms made no claim and nothing could tell | the 12 registered sites, each with its reason | `::test_an_alarm_without_a_state_claim_must_be_registered`, `::test_the_unnoted_register_reads_every_alarm_description` | **yes.** Red-before at `2965526` (5 failed); I-N1 (74 failed), I-N2 red | 2 | 0 | F3 | **SETTLED for `alarms.tf`** |
+| IR5-17 | iac | same, `:132` (`ALARMS_FILE`); `scripts/validate_alarms.py:42` (`ALERT_SURFACE`) | the alarm surface is `alarms.tf` (+ `alerting.tf`) | every alarm lives there today (6 resources + 2 maps, verified across all 25 `.tf`) | an alarm in any other `.tf` is read by neither validator | none | no: **N6** (an unnoted alarm in `cloudwatch.tf`) survives, FULL 302, both validators exit 0 | 3 | 1 | F3 | **PARTIAL** (P3-1) — latent; the constant's own comment scopes itself correctly, only the message over-reads |
+| IR5-18 | iac | `tests/unit/observability/test_attribute_key_prose_pinned.py:76`, `:84`, `:144-152` | the vacuity floor counts DURABLE files only; `MINIMUM_DURABLE_MENTIONS = 6`, today 8 | IB-03: 16 of 30 mentions came from a probe deleted when C2 settles, so the C2 cleanup would have reddened the floor for a non-vacuity reason | 30 total − 22 C2-scoped = 8 | `::test_the_scan_is_not_vacuous` | **yes, bracketed.** IB03-f9 (floor 9) KILLED with `assert 8 >= 9`; IB03-f8 (floor 8) SURVIVED, FULL 302 | 3 | 0 | F3 | **SETTLED** (arithmetic TRUE; post-C2 the margin is exactly zero, by design) |
+| IR5-19 | iac | `scripts/validate_metric_vocabulary.py` (`UNIT_SUFFIXED_INSTRUMENTS` comment) | the constant names the copilot-mro BRANCH its entries are read on, and the third instrument on the pushed line | IR-12: the claim was true of `obs-merge` and false of `langgraph-merge` | `417df303` `telemetry.py:38-41` creates `agent.model.latency_seconds`; `54a01f39` deleted it on obs-merge and is not an ancestor | none (a comment) | n/a | 3 | 1 | F3 | **SETTLED** — and it is the in-tree correction of the false "fabricated citation" verdict |
+| IR5-20 | iac | `alarms.tf` B1b block | states the M-ALARM-DENOMINATOR ruling (keep `notBreaching`, add one denominator metric filter) and what stays owner-owed | the block still read "OWNER RULING OWED" after the 2026-09-22 ruling | comment only, 293 → 293 | none | n/a | 3 | 1 | F3 | **SETTLED** |
+| IR5-21 | iac | `dashboards/llm-agents.json.tftpl`; `alarms.tf` ApiHighErrorRate | a board or alarm may change which AGGREGATION it applies to a histogram with no guard | the validators read names, dialect and state notes, never the expression | — | none | no: **H1** (`histogram_sum` → `rate`), **H2** (both `histogram_count` wrappers dropped) survive, FULL 302, all three validators exit 0 | 3 | 1 | F3 | **OPEN** (P3-2) — same family as r4 IR4-21; the published instrument inventory closes both |
+| IR5-22 | iac | `terraform-plan.yaml:3-11`; `validate_metric_vocabulary.py` (`"examples" not in p.parts`) | the `pull_request:` trigger and the examples exclusion | the plan comment says the PR trigger is what makes the guards bite on a branch | triggers are pinned on `guards.yaml` only; the exclusion is unpinned | none | no: **H3**/P2-7 and **H4**/P2-6 survive, FULL 302 | 3 | 1 | F3 | **OPEN** (P3-3) |
+| IR5-23 | iac | `alarms.tf:288`, `:291-320` | both API alarms take their count through `histogram_count()` INNERMOST; `le` leaves the quantile grouping | `9fda3db` P0-A: both alarms were inert — `histogram / histogram` and `histogram >= float` are undefined, so the samples dropped | read end to end this round: left limb `histogram_quantile(0.95, sum by (…) (rate(…)))` (native form, correctly no `histogram_count`), right limb `histogram_count(increase(…))` | none | no (P3-2 covers it) | 1 | 1 | F2 | **SETTLED as a repair** (correct and complete; unguarded) |
+| IR5-24 | iac | `9fda3db` message | "It fails LOUDLY if wrong, and the one edit that flips it is written next to it" | the `histogram_count()` subset bet | `alarms.tf:288` now says the failure mode "is unestablished" and `:274-281` says there is no working substitute | none | n/a | 3 | 1 | F3 | **REFUTED, already corrected in-tree** (P3-5) |
+| IR5-25 | iac | `5e476e0` (9 state notes) | 0 behavioural terraform change | the commit rewrites truth claims only | **exact:** `alarms.tf` changes 16 non-comment lines, all 8 `description` pairs, 0 query/threshold/pattern/gate; `dashboards/` changes only `markdown` (10) and `title` (8) | check 6 | **yes.** P5-1…P5-6 all red | 1 | 0 | F3 | **SETTLED** (verified line by line) |
+| IR5-26 | copilot-mro / iac | `5e476e0` vs copilot-mro `3978073b` | the WIRED notes name G.6's emitters | check 6 requires a code artifact where a note says WIRED | `5e476e0` is 2026-09-20 12:00:38; `3978073b` is authored 2026-09-21 04:19:12 — sixteen hours later. True today at `557a178f` (`agent_pipeline.py:273`, `:691`) | check 6 (cannot read another repo — a limit the commit states) | n/a | 3 | 1 | F3 | **PARTIAL** (P3-4) — the declared cross-repo limit, exercised by the commit that declared it |
+| IR5-27 | iac | `test_shared_env_content_flags.py:93`, `:108` | GenAI capture counts as off only for a whole-RHS literal `false` / `NO_CONTENT` | `013dc89`: 13 planted evasions had stayed green | the `DECOYS` matrix (~300 lines) | `::test_a_planted_violation_is_caught_in_every_syntax` | **yes for the parser** (P0-1, P0-2 red); **no for the set** — P0-3 (equality → prefix) survives, FULL 243 | 3 | 1 | F1 | **PARTIAL** (P3-6) |
+| IR5-28 | SDD ledger | `progress.md:3949-3958` (CP 11b) | the "fabricated citation" verdict on `234603b` | it is FALSE, re-verified this round | `417df303` `telemetry.py:38-41`; `54a01f39` is not an ancestor of it | none | n/a | 3 | 1 | F3 | **OPEN, owner-facing** (P3-7) — corrected only by an appended line at `:8139` |
+| IR5-29 | iac | all 22 SHAs | each commit is green at its own HEAD: the suite plus the three validators | the guard lane runs all four | 275 → 302 across the range, every count matching its message; all validators exit 0; rootdir = each clone; every clone clean after its lane | the guard lane | n/a (measured) | 1 | 1 | F2 | **SETTLED** (measured) |
+| IR5-30 | copilot-mro | `_emitted_series.py:181,183` | r4 IR4-20, carried forward | the phantom recorder name survives in copilot-mro-obsm | nothing in this range touches it | none | n/a | 3 | 1 | F3 | **OPEN, unowned** (unchanged from r4) |
+
+**Totals: 30 claims. 17 SETTLED · 5 PARTIAL · 5 REFUTED · 3 OPEN.** 13 are tier 0 and 17 tier 1; **none is tier 2** —
+nothing in either range changes a name, unit or attribute of the signal contract, content capture, RBAC or tenancy.
+
+## Open and refuted claims, for the plan's Future Improvements
+
+Per the controller's ruling all of these are **Future Improvements**, not another round. In descending order of what they
+would cost to close:
+
+1. **IR5-14 (P2-2)** — the CI gate reads neither `if`, nor `continue-on-error`, nor `with.ref`. **Flagged to the owner as
+   the one worth a ~30-minute test-only fix**, because it defeats the gate `4e2a936` exists to install: assert no
+   `if`/`continue-on-error` on the guard job, its steps, or any terraform job, and no `ref:` on the lane's checkout.
+2. **IR5-15 (P2-3)** — detect `terraform` at a command position in the whole `run`, not as a prefix of its first line.
+3. **IR5-02 (P2-1)** — drop the `[ \t]+` requirement before a bare label and widen the class to HCL's unicode
+   identifiers; add `resource "t"n {` and a unicode bare label to `TRAPS`.
+4. **IR5-06 (P2-4)** — re-lex the body of a `bash -c` / `sh -c` / `eval` / `su -c` argument, or fail on any word that
+   merely CONTAINS `.env` outside the heredoc line and the `chmod`.
+5. **IR5-04 (P2-5)** — treat a non-literal `cidr_blocks` as unreadable and fail closed, as `_hcl_blocks` already does for
+   `merge(...)`.
+6. **IR5-17 (P3-1)** — derive the alarm set from every `terraform_files(root)` file, or guard that no `.tf` outside
+   `ALERT_SURFACE` declares an alarm.
+7. **IR5-21 (P3-2)** and **IR5-26 (P3-4)** — both close with the published cross-repo instrument/emitter inventory
+   already designed under DEFERRED; so does r4's IR4-21 and the unowned IR5-30.
+8. **IR5-22 (P3-3)**, **IR5-27 (P3-6)** — one assertion and one decoy respectively.
+
+**Owner-facing, no code:** IR5-28 (the SDD ledger still carries the false "fabricated citation" verdict) and IR5-30 (r4's
+IR4-20, still unowned).
+
+## Closed by controller ruling, not by evidence
+
+**I-X-C6** (`{__name__=~"claude.?code.*"}` — no `_`, so `_is_series_shaped` drops it) and **I-X-L8i**
+(`importlib.import_module("loguru")`) were re-run at HEAD and survive, as they did at r4. Both are **closed as
+contrived**: each needs a spelling no human writes to defeat a guard that already catches every spelling one does.
