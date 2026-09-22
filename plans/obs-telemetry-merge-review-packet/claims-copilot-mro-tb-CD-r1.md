@@ -1,37 +1,66 @@
 # Claims packet — copilot-mro M-TRACEBACK lanes C (services) + D (scripts), review r1
 
-Independent adversarial review, Opus 5, 2026-09-22. **PARTIAL — paused by the controller (agent cap cut to 1).**
+Independent adversarial review, Opus 5, 2026-09-22. **FINAL.**
 
-**What is final and what is not.** Every lane-C and lane-D finding below is FINAL: the first
-reviewer completed the whole packet (both lane heads, the register, the scope arithmetic, 17
-mutants, the probes, the per-head full lanes and rehearsals 1 and 2) before it was killed; a
-second reviewer spot-checked its DONE items and they held. The ONE item still owed is
-**rehearsal 3 onto the moved obs-merge head `ce545211`** — the merges are done and resolved, the
-test runs on them are not. Resume plan, recipe and remaining steps in order:
-`~/.claude/scratch/obs-merge/tb-review-cd/PAUSED.md`. **The verdicts below do not change with
-rehearsal 3**: it produced the same six conflicts with the same resolutions and the same register
-arithmetic as rehearsals 1 and 2, and none of the six new obs-merge commits touches a file either
-lane edits.
+**The gating P1 has since been fixed, and both lanes are re-verdicted MERGE-CLEAN.** The single
+estate defect that held both lanes (C-1 = D-1: `failure_fields` kwargs reaching a sink that drops
+them) was paid off in utils — **utils-obsm `2f33a1c`** (`7613a4b` makes the loguru safe default keep
+and write the withheld extras it used to throw away, and adds `utils/_stdlib_records.py`, a record
+factory that renders withheld flattened non-reserved attributes through a script's own
+`basicConfig` formatter; `f799876` closes the second-layer gap). **I re-ran all three of my own
+sink probes against that utils and the refutation no longer holds** — see "The gating fix, re-probed".
+Nothing in either lane changed; the sink underneath them did.
 
 **Controller asks answered:**
-- **The A+B privacy-guard question.** `tests/agent_sdk/core` + `tests/architecture` are green at `ece9c60e`, at `3637540d` and on both merge rehearsals. `test_served_api_runtime_and_tool_ordinary_logs_do_not_emit_content` PASSED at all four. Lanes C and D have no site in that guard's scope. Row X-1.
+- **The A+B privacy-guard question.** `tests/agent_sdk/core` + `tests/architecture` are green at `ece9c60e`, at `3637540d` and on all three merge rehearsals — **1428 passed, 1 skipped** on the final one. `test_served_api_runtime_and_tool_ordinary_logs_do_not_emit_content` PASSED in all five trees (22 passed with the sibling pinned, every time). Lanes C and D have no `extra={**failure_fields(exc)}` site in that guard's scope — this is the lane-A defect the A+B review found, and neither C nor D repeats it. Row X-1.
 - **The owner's typed-refusal carve-out.** The HELD `seed_dev_tenant.py::main` site **is that shape**. `Aborted(RuntimeError)` is script-local, raised only in this file, at 9 sites that interpolate identifiers only, and it is caught by its own type. See the section at the end.
 
 **Verdicts:**
 
-| lane | verdict | P0 | P1 | P2 | P3 |
-|---|---|---|---|---|---|
-| C | **FIX-FIRST** | 0 | 1 | 3 | 4 |
-| D | **FIX-FIRST** | 0 | 1 | 2 | 3 |
-| shared scope guard | — | — | — | — | 1 |
+| lane | verdict | P0 | P1 | P2 | P3 | was (before utils `2f33a1c`) |
+|---|---|---|---|---|---|---|
+| C | **MERGE-CLEAN** | 0 | 0 | 3 | 4 | FIX-FIRST, 0/1/3/4 |
+| D | **MERGE-CLEAN** | 0 | 0 | 2 | 3 | FIX-FIRST, 0/1/2/3 |
+| shared scope guard | — | — | — | — | 1 | unchanged |
+| the rehearsal tooling | — | — | — | — | 1 | new (M-5) |
 
-**Both P1s are one estate defect** (C-1 = D-1):
-- `failure_fields(exc)` puts the error type and frames into loguru kwargs or stdlib `extra`.
-- Any process that never calls `setup_logging` has a sink that drops those fields: the deployed S3 PDF Lambda, six stdlib `basicConfig` AD scripts, and three loguru scripts.
-- In those processes the converted line is now a bare constant. There is no type, no frames, and no ids — the conversion moved the ids into kwargs, and the sink drops them.
-- The lanes' tests capture records upstream of the sink, so they cannot see this.
-- The cheapest fix is outside both lanes: one utils change, making the safe-default loguru sink and a stdlib formatter render the flattened extras.
-- **If that fix lands, or the controller rules the entrypoints call `setup_logging`,** both lanes are MERGE-CLEAN on their own diffs. The one exception is lane C's C-9, which is two small tests.
+Merge-blocking is P0/P1 only. **Neither lane has one.** Every P2 and P3 below routes to the
+post-merge follow-ups batch; none of them is a defect the lanes introduced except C-9 (an absent
+pin) and D-4/D-5 (over-conversion and a pin moved to a place no consumer reads).
+
+### The gating fix, re-probed
+
+**The former P1 (C-1 = D-1) was one estate defect:** `failure_fields(exc)` puts the error type and
+frames into loguru kwargs or stdlib `extra`, and any process that never calls `setup_logging` had a
+sink that dropped them — the deployed S3 PDF Lambda, six stdlib `basicConfig` AD scripts and three
+loguru scripts. In those processes the converted line was a bare constant: no type, no frames, and
+not even the ids, because the conversion had moved the ids into kwargs too. The lanes' own tests
+capture records upstream of the sink, so they could not see it.
+
+**utils-obsm `2f33a1c` fixes it at the sink, which is where I said the cheapest fix was.** All three
+probes re-run against that utils, with `merged3` on the path:
+
+| probe | before (`735f8213`, old utils) | lane head, old utils | **merged3 + utils `2f33a1c`** |
+|---|---|---|---|
+| `probe/stdlib_basic.py` (the AD scripts) | the full rendered traceback | `… ERROR dispatch_ad_notifications Dispatch failed` — nothing else | `… Dispatch failed \| {'error_type': 'RuntimeError', 'stack': '  File "…", line 8, in <module>\n  File "…", line 6, in boom\n'}` |
+| `probe/loguru_default.py` (the chunk scripts) | the message | `… - Failed to upload a chunk` | `… - Failed to upload a chunk \| {'file_key': 'k/1.json', 'error_type': 'RuntimeError', 'stack': '…'}` |
+| `probe/lambda_probe.py` (the deployed Lambda) | `Lambda function error: 'list' object has no attribute 'get'` + `[rendered traceback withheld]`; body carried the same words | `Lambda function error` — nothing else | `Lambda function error \| {'error_type': 'AttributeError', 'stack': '  File "…s3_pdf_processor_lambda.py", line 193, in lambda_handler\n'}`; body `"Lambda function error: AttributeError"` |
+
+- **The type and the frames now reach the sink**, which is exactly what both lanes' commit subjects
+  promised and what the ruling asked for.
+- **The ids come back with them** (`file_key='k/1.json'`) — the conversion's move of ids into kwargs
+  is no longer a loss.
+- **No new leak.** The probes raise `RuntimeError("SECRET row value 42")`. That message appears in
+  none of the three post-fix lines. The sink renders the withheld *fields*, not the message.
+
+**One consequence I checked, because it is the lanes' own risk:** the safe-default sink now prints
+*every* non-reserved extra, where before it printed none. So anything a lane passes as a kwarg is
+newly visible at the terminal. I enumerated every kwarg the two diffs ADD to a log call: they are
+identifiers (`document_id`, `tenant_id`, `operator_id`, `file_key`, `wo_id`, `task_hierarchy_key`,
+`references_url`, `column_name`, `job_id`, `orphaned_key`, `folder_prefix`, `task_id`,
+`work_order_number`, `processor`), a `page_size` count, a `str(path)` and the constant
+`error="Service error"`. **No free text, no exception message, nothing a tenant authored.** The
+change surfaces what the lanes intended to surface and nothing more.
 
 **Nothing in either lane ships a content leak (no P0).** The register, the frozen seed digest and every scope approval are arithmetically clean and guard-proved (R1, S1, S2 killed).
 
@@ -45,7 +74,12 @@ lane edits.
   - `wtC`, `wtD`, `wtBase` — worktrees of that clone at `ece9c60e`, `3637540d` and `735f8213`. Every mutant ran in them, and each was restored and verified clean.
   - `C/`, `D/`, `base/` — `git archive` copies, used for reading.
   - Scripts: `run.sh` (the lane recipe), `regdiff.py`, `regmerge.py`, `scope_check.py`, `binding.py`, `shadow.py`, `aborts.py`.
-  - `probe/` — the sink probes. `mut/` — the mutants and `results.txt`. `NOTES.md`.
+  - `probe/` — the sink probes. `mut/` — the mutants and `results.txt`. `NOTES.md`, `PAUSED.md`.
+- The review ran in three sittings (the first reviewer was killed, the second paused at the agent
+  cap and resumed). The clone checkout is branch `merged3` at `8679f89c`, clean; rehearsals 1 and 2
+  survive as branches `merged` (`797c6898`) and `merged2` (`db7830dc`).
+- Run logs for the final rehearsal: `m3-run1.log` (389 passed), `m3-run2.log` (1428 passed),
+  `m3-run3.log` (22 passed).
 
 | lane | worktree | branch | range |
 |---|---|---|---|
@@ -77,6 +111,10 @@ lane edits.
 | full `tests/unit -n 2 -m "not db"` @ `3637540d` (wtD) | **6665 passed, 23 skipped, 5 failed, 6 errors** (591 s): the same 11 location reds, nothing else |
 | `tests/agent_sdk/core` + `tests/architecture` (`-n 2 -m "not db"`) @ wtC / wtD / rehearsal `797c6898` / rehearsal `db7830dc` | 1426 / 1426 / 1428 / 1428 passed, 1 skipped. In each tree 2 architecture files collect-error with `RootAnchorError` for sibling `api`, which is a location artifact reproduced at `735f8213`. Re-run with `SIBLING_CHECKOUTS=api=/home/aditya/Code/api-obsm`, those files plus `test_agent_sdk_ordinary_log_privacy.py` give **22 passed in all four trees**. |
 | both guards + `test_tool_results_carry_no_exception_text.py` + `test_sdk_tool_handlers_are_seated.py` + `test_register_ratchet_history.py` on rehearsal `db7830dc` (current obs-merge `37e84d1c` + C + D) | 297 passed |
+| **rehearsal 3 `merged3` = obs-merge `16760afc` + tbC + tbD**, both guards alone | **213 passed** (28 s) — the same figure as at both lane heads and both earlier rehearsals |
+| the same, plus `test_tool_results_carry_no_exception_text` + `test_sdk_tool_handlers_are_seated` + `test_register_ratchet_history` + the 5 test files the moved head brought | **389 passed** (129 s), exit 0. `copilot_mro.app` from the rehearsal tree, `utils` from `utils-obsm` |
+| `tests/agent_sdk/core` + `tests/architecture` on `merged3` | **1428 passed, 1 skipped** (98 s) — the same figure as rehearsals 1 and 2. The only reds are the 2 known `RootAnchorError` architecture files (a location artifact, red at `735f8213` too) |
+| the 2 architecture files + `test_agent_sdk_ordinary_log_privacy.py` on `merged3` with `SIBLING_CHECKOUTS=api=…/api-obsm` | **22 passed** (9 s) — the same figure as at wtC, wtD and both earlier rehearsals |
 | the lanes' own full lanes, read from their notes | C `ece9c60e`: 6764 passed, 1 failed (deadline), 8 errors (known). D `3637540d`: 6763 passed, 1 failed (deadline), 8 errors (known). |
 
 **Known pre-existing reds, confirmed at `735f8213`:**
@@ -117,7 +155,12 @@ Each survivor was aimed first. Then all five were applied **together** to the me
 
 ## Lane C — findings
 
-### C-1 (P1, tier 1) — the Lambda's failure logs now carry nothing: no type, no frames, no message
+### C-1 (was P1, **CLOSED** by utils `2f33a1c`) — the Lambda's failure logs carried nothing: no type, no frames, no message
+
+> **Closed.** The sink now renders the withheld extras: the Lambda logs
+> `Lambda function error | {'error_type': 'AttributeError', 'stack': '… line 193, in lambda_handler'}`.
+> The finding as first written follows, for the record.
+
 
 `lambda_functions/s3_pdf_processor_lambda.py` never calls `setup_logging`, and utils' `_loguru_default.py` docstring says the same of "the S3 PDF lambda". Its sink is the safe loguru default, which writes loguru's default line with no `{extra}`. Every `logger.error("…", **failure_fields(e))` in the Lambda process loses `error_type` and `stack`:
 - 5 sites in the Lambda file;
@@ -233,7 +276,14 @@ The approved hunk makes `_safe_failure_message` read `__cause__`, with the comme
 
 ## Lane D — findings
 
-### D-1 (P1, tier 1) — ten scripts now print a bare constant: no type, no frames, and the moved ids are gone too
+### D-1 (was P1, **CLOSED** by utils `2f33a1c`) — ten scripts printed a bare constant: no type, no frames, and the moved ids were gone too
+
+> **Closed.** Both script sinks now render the withheld extras, ids included:
+> `… Dispatch failed | {'error_type': 'RuntimeError', 'stack': '…'}` and
+> `… Failed to upload a chunk | {'file_key': 'k/1.json', 'error_type': 'RuntimeError', 'stack': '…'}`.
+> The finding as first written follows, for the record. Note that mutant **D1 still survives** —
+> nothing checks that a failure is *described at all* — which is why D1 stays on the follow-ups list.
+
 
 **Stdlib scripts.** `scripts/ad/dispatch_ad_notifications`, `evaluate_ad_applicability`, `fetch_ad_samples`, `fetch_new_ads`, `list_applicability_unknown` and `materialize_ad_corpus` have 14 calls between them.
 - They configure `logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s %(message)s")`.
@@ -416,7 +466,7 @@ After the rehearsal:
 - the guards, the widened tool-result detector, the seat guard and the ratchet-history test give **297 passed**;
 - `tests/agent_sdk/core` + `tests/architecture` are green (the Lanes table).
 
-**Rehearsal 3, onto the head as it stands now (PARTIAL — merges done, runs owed).** obs-merge
+**Rehearsal 3, onto the head as it stands now — COMPLETE.** obs-merge
 moved again, `37e84d1c` → `ce545211`: 6 commits, 8 files (`agent_shared/turn_facts.py`,
 `weaviate_tenancy.py` and 6 test files). **None of the 8 is touched by lane C or lane D.** In the
 scratch clone, branch `merged3` = `ce545211` + `tbC` (`e391546c`) + `tbD` (`f5ba5a93`), plus a
@@ -429,8 +479,27 @@ sort tidy (`02e866b1`):
 - `scripts/purge_llm_turn_content.py` taken from obs-merge is byte-identical to
   `ce545211:scripts/purge_llm_turn_content.py`;
 - `SEEDED_SHA256 = 80a7ff66…` is unchanged.
-- **Owed:** the guards, `tests/agent_sdk/core` + `tests/architecture`, the r8-era extras and the 5
-  new pins the moved head brought, all on `merged3` (steps 2–6 of `PAUSED.md`).
+
+**The head then moved once more, `ce545211` → `16760afc`, and it changes nothing.** That commit is
+**docstring-only**: 5 lines in
+`tests/unit/observability/test_no_exception_text_in_logs.py::test_a_reseed_comes_with_a_new_detector`,
+restating the rule as `unbound_reseeds`. **Neither lane touches that file** — C and D each touch
+exactly two files under `tests/unit/observability/` (`_mro_exception_text_debt.py` and
+`test_phase1c_nonagent_scope_guard.py`), so the file is outside both diff surfaces and cannot
+conflict. Merging the new head into `merged3` confirms it: **zero conflicts**, one file, 5
+insertions / 5 deletions (`8679f89c`). The commit is also digest-neutral by construction — the
+detector digest is this module *without* docstrings. **Every run below was done on `8679f89c`,
+i.e. C + D on `16760afc`, so the rehearsal evidence is at the head as it stands.**
+
+**Arithmetic on the finished rehearsal** (`regdiff.py`, `merged3` against `16760afc`):
+- DEBT **505 → 349 keys, 719 → 491 sites**: −156 keys, −228 sites;
+- `deleted == REPAIRED added` (156 each), **none removed from REPAIRED**, no key added to DEBT, no
+  partial lowering;
+- `SEEDED` and `SEEDED_SHA256` equal;
+- the only lane key left in DEBT is the HELD `scripts/seed_dev_tenant.py::main` (line 380), which
+  the owner's carve-out closes;
+- `MRO_POST_MERGE_PRODUCTION_PATHS`: **135 → 144** entries (135 + lane C's 1 + lane D's 8), exactly
+  as predicted.
 
 **A nit about the rehearsal tool, not the lanes.** `regmerge.py` appends each inserted key to its
 index list out of file order, so a run of new keys lands **reversed**; rehearsal 2's register
@@ -511,7 +580,7 @@ The evidence gathered before the ruling follows, kept for the record.
 
 | # | Lane | File:line | Claim (decision taken) | Evidence (command) | Verdict | Severity | Tier | Failure scenario |
 |---|---|---|---|---|---|---|---|---|
-| C-1 | C | `lambda_functions/s3_pdf_processor_lambda.py:233` et al.; `utils/_loguru_default.py` | Lambda failures are logged "by type and frames" | `probe/lambda_probe.py` at base vs `ece9c60e` | **REFUTED** at the sink | P1 | 1 | a production ingest failure cannot be diagnosed from CloudWatch |
+| C-1 | C | `lambda_functions/s3_pdf_processor_lambda.py:233` et al.; `utils/_loguru_default.py` | Lambda failures are logged "by type and frames" | `probe/lambda_probe.py` at base vs `ece9c60e` vs `merged3`+utils `2f33a1c` | was **REFUTED** at the sink; **CLOSED** — utils `2f33a1c` renders the withheld extras, re-probed green | — (was P1) | 1 | — |
 | C-2 | C | `data_discovery/service.py:1367` → `takeaways.py:446` → `service.py:1489` → `dashboard/types/data-discovery.ts:287` | `_analyze_level2_context` is REPAIRED | `rg analysis_fallback_reason`; `safe_payloads` blocked-key read | OPEN (pre-existing, survives a REPAIRED function) | P2 | 2 | Claude SDK error text in the tenant's public L2 summary |
 | C-3 | C | `document_hub/processing.py:221,243,283,306` → `schemas/document_hub.py:360` | DocHub failures stay out of bodies | `rg internal_error` (no stripper); the response models | OPEN (pre-existing) | P2 | 2 | parser, S3 or Weaviate error text in `GET /document-hub/documents` |
 | C-9 | C | `mro_document_service.py:436,516`; `pilot_document_service.py:218,288`; `s3_pdf_processor_lambda.py:233,362,496` | the 500 bodies are constant or type-only | mutants C2, C3, C5 SURVIVED on the full lane | ASSERTED (unguarded) | P2 | 2 | `{e}` returns to a 500 body and the suite stays green |
@@ -524,7 +593,7 @@ The evidence gathered before the ruling follows, kept for the record.
 | C-11 | C | register | 90/129 paid, == REPAIRED, seed unchanged | `regdiff.py`; R1 KILLED | SETTLED | — | 0 | — |
 | C-12 | C | scope `level1.py` | the approval covers exactly its 3 hunks and is needed | `scope_check.py`; S1 KILLED | SETTLED | — | 0 | — |
 | C-13 | C | `level1._safe_failure_message` | the user-facing batch text survives the constant wrapper | C1 KILLED | SETTLED | — | 1 | — |
-| D-1 | D | `scripts/ad/*` (14 calls); `build_referred_by_mapping`, `load_task_hierarchy_locations`, `update_chunks_with_task_hierarchy` (13) | scripts "log a failure by type and frames" | `probe/stdlib_basic.py`, `probe/loguru_default.py`; D1 SURVIVED on the full lane | **REFUTED** at the sink | P1 | 1 | "Dispatch failed", "Failed to update references for a document" — no type, frames or id |
+| D-1 | D | `scripts/ad/*` (14 calls); `build_referred_by_mapping`, `load_task_hierarchy_locations`, `update_chunks_with_task_hierarchy` (13) | scripts "log a failure by type and frames" | `probe/stdlib_basic.py`, `probe/loguru_default.py` at base vs lane vs `merged3`+utils `2f33a1c`; D1 SURVIVED on the full lane | was **REFUTED** at the sink; **CLOSED** — utils `2f33a1c`, re-probed green, ids restored. The unpinned-description gap (mutant D1) stays on the follow-ups list | — (was P1) | 1 | — |
 | D-2 | D | `create_akasa_solo_tenant.py:1181,1362`; `migrate_tenancy_schema.py:4228`; `provision_rls.py:2045`; `provision_weaviate_mt.py:798`; `migrate_ifim_dynamodb.py:443`; `e2e/figure_arc_headless_e2e.py:202` | an abort prints type + frames | `aborts.py`; code read | OPEN (owner ruling) | P2 | 1 | the operator cannot learn which role, table, rows or property failed |
 | D-3 | D | `certify_model_profile.py` ×13; `capture_oss_live_fixtures.py:465`; `seed_dev_tenant.py:651,664`; `provision_weaviate_mt.py:494` | lane-D files print no exception text | `rg` over the lane's files; D3 SURVIVED on the full lane | OPEN | P2 | 1 | error text in a certification record or a committed fixture |
 | D-4 | D | `reset_demo.py:617`; `manual_sandbox_check.py:22,84`; 12 import guards; `materialize_ad_corpus.py:1024` | non-exception values converted | code read | OPEN | P3 | 1 | the sandbox check cannot say which rule blocked a transform |
@@ -536,7 +605,8 @@ The evidence gathered before the ruling follows, kept for the record.
 | M-1 | merge | see Merge rehearsal | C then D merge onto `557a178f` with 6 mechanical conflicts; purge is taken from obs-merge | scratch `797c6898`; guards 213; full lane green bar location artifacts | ASSERTED | — | 1 | — |
 | M-2 | merge | `scripts/ad/evaluate_ad_applicability.py` `_post_commit_side_effects` | r7b × tbD conflict | `git merge-tree r7b tbD` | OPEN (resolve at merge time) | P3 | 1 | resolving to either side drops r7b's refusal text or lane D's frames |
 | M-3 | merge | rehearsal onto obs-merge `37e84d1c` | the same 6 conflicts and resolutions hold on the moved head | scratch `db7830dc`; guards + M-TOOL-ERRORS detector + seat + ratchet: 297 passed | ASSERTED | — | 1 | — |
-| M-4 | merge | rehearsal 3, onto obs-merge `ce545211` | the same 6 conflicts and resolutions hold on the head as it stands now; no new-commit file overlaps either lane | scratch `merged3` = `ce545211`+tbC `e391546c`+tbD `f5ba5a93`; regmerge 68/66/66/2; purge byte-identical to `ce545211`'s | **PARTIAL** — merges done, the runs on `merged3` are owed (`PAUSED.md` steps 2–6) | — | 1 | — |
+| M-4 | merge | rehearsal 3, onto obs-merge `16760afc` (via `ce545211`) | the same 6 conflicts and resolutions hold on the head as it stands now; no new-commit file overlaps either lane | scratch `merged3` `8679f89c`; regmerge 68/66/66/2; purge byte-identical to the head's; the `16760afc` merge is 0 conflicts; 389 + 1428 + 22 passed; DEBT −156/−228, scope 135→144 | **SETTLED by run** | — | 1 | — |
 | M-5 | tooling | `regmerge.py` (reviewer's own script) | a run of inserted REPAIRED keys lands reversed; `db7830dc` is unsorted too | `sort -c` over the `REPAIRED` block | OPEN (cosmetic — `REPAIRED` is a frozenset, the guard is order-blind) | P3 | 1 | a hand resolver copies the unsorted block into the real merge |
 | X-1 | C, D | `tests/agent_sdk/core/test_agent_sdk_ordinary_log_privacy.py`; `tests/architecture` | neither lane has a site in the ordinary-log privacy guard's scope | the two dirs at wtC, wtD, `797c6898`, `db7830dc`: green; the privacy test PASSED ×4 (`SIBLING_CHECKOUTS=api=…` for the 2 location-red architecture files, red at base too) | SETTLED by run (not mutation) → ASSERTED | — | 1 | — |
+| X-3 | C, D | every kwarg the two diffs ADD to a log call | utils `2f33a1c` makes the safe-default sink print EVERY non-reserved extra, so what the lanes pass is newly visible — none of it is content | enumeration of added kwargs across `laneC.diff` + `laneD.diff`; the 3 probes show no `SECRET …` message post-fix | **SETTLED** — identifiers, a count, a `str(path)` and one constant; no free text, no exception message | — | 2 | — |
 | X-2 | D | `seed_dev_tenant.py:162,1173` | the HELD site is a typed sanctioned refusal (owner carve-out) | `aborts.py`; `rg` for outside raisers/importers: none | ASSERTED | — | 1 | — |
