@@ -1,6 +1,17 @@
 # Claims packet — copilot-mro M-TRACEBACK lanes C (services) + D (scripts), review r1
 
-Independent adversarial review, Opus 5, 2026-09-22. **FINAL.**
+Independent adversarial review, Opus 5, 2026-09-22. **PARTIAL — paused by the controller (agent cap cut to 1).**
+
+**What is final and what is not.** Every lane-C and lane-D finding below is FINAL: the first
+reviewer completed the whole packet (both lane heads, the register, the scope arithmetic, 17
+mutants, the probes, the per-head full lanes and rehearsals 1 and 2) before it was killed; a
+second reviewer spot-checked its DONE items and they held. The ONE item still owed is
+**rehearsal 3 onto the moved obs-merge head `ce545211`** — the merges are done and resolved, the
+test runs on them are not. Resume plan, recipe and remaining steps in order:
+`~/.claude/scratch/obs-merge/tb-review-cd/PAUSED.md`. **The verdicts below do not change with
+rehearsal 3**: it produced the same six conflicts with the same resolutions and the same register
+arithmetic as rehearsals 1 and 2, and none of the six new obs-merge commits touches a file either
+lane edits.
 
 **Controller asks answered:**
 - **The A+B privacy-guard question.** `tests/agent_sdk/core` + `tests/architecture` are green at `ece9c60e`, at `3637540d` and on both merge rehearsals. `test_served_api_runtime_and_tool_ordinary_logs_do_not_emit_content` PASSED at all four. Lanes C and D have no site in that guard's scope. Row X-1.
@@ -405,6 +416,28 @@ After the rehearsal:
 - the guards, the widened tool-result detector, the seat guard and the ratchet-history test give **297 passed**;
 - `tests/agent_sdk/core` + `tests/architecture` are green (the Lanes table).
 
+**Rehearsal 3, onto the head as it stands now (PARTIAL — merges done, runs owed).** obs-merge
+moved again, `37e84d1c` → `ce545211`: 6 commits, 8 files (`agent_shared/turn_facts.py`,
+`weaviate_tenancy.py` and 6 test files). **None of the 8 is touched by lane C or lane D.** In the
+scratch clone, branch `merged3` = `ce545211` + `tbC` (`e391546c`) + `tbD` (`f5ba5a93`), plus a
+sort tidy (`02e866b1`):
+- **the same 6 conflicts arose, with the same resolutions** — no new conflict, and
+  `scripts/migrate_tenancy_schema.py` auto-merged cleanly again;
+- the set-level register resolution is arithmetically identical to rehearsals 1 and 2: 68 lane-D
+  DEBT keys deleted, 66 removed from ours (cli had already taken the 2 `purge` keys), 66 REPAIRED
+  added, 2 already present;
+- `scripts/purge_llm_turn_content.py` taken from obs-merge is byte-identical to
+  `ce545211:scripts/purge_llm_turn_content.py`;
+- `SEEDED_SHA256 = 80a7ff66…` is unchanged.
+- **Owed:** the guards, `tests/agent_sdk/core` + `tests/architecture`, the r8-era extras and the 5
+  new pins the moved head brought, all on `merged3` (steps 2–6 of `PAUSED.md`).
+
+**A nit about the rehearsal tool, not the lanes.** `regmerge.py` appends each inserted key to its
+index list out of file order, so a run of new keys lands **reversed**; rehearsal 2's register
+(`db7830dc`) is unsorted from line 86 of `REPAIRED` for that reason. `REPAIRED` is a `frozenset`
+and the guard is order-blind, so it is cosmetic — but whoever resolves the register by hand should
+keep the file sorted, as `merged3` now is.
+
 **r7b is ordered BEFORE tbA..D (cli → r7b → tbA..D).** `git merge-tree` shows:
 - **`r7b × tbD` conflicts in `scripts/ad/evaluate_ad_applicability.py`**, in `_post_commit_side_effects`' `expected_dispatch_failures` handler:
   - r7b adds `roster_refusal` and `_NO_CLEAN_REPLAY`, and logs `"… failed (%s). " + _NO_CLEAN_REPLAY, type(exc).__name__`;
@@ -503,5 +536,7 @@ The evidence gathered before the ruling follows, kept for the record.
 | M-1 | merge | see Merge rehearsal | C then D merge onto `557a178f` with 6 mechanical conflicts; purge is taken from obs-merge | scratch `797c6898`; guards 213; full lane green bar location artifacts | ASSERTED | — | 1 | — |
 | M-2 | merge | `scripts/ad/evaluate_ad_applicability.py` `_post_commit_side_effects` | r7b × tbD conflict | `git merge-tree r7b tbD` | OPEN (resolve at merge time) | P3 | 1 | resolving to either side drops r7b's refusal text or lane D's frames |
 | M-3 | merge | rehearsal onto obs-merge `37e84d1c` | the same 6 conflicts and resolutions hold on the moved head | scratch `db7830dc`; guards + M-TOOL-ERRORS detector + seat + ratchet: 297 passed | ASSERTED | — | 1 | — |
+| M-4 | merge | rehearsal 3, onto obs-merge `ce545211` | the same 6 conflicts and resolutions hold on the head as it stands now; no new-commit file overlaps either lane | scratch `merged3` = `ce545211`+tbC `e391546c`+tbD `f5ba5a93`; regmerge 68/66/66/2; purge byte-identical to `ce545211`'s | **PARTIAL** — merges done, the runs on `merged3` are owed (`PAUSED.md` steps 2–6) | — | 1 | — |
+| M-5 | tooling | `regmerge.py` (reviewer's own script) | a run of inserted REPAIRED keys lands reversed; `db7830dc` is unsorted too | `sort -c` over the `REPAIRED` block | OPEN (cosmetic — `REPAIRED` is a frozenset, the guard is order-blind) | P3 | 1 | a hand resolver copies the unsorted block into the real merge |
 | X-1 | C, D | `tests/agent_sdk/core/test_agent_sdk_ordinary_log_privacy.py`; `tests/architecture` | neither lane has a site in the ordinary-log privacy guard's scope | the two dirs at wtC, wtD, `797c6898`, `db7830dc`: green; the privacy test PASSED ×4 (`SIBLING_CHECKOUTS=api=…` for the 2 location-red architecture files, red at base too) | SETTLED by run (not mutation) → ASSERTED | — | 1 | — |
 | X-2 | D | `seed_dev_tenant.py:162,1173` | the HELD site is a typed sanctioned refusal (owner carve-out) | `aborts.py`; `rg` for outside raisers/importers: none | ASSERTED | — | 1 | — |

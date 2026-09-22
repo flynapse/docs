@@ -1,453 +1,634 @@
-# Task R.4 — orphan analysis (both directions) + attribute & cardinality compliance
+# Task R.4 — orphan analysis, re-derived from code (2026-09-21)
 
-Read-only audit. Nothing was written outside this scratchpad; no tree was modified.
+Read-only audit. This file is the only thing that was edited. Nothing was committed, staged or
+stashed; no tree was modified.
 
-## 0. What I read, and when
-
-| Tree | Path | HEAD at read time | Working tree |
-|---|---|---|---|
-| copilot-mro | `/home/aditya/Code/copilot-mro-obsm` | `obs-merge` @ `d8d2570c` | **21 files modified, uncommitted** — I read the working tree |
-| api | `/home/aditya/Code/api-obsm` | `obs-merge` @ `9812f44` | clean except untracked `tests/unit/api_surface/` |
-| utils | `/home/aditya/Code/utils-obsm` | `obs-merge` @ `e6b464e` | clean |
-| core | `/home/aditya/Code/core-obsm` | `obs-merge` @ `d7f7b54` | clean |
-| dashboard | `/home/aditya/Code/dashboard-obsm` | `obs-merge` @ `3afd524` | **4 untracked files — a third implementer is active** (see §5, item 15) |
-| iac | `/home/aditya/Code/iac` | `obs-merge` @ `2d493c8` | clean (untracked `__pycache__` + a POC shell script only) |
-| telegram-bot / shift-optimizer / flynapse-otel | `main` | — | clean |
-
-**Moving-target caveat.** Every file under `copilot-mro-obsm/deployment/`, `docs/runbooks/observability/`,
-`deployment/otel/dashboards/CATALOGUE.md` and `tests/integration/otel/_emitted_series.py` is *currently
-being edited*. My reads are a snapshot taken between 09:05 and 09:30 on 2026-09-20. Where a claim
-differs between `HEAD` and the working tree I say which I am quoting.
-
-**In-flight exclusions (per the brief).** Three signals are being wired right now by the copilot-mro
-implementer. They are **excluded from the orphan verdict** and listed separately in §2b:
-`agent.subagent.calls`, `agent.subagent.duration_seconds`, `agent.ledger.write_failures`.
-I confirmed by diff that all three are uncommitted: `git diff` on `telemetry.py` (+36),
-`agent_pipeline.py` (+17), `lang_agent/backend.py` (+16), `agent_claude/orchestrator.py` (+13),
-`agent_shared/subagent_runs.py` (+52), `usage_ledger.py` (+53), `model_call_ledger.py` (+20).
+**This is a full re-derivation, not an edit of the 2026-09-20 version.** The producer set was
+rebuilt from instrument-creating code and collector config; no number was copied from
+`_emitted_series.py`, from the R.3 coverage matrix, or from the previous R.4. Where a previous
+figure survives, it survives because it was re-derived and matched, and that is said explicitly.
 
 ---
 
-## 1. Emitted-but-unconsumed
+## 0. Lead — what changed against the 2026-09-20 version
 
-**Consumers searched (the complete set):** 8 Grafana boards (85 panels total) under
-`copilot-mro-obsm/deployment/observability-local/grafana/provisioning/dashboards/flynapse/*.json` ·
-4 Prometheus rule files (12 rules) under `.../rules/prometheus/` · 1 Loki rule file (5 rules) at
-`.../rules/loki/flynapse/browser-alerts.yml` · 4 runbooks under
-`copilot-mro-obsm/docs/runbooks/observability/` · 8 CloudWatch dashboard templates under
-`iac/dashboards/*.json.tftpl` · `iac/alarms.tf` (13 PromQL alarms + 6 log-metric-filter alarms + 3
-classic alarms).
+The old numbers are cited elsewhere in the plan set, so the delta comes first.
 
-Panel census (`grep -c '"gridPos"'`): agent-turn-explorer 3 · dependencies 5 · frontend 19 ·
-llm-agents 12 · platform-health 9 · service-overview 7 · shift-optimizer 12 · telegram-bot 18 = **85**.
-
-### 1a. Metrics
-
-| Signal | Kind | Emitter (file:line) | Consumption | Verdict |
-|---|---|---|---|---|
-| `agent.turn.calls` | counter | `copilot-mro-obsm/copilot_mro/app/services/agent_shared/telemetry.py:1406` / recorder `:1819` | charted (fn-llm-agents p6), rule (`AgentTurnFailureRatioHigh` oss+aws), iac markdown ×2 | consumed |
-| `agent.turn.duration_seconds` | histogram | same file `:1411` / `:1819` | charted (fn-llm-agents p7), iac markdown | consumed |
-| `agent.model.calls` | counter | `telemetry.py:1427` / `:1842` | charted (fn-llm-agents p2) **oss only** | consumed (oss); **no AWS consumer** |
-| `agent.model.cost_usd` | counter | `telemetry.py:1432` / `:1842` | charted, rule (`TenantDailySpendHigh` oss+aws), runbook | consumed |
-| `agent.model.unpriced_calls` | counter | `telemetry.py:1437` / `:1842` | charted, rule (`UnpricedModelCalls` oss+aws), runbook | consumed |
-| `gen_ai.client.token.usage` | histogram | `telemetry.py:1421` / `:1842` | charted (fn-llm-agents p1, p5), iac markdown | consumed |
-| **`gen_ai.client.operation.duration`** | histogram | `telemetry.py:1416` / `:1842` (recorded whenever `usage.latency_seconds is not None`) | **none** — named only in `CATALOGUE.md:151`'s name-mapping table; no panel, no rule, no alarm, no runbook query | **ORPHAN** |
-| `agent.tool.calls` | counter | `telemetry.py:1442` / `:1871` | charted (fn-llm-agents p8 target C) **oss only** | consumed (oss); **no AWS consumer** |
-| `agent.tool.attempts` | counter | `telemetry.py:1447` / `:1871` | charted (p8 A+B), iac markdown | consumed |
-| `auth.rejections` | counter | `api-obsm/flynapse_api/middleware/telemetry.py:34` / emit `:85` | charted (fn-service-overview p5), iac markdown | consumed |
-| `http.server.request.duration` | histogram | auto-instr., `api-obsm/flynapse_api/telemetry/http_server.py` (`OTEL_SEMCONV_STABILITY_OPT_IN=http` defaulted at `flynapse-otel/flynapse_otel/bootstrap.py:171`) | charted ×8, rules `ApiHighErrorRate`/`ApiP95LatencyHigh` (oss+aws) | consumed |
-| `http.server.active_requests` | up-down | same instrumentation | charted (fn-service-overview p4), iac markdown | consumed |
-| `http.client.request.duration` | histogram | auto-instr. httpx/requests/urllib3 — verified present at `.venv/.../opentelemetry/instrumentation/httpx/__init__.py:792`, attrs incl. `SERVER_ADDRESS` | charted (fn-telegram-bot p13), iac markdown | consumed |
-| `telegram.updates` | counter | `telegram-bot/telegram_bot/telemetry.py:856` / emit `:649` | charted (p1) | consumed |
-| `telegram.updates.active` | up-down | `:859` / `:631,:648` | charted (p2), iac markdown | consumed |
-| `telegram.turns` | counter | `:883` via `counted()` `:896` | charted ×5, rule `TelegramTurnFailureRate` (oss+aws) | consumed |
-| `telegram.turn.duration` | histogram | `:862` / `:796` | charted (p6) | consumed |
-| `telegram.turn.phase.duration` | histogram | `:868` / `:799` | charted (p7) | consumed |
-| `telegram.turn.cost` | counter | `:874` / `:801` | charted (p8, p9) | consumed |
-| `telegram.jobs` | counter | `:877` / `:842` | charted (p15) | consumed |
-| `telegram.uploads` | counter | `:886` | charted (p11) | consumed |
-| `telegram.provisionings` | counter | `:887` | charted (p12) | consumed |
-| `telegram.refusals` | counter | `:890` | charted (p10) | consumed |
-| `optimizer.runs` | counter | `shift-optimizer/shift_optimizer/app/services/run_telemetry.py:51` / `:175` | charted ×3, rule `OptimizerRunFailureRate` (oss+aws) | consumed |
-| `optimizer.run.duration` | histogram | `:54` / `:176` | charted (p5) | consumed |
-| `optimizer.solve.duration` | histogram | `:60` / `:145` | charted (p6) | consumed |
-| `optimizer.runs.active` | up-down | `:66` / `:194,:206` | charted (p3), iac markdown | consumed |
-
-#### 1a-bis. The legacy `MetricsService` block — an entire unconsumed family
-
-`utils-obsm/utils/observability/metrics.py` still ships `LegacyMetricsService`, which
-**auto-registers a counter/histogram/up-down-counter on first use from the call site's own string**
-(`metrics.py:100,110,123,133`). `get_metrics_service()` (`metrics.py:144`) always returns a live
-service — there is no off switch. Every name below is therefore emitted whenever its code path runs,
-and **not one of them is named by any panel, rule, alarm, or runbook query** (verified by grepping
-all six consumer surfaces; the only `document_hub_*` hits in `CATALOGUE.md` are the `document_hub_documents`
-**table**, not a metric).
-
-| Signal | Kind | Emitter (file:line) | Consumption | Verdict |
-|---|---|---|---|---|
-| `llm_requests_total` | counter | `utils-obsm/utils/llm.py:393,444,799` | none | **ORPHAN** |
-| `llm_request_duration` | histogram (unit `1`) | `utils/llm.py:400,451` | none | **ORPHAN** |
-| `llm_tokens_total` | counter | `utils/llm.py:350` | none | **ORPHAN** |
-| `llm_tokens_per_request` | histogram (unit `1`) | `utils/llm.py:358` | none | **ORPHAN** |
-| `embedding_requests_total` | counter | `utils/llm.py:1179` | none | **ORPHAN** |
-| `embedding_tokens_total` | counter | `utils/llm.py:1183` | none | **ORPHAN** |
-| `embedding_cost_usd` | histogram (unit `1`) | `utils/llm.py:1189` | none | **ORPHAN** (and a USD figure recorded as a unitless histogram) |
-| `embedding_request_duration` | histogram (unit `1`) | `utils/llm.py:1193` | none | **ORPHAN** |
-| `embedding_cache_hits_total` | counter | `utils/llm.py:1299` | none | **ORPHAN** |
-| `embedding_cache_tokens_avoided_total` | counter | `utils/llm.py:1304` | none | **ORPHAN** |
-| `chat_block_save_failures_total` | counter | `copilot-mro-obsm/copilot_mro/app/api/chat_management.py:379` | none | **ORPHAN** |
-| `memory_get_latency_ms` | histogram (unit `1`) | `copilot_mro/app/services/memory/memory_db.py:880` | none | **ORPHAN** |
-| `memory_search_latency_ms` | histogram (unit `1`) | `copilot_mro/app/services/memory/memory_index.py:636` | none | **ORPHAN** |
-| `document_hub_upload_total` | counter | `document_hub/operations.py:20`, emitted via `record_document_hub_metric` `:72` | none | **ORPHAN** |
-| `document_hub_retry_total` | counter | `operations.py:21` | none | **ORPHAN** |
-| `document_hub_delete_total` | counter | `operations.py:22` | none | **ORPHAN** |
-| `document_hub_share_total` | counter | `operations.py:23` | none | **ORPHAN** |
-| `document_hub_processing_total` | counter | `operations.py:24` | none | **ORPHAN** |
-| `document_hub_processing_duration_seconds` | histogram (unit `1`) | `operations.py:25` | none | **ORPHAN** (unit `1` on a `_seconds`-named histogram) |
-| `document_hub_parser_failure_total` | counter | `operations.py:26` | none | **ORPHAN** |
-| `document_hub_index_upsert_total` | counter | `operations.py:27` | none | **ORPHAN** |
-| `document_hub_cleanup_total` | counter | `operations.py:28` | none | **ORPHAN** |
-| `document_hub_cleanup_vectors` | counter | `operations.py:29` | none | **ORPHAN** |
-| `document_hub_cleanup_objects` | counter | `operations.py:30` | none | **ORPHAN** |
-| `document_hub_notification_total` | counter | `operations.py:31` | none | **ORPHAN** |
-| `document_hub_attempt_vector_cleanup_total` | counter | `operations.py:36` | none | **ORPHAN** |
-| `document_hub_query_embedding_fallback_total` | counter | `operations.py:40` | none | **ORPHAN** |
-
-**27 emitted, unconsumed metric families** from the legacy shim, plus `gen_ai.client.operation.duration`
-= **28 orphaned metric families**. None is in `_emitted_series.SERIES`, and none can ever be caught by
-its lint (see §5, FAMILY_TOKEN).
-
-### 1b. Browser events (log records) — the `dashboard-obsm` merged tree
-
-`lib/telemetry/events.ts:28-51` declares 20 event names + 1 span name (`CHAT_TURN_SPAN`, `:55`).
-I verified a production producer for each by tracing the exported emitter and its wrappers.
-
-| Signal | Emitter (file:line) | Consumption | Verdict |
+| Figure | 2026-09-20 | Now | Why |
 |---|---|---|---|
-| `browser.web_vital` | `lib/telemetry/web-vitals.ts` → `events.ts:282` | charted ×2 (fn-frontend p1,p2), 3 Loki rules, 3 CW alarms, iac widget | consumed |
-| `browser.error` | `lib/telemetry/errors.ts` → `events.ts:297` | charted ×2, Loki rule `BrowserErrorRateHigh`, CW alarm, iac widget | consumed |
-| `browser.route.change` | `lib/telemetry/use-route-telemetry.ts` → `events.ts:347` | charted (p5), iac widget, runbook | consumed |
-| `browser.app.boot` | `components/providers/TelemetryProvider.tsx` → `events.ts:359` | charted (p19 "Slowest Pages") | consumed |
-| `browser.telemetry.dropped` | `lib/telemetry/provider.ts` → `events.ts:321` | charted (p18, 7 targets), iac widget | consumed |
-| `browser.feature.mutation` | `mutation-meta.ts:174` metas across hooks | charted (p11,p12), iac widget ×2 | consumed |
-| `browser.settings.mutation` | `mutation-meta.ts:162` metas (12 hook sites) | charted (p13), iac widget | consumed |
-| `browser.auth.flow` | `startAuthFlowTiming` → `events.ts:794`; 6 auth components | charted (p14), iac widget | consumed |
-| `browser.optimizer.run_triggered` | `optimizerRunTelemetry` `mutation-meta.ts:189`, `useOptimizer.ts:551,576` | charted (p15), iac widget | consumed |
-| `browser.export.requested` | `withExportRequested` `events.ts:874`; `WorkOrderCarousel.tsx:115`, `CanvasHeader.tsx:199` | charted (p16), iac widget | consumed |
-| `browser.ad_review.disposition_set` | `hooks/mro/useAdReview.ts:186` | charted (p17), iac widget | consumed |
-| `browser.automation.run_settled` | `lib/telemetry/long-running.ts` → `events.ts:835`; `useAutomations.ts:29` | charted (p17 target A), iac widget | consumed |
-| `browser.discovery.job_settled` | `long-running.ts` → `events.ts:846`; `useDiscoverySettleTelemetry.ts:12` | charted (p17 target B), iac widget | consumed |
-| **`browser.auth.login`** | `startLoginTiming` `events.ts:582` → `emitAuthLogin` `:369`; `components/features/auth/LoginView.tsx` | **none.** The fn-frontend "Auth flows" panel description (`frontend.json:228`) says so verbatim: *"no panel charts it — read it in Loki directly until one exists"* | **ORPHAN (documented)** |
-| **`browser.pdf.render`** | `startPdfRenderTiming` `events.ts:611` → `:382`; `components/features/pdf-viewer/pdf-viewer-main.tsx` | none | **ORPHAN** |
-| **`browser.upload.started`** | `withUploadTelemetry` `events.ts:536` → `:392` (call at `:541`); `hooks/document-hub/useDocumentHubMutations.ts:86` | none | **ORPHAN** |
-| **`browser.automation.run_triggered`** | `hooks/api/useAutomations.ts:267` meta | none (only its `run_settled` sibling is charted) | **ORPHAN** |
-| **`browser.discovery.job_started`** | `app/(dashboard)/data-discovery/page.tsx:179`, `.../jobs/[jobId]/page.tsx:712` | none (only `job_settled` is charted) | **ORPHAN** |
-| **`browser.chat.feedback_submitted`** | `hooks/chat/useFeedback.ts:51` meta | none | **ORPHAN** |
-| **`browser.log`** | `lib/telemetry/logger.ts` → `events.ts:313` | no panel, no rule, no runbook query. The only `{service_name=…}` raw-log panel on any board is telegram-bot's (`telegram-bot.json:284`); fn-frontend has none | **ORPHAN — log-search-only** |
+| Metric families the estate emits | **57** | **76** | +6 api registry instruments (queue, scheduler tick, lifecycle) · +2 auto-instrumentation body-size families the old pass missed · +11 collector-derived browser metrics |
+| Orphaned metric families (emitted, unconsumed) | **28** | **47** | all 19 new families above are unconsumed; the previous 28 are unchanged and were re-verified one by one |
+| Orphaned browser **events** | 7 events + 1 span | **7 events + 1 span** | unchanged, re-derived against the now-committed `contracts/browser-signals.json` |
+| Consumed-but-unemitted | 2 `claude_code.*` + 2 `automation-worker` surfaces; the 4 CloudWatch browser alarms were "possibly unemitted, unverified" | **same 4, plus the 4 CloudWatch browser alarms, now DEAD by `iac/alarms.tf`'s own statement** | `alarms.tf:100-137` (committed at `f85284e`) says the four metric-filter patterns name a key that "does not exist" and "cannot match under ANY reading", and says: read them "as DEAD, not as quiet". The previous version had them as unverified. The file has settled that they match nothing; it has not settled what the right pattern is (§4.5) |
+| `_emitted_series.py` inventory size | 14 Series + 5 SpanSignal | **14 + 5, unchanged** | the inventory did not grow while the estate gained 19 families; the gap widened from 14-of-57 to **14-of-76** |
+| Backend profiles shipped | 2 ("both shipped profiles") | **4** (oss, aws, azure, newrelic) | **the previous version was already wrong here.** `backend-azure.yaml` and `backend-newrelic.yaml` both exist at its own read HEAD `d8d2570c` (checked with `git cat-file -e`). This was not a change made tonight |
+| Prometheus alert rules | 12 | **14** | **the previous version miscounted.** The four files have 6 + 2 + 4 + 2 at the current tree **and** at `d8d2570c` (`grep -c 'alert:'` on `git show`) |
+| Grafana panels | 85 | **85** | re-derived by `grep -c '"gridPos"'`; identical |
 
-### 1c. Spans — reachability reported separately from charted
+**Two claims in the brief that drove this re-derivation are wrong, and the corrections matter
+more than the new totals.** Both are stated in §8.
 
-The estate has **no span-metrics connector in the collector** (`deployment/otel/base.yaml` has no
-`connectors:` block; neither overlay adds one). `traces_spanmetrics_*` comes from **Tempo's
-metrics-generator** (`deployment/observability-local/tempo.yaml:34-66`, `overrides.defaults.metrics_generator.processors: [service-graphs, span-metrics]`),
-remote-writing to Prometheus. Its configured dimensions are `db.system, peer.service, server.address,
-rpc.service, url.template`. In the **aws** profile there is no Tempo — X-Ray Transaction Search is
-the only trace surface, and it has no dashboard-widget form (`iac/dashboards/agent-turn-explorer.json.tftpl`
-is two markdown panels saying exactly that).
+1. **R.4's producer side was not short by fifteen Document Hub names.** The 2026-09-20 §1a-bis
+   already listed **all fourteen** `document_hub_*` families as orphans. It derived them from
+   code, not from `_emitted_series.py`, so the conditional in R.3 §"If R.4's orphan analysis was
+   run against that inventory" did not apply to it.
+2. **There are fourteen Document Hub families, not fifteen.** Two independent sources agree:
+   `utils-obsm/utils/observability/legacy_families.py` declares 14, and
+   `copilot-mro-obsm/copilot_mro/app/services/document_hub/operations.py` defines 14 name
+   constants, each with at least one call site. R.3's own prose says "fifteen" while listing
+   fourteen, and says "18 families" while listing seventeen.
 
-| Span | Emitter (file:line) | Charted | Trace-search reachable | Verdict |
-|---|---|---|---|---|
-| `invoke_agent <runtime>` | `telemetry.py:1508` (`turn_span`) | no direct panel; attributes `gen_ai.operation.name` / `agent.outcome` are TraceQL selectors on fn-agent-turn-explorer p1,p2 | yes (Tempo; X-Ray TS) | consumed — trace search |
-| `invoke_agent <runtime>` (content copy) | `telemetry.py:1731` (`record_content_copy_span`) | no | only on the `traces/content` pipeline (`filter/content_only`), which no checked-in backend profile exports in `backend-oss.yaml`/`backend-aws.yaml` | **unreachable in both shipped profiles** — see §4 |
-| `execute_tool <name>` | `telemetry.py:1891`/`:1899` | **charted** — fn-agent-turn-explorer p3, `span_name=~"execute_tool .*"` over `traces_spanmetrics_latency_bucket` | yes | consumed |
-| `retrieve evidence`, LLM/tool child spans | `telemetry.py:1336`, `:1761` | no | content pipeline only | same as content copy |
-| `agent_sdk.tool.<short>` | `agent_shared/loop_observability.py:248` | no | yes, **but suppressed** whenever runtime telemetry exists (`agent_pipeline.py:276` `suppress_legacy_agent_sdk_spans=runtime_telemetry is not None`) | dead by design when OTel is on |
-| `automation.run` | `api-obsm/flynapse_api/telemetry/run_span.py:22,45` | no | yes | trace-search-only |
-| `optimizer.run` / `.solve` / `.persist` | `shift-optimizer/.../run_telemetry.py:32-34`, `:195,:131,:150` | `optimizer.run` selected by TraceQL on fn-shift-optimizer p11,p12; `.solve`/`.persist` not | yes | `.run` consumed; `.solve`/`.persist` trace-search-only |
-| `telegram.update` | `telegram-bot/telegram_bot/telemetry.py:633` | TraceQL on fn-telegram-bot p17,p18 | yes | consumed |
-| `telegram.turn` / `telegram.turn.<phase>` | `telemetry.py:709`,`:767` | no | yes | trace-search-only |
-| `s3.download` | `utils-obsm/utils/s3_service.py:226` (CLIENT) | **charted indirectly** — fn-dependencies p2 `server_address`/`rpc_service` | yes | consumed via spanmetrics |
-| `weaviate.hybrid_search` | `utils-obsm/utils/weaviate_service.py:1011` (CLIENT) | same | yes | consumed via spanmetrics |
-| `db.chat.save_block` | `copilot_mro/app/api/chat_management.py:1332,:1734` | no (INTERNAL, not CLIENT — not in fn-dependencies' `SPAN_KIND_CLIENT` filter) | yes | trace-search-only |
-| `mro.lifecycle.startup` / `.shutdown` | `copilot_mro/app/main.py:102,:235` | no | yes | trace-search-only |
-| `ingest.parse` | 7 parsers (`mel_parser.py:1541`, `tn_parser.py:1974`, `crew_manual_parser.py:1546`, `amos_parser.py:4659`, `ifim_parser.py:2604`, `ftd_parser.py:2003`, `amos_metadata_backfill.py:272`) + `s3_pdf_processor.py:927` | no | yes | trace-search-only |
-| `document_hub.process` / `.cleanup` | `document_hub/processing.py:137`, `cleanup.py:213` | no | yes | trace-search-only |
-| `data_discovery.job.run` | `data_discovery/runner.py:142` | no | yes | trace-search-only |
-| `improvement.run` / `.stage` | `improvement/runner.py:460,:507` | no | yes | trace-search-only |
-| `memory.items.get_by_ids` + `memory_index` spans | `memory/memory_db.py:67`, `memory_index.py:96` | no | yes | trace-search-only |
-| **`browser.chat.turn`** | `dashboard-obsm/lib/telemetry/chat-turn.ts:60` | **no panel, no rule.** Named only in `CATALOGUE.md` | yes (Tempo browser pipeline) | **ORPHAN — trace-search-only**; the one browser signal with no consumer at all |
+**The producer side really was short — by nineteen names, in places nobody was looking:** the api
+gateway's six new instruments, two HTTP body-size families created by contrib under the new
+semantic conventions, and eleven metrics that exist only as collector config.
 
-**No span is an orphan merely for lacking a panel** — that is the intended shape for INTERNAL work
-spans. The only span I would call a genuine gap is the **content-copy tree**, which is unreachable in
-both shipped profiles (§4).
+**One more change matters to anyone arming aws.** The four CloudWatch browser alarms were
+"possibly unemitted, unverified" in the previous version. They are now **dead by their own file's
+statement** (§4.1, §4.5). Each treats missing data as OK, so each reports green forever.
+
+**On the rule (§7):** counting every unconsumed family as an orphan turns tonight's work into
+"28 → 47". Splitting unconsumed families into `on-call` (a purpose is stated; provisional until a
+runbook line exists) and `orphan` (no purpose anywhere) gives **28 → 30**. Under the split, the
+number of families that can be removed today is **18**.
 
 ---
 
-## 2. Consumed-but-unemitted
+## 1. Method
 
-### 2a. Genuinely dead
+### 1.1 Counting rule (stated so the next re-derivation is comparable)
 
-| Consumer (where) | Signal it reads | Emitted by | Verdict |
+A **metric family** is one instrument name, counted once regardless of how many Prometheus series
+it expands to and regardless of how many construction paths create it. `agent.turn.calls` is one
+family whether it is built by `meter.create_counter` or by `registry.counter` — both paths exist
+in the same file and both are counted once.
+
+A **producer** is code or configuration that *creates the instrument*. An instrument created and
+never recorded still counts as emitted if any call site exists; an instrument whose only call
+site is a test does not.
+
+A **consumer** is a surface that reads the family *by name to answer an operational question*:
+
+| Tier | What it is | Counted as consumption? |
+|---|---|---|
+| **1 — operational** | a Grafana panel target, a Prometheus/Loki rule `expr`, a CloudWatch alarm or widget query, a runbook query an operator pastes | **yes** |
+| **2 — guard** | a test, a lint inventory, a generated contract, a vocabulary validator | **no** — recorded separately |
+| **3 — prose** | a name in a docstring, a CATALOGUE mapping table, a panel description saying the family is *not* charted | **no** |
+
+Tier 2 is separated on the estate's own precedent, not on my taste:
+`legacy_families.py` gives every family a `consumer` field — `None` for all 27 — and keeps
+`TEST_CONSUMERS` as a distinct dict naming the 11 with test consumers. That file's own comment
+says a test "is a consumer in the way that matters here". It is a different way, and §7 argues the
+split should be promoted from one file's convention to the rule.
+
+**Worked application of tier 3:** `gen_ai.client.operation.duration` appears in the estate exactly
+once outside its emitter — `deployment/otel/dashboards/CATALOGUE.md:161`, inside a
+dotted-name → Prometheus-name mapping table. That is not a query. It stays an orphan.
+
+### 1.2 Search spellings actually used
+
+The brief's warning is a real one — a literal grep for `record_exception=False` misses
+`flynapse-otel`, which splats a `_WITHHOLD` dict. I assumed the same class of miss for instrument
+creation and searched these spellings:
+
+| # | Spelling | What it is for | Result |
 |---|---|---|---|
-| `fn-llm-agents` p10 "Claude Code CLI tokens and cost", target A (`llm-agents.json:189`) | `claude_code_token_usage_total` | **nothing in the estate.** No `CLAUDE_CODE_ENABLE_TELEMETRY` anywhere (grepped `copilot-mro-obsm/deployment`, `copilot_mro`, `api-obsm`, `iac`); the only hit is a *comment* in `base.yaml:98` | **DEAD** — correctly declared `dark` in `_emitted_series.py:141` and `CATALOGUE.md:273` |
-| same panel, target B (`:194`) | `claude_code_cost_usage_total` | nothing | **DEAD**, correctly declared |
-| `iac/dashboards/llm-agents.json.tftpl` markdown | `{"claude_code.token.usage"}`, `{"claude_code.cost.usage"}` | nothing | **DEAD**, declared |
-| `flynapse-platform-alerts.yml:60` `AutomationWorkerSilent` — `absent(target_info{job="flynapse/automation-worker"})`, `for: 15m`, severity **warning** | `target_info` for `service.name=automation-worker` | `api-obsm/flynapse_api/automations/worker.py:111` sets that name, **but no checked-in compose runs the worker**: `deployment/docker-compose.yml` (11 services) and `deployment/observability-local/observe-docker-compose.yml` (7 services) contain none | **PERMANENTLY FIRING** in any oss deployment. `absent()` on a never-present series is `1` forever. The AWS twin is gated behind `automation_worker_deployed = false` (`iac/alarms.tf:61`) and is therefore *not created*; the oss twin has no such gate |
-| `fn-platform-health` p6 "Automation worker heartbeat" (`platform-health.json:96-101`) | same `target_info` | same | **PERMANENTLY "worker absent = 1"** |
-| `rules/loki/flynapse/browser-alerts.yml:99` `AutomationRunErrors` — `{service_name="automation-worker"}` | log stream for that service | same | **NEVER FIRES** — the inverse failure of the two above. Its own annotation calls it a "TRANSITIONAL LOG PROXY … arms as soon as worker logs flow"; nothing makes them flow |
-| `iac/alarms.tf` `LedgerWriteFailures` description (`:210`) | *the description itself*: "DARK until Task R names and wires the ledger-write-failure signal: no instrument … is created anywhere in the estate" | the instrument now exists (in-flight) | **STALE ASSERTION** in iac `2d493c8`; the copilot-mro twin was updated in the same in-flight batch and iac was not |
-| `iac/dashboards/llm-agents.json.tftpl` markdown: "Subagents: **DARK** — the instruments exist and nothing calls `record_subagent`" | — | `record_subagent` is now bound on both runtimes (in-flight) | **STALE ASSERTION** in iac `2d493c8` |
+| 1 | `create_counter\|create_histogram\|create_up_down_counter\|create_observable_(counter\|gauge\|up_down_counter)\|create_gauge` | raw OTel Meter API | 12 production sites, all in `copilot-mro-obsm/.../agent_shared/telemetry.py:1362-1396`, plus `flynapse-otel`'s own registry internals and 2 hits in a test docstring |
+| 2 | `\b(registry\|_registry\|metric_registry\|otel_registry)\.(counter\|up_down_counter\|histogram\|observable_gauge)\s*\(` | the estate's registry facade, incl. plausible aliases | 8 production files across 5 repos (api ×4, copilot-mro, utils shim, shift-optimizer, telegram-bot) |
+| 3 | `from (flynapse_otel\|utils\.observability\|\.\.?…) import .*(counter\|histogram\|observable_gauge)` | a factory imported bare and called unqualified | zero hits — no repo does this |
+| 4 | `increment_counter(\|record_histogram(\|set_gauge(\|observe_summary(` | the legacy `MetricsService` shim's whole public surface (derived by listing its `def`s, not guessed) | 19 call sites in 2 repos |
+| 5 | `record_document_hub_metric(` | the one domain wrapper over spelling 4 | 14 distinct constants, 17 call sites |
+| 6 | `registry\.[a-z_]+\(f"` and `count\(\s*([A-Z_]+)` (multiline) | **name assembled from an f-string or a constant** | one real hit — see §1.3 |
+| 7 | `prometheus_client\|from prometheus\|statsd\|StatsD\|put_metric_data\|MeterProvider\|getMeter\|createCounter\|createHistogram` | a second metrics library, or a browser-side MeterProvider | zero outside `flynapse-otel`'s own SDK bootstrap; the dashboard has no MeterProvider and `base.yaml:217` says so |
+| 8 | `connectors:`, `signaltometrics`, `spanmetrics`, `metrics_generator` | families minted by the collector or by Tempo, which no Python grep can see | 11 + the Tempo generator |
+| 9 | `metric_transformation\|metric_name\|namespace` in `iac/alarms.tf` | families minted by CloudWatch log-metric filters | 6 `Flynapse/*` families |
+| 10 | `View(\|views=\|drop_aggregation\|DropAggregation` | an SDK view that would suppress a created instrument | zero — nothing created is dropped |
+| 11 | `api/v1/query\|query_range\|get_metric_data\|GetMetricStatistics` | code that queries a family by name | tests only; no production reader |
 
-### 2b. In-flight (excluded from the verdict, per the brief)
+**Spelling 6 found the trap the brief predicted.** `telegram-bot/telegram_bot/telemetry.py:896`:
 
-| Consumer | Signal | State at `HEAD` `d8d2570c` | State in the working tree |
-|---|---|---|---|
-| `fn-platform-health` p5 "Ledger write failures (1h)" (`platform-health.json:118`) | `agent_ledger_write_failures_total` | dead | instrument `telemetry.py:1462`, recorder `:1922`, 8 call sites via `usage_ledger.py:84` / `model_call_ledger.py:70` |
-| `flynapse-agent-alerts.yml:56` `LedgerWriteFailures` | same | dead; annotation said so | annotation rewritten to `WIRED 2026-09-20` |
-| `iac/alarms.tf:208` `LedgerWriteFailures` | same | dead | **still says DARK** (iac not yet updated) |
-| `fn-llm-agents` p9 "Subagent rate and p95 duration" (`llm-agents.json:168,:173`) | `agent_subagent_calls_total`, `agent_subagent_duration_seconds_bucket` | **dead** — instruments existed, `record_subagent` had no production caller | wired via `agent_shared/subagent_runs.observe_subagent_runs:105`, bound at `agent_pipeline.py:268,:684`, called at `lang_agent/backend.py:975` and `agent_claude/orchestrator.py:3560` |
-
-### 2c. `ApiHighErrorRate` in `iac/alarms.tf` — confirmed non-functional under both shapes
-
-`iac/alarms.tf:113-124`:
-
-```
-( sum by ("@resource.service.name") (rate({"http.server.request.duration", "http.response.status_code"=~"5.."}[5m]))
-  / (sum by ("@resource.service.name") (rate({"http.server.request.duration"}[5m])) > 0.1) ) > 0.05
+```python
+def counted(name: str, fields: Mapping[str, object]) -> None:
+    handle = _COUNTERS.get(name)
+    if handle is None:
+        handle = _COUNTERS[name] = registry.counter(
+            f"telegram.{name}", "1", f"`{name}` events, as the bot counts them"
+        )
 ```
 
-`http.server.request.duration` is a **histogram** (`api-obsm/flynapse_api/telemetry/http_server.py`,
-contrib ASGI `duration_histogram_new`). The selector carries no suffix and no `le` filter, so it
-selects the histogram itself.
+A grep for `registry.counter("telegram` finds six of telegram-bot's ten families and misses the
+mechanism entirely. The family name is `f"telegram.{name}"`, where `name` is the first argument of
+`observability.count()`. I censused that argument with a multiline regex over every `count(` call
+site: it is always one of four module constants (`TURNS`, `UPLOADS`, `PROVISIONINGS`, `REFUSALS`,
+declared at `observability.py:76-79`). **So no undeclared telegram family exists today** — but any
+future `count("X")` mints `telegram.X` as a live metric with no code review of the name, and
+nothing anywhere would notice.
 
-| Stored shape | What the expression does | Can it fire correctly? |
-|---|---|---|
-| **Native histogram** | `rate(H)` yields a native histogram. PromQL supports `+`/`-` between two histograms and `*`/`/` only histogram-by-*float*; histogram ÷ histogram drops the sample. The volume guard `rate(H) > 0.1` is likewise a histogram-vs-float comparison, which is also invalid | **No — never fires.** Both the ratio and the guard are type errors; the alarm returns no series |
-| **Classic `le`-labelled buckets** | `sum by (svc)` collapses every `le` bucket into one number, so each request is counted once per bucket it falls into. The ratio becomes a *latency-weighted* share, not the 5xx request share — and it is biased exactly the wrong way, because 5xx responses are typically fast and therefore land in **more** buckets than slow 2xx ones | **No — fires on the wrong quantity**, systematically over-stating the error share |
+The legacy shim has the same shape: `metrics.py:267-272` auto-registers any name not in
+`legacy_families.BY_NAME` with unit `"1"` and the description `"legacy auto-registered counter"`.
+I cross-checked every call site's name against the declared 27 — all match, so there is no
+undeclared legacy family today either.
 
-**Correct forms:**
+### 1.3 The false-positive the brief warned about, checked
 
-| Shape | Numerator / denominator |
-|---|---|
-| Native | `sum by ("@resource.service.name") (histogram_count(rate({"http.server.request.duration", "http.response.status_code"=~"5.."}[5m])))` over `sum by (…) (histogram_count(rate({"http.server.request.duration"}[5m])))` |
-| Classic buckets | add `"le"="+Inf"` to **both** selectors (the `+Inf` bucket *is* the request count), or read a `…_count` series if one exists on the endpoint — the file's own header asserts none does |
+`ad_notification_dispatcher.py` has plain dataclass fields named `*_created`. It matched none of
+spellings 1-5 (they all require a call), and `copilot-mro`'s only metric instruments are the 13 in
+`telemetry.py` and the shim emissions. No false positive reached the census.
 
-The file already flags this as unresolved (`alarms.tf:107-114`: *"both sides of this ratio want a
-request count out of a histogram, and how that is written depends on what CloudWatch stores … Written
-bare, as here"*). **The brief's claim is confirmed.** The **oss** twin
-(`flynapse-api-alerts.yml:11`) is *correct*: it names `http_server_request_duration_seconds_count`
-explicitly, which is a single series per label set.
+### 1.4 Trees read — every repo by absolute path, never by name
 
-`ApiP95LatencyHigh` (`alarms.tf:131-142`) is **not** broken the same way: `histogram_quantile` over a
-native histogram tolerates the redundant `sum by (le, …)` (grouping by an absent label yields one
-group), and over classic buckets the `le` grouping is exactly right. Its `increase({…}) >= 20` volume
-guard has the same histogram-vs-float problem under the native shape, so that half would drop — worth
-the same fix, but the alarm is not wrong in the same sense.
+Resolved by path because a pre-merge sibling sits beside every merged worktree
+(`/home/aditya/Code/dashboard` is the **pre-merge** checkout; `/home/aditya/Code/dashboard-obsm` is
+the merged one, and the 2026-09-20 coverage matrix measured the wrong one).
 
-### 2d. Every other selector converted by iac `2d493c8`, checked against the three emitter repos
+| Repo | Absolute path | Branch | HEAD at start (2026-09-20 23:58) | HEAD at end (2026-09-21 00:09) | Moved? |
+|---|---|---|---|---|---|
+| api | `/home/aditya/Code/api-obsm` | `obs-merge` | `b6471c8`, dirty 19 | **`1b1d088`, dirty 0** | **yes — a commit landed mid-audit** |
+| core | `/home/aditya/Code/core-obsm` | `obs-merge` | `af6adce`, dirty 3 | **`0ea20d3`, dirty 0** (00:15) | **yes. The tree grew to dirty 7, then a commit landed** (backfill subtransaction work, analytics-only) |
+| utils | `/home/aditya/Code/utils-obsm` | `obs-merge` | `fffa470`, dirty 13 | `fffa470`, **dirty 17** (00:15) | working tree grew twice |
+| copilot-mro | `/home/aditya/Code/copilot-mro-obsm` | `obs-merge` | `6058e662`, dirty 64 | `6058e662`, **dirty 65** | working tree grew |
+| dashboard | `/home/aditya/Code/dashboard-obsm` | `obs-merge` | `004a809`, dirty 0 | `004a809`, dirty 0 | no |
+| flynapse-otel | `/home/aditya/Code/flynapse-otel` | `main` | `f6bd5c0`, dirty 6 | **`af40bbe`, dirty 0** | **yes — a commit landed mid-audit** |
+| iac | `/home/aditya/Code/iac` | `obs-merge` | `f85284e`, dirty 7 | `f85284e`, dirty 7 | no (all 7 are `__pycache__` + one POC shell script) |
+| shift-optimizer | `/home/aditya/Code/shift-optimizer` | `main` | `1ba897e`, dirty 0 | `1ba897e`, dirty 0 | no |
+| telegram-bot | `/home/aditya/Code/telegram-bot` | `main` | `3102fcc`, dirty 0 | `3102fcc`, dirty 0 | no |
 
-| Selector in `iac` | Emitted? | Where |
-|---|---|---|
-| `{"http.server.request.duration"}`, `"http.route"`, `"http.response.status_code"` | yes | contrib ASGI + `OTEL_SEMCONV_STABILITY_OPT_IN` defaulted to `http` at `flynapse-otel/flynapse_otel/bootstrap.py:52,171` |
-| `{"http.server.active_requests"}` | yes | same instrumentation, wrapped at `api-obsm/flynapse_api/telemetry/http_server.py:225` |
-| `{"http.client.request.duration"}`, `server.address` | yes | httpx instrumentation `0.65b0`, `__init__.py:792`, attrs `_client_duration_attrs_new` incl. `SERVER_ADDRESS` |
-| `{"auth.rejections"}` | yes | `api-obsm/flynapse_api/middleware/telemetry.py:34` |
-| `{"agent.turn.calls"}`, `"agent.outcome"` | yes | `telemetry.py:1406` / `:1819` |
-| `{"agent.turn.duration_seconds"}` | yes | `:1411` |
-| `{"agent.model.cost_usd"}`, `"tenant.id"`, `"model.profile"` | yes | `:1432`, attrs `:1784` + `for_turn` `:1469` |
-| `{"agent.model.unpriced_calls"}` | yes | `:1437` |
-| `{"agent.tool.attempts"}`, `"tool.name"`, `"tool.outcome"` | yes | `:1447`, attrs `:1800` |
-| `{"gen_ai.client.token.usage"}`, `"gen_ai.request.model"`, `"gen_ai.token.type"` | yes | `:1421`, `:1842` |
-| `{"agent.ledger.write_failures"}` | **in-flight** | `:1462` |
-| `{"claude_code.token.usage"}`, `{"claude_code.cost.usage"}` | **no** | dead, declared |
-| `{"telegram.turns"}`, `"outcome"`, `"lane"`, `"reason"`, `"verdict"` | yes | `telegram-bot/telegram_bot/telemetry.py:883-890`; `COUNT_DIMENSIONS` at `:139` contains all of them |
-| `{"telegram.updates"}` `"kind"`, `{"telegram.updates.active"}`, `{"telegram.turn.duration"}`, `{"telegram.turn.phase.duration"}` `"phase"`, `{"telegram.turn.cost"}` `"lane"`, `{"telegram.jobs"}`, `{"telegram.uploads"}`, `{"telegram.provisionings"}`, `{"telegram.refusals"}` | yes | `:649,:631,:796,:799,:801,:842`, `:886-890` |
-| `{"optimizer.runs"}`, `"status"`, `"solve_status"` | yes | `run_telemetry.py:175`; `METRIC_ATTRIBUTE_KEYS = {"status","solve_status"}` at `:42` |
-| `{"optimizer.run.duration"}`, `{"optimizer.solve.duration"}`, `{"optimizer.runs.active"}` | yes | `:176,:145,:194` |
-| `otelcol_exporter_send_failed_{spans,metric_points,log_records}`, `otelcol_exporter_queue_{size,capacity}`, `otelcol_receiver_refused_*`, `otelcol_process_uptime` | reaches CloudWatch via the periodic OTLP reader added in `backend-aws.yaml:69-76` → `otlphttp/cwmetrics` | **spelling unverifiable statically** — the aws-profile runbook records a 2026-09-15 capture-exporter observation for `otelcol_process_uptime` only |
-| `"@resource.service.name"` values `api`, `telegram-bot`, `dashboard`, `automation-worker` | `api` ✓ (`iac/apprunner.tf:47`), `telegram-bot` ✓ (`telemetry.py` `SERVICE_NAME`), `dashboard` ✓, **`automation-worker` ✗ (not deployed)** | — |
+**Three trees committed while I was reading them.** I re-ran the producer census against each new
+HEAD:
 
-**Verdict on 2d493c8: every converted selector but the two `claude_code.*` ones and
-`agent.ledger.write_failures` names a metric something emits.** The conversion itself is sound; the
-defect is `ApiHighErrorRate`'s *shape*, not its *name*.
+- `api-obsm` at `1b1d088` still declares exactly the seven instruments listed in §2.2.
+- `flynapse-otel`'s registry at `af40bbe` still exposes exactly `counter`, `up_down_counter`,
+  `histogram` and `observable_gauge`.
+- `core-obsm` at `0ea20d3` still has zero instrument sites and still has three `traced_sweep(`
+  decorations.
 
-### 2e. The CloudWatch attribute-path spelling — 4 alarms + 11 widgets at risk
+None of the three commits changed a family name. `utils-obsm` was still growing at the last read
+(dirty 17). I checked its diff for new literal-named instruments twice and found none either time.
+Every count in this document is as of the **end** state.
 
-The browser emitter writes the event name as a **dotted log attribute**: `events.ts:264`
-`attributes: { 'event.name': name, …}`. Every CloudWatch consumer selects it as
-**`attributes.event_name`** (underscore):
+**I read working trees, not `git log`.** That is load-bearing here: at `copilot-mro-obsm`
+`6058e662` the connector does not exist. `git diff` shows `deployment/otel/base.yaml` **+183
+lines** and `agent_shared/telemetry.py` **+36** uncommitted. So **eleven of the 47 orphans and one
+of the twelve agent families exist only in an uncommitted working tree right now.** A reader
+working from `HEAD` will not find them.
 
-- `iac/alarms.tf:258,289,297,305` — the 4 browser metric filters behind `BrowserErrorRateHigh`,
-  `WebVitalLcpP75Poor`, `WebVitalInpP75Poor`, `WebVitalClsP75Poor`.
-- `iac/dashboards/frontend.json.tftpl` — 10 of its 11 Logs Insights widgets.
-
-The same files address `service.name` **dotted** (`resource.attributes.service.name`) and one query
-addresses `session.id` **dotted** (`frontend.json.tftpl:127` `by attributes.session.id`). Both
-spellings cannot be right. The estate already knows: `docs/runbooks/observability/aws-profile.md:22-23`
-says *"`event.name` (written `attributes.event_name` — Loki's sanitised spelling; the stored key is
-`event.name`)"*, and `alarms.tf:53` lists it under the B1b RE-VERIFY block. **Verdict: consumed-but-
-possibly-unemitted, self-declared unverified.** If CloudWatch preserves dotted keys — which the
-`resource.attributes.service.name` usage assumes — all four browser alarms and ten widgets match nothing.
-The same `alarms.tf:53` note flags `severity_number` (used at `:278`, `:323`) for the same reason.
-
-### 2f. Consumers checked and found sound
-
-| Consumer | Signal | Emitter confirmed |
-|---|---|---|
-| `fn-frontend` p7,p8 (`frontend.json:131,:146`) `rawSql` over `product_events` selecting `document_id`, `document_kind` | Postgres columns | real columns — `core-obsm/core/db/table_definitions.py:1407,1408`; `document_opened` is in `PRODUCT_EVENT_NAMES` `:1366` and emitted at `dashboard-obsm/lib/telemetry/use-document-view.ts:73`, `components/features/chat/DocumentCard.tsx:114` |
-| `fn-llm-agents` p11,p12 `rawSql` over `llm_usage` / `llm_model_calls` | Postgres | written by the two ledgers the in-flight `count_lost_ledger_write` guards |
-| `fn-dependencies` (5 panels), `fn-frontend` p6,p9, `fn-agent-turn-explorer` p3, `fn-telegram-bot` p14 target B | `traces_spanmetrics_{latency_bucket,calls_total}` + `db_system`/`server_address`/`rpc_service`/`url_template` | Tempo generator `tempo.yaml:58-66`; every board label is a configured dimension and `tests/integration/otel/test_tempo_span_metrics.py:118` guards that. **The family NAME is unproved against the `grafana/tempo:3.0.3` pin** (see §4) |
-| `fn-platform-health` p9,p10,p11 | `prometheus_tsdb_head_series`, `loki_distributor_*`, `tempo_distributor_*` | the `prometheus`/`loki`/`tempo` scrape jobs in `prometheus.yml` |
-| `flynapse-platform-alerts.yml:96` `AlertmanagerNotificationsFailing` | `alertmanager_notifications_failed_total` | the `alertmanager` scrape job |
-| `flynapse-platform-alerts.yml:73` `TempoGeneratorSeriesNearCap` | `tempo_metrics_generator_registry_active_series_demand_estimate` | Tempo self-scrape; the cap it references is real (`tempo.yaml:85`) |
-| `fn-service-overview` templating `label_values(http_server_request_duration_seconds_count, job)` | `job` label | `prometheusremotewrite/prom` with `target_info.enabled: true` (`backend-oss.yaml:17-22`) and `NAMESPACE = "flynapse"` (`flynapse-otel/flynapse_otel/resource.py:27`) → `job = flynapse/<service.name>` |
-| every `browser.*` LogQL panel/rule label | Loki structured metadata | `test_grafana_dashboards.py:566` `test_browser_logql_reads_only_keys_the_collector_delivers` already enforces it against `transform/browser_allowlist` |
+**One library read, declared as such.** The auto-instrumentation families in §2.6 come from
+reading the installed contrib package at
+`/home/aditya/Code/api/.venv/lib/python3.11/site-packages/opentelemetry/instrumentation/`. That
+venv belongs to the **pre-merge** `api` sibling — I used it because `copilot-mro-obsm/.venv` has no
+`opentelemetry` installed and `api-obsm` has no venv at all. It is legitimate only because its
+`instrumentation/version.py` reads `0.65b0`, which is exactly the `CONTRIB_VERSION` pin declared in
+`flynapse-otel/flynapse_otel/__init__.py`. This is a read of a pinned third-party library, not of a
+repo.
 
 ---
 
-## 3. Attribute and cardinality compliance
+## 2. The producer set — 76 metric families, by construction class
 
-### 3.0 There is no attribute allow-list. Name the surfaces.
+### 2.1 copilot-mro agent runtime — 12 families
 
-The brief asked me to "find the allow-list". **It does not exist.** What exists:
+`copilot-mro-obsm/copilot_mro/app/services/agent_shared/telemetry.py`. **Two construction paths,
+same twelve names:** `RuntimeTelemetry.__init__` (`:1362-1396`, raw `meter.create_*`) and
+`RuntimeTelemetry.from_current_provider` (`:1406-1462`, `registry.*`). Counted once each.
 
-| Surface | File:line | Kind | Contents |
+`agent.turn.calls` · `agent.turn.duration_seconds` · `gen_ai.client.operation.duration` ·
+`gen_ai.client.token.usage` · `agent.model.calls` · `agent.model.cost_usd` ·
+`agent.model.unpriced_calls` · `agent.tool.calls` · `agent.tool.attempts` ·
+`agent.subagent.calls` · `agent.subagent.duration_seconds` · `agent.ledger.write_failures`
+
+`agent.ledger.write_failures` is **still uncommitted** (it appears as `+` in `git diff` against
+`6058e662`, 36 lines across both constructors). The previous R.4 excluded it and the two subagent
+families as "in-flight"; the subagent pair has since committed, the ledger counter has not.
+
+### 2.2 api gateway registry instruments — 7 families
+
+| Family | File:line | Kind |
+|---|---|---|
+| `auth.rejections` | `api-obsm/flynapse_api/middleware/telemetry.py:34` | counter |
+| `automation.tick.duration` | `api-obsm/flynapse_api/telemetry/scheduler_telemetry.py:30` | histogram |
+| `automation.queue.depth` | `api-obsm/flynapse_api/telemetry/queue_telemetry.py:150` | histogram |
+| `automation.queue.wait` | `queue_telemetry.py:162` | histogram |
+| `automation.queue.claims` | `queue_telemetry.py:170` | counter |
+| `api.lifecycle.duration` | `api-obsm/flynapse_api/telemetry/lifecycle_span.py:60` | histogram |
+| `api.lifecycle.step.duration` | `lifecycle_span.py:68` | histogram |
+
+**Six of these seven are new since the previous R.4**, which knew only `auth.rejections`.
+
+### 2.3 shift-optimizer — 4 families
+`optimizer.runs` · `optimizer.run.duration` · `optimizer.solve.duration` · `optimizer.runs.active`
+(`shift-optimizer/shift_optimizer/app/services/run_telemetry.py:51-66`).
+
+### 2.4 telegram-bot — 10 families
+`telegram.updates` · `.updates.active` · `.turn.duration` · `.turn.phase.duration` · `.turn.cost` ·
+`.jobs` · `.turns` · `.uploads` · `.provisionings` · `.refusals`
+(`telegram-bot/telegram_bot/telemetry.py:856-891`, plus the f-string path at `:900`, §1.2).
+
+### 2.5 Legacy `MetricsService` shim — 27 families, all declared
+
+`utils-obsm/utils/observability/legacy_families.py` declares exactly 27 `Family(` entries, which is
+also the number the previous R.4 derived independently from call sites. Emission still routes
+through `registry`, so these are real OTel instruments, not a parallel system.
+
+- **`utils/llm.py` (10):** `llm_requests_total`, `llm_request_duration`, `llm_tokens_total`,
+  `llm_tokens_per_request`, `embedding_requests_total`, `embedding_tokens_total`,
+  `embedding_cost_usd`, `embedding_request_duration`, `embedding_cache_hits_total`,
+  `embedding_cache_tokens_avoided_total`
+- **copilot-mro, non-Document-Hub (3):** `chat_block_save_failures_total`
+  (`chat_management.py:379`), `memory_get_latency_ms` (`memory_db.py:880`),
+  `memory_search_latency_ms` (`memory_index.py:636`)
+- **copilot-mro Document Hub (14, not 15):** `document_hub_upload_total`, `_retry_total`,
+  `_delete_total`, `_share_total`, `_processing_total`, `_processing_duration_seconds`,
+  `_parser_failure_total`, `_index_upsert_total`, `_cleanup_total`, `_cleanup_vectors`,
+  `_cleanup_objects`, `_notification_total`, `_attempt_vector_cleanup_total`,
+  `_query_embedding_fallback_total` — constants at `document_hub/operations.py:20-41`, every one
+  with at least one `record_document_hub_metric` call site outside that file
+
+`legacy_families.py` is an improvement the previous R.4 could not have seen: it replaces
+auto-registration (unit `"1"`, deny-list only) with declared kinds, units, buckets and a **bounded
+attribute set**, which is the fix for the `chat_block_save_failures_total` cardinality exposure
+§3.2 of the previous version called the worst in the estate. It also renames some exported series
+by giving them honest units, and records that in each family's `unit_note`.
+
+### 2.6 Auto-instrumentation — 5 families
+
+One `OpenTelemetryMiddleware` exists in the whole estate, at the gateway
+(`api-obsm/flynapse_api/telemetry/http_server.py`). `OTEL_SEMCONV_STABILITY_OPT_IN` is defaulted to
+`http` and **latched** at `flynapse-otel/flynapse_otel/bootstrap.py:187`, so only the new-semconv
+branch of the contrib constructor runs.
+
+| Family | Created at | In the previous R.4? |
+|---|---|---|
+| `http.server.request.duration` | contrib `asgi/__init__.py:632` under `_report_new` | yes |
+| `http.server.active_requests` | `asgi/__init__.py:661`, **created unconditionally** — not gated on the stability mode | yes |
+| **`http.server.request.body.size`** | `asgi/__init__.py:659` under `_report_new`, recorded at `:872` | **no — missed** |
+| **`http.server.response.body.size`** | `asgi/__init__.py:647` under `_report_new`, recorded at `:852` | **no — missed** |
+| `http.client.request.duration` | httpx instrumentor under `_report_new` (`httpx/__init__.py:793` and three sibling sites); requests and urllib3 use the same semconv constant — I did not read them separately | yes |
+
+The two body-size families are named in
+`opentelemetry/semconv/_incubating/metrics/http_metrics.py:128,161`. They are not hypothetical:
+`asgi/__init__.py` calls `.record()` on both, and the gateway's `_ResponseEndOtelMiddleware` wraps
+only the duration histograms and the active-requests counter — it leaves the body-size instruments
+untouched. **This is the class of miss the brief predicted, found in a different place than
+expected: not a repo, a library.** A producer census that reads only first-party code misses them.
+
+### 2.7 Collector-derived browser metrics — 11 families
+
+`connectors::signaltometrics/browser` in `copilot-mro-obsm/deployment/otel/base.yaml:248-395`
+(**uncommitted**). Five built from `browser.chat.turn` span attributes, six from `browser.*` log
+record attributes:
+
+| # | Family | Derived from | Value |
 |---|---|---|---|
-| `flynapse_otel.registry.FORBIDDEN_ATTRIBUTE_KEYS` | `flynapse-otel/flynapse_otel/registry.py:27` | **DENY-list**, 10 keys, process-side | `session_id`, `session.id`, `user_id`, `user.id`, `enduser.id`, `path`, `url`, `url.path`, `url.full`, `http.target` |
-| `flynapse_otel.registry.UNITS` | `registry.py:23` | ALLOW-list, but of **units**, not attributes | `1 s ms By {USD} {token} {request}` |
-| collector `attributes/metric_cardinality` | `copilot-mro-obsm/deployment/otel/base.yaml:76` | **DENY-list**, 10 keys, collector-side, metrics pipeline only | `session.id`, `user.id`, `user.email`, `enduser.id`, `organization.id`, `terminal.type`, `app.entrypoint`, `url.path`, `http.target` |
-| collector `transform/browser_allowlist` | `base.yaml:136` | ALLOW-list, **attribute-keyed**, browser pipelines only | ~90 record keys + 9 resource keys |
-| `shift_optimizer…METRIC_ATTRIBUTE_KEYS` | `run_telemetry.py:42` | **per-instrument ALLOW-list**, raises on an unlisted key (`_labels` `:71`) | `status`, `solve_status` |
-| `telegram_bot…COUNT_DIMENSIONS` | `telegram-bot/telegram_bot/telemetry.py:139` | per-family ALLOW-list, filters silently (`dimensions()` `:906`) | `lane reason carrier outcome refund verdict chat_type created` |
+| 1 | `browser.chat.turn.duration` | span `browser.chat.turn` | `total_ms / 1000` |
+| 2 | `browser.chat.turn.time_to_init` | same | `ttf_init_ms / 1000` |
+| 3 | `browser.chat.turn.time_to_first_token` | same | `ttf_token_ms / 1000` |
+| 4 | `browser.chat.turn.attachment_upload.duration` | same | `attachment_upload_ms / 1000` |
+| 5 | `browser.chat.turn.steps` | same | `step_count` |
+| 6 | `browser.web_vital.value` | log `browser.web_vital` | `value`, exponential histogram |
+| 7 | `browser.app.boot.ttfb` | log `browser.app.boot` | `ttfb_ms / 1000` |
+| 8 | `browser.app.boot.dom_interactive` | same | `dom_interactive_ms / 1000` |
+| 9 | `browser.app.boot.load_complete` | same | `load_complete_ms / 1000` |
+| 10 | `browser.long_running.observed_wait` | logs `browser.automation.run_settled` **or** `browser.discovery.job_settled` | `observed_wait_ms / 1000` |
+| 11 | `browser.long_running.polls` | same two events | `poll_count` |
 
-Three consequences worth the owner's attention:
+Wired as an exporter on `traces/browser` and `logs/browser` and as the sole receiver of
+`metrics/browser` in **all four** overlays — `backend-oss.yaml:85,97,107`,
+`backend-aws.yaml:119,131,141`, `backend-azure.yaml:80,92,102`,
+`backend-newrelic.yaml:66,78,88`. **No repo's code creates any of these.** A census that reads only
+Python scores them zero.
 
-1. **The two satellites are the only repos with a positive attribute contract.** `copilot-mro` and
-   `api` have none — any new attribute ships unless it happens to collide with one of the 10
-   forbidden keys.
-2. **A forbidden key drops the whole datapoint, not the key.** `registry._lint_attributes` raises
-   `AttributeKeyError`; `RuntimeTelemetry._safe_add`/`_safe_record` (`telemetry.py:1548,:1554`)
-   catch `Exception` and `return`. Adding `enduser.id` to an agent metric would make that **series
-   vanish silently**, not just lose a label. The legacy shim (`utils/observability/metrics.py:76`)
-   drops the *key* with one WARNING instead — two opposite degradations for the same mistake.
-3. **`tenant.id` is on no list, in either direction.** It is neither forbidden nor allow-listed;
-   it is simply passed through. That is the ruling the owner owes.
+### 2.8 Not counted in the 76, but named so the boundary is explicit
 
-### 3.1 Per-instrument attribute table
+- **Tempo metrics-generator, oss only** — `traces_spanmetrics_calls_total`,
+  `traces_spanmetrics_latency_*`, `traces_service_graph_*`, from
+  `deployment/observability-local/tempo.yaml:76-77` (`processors: [service-graphs, span-metrics]`).
+  Emitted by Tempo, not by the estate; consumed by 9 panels. **No such family exists in aws, azure
+  or newrelic** — there is no Tempo there.
+- **CloudWatch log-metric filters, aws only — 6 `Flynapse/*` families** *declared* by
+  `iac/alarms.tf`: `Flynapse/Browser` → `BrowserErrors`, `WebVitalLcp`, `WebVitalInp`,
+  `WebVitalCls`; `Flynapse/Automation` → `AutomationWorkerErrorRecords`,
+  `AutomationWorkerLogRecords`. **Declared is not the same as produced.** The two Automation filters
+  are gated off by `var.automation_worker_deployed = false`, so they are neither created nor
+  consumed. The four Browser filters are created, and by `alarms.tf:123`'s own statement their
+  patterns "cannot match under ANY reading", so they never produce a datapoint. That puts them in
+  §4.1 as consumed-but-unemitted, not in the producer set.
+- **Platform self-telemetry** — `otelcol_*`, `prometheus_*`, `loki_*`, `tempo_*`,
+  `alertmanager_*`. Emitted by the infrastructure, scraped by the five jobs in
+  `prometheus.yml:24-48`, consumed by fn-platform-health and three platform rules.
 
-`D` = also carries `RuntimeTelemetry._default_attributes` from `for_turn` (`telemetry.py:1469`),
-i.e. `tenant.id` + `agent.department`. **`for_turn` is applied only to the model-usage sink**
-(`agent_pipeline.py:89,:222,:579`); the tool and subagent observers are bound from the *unscoped*
-facade (`agent_pipeline.py:264,:272,:688,:693`), so they carry neither.
+---
 
-| Instrument | Attributes actually set | On a list? | Unbounded / user-controlled | Expected cardinality (label sets) |
-|---|---|---|---|---|
-| `agent.turn.calls` / `agent.turn.duration_seconds` (`telemetry.py:1819`) | `gen_ai.agent.name`, `agent.department`, `agent.outcome`, `tenant.id`, `deployment.environment.name` (**never passed — always `None`, always dropped**; `pipeline.py:493`) + D | none forbidden | **`tenant.id`** | runtimes 2 (`claude`/`lang`, canonicalised `telemetry.py:36-47`) × departments 3 (`MRO/PILOT/CREW`) × outcomes 2 = **12 per tenant**; ×2 instruments |
-| `agent.model.calls`, `agent.model.cost_usd`, `agent.model.unpriced_calls`, `gen_ai.client.operation.duration` (`telemetry.py:1784`) | `gen_ai.operation.name` (const `chat`), `gen_ai.provider.name`, `gen_ai.request.model`, `model.role`, `model.purpose`, `model.profile`, `model.cost_source`, `model.graph_node`, `error.type` + D | none forbidden | **`tenant.id`**; **`gen_ai.request.model`** (provider-supplied string); **`model.profile`** (registry-supplied); **`error.type`** (outcome token) | roles ≤12 (`contracts/models.py:11-28`) × purposes 9 (literals) × graph_nodes ≈17 (10 static + `f"{prefix}:{decision}"` over 7 decisions, `lang_agent/decisions.py:88`) × models ~6-10 × cost_source ~3 × error.type ~8 (`model_gateway.py:276-403`: `transient_error`, `usage_normalization_error`, `response_normalization_error`, `cancelled`, `error`, …). Realistic joint occupancy **~150-400 per tenant** |
-| `gen_ai.client.token.usage` (`telemetry.py:1855`) | the above **+ `gen_ai.token.type`** (6 values: input/output/reasoning/cache_read/cache_write/tool_search_overhead) | none forbidden | as above | **×6** the model row → **~900-2,400 per tenant** — the single largest family |
-| `agent.tool.calls` / `agent.tool.attempts` (`telemetry.py:1800`) | `gen_ai.operation.name` (const), `tool.name`, `tool.outcome`, `tool.error_code`, `error.type` (**identical value to `tool.error_code`** — two labels, one value) | none forbidden | `tool.error_code` — `ToolError.code` is typed `str` in the contract (`contracts/tools.py:432`); **103 distinct `code="…"` literals** in `copilot_mro` | tools ~70 (73 distinct `name="…"` literals under `agent_shared/tools/`) × (1 success + ~3 realistic codes) ≈ **280**, **not tenant-scoped** |
-| `agent.subagent.calls` / `.duration_seconds` (`telemetry.py:1811`) | `subagent.name`, `subagent.outcome` | none forbidden | **`subagent.name` is the MODEL's raw `subagent_type` string** — `agent_claude/_subagent_runs.py:59` takes `tool_input["subagent_type"]` verbatim, no catalogue validation, despite `subagent_runs.py:113` asserting "`name` is a catalogue agent name" | catalogue agents ~20 × outcomes 3 (`completed/error/incomplete`) = **~60 expected**; **worst case unbounded** — one hallucinated `subagent_type` per turn mints a permanent series. Not tenant-scoped |
-| `agent.ledger.write_failures` (`telemetry.py:1922`, in-flight) | `ledger.name` (2), `ledger.outcome` (3), `tenant.id` + D | none forbidden | **`tenant.id`** | **6 per tenant** — the docstring's own arithmetic, and it is right |
-| `auth.rejections` (`api-obsm/.../middleware/telemetry.py:85`) | `http.response.status_code` (2), `http.request.method` (~7) | none forbidden | none | **~14**, estate-wide |
-| `http.server.request.duration` / `http.server.active_requests` | contrib ASGI new-semconv set: `http.request.method`, `http.route`, `http.response.status_code`, `url.scheme`, `network.protocol.version` | `url.path`/`http.target` would be forbidden — correctly **not** set (the route is templated, `http_server.py:8-17`) | none | routes ~220 × methods ~3 × statuses ~8 ≈ **5,000** per service, ×15 histogram buckets |
-| `http.client.request.duration` | `error.type`, `http.request.method`, `http.response.status_code`, `network.protocol.version`, `server.address`, `server.port` (`_semconv.py:130`) | none forbidden | **`error.type` = `type(exc).__qualname__`** — an exception class name, unbounded in principle | hosts ~8 × methods ~4 × statuses ~8 ≈ **256**, + one series per distinct exception class |
-| `telegram.turns` / `.uploads` / `.provisionings` / `.refusals` | the `COUNT_DIMENSIONS` subset each line carries | **positive allow-list** `telemetry.py:139` | none | lanes ~3 × carriers ~3 × outcomes ~6 × reasons ~10 → **~500** worst case; no tenant label |
-| `telegram.updates` / `.active` / `.turn.duration` / `.turn.phase.duration` / `.turn.cost` / `.jobs` | `kind`(6)/none/`lane`+`outcome`/`phase`(5)/`lane`/`name`+`outcome` | closed vocabularies (`UPDATE_KINDS` `:144`) | none | **< 100 total** |
-| `optimizer.runs` / `.run.duration` / `.solve.duration` / `.runs.active` | `status` (2), `solve_status` (4 + null) | **positive allow-list, raises** `run_telemetry.py:71` | none — run/job/tenant ids ride the **span** only (`:110-115`), by explicit design | **≤ 10**. The cleanest instrument in the estate |
-| **legacy** `llm_requests_total`, `llm_request_duration`, `llm_tokens_total`, `llm_tokens_per_request` | `tenant_id`, `model`, `status`, (+ provider) | `tenant_id` is **not** on `FORBIDDEN_ATTRIBUTE_KEYS` (only `user_id`/`session_id` are) | **`tenant_id`**, **`model`** (raw model string) | models ~10 × statuses 2 = **20 per tenant**, ×4 families |
-| **legacy** `embedding_*` (6 families) | `tenant_id`, `model`, `status` | as above | **`tenant_id`**, `model` | **~20 per tenant** ×6 |
-| **legacy** `chat_block_save_failures_total` (`chat_management.py:379`) | `tenant_id`, `department`, `reason`, `error_kind`, `field` | none forbidden | **`tenant_id`**; **`error_kind`** and **`field`** are free strings from the failure path | departments 3 × reasons ~8 × error_kinds ~15 × fields ~20 = **up to 7,200 per tenant** — **the worst single cardinality exposure in the estate** |
-| **legacy** `memory_get_latency_ms`, `memory_search_latency_ms` | `tenant_id` + call-site kwargs | none forbidden | **`tenant_id`** | small per tenant, but unaudited |
-| **legacy** `document_hub_*` (14 families, `operations.py:72`) | `tenant_id` + arbitrary `**attributes` per call site | none forbidden, **no allow-list at all** | **`tenant_id`**; every call site chooses its own keys | **unbounded by construction** — the helper forwards whatever the caller passes |
-| browser records (all 20 events) | per-event `EVENT_ATTRIBUTE_KEYS` (`events.ts:67`) + envelope (`session.id`, `route_pattern`, `app.version`, `deployment.environment.name`) + gateway-upserted `tenant.id`/`enduser.id`/`session.id` (`base.yaml:51`) | **double allow-listed** (browser `emitRecord:239` strips off-list keys; collector `transform/browser_allowlist` re-strips) | these are **LOG records, not metrics** — `attributes/metric_cardinality` does not touch them, and `session.id`/`enduser.id` legitimately ride them | not a metric-cardinality concern; a Loki *stream* concern only if any of these became an index label, which `test_browser_logql_reads_only_keys_the_collector_delivers` prevents |
+## 3. Emitted-but-unconsumed — 47 metric families
 
-### 3.2 The tenant-scoped cardinality list the owner must rule on
+Consumer surfaces searched, in full: 8 Grafana boards (**85 panels**, re-derived by
+`grep -c '"gridPos"'`: agent-turn-explorer 3 · dependencies 5 · frontend 19 · llm-agents 12 ·
+platform-health 9 · service-overview 7 · shift-optimizer 12 · telegram-bot 18) · 4 Prometheus rule
+files (**14 alerts**) · 1 Loki rule file (5 alerts) · `iac/alarms.tf` (7 `aws_cloudwatch_*`
+resources over gated maps) · 8 CloudWatch dashboard templates · 4 runbooks ·
+`deployment/otel/dashboards/CATALOGUE.md`.
 
-Every metric below carries a **tenant identifier as a metric label**. Multiply each by the tenant count.
+### 3.1 New this pass — 19 families (the whole delta)
 
-| # | Metric | Tenant label | Per-tenant label sets | Also carries |
-|---|---|---|---|---|
-| 1 | `gen_ai.client.token.usage` | `tenant.id` | **~900-2,400** (×15 histogram buckets + sum + count ⇒ ~15k-40k Prometheus series) | model, profile, role, purpose, graph_node, token type |
-| 2 | `gen_ai.client.operation.duration` | `tenant.id` | ~150-400 (×17 series each) — **and nothing reads it** | as above |
-| 3 | `agent.model.calls` | `tenant.id` | ~150-400 | as above |
-| 4 | `agent.model.cost_usd` | `tenant.id` | ~150-400 | as above |
-| 5 | `agent.model.unpriced_calls` | `tenant.id` | ~150-400 | as above |
-| 6 | `agent.turn.calls` / `agent.turn.duration_seconds` | `tenant.id` | 12 | runtime, department, outcome |
-| 7 | `agent.ledger.write_failures` (in-flight) | `tenant.id` | 6 | ledger, outcome |
-| 8 | `chat_block_save_failures_total` (legacy) | `tenant_id` | **up to 7,200** | department, reason, error_kind, **field** |
-| 9 | `llm_requests_total`, `llm_request_duration`, `llm_tokens_total`, `llm_tokens_per_request` (legacy) | `tenant_id` | ~20 each | model, status |
-| 10 | `embedding_requests_total`, `embedding_tokens_total`, `embedding_cost_usd`, `embedding_request_duration`, `embedding_cache_hits_total`, `embedding_cache_tokens_avoided_total` (legacy) | `tenant_id` | ~20 each | model, status |
-| 11 | `memory_get_latency_ms`, `memory_search_latency_ms` (legacy) | `tenant_id` | unaudited | call-site kwargs |
-| 12 | 14 × `document_hub_*` (legacy) | `tenant_id` | **unbounded by construction** | caller-chosen keys |
+| # | Family | Class | Consumers found |
+|---|---|---|---|
+| 1 | `automation.tick.duration` | api registry | **none** — not in any board, rule, alarm, widget, runbook or CATALOGUE |
+| 2 | `automation.queue.depth` | api registry | **none** |
+| 3 | `automation.queue.wait` | api registry | **none** |
+| 4 | `automation.queue.claims` | api registry | **none** |
+| 5 | `api.lifecycle.duration` | api registry | **none** |
+| 6 | `api.lifecycle.step.duration` | api registry | **none** |
+| 7 | `http.server.request.body.size` | auto-instr | **none** |
+| 8 | `http.server.response.body.size` | auto-instr | **none** |
+| 9-13 | the five `browser.chat.turn.*` derived metrics | collector | **none** — `browser.chat.turn` is named once in `CATALOGUE.md:365`, as a span, about its attributes |
+| 14 | `browser.web_vital.value` | collector | **none** — every web-vital consumer reads the **log** (LogQL `unwrap` in oss, CloudWatch metric filters in aws), not this metric |
+| 15-17 | `browser.app.boot.{ttfb,dom_interactive,load_complete}` | collector | **none** — fn-frontend p19 reads the **log** (`unwrap load_complete_ms`), not the derived family |
+| 18-19 | `browser.long_running.{observed_wait,polls}` | collector | **none** — the two settle **events** are charted; these derived metrics are not |
 
-**Non-tenant-scoped but worth a ruling:** `subagent.name` (model-authored, unvalidated) and
-`tool.error_code` / `error.type` (103 literals, and `ToolError.code` is typed `str`).
+Tier-2 (guard) consumers exist for #9-19 and only for those:
+`copilot-mro-obsm/tests/integration/otel/test_browser_derived_metrics.py` checks all eleven against
+`base.yaml`, the browser allow-list, all four overlays, and
+`dashboard-obsm/contracts/browser-signals.json`. Families #1-8 have unit tests on their recorders
+(`api-obsm/tests/unit/telemetry/`, `tests/integration/otel/test_one_shot_queue_signals.py`) but no
+inventory or vocabulary guard of any kind.
 
-### 3.3 The collector processors
+**Rows 14-17 are the most interesting shape in the whole document, and §7 turns on them.** The
+*signal* is consumed; the *derived family built from the same signal* is not. `browser.app.boot`
+and `browser.web_vital` are charted and alerted on — as logs. Counting their derived metric
+siblings as orphans is arithmetically correct and operationally misleading.
 
-| Processor | Verdict |
+### 3.2 Carried forward, each re-derived — 28 families
+
+**`gen_ai.client.operation.duration`** (1). Re-derived: zero panel targets, zero rule exprs, zero
+alarm or widget selectors, zero runbook queries. Its only estate mention outside its emitter is the
+name-mapping table at `CATALOGUE.md:161` — tier 3. **Still an orphan.** Unchanged except the line
+number (was `:151`).
+
+**The 27 legacy families** (§2.5). Re-derived by grepping all consumer surfaces for
+`llm_*`, `embedding_*`, `memory_*_latency_ms`, `chat_block_save_failures*` and `document_hub_*`:
+**zero hits across every surface.** The only `document_hub_*` strings anywhere in the consumer set
+are `document_hub_documents` — a Postgres table — and `document_hub_process`, a span. Their own
+declaration file agrees: `consumer` is `None` for all 27.
+
+**11 of the 27 have tier-2 consumers**, listed by name in `legacy_families.TEST_CONSUMERS`:
+the four `llm_*`, five of the six `embedding_*`, `chat_block_save_failures_total`, and
+`document_hub_query_embedding_fallback_total`. Renaming or retiring any of those eleven turns a
+suite red. **The other sixteen can be deleted today with nothing anywhere noticing** — that, not
+the orphan count, is the actionable number in this section.
+
+### 3.3 Browser log events — 7 events + 1 span, unchanged
+
+`dashboard-obsm/lib/telemetry/events.ts:29-51` declares 20 event names plus the `browser.chat.turn`
+span at `:55`. Producers re-derived from `contracts/browser-signals.json`, which is
+**generated, AST-derived from the emitter** by `scripts/generate-browser-signal-contract.mts` and
+checked by `tests/unit/telemetry/browser-signal-contract.test.ts` — 21 of 21 `wired`, each with a
+`producers` list. I treated that as a derivation from code, not as a hand list, and spot-checked
+three orphans' producer lists.
+
+Consumption re-derived by grepping all consumer surfaces for `browser.*`:
+
+| Orphan | Note |
 |---|---|
-| `attributes/metric_cardinality` (`base.yaml:76`) | Present on the **metrics** pipeline of both shipped profiles (`backend-oss.yaml:56`, `backend-aws.yaml:93`). It is a 10-key **deny**-list. It does **not** delete `tenant.id`, `tenant_id`, `model`, `field`, `error_kind`, `subagent.name` or anything in §3.2 — i.e. **none of the estate's actual cardinality exposure is caught here.** It also runs *after* `transform/genai_aliases`, which is correct (the aliases add `tenant.id`, not a forbidden key) |
-| `transform/browser_allowlist` (`base.yaml:136`) | **Confirmed attribute-keyed, not event-keyed.** Two `keep_matching_keys` calls on `span.attributes`/`log.attributes` plus one on `resource.attributes`. There is **no `event.name` filter anywhere** in the browser pipelines — no `filter/` processor, no condition on the record's event name |
+| `browser.auth.login` | mentioned once, at `frontend.json:228`, in a panel description that says it is **not** charted — tier 3, not consumption |
+| `browser.pdf.render` | zero mentions |
+| `browser.upload.started` | zero mentions |
+| `browser.automation.run_triggered` | zero — only the `run_settled` sibling is charted |
+| `browser.discovery.job_started` | zero — only `job_settled` is charted |
+| `browser.chat.feedback_submitted` | zero mentions |
+| `browser.log` | zero mentions — log-search-only |
+| `browser.chat.turn` (span) | zero panel, zero rule. It now *also* feeds five derived metrics that nothing reads, so the span is upstream of orphans rather than being one alone |
 
-**What attribute-keying implies, both directions:**
+The other 13 events are consumed: `web_vital`, `error`, `telemetry.dropped`, `feature.mutation`,
+`settings.mutation`, `route.change`, `optimizer.run_triggered`, `export.requested`,
+`discovery.job_settled`, `automation.run_settled`, `auth.flow`, `ad_review.disposition_set`, and
+`app.boot` (fn-frontend p19, `unwrap load_complete_ms`).
 
-- **Direction 1.** A brand-new browser event reaches Loki/CloudWatch the moment it is emitted, with
-  zero collector edits, provided its attribute keys happen to be on the ~90-key list — and *most new
-  events reuse `outcome`/`duration_ms`/`error_type`, which are already on it*. So a new event is
-  delivered and orphaned by default, invisibly. Empirically this is exactly what happened: **7 of the
-  20 catalogued events are delivered and read by nothing**, and the only mechanical guard,
-  `test_frontend_board_charts_every_phase9_browser_event` (`test_grafana_dashboards.py:553`),
-  covers **only the 9 phase-9 events** listed at `:441-451`. The 7 orphans are precisely the
-  pre-phase-9 members that tuple omits. That is a structural explanation, not a coincidence.
-- **Direction 2.** A panel written against `event_name="browser.X"` fails silently in two distinct
-  ways the allow-list cannot distinguish: the event is not emitted at all, or the event arrives but
-  the attribute the panel unwraps was stripped. The second mode is guarded for panels
-  (`test_browser_logql_reads_only_keys_the_collector_delivers`) but the guard reads the panel, not the
-  emitter — a panel naming a *correct* key for an event nobody emits still passes.
-- **One concrete hole this creates today.** `EVENT_NAMES.LOG` is in `OPEN_ATTRIBUTE_EVENTS`
-  (`events.ts:205`), so the browser lets developer-authored payload keys through unfiltered — and
-  then the collector allow-list strips every one of them that is not among the ~90. `browser.log`'s
-  extras are therefore emitted, shipped and silently deleted at the collector. Since nothing charts
-  `browser.log` either, nobody would notice.
+### 3.4 Spans
 
----
+No span is an orphan merely for lacking a panel — INTERNAL work spans are trace-search-reachable by
+design, and in oss every span also mints `traces_spanmetrics_*`. Two additions since the previous
+version:
 
-## 4. What R.4 cannot determine without running the system
+- **`core`'s three sweep spans** — `automation.sweep.reap_stale_runs`,
+  `automation.sweep.recover_stale_one_shot_runs`, `automation.sweep.expire_retry_stamps`, from
+  `core-obsm/core/resources/automations/sweep_span.py:97` decorating `automation_store.py:1296`,
+  `:2835`, `:3022`. No consumer names them; that is the expected shape.
+- **`api.lifecycle.*` spans** alongside the two lifecycle histograms.
 
-| # | Question | Why code reading cannot answer it |
-|---|---|---|
-| 1 | **Does any of this arrive?** Every "consumed" verdict above proves a *reference*, never a *retrieval*. `_emitted_series.py` itself says so: the entire agent half is `wired`, not `live`. No probe has seen an `agent_*` series in Prometheus. Acceptance is proved by query, never by a lint's exit code |
-| 2 | **The Prometheus name each metric actually gets.** Unit→suffix mapping is computed statically in `_emitted_series.base_name`, but the exporter's real behaviour at the pinned versions — and whether `prometheusremotewrite` re-sanitises — is a scrape question |
-| 3 | **Whether CloudWatch stores `http.server.request.duration` as a native histogram or `le` buckets.** This decides which of the two `ApiHighErrorRate` failure modes in §2c is the live one. Probe B1a |
-| 4 | **Whether CloudWatch renders a dotted log-attribute key as `event.name` or `event_name`** (§2e). Four alarms and ten widgets hang on it. Probe B1b |
-| 5 | **Tempo 3.0.3's span-metrics family name.** Six panels read `traces_spanmetrics_latency_bucket` / `traces_spanmetrics_calls_total`. The *labels* are guarded against `tempo.yaml`'s dimensions by `test_tempo_span_metrics.py`; the **metric name** is guarded by nothing and has been renamed across Tempo majors before |
-| 6 | **The collector's own internal-metric names through the periodic OTLP reader** (`backend-aws.yaml:73`). The oss side is scraped and the spellings are recorded as live-verified at 0.160.0; the aws side rides a different reader and only `otelcol_process_uptime` has an observation behind it |
-| 7 | **Whether the legacy `MetricsService` families actually flow.** They are emitted only when their code paths execute; I proved the call sites exist, not that they run in any deployment. Their cardinality estimates in §3.2 are structural upper bounds, not measurements |
-| 8 | **`subagent.name`'s real value space.** Bounded in practice by which `subagent_type` strings the model emits — knowable only from live data |
-| 9 | **Whether the content-copy span tree reaches any backend.** `filter/content_only` (`base.yaml:196`) is defined, but **neither `backend-oss.yaml` nor `backend-aws.yaml` declares a `traces/content` pipeline**. On a static read the whole `record_content_copy_span` tree (`telemetry.py:1731`) is exported nowhere in either shipped profile; only `content-phoenix.yaml` might carry it, and I did not trace that overlay to a deployment |
-| 10 | **Whether `AutomationWorkerSilent` is actually firing.** Structurally it must (§2a). Whether Alertmanager is delivering it, and whether an operator has silenced it, is runtime state |
-| 11 | **The in-flight batch's final shape.** Three files I quote (`_emitted_series.py`, `flynapse-agent-alerts.yml`, `platform-health.json`) are being edited as I write. Re-run §2b against the committed diff |
+**Correction to the brief:** it says "core's three sweep spans **and their instruments**". `core`
+creates **no metric instrument at all** — spellings 1, 2 and 4 return zero hits across
+`core-obsm/core`. `automation.sweep.rows` is a **span attribute** set by `span.set_attribute`, not
+a histogram. The sweep work added three spans and zero families.
 
 ---
 
-## 5. Everything in the brief that was wrong
+## 4. Consumed-but-unemitted
 
-| # | Brief's claim | Verdict |
+### 4.1 Genuinely dead — re-derived, unchanged
+
+| Consumer | Signal | Verdict |
 |---|---|---|
-| 1 | "an implementer … is at this moment creating an instrument for `agent.ledger.write_failures`" | **True.** Uncommitted: instrument `telemetry.py:1462`, recorder `:1922`, 8 call sites |
-| 2 | "and possibly **subagent span** … call sites" | **False in one half.** Subagent *metric* call sites are being created (`observe_subagent_runs`, `subagent_runs.py:105`). There is **no subagent span** anywhere in the estate — not before, not in the in-flight diff. A subagent produces no span of its own in either runtime |
-| 3 | "and tenant/department attributes on tool metrics" | **Not present at read time.** `agent.tool.calls` / `.attempts` carry neither. The cause is structural: `agent_pipeline.py:264,:693` bind `record_tool_operation` from the *unscoped* facade, while only `model_usage_sink(turn)` (`:89`) goes through `for_turn`. Same for `record_subagent` (`:272,:688`). If this is intended work, it is not in the tree yet |
-| 4 | "`_emitted_series.py` … `FAMILY_TOKEN` … reported to cover only `agent.*` / `gen_ai.*` / `claude_code.*`" | **True**, plus two bare span tokens. The regex (`_emitted_series.py:190`) is `\b(?:agent\|gen_ai\|claude_code)[._][A-Za-z0-9_.]*\|\b(?:invoke_agent\|execute_tool)\b`. The in-flight diff does **not** touch it. **Blast radius: ~14 of 85 panels are inspected** (fn-llm-agents' 10 PromQL panels, fn-agent-turn-explorer's 3, fn-platform-health's ledger stat). **71 panels — 84% — are invisible to it**, including all of fn-service-overview (7), fn-dependencies (5), fn-telegram-bot (18), fn-shift-optimizer (12), fn-platform-health's other 8, and fn-frontend's 19. Of the 4 Prometheus rule files only `flynapse-agent-alerts.yml` is inspected; `flynapse-api-alerts.yml`, `flynapse-platform-alerts.yml` and `flynapse-satellite-alerts.yml` are not. Nothing named `otelcol_*`, `http_*`, `traces_spanmetrics_*`, `telegram_*`, `optimizer_*`, `auth_rejections_*`, `loki_*`, `tempo_*`, `prometheus_*`, `alertmanager_*`, `document_hub_*`, `llm_*` or `embedding_*` can ever be resolved, contradicted or flagged by it |
-| 5 | "six browser events are emitted, delivered, and consumed by nothing" | **The six are right but the list is incomplete.** It is **seven events plus one span**: add **`browser.log`** (emitted `lib/telemetry/logger.ts` → `events.ts:313`; no panel, no rule, no runbook — I classify it *log-search-only*) and **`browser.chat.turn`** (a span, `chat-turn.ts:60`; *trace-search-only*). Also worth recording: `browser.auth.login`'s orphanhood is already stated verbatim inside the fn-frontend board at `frontend.json:228` |
-| 6 | "The `LedgerWriteFailures` Prometheus rule states in its own annotation that no instrument exists" | **False of the working tree; true of `HEAD`.** `flynapse-agent-alerts.yml:56` now reads "WIRED 2026-09-20, retrieval unproved: … recorded by `agent_shared/usage_ledger.py`'s `count_lost_ledger_write`". **The false claim has moved to `iac`**, which at `2d493c8` still says "DARK until Task R names and wires the ledger-write-failure signal: no instrument … is created anywhere in the estate" (`alarms.tf:210`), and whose `llm-agents.json.tftpl` still says "Subagents: **DARK** — the instruments exist and nothing calls `record_subagent`". Both are now wrong |
-| 7 | "`iac` `2d493c8` has converted every CloudWatch selector … to unsuffixed dotted brace-selector form" | **True.** Exactly **27 distinct dotted metric names** across `alarms.tf` + `dashboards/*.tftpl`, every one enumerated in §2d. Exception, correctly: the `otelcol_*` self-telemetry names keep their underscore spelling, because that is the instrument name the collector itself uses |
-| 8 | "the AWS profile's metrics pipeline exports native OTLP via `otlphttp/cwmetrics` with no `prometheusremotewrite` exporter anywhere on that path" | **True — independently re-verified.** `backend-aws.yaml:42` defines `otlphttp/cwmetrics`; `:88-98` is the whole metrics pipeline; no `prometheusremotewrite` appears in `base.yaml` or `backend-aws.yaml`. `prometheusremotewrite/prom` exists only in `backend-oss.yaml:16` |
-| 9 | "`ApiHighErrorRate` in `iac/alarms.tf` is non-functional under both candidate metric shapes" | **Confirmed.** Full analysis and both corrected expressions in §2c. Under native, the ratio *and* the volume guard are type errors and it never fires; under classic buckets it computes a latency-weighted share biased toward over-reporting. The **oss** twin is correct and is not affected |
-| 10 | "the browser allow-list is attribute-keyed rather than event-keyed" | **True**, and it is worse than "no event gate": there is no `filter/` processor on either browser pipeline at all. Implications in §3.3 |
-| 11 | "Check every instrument's attributes against **the registry's allow-list**" | **The premise is false.** There is no attribute allow-list in the registry — only a 10-key **deny**-list (`FORBIDDEN_ATTRIBUTE_KEYS`) and a *unit* allow-list. Positive per-instrument attribute allow-lists exist in exactly two repos, `shift-optimizer` and `telegram-bot`. `copilot-mro` and `api` have none. §3.0 |
-| 12 | "`copilot-mro-obsm/tests/integration/otel/_emitted_series.py` … the derived metric inventory, mechanically verified" | **True but narrow.** It inventories **14 metric series** (12 `agent.*`/`gen_ai.*` + 2 `claude_code.*`) and **5 span signals** — counted by `grep -c 'Series('` / `'SpanSignal('`. The estate emits **57 metric families** (30 current + 27 legacy). 28 of them (§1a-bis + `gen_ai.client.operation.duration`) are orphans the inventory neither lists nor can detect |
-| 13 | "`docs/plans/obs-telemetry-merge-review-packet/` — six claims files, **269 claims**" | Six files confirmed present. I did not recount the claims; the coverage matrix's header says 234 in one place and the brief says 269 — I flag the discrepancy rather than resolve it, since R.4 did not need it |
-| 14 | "an implementer is active [in api-obsm] (adding a log-hygiene guard only)" | **Consistent.** `api-obsm` has exactly one untracked path, `tests/unit/api_surface/` |
-| 15 | *(unstated)* | **A third implementer is active in `dashboard-obsm`.** Untracked: `contracts/browser-signals.json`, `scripts/generate-browser-signal-contract.mts`, `tests/fixtures/telemetry/browser-signals.ts`, `tests/unit/telemetry/browser-signal-contract.test.ts`. It is generating a machine-readable browser-signal inventory — the `_emitted_series.py` of the browser half — listing all 20 events + the `browser.chat.turn` span, each with `state: "wired"` and its producer files. It closes the *emitter* side of the §3.3 hole. It does **not** close the *consumer* side: nothing in it requires a panel. Worth telling whoever owns it that R.4 found seven events it will mark `wired` with no consumer at all |
-| 16 | *(unstated)* | **`fn-shift-optimizer` has 12 panels, not 11**, and **`fn-telegram-bot` 18, not 17** — I mention it only because the R.3 matrix and CATALOGUE prose quote per-board counts, and mine come from `grep -c '"gridPos"'` on the JSON |
+| fn-llm-agents p10 targets A and B; `iac/dashboards/llm-agents.json.tftpl` markdown | `claude_code_token_usage_total` / `claude_code.token.usage`, `claude_code_cost_usage_total` / `claude_code.cost.usage` | **SUPERSEDED 2026-09-22 by M-CLI-TELEMETRY (owner B9): the CLI now emits LOGS only, metrics off; both `claude_code_*` targets are REMOVED from the board and CATALOGUE (copilot-mro `obs-merge-cli` `cb5d309d`); iac's template still names them (owed).** Was: **DEAD, correctly declared** `dark` in `_emitted_series.py` and CATALOGUE. Nothing sets `CLAUDE_CODE_ENABLE_TELEMETRY`; the collector's `transform/genai_aliases` (`base.yaml:101`) would relabel these families if they ever arrived, and relabels nothing today |
+| `flynapse-platform-alerts.yml:61` `AutomationWorkerSilent` — `absent(target_info{job="flynapse/automation-worker"})` | `target_info` for `service.name=automation-worker` | **PERMANENTLY FIRING in any oss deployment.** Re-verified: `api-obsm/flynapse_api/automations/worker.py:117` sets that service name, and neither `deployment/docker-compose.yml` (12 services) nor `observability-local/observe-docker-compose.yml` (6 services) runs it. The AWS twin is gated by `var.automation_worker_deployed=false` (`alarms.tf:195`) and is not created; **the oss twin has no gate** |
+| fn-platform-health p6 "Automation worker heartbeat" | same | reads "worker absent = 1" forever |
+| `rules/loki/flynapse/browser-alerts.yml:100` `AutomationRunErrors` — `{service_name="automation-worker"}` | that log stream | **NEVER FIRES** — the inverse failure. Its own annotation calls it a transitional proxy that "arms as soon as worker logs flow"; nothing makes them flow |
+| **`iac/alarms.tf` — the four browser alarms** (`BrowserErrorRateHigh`, `WebVitalLcpP75Poor`, `WebVitalInpP75Poor`, `WebVitalClsP75Poor`), over the metric filters at `:519`, `:550`, `:558`, `:566` | `Flynapse/Browser` `BrowserErrors`, `WebVitalLcp`, `WebVitalInp`, `WebVitalCls`, minted from `$.attributes.event_name` | **DEAD, and the file says so.** `alarms.tf:123`: "`$.attributes.event_name` names a key that does not exist. It cannot match under ANY reading." `:135`: "READ THE FOUR BROWSER ALARMS AS DEAD, NOT AS QUIET". Each has `treat_missing_data = "notBreaching"`, so each one reports OK forever. **The emitter is fine**: `browser.error` and `browser.web_vital` are both produced and both work in oss. What is dead is the aws read path. `:127-130` adds that `$.resource.attributes.service.name` has the same defect, which makes it six dead patterns: these four, plus the two worker patterns, which are gated off anyway |
+
+### 4.2 Stale assertions in `iac` — now resolved
+
+The previous version recorded two false statements in `iac` at `2d493c8`: the `LedgerWriteFailures`
+alarm description claiming no ledger instrument exists anywhere, and the llm-agents markdown
+claiming nothing calls `record_subagent`. At `f85284e` neither string survives: `alarms.tf` names
+`{"agent.ledger.write_failures"}` as a live selector, and `llm-agents.json.tftpl` names
+`agent.subagent.calls` and `agent.subagent.duration_seconds`. **Both stale assertions are gone.**
+
+### 4.3 Every dotted selector in `iac`, re-checked against emitters
+
+29 distinct dotted names across `alarms.tf` and `dashboards/*.tftpl`: 28 in the templates, plus
+`agent.ledger.write_failures`, which only `alarms.tf` names. All 29 are names the estate emits,
+**except** the two `claude_code.*`, which are declared dead. So the metric-name conversion is
+correct. The dead alarms in §4.1 fail at the **log-attribute** level, not on a metric name.
+
+Three things `iac` does **not** name, which is where the asymmetry now sits:
+`agent.model.calls` and `agent.tool.calls` are charted in oss and have **no AWS consumer**
+(unchanged); and **none of the 19 new families in §3.1 appears anywhere in `iac`.**
+
+### 4.4 `ApiHighErrorRate` — carried, not re-derived
+
+`iac/alarms.tf` still writes both sides of a ratio as bare histogram selectors with no
+`histogram_count`, no `le="+Inf"` and no `_count` suffix. **I am carrying the previous version's
+verdict — non-functional under both candidate storage shapes — rather than re-deriving it**,
+because settling it needs a fact about what CloudWatch stores for an OTLP histogram that no file in
+the estate contains. The estate's own note at `alarms.tf:107-114` says the same. The oss twin
+(`flynapse-api-alerts.yml:11`) names `http_server_request_duration_seconds_count` explicitly and is
+correct. **Treat this as an open probe, not as a settled finding.**
+
+### 4.5 The CloudWatch attribute-path spelling — fixed on the widgets, deliberately left broken on the alarms
+
+The previous version flagged 4 alarms and 10 widgets that select `attributes.event_name`
+(underscore) while the browser emits `event.name` (dotted). **The two halves have separated.**
+
+- **Widgets — fixed.** `iac/dashboards/frontend.json.tftpl` now selects `attributes.event.name`.
+  The one `attributes.event_name` left in that file is inside its markdown, explaining the old
+  spelling. `iac/scripts/validate_metric_vocabulary.py` check 7 pins the dotted form, through
+  `DOTTED_ATTRIBUTE_KEYS` and `SANITISED_PROVENANCE`.
+- **Alarms — not fixed, on purpose.** The four live patterns at `alarms.tf:519,550,558,566` still
+  read `$.attributes.event_name`. `alarms.tf:116-134` says why. Metric filters use a different
+  grammar from Logs Insights: in a metric filter the period is the path separator, so
+  `$.attributes.event.name` would be wrong as well. The correct form is bracket notation, and AWS
+  documents two possible spellings of it without saying which one applies. The file declines to
+  guess, and it keeps a spelling that it calls "at least HONESTLY dead". §4.1 lists these alarms as
+  dead.
+
+**My first draft of this section said the defect was closed.** I wrote that after reading only the
+widget markdown. The alarm patterns proved it wrong when I checked the claim against `alarms.tf`.
+I note the mistake here because it has the same shape as the one this document is about: I read
+the fixed half and assumed the other half was fixed too.
+
+**The experiment that settles it is already written:** `iac/scripts/b1b_metric_filter_probe.sh
+[region]`. It needs only `logs:TestMetricFilter`, it runs every candidate selector against both
+possible storage shapes, and it prints MATCH / NO MATCH / REJECTED for each. `alarms.tf:138-150`
+states what it predicts before it runs.
+
+---
+
+## 5. What I could not settle
+
+| # | Question | Why code reading cannot answer it, and the experiment that would |
+|---|---|---|
+| 1 | **Does any of this arrive?** Every "consumed" verdict proves a *reference*, never a *retrieval*. `_emitted_series.py` says so itself: the agent half is `wired`, not `live`. | Run `test_oss_profile_smoke.py::…inventory…` against a booted oss stack — it already pushes one synthetic datapoint per inventoried instrument and asserts Prometheus serves the predicted names. It covers 12 of 76 families. Extending it to the other 64 is the experiment |
+| 2 | **`ApiHighErrorRate`'s real behaviour.** §4.4. | One `aws cloudwatch get-metric-data` PromQL call against a deployed environment, asking for `histogram_count(rate({"http.server.request.duration"}[5m]))` and for the bare form; whichever errors tells you the stored shape |
+| 3 | **`traces_spanmetrics_*` family names** against the `grafana/tempo:3.0.3` pin. Nine panels depend on the spelling and no file in the estate proves it. | Boot the oss stack, send one span, `GET /api/v1/label/__name__/values` on Prometheus, grep for `traces_` |
+| 4 | **`otelcol_*` spelling on the aws path.** They reach CloudWatch through the periodic OTLP reader in `backend-aws.yaml`, and the aws runbook records a 2026-09-15 capture-exporter observation for `otelcol_process_uptime` **only**. The other seven names on fn-platform-health are unverified there | Repeat that capture-exporter run and list every `otelcol_*` name it emits |
+| 5 | **Whether the 11 derived browser metrics are produced at all.** The connector is uncommitted config; no probe has seen `browser_chat_turn_duration_seconds_bucket` in any backend | Boot oss, drive one chat turn in a real browser, query Prometheus for `browser_chat_turn_duration_seconds_count` |
+| 6 | **The exported Prometheus name of the 27 legacy families after `legacy_families.py`.** Declaring honest units *renames* the exported series (`embedding_cost_usd` is now `{USD}`, `document_hub_processing_duration_seconds` is now `s`). The file's `unit_note` records the disagreements, but no probe has confirmed what the exporter actually emits | Push one synthetic datapoint per declared family through the pinned collector and read the served names back — the §1 experiment, applied to this class |
+| 7 | **Whether `http.server.{request,response}.body.size` survive to a backend.** I proved the instruments are created and recorded. I did not prove the collector exports them (nothing filters metrics by name, so they should, but "should" is not a measurement) | Same probe as #5, asking for `http_server_request_body_size_bytes_count` |
+| 8 | **What the four CloudWatch browser metric-filter patterns should say** (§4.5). The file has settled that the current patterns match nothing. It has not settled what the right pattern is | `iac/scripts/b1b_metric_filter_probe.sh [region]` — read-only, needs only `logs:TestMetricFilter`, and states its predicted result before it runs |
+
+**One thing I deliberately declined to score.** `copilot-mro-obsm` moved from dirty 64 to dirty 65
+during the audit and `deployment/otel/base.yaml`, `CATALOGUE.md`, all three edited boards, two rule
+files and four runbooks are in that set. I did **not** attempt a per-panel or per-rule consumption
+verdict at panel granularity for those files, because the panel bodies are being rewritten under
+me. Every verdict in §3 and §4 is at **family granularity**, where a name either appears in the
+file or does not — a property that survived every re-read I did. Where I needed a count that could
+move (panels, alerts), I re-derived it mechanically and said which command produced it.
+
+---
+
+## 6. The inventory gap
+
+`copilot-mro-obsm/tests/integration/otel/_emitted_series.py` holds **14 `Series(` and 5
+`SpanSignal(`** — identical to the previous version's count, re-derived by `grep -c`. Its
+`FAMILY_TOKEN` regex at `:218` is also unchanged:
+
+```
+\b(?:agent|gen_ai|claude_code)[._][A-Za-z0-9_.]*|\b(?:invoke_agent|execute_tool)\b
+```
+
+So the inventory can still resolve or contradict only `agent.*`, `gen_ai.*`, `claude_code.*` and
+two span tokens. **Nothing named `automation_*`, `api_lifecycle_*`, `browser_*`, `http_*`,
+`telegram_*`, `optimizer_*`, `otelcol_*`, `traces_spanmetrics_*`, `document_hub_*`, `llm_*` or
+`embedding_*` can ever be flagged by it.** The gap it leaves went from 43 families (57 − 14) to
+**62 (76 − 14)** in one night.
+
+Three partial inventories now exist and none of them meets the others:
+
+| Inventory | Covers | Blind to |
+|---|---|---|
+| `_emitted_series.py` (copilot-mro) | 12 agent families + 2 dark + 5 spans | the other 62 families |
+| `legacy_families.py` (utils) | the 27 legacy families, with declared bounds and a `consumer` field | everything modern |
+| `contracts/browser-signals.json` (dashboard, generated) | 20 browser events + 1 span, with producers | all metrics, including the 11 derived from its own signals |
+
+`iac/scripts/validate_metric_vocabulary.py` is **not** a fourth inventory: its own docstring
+(`:1488`, `:1519`) says `{"telegram.turnz"}` and `{"agent.turn.callz"}` pass every check it makes.
+It pins dialect, form, AWS namespaces and deployment gating — not existence. It holds two emitter
+names (`UNIT_SUFFIXED_INSTRUMENTS` at `:221`) and that is the whole of its name knowledge.
+
+---
+
+## 7. The rule — and why it should be split
+
+**The question.** Tonight's collector work created 11 emitted-but-unconsumed families, so by R.4's
+own rule tonight's work is a 39% regression in the orphan count. Is that rule still right?
+
+**No. It is measuring the wrong thing, and the evidence is in this document.**
+
+Take rows 14-17 of §3.1. `browser.web_vital.value` counts as "unconsumed". The web-vital log it is
+derived from feeds **two fn-frontend panels and three Loki alert rules**. Before tonight, a p75
+web-vital query worked only where Loki runs. Now there is a metric carrying the same reading in all
+four profiles. **In aws that matters more than a new capability usually does:** the three
+CloudWatch web-vital alarms that were supposed to cover aws are dead (§4.1). Today
+`browser.web_vital.value` is the only aws path to web vitals that is not known to be broken. A rule
+that counts this family and the three `app.boot.*` families as four new orphans is not describing
+a defect. It is describing a portability gain in the language of debt.
+
+**The failure mode is not hypothetical.** A metric that counts every new capability as a regression
+gets ignored, and then the rule stops catching the thing it exists to catch — the sixteen legacy
+families in §3.2 that nothing reads, no test asserts on, and that can be deleted today.
+
+### 7.1 The split
+
+Replace one verdict with two independent axes. Both are derivable from what is already in this
+document; neither needs new tooling.
+
+**Axis A — reachability.** Can an operator get at this family *at all*, during an incident, without
+shipping code?
+
+| Value | Meaning |
+|---|---|
+| `reachable` | exists as a series in at least one shipped profile's backend; an operator can query it ad hoc |
+| `unreachable` | not exported on any shipped profile's path, or gated off |
+
+**Axis B — intent.** Why does it exist?
+
+| Value | Meaning | Action when unconsumed |
+|---|---|---|
+| `charted` | at least one tier-1 consumer names it | none |
+| `on-call` | deliberately unconsumed: it exists so someone can query it during an incident. Requires a named owner and a runbook sentence saying which question it answers | none — this is the intended terminal state |
+| `orphan` | no tier-1 consumer, no runbook sentence, and no one has claimed it | **this is the only number worth reporting as debt** |
+
+An `on-call` claim is cheap to make and cheap to audit: one line in
+`docs/runbooks/observability/`. That is the whole enforcement mechanism, and it is enough, because
+the claim is what makes the difference auditable — a family with no consumer *and* no runbook line
+is unowned by construction.
+
+### 7.2 What the 47 become
+
+| Bucket | Count | Families |
+|---|---|---|
+| `on-call`, **provisional** (a purpose is stated in code; the runbook line is not written yet) | **17** | the 11 derived browser metrics (`base.yaml:229-230` says `browser.chat.turn.duration` is "deliberately derived anyway so the turn's duration is one series with one name in every profile") + the 6 api queue/tick/lifecycle families (each docstring names the question the family answers — for example `queue_telemetry.py:168-169` on `automation.queue.claims`: "A rising `lost` rate is two schedulers reading one work list, which today is visible nowhere") |
+| `orphan` (unowned debt) | **30** | `gen_ai.client.operation.duration` + the 27 legacy families + **the 2 HTTP body-size families**. The body-size pair is a side-effect of the contrib library, and nobody in the estate ever gave either family a purpose |
+| of which **safe to remove today** | **18** | 16 legacy families (the 27, minus the 11 that have `TEST_CONSUMERS` entries) + the 2 body-size families. The body-size pair should be dropped with an SDK `View`; there is no call site to delete |
+
+**All 17 new families that have a stated purpose land in `on-call`. The 2 that have none land in
+`orphan`.** Under this rule the orphan count moves **28 → 30**, not 28 → 47. That describes the
+night's work more accurately, and it is not a whitewash, for two reasons:
+
+- **The `on-call` label is provisional for all 17.** By the rule's own terms, a family with no
+  runbook line is `orphan`. Writing the 17 runbook sentences in `docs/runbooks/observability/` is
+  what makes the label real. I have counted them as `on-call` and flagged that here.
+- **The rule still charged tonight's work with 2 new orphans.** It separates stated intent from
+  accident. It does not wave every new family through.
+
+### 7.3 One thing the split does not fix
+
+`on-call` is a claim about intent, and this document proves references, never retrievals (§5 #1).
+A family can be `reachable` on paper and absent in practice — the 11 derived metrics are the live
+example, since no probe has seen one. **`on-call` should not be grantable to a family in the
+`wired` state.** The honest three-state chain is `wired` → `live` → `on-call`, and the estate
+already has the first two words for exactly this reason.
+
+---
+
+## 8. Corrections to the brief and to R.3
+
+| # | Claim | Verdict |
+|---|---|---|
+| 1 | "R.4's producer inventory is short by at least fifteen names" | **False as stated.** The 2026-09-20 §1a-bis listed all fourteen `document_hub_*` families, derived from code. The producer side *was* short — by **nineteen** names (6 api + 2 body-size + 11 derived), none of them Document Hub |
+| 2 | "the estate carries 15 Document Hub families" (R.3 §"copilot-mro (legacy shim)") | **Fourteen.** `legacy_families.py` declares 14; `operations.py` defines 14 constants. R.3's own sentence lists fourteen while saying fifteen, and says "18 families" while listing seventeen |
+| 3 | R.3: "if R.4 was run against that inventory it under-counted by fifteen" | **The premise did not hold.** R.4 was not run against `_emitted_series.py`. This is the exact failure the brief warns about — a derived document inheriting an unverified number — occurring *in the brief itself*, one generation on |
+| 4 | "core's three sweep spans **and their instruments**" | **Half true.** The three spans exist. `core` creates **no metric instrument anywhere**; `automation.sweep.rows` is a span attribute |
+| 5 | "api's lifecycle instruments" | **True**, and there are four more the brief did not name: the three `automation.queue.*` families and `automation.tick.duration` |
+| 6 | "11 browser metrics derived at the collector, wired into all four backend overlays" | **True, verified name by name and overlay by overlay.** Also: the connector and its wiring are **uncommitted** at `6058e662` |
+| 7 | "`contracts/browser-signals.json` was referenced in exactly two ways and read by nothing" | **Out of date.** `copilot-mro-obsm/tests/integration/otel/test_browser_derived_metrics.py:55` now loads and asserts on it cross-repo (via `sibling_variant`, explicitly so it cannot read the pre-merge `dashboard` checkout). It is a tier-2 consumer, which is why §1.1 makes the tier explicit rather than arguing about the word |
+| 8 | "a family built from a constant, an f-string, a loop, or a name assembled from a prefix" | **Found one**, in telegram-bot: `registry.counter(f"telegram.{name}")` at `telemetry.py:900`, reached through four module constants. Today it mints no undeclared family; the mechanism means a future one would ship silently. The legacy shim has the same shape at `metrics.py:267` |
+| 9 | "a dataclass field can look like an instrument" | **Confirmed as a non-issue here.** None of spellings 1-5 matches a bare field, and `ad_notification_dispatcher.py` produced no false positive |
+| 10 | "the collector can create families no repo's code creates" | **True, and there is a second case the brief did not name:** `iac/alarms.tf` *declares* six `Flynapse/*` CloudWatch log-metric-filter families. None of them currently produces a datapoint. Two are gated off, and four sit on patterns the file itself calls dead. Declaring a family in config does not produce it — the same point this document makes about writing a name in prose |
