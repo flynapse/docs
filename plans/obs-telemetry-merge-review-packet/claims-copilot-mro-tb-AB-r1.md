@@ -1,4 +1,4 @@
-# Claims packet — copilot-mro M-TRACEBACK lanes A + B, review r1 — **PARTIAL — in progress (merged-clone lanes running)**
+# Claims packet — copilot-mro M-TRACEBACK lanes A + B, review r1 — FINAL
 
 Independent adversarial review, Opus 5, 2026-09-22. Read-only on every real tree: nothing edited, committed,
 checked out, merged or stashed in `copilot-mro-obsm*`; nothing pushed; no docker, no live stack, no DB-writing
@@ -17,22 +17,29 @@ flynapse-otel `0224a1a`. Recipe `tools/pt.sh <clone> <pytest args>` = load gate 
 PHASE1C_UTILS_REPOSITORY=/home/aditya/Code/utils-obsm PYTHONPATH=<clone>:core-obsm:utils-obsm:api-obsm:flynapse-otel`,
 `-o addopts="-ra --strict-markers" -p no:cacheprovider`. Import seat proven: `rootdir: …/tb-review-ab/cloneA`,
 `copilot_mro.app.__file__ = …/cloneA/copilot_mro/app/__init__.py` (primary checkout last on the namespace path).
-Two symlinks in the scratch dir (`core`, `dashboard` → the `-obsm` trees) let `tests/_root.sibling_*` anchor.
+Three symlinks in the scratch dir (`core`, `dashboard`, `api` → the `-obsm` trees) let `tests/_root.sibling_*` anchor.
 
 Severity: 0 = a content leak that ships … 3 = docs/cosmetic. Tier (§2.3a): 0 = settled by a mutation-checked guard
 this reviewer saw red; 1 = consequential, reversible; 2 = irreversible / estate-shaping.
 
 ---
 
-## Verdicts (provisional until the merged lanes finish)
+## Verdicts
 
-- **Lane A — FIX-FIRST** — 0 P0 · 0 P1 · **2 P2** · 7 P3 (+1 out-of-lane P2 routed to G.105). Both P2s are
-  model-visible regressions against the explicit M-TOOL-ERRORS allowance ("`run_code`'s own syntax error", "regex
-  errors, `read_docx` search"); each is a few lines at the tool seat.
+- **Lane A — FIX-FIRST** — 0 P0 · **1 P1** · **2 P2** · 7 P3 (+1 out-of-lane P2, X-1, routed to G.105).
+  - **P1 (A-P1-1):** lane A's HEAD is RED on an existing privacy guard it never ran —
+    `tests/agent_sdk/core/test_agent_sdk_ordinary_log_privacy.py` rejects the stdlib form `extra={**failure_fields(exc)}`
+    at 6 sites (`resolve_workout.py:902`, `workout_gate.py:477,604,645,758,896`). Merging turns `obs-merge` red outside
+    `tests/unit`. Fix proven in a scratch clone: `extra=failure_fields(exc)` at the 6 sites → privacy test, both M-TRACEBACK
+    guards and the logger-binding guard green (233 passed).
+  - **P2 (A-P2-1, A-P2-2):** model-visible regressions against the explicit M-TOOL-ERRORS allowance ("`run_code`'s own
+    syntax error", "regex errors, `read_docx` search"); each is a few lines at the tool seat (recommendation at the end).
 - **Lane B — MERGE-CLEAN** — 0 P0 · 0 P1 · 0 P2 · 3 P3.
-- **Merge rehearsal A→B onto `557a178f`** — only the register conflicts (1 hunk for A, 2 for B); the DEBT hunk must be
-  resolved by DROPPING both sides' lines, not by a union (a union is caught: mutant M1 KILLED). Both guards green on
-  the merged clone (213 passed).
+- **Merge rehearsal A→B** onto `557a178f` (as briefed) and again onto today's `obs-merge` `80bfa139`: only the register
+  conflicts (1 hunk for A, 2 for B). The DEBT hunk must be resolved by DROPPING both sides' lines, not by a union (a union
+  is caught: mutant M1 KILLED). On `557a178f`: both guards 213 passed, full unit lane 6776 passed with only
+  pre-existing/location reds. On `80bfa139`: M-TRACEBACK guard, scope guard and the r8-updated M-TOOL-ERRORS guard green;
+  the privacy test red for A-P1-1 alone.
 
 ---
 
@@ -44,7 +51,7 @@ this reviewer saw red; 1 = consequential, reversible; 2 = irreversible / estate-
 | A-02 | Every hunk in the 94 production files lies inside a function whose debt fell, or is an import line — no scope-guard approval needed | — | 0 | `tools/confine.py` (the scope guard's own `hunks_outside_repairs` over `735f8213..79bad4ac`): 0 files with a hunk outside; the guard goes red on a planted module-level hunk in `_topic.py` (S1 KILLED) | SETTLED | — |
 | A-03 | Both guards green at HEAD, cross-repo half included | — | 1 | `pt.sh cloneA …test_no_exception_text_in_logs.py …test_phase1c_nonagent_scope_guard.py -n 0` → 213 passed, exit 0. (The lane's own full-lane run SKIPPED the cross-repo half: `utils-obsm-tbA is not a checkout`.) | SETTLED | — |
 | A-04 | No loguru brace hazard introduced | — | 1 | `tools/shapecheck.py`: 0 constant messages with `{`/`}` among calls carrying kwargs. The only NON-constant messages the lane newly gave kwargs to (`lifecycle._collect_prior` `failure_message`, `_advisory` `message`, `dataview_persistence` `f"{log_label}: …"` / `f"{tool_name}: …"`) are fed brace-free literals by all 11 `_collect_prior`/`_advisory` and ~20 `log_label=`/`tool_name=` callers; loguru 0.7.3 `_log` formats `message.format(*args, **kwargs)` whenever kwargs exist and does not catch | SETTLED-by-reading | a caller later passing a data-derived label makes `str.format` raise inside a fail-open handler |
-| A-05 | Logger-kind/call-shape fit: no loguru call given `extra=` (G.92 limb four), no stdlib call given bare keywords; stdlib `workout_gate`/`resolve_workout` use `extra={**failure_fields(exc)}`; no explicit `error_type=`/`stack=`/… beside the splat | — | 1 | `tools/shapecheck.py` issues 0; `tools/dupkw.py` 0; `failure_fields` keys (`error_type`, `stack`, `aws_error_code`, `sqlstate`, `pg_primary`) collide with no `LogRecord` attribute | SETTLED-by-reading | — |
+| A-05 | Logger-kind/call-shape fit: no loguru call given `extra=` (G.92 limb four), no stdlib call given bare keywords; stdlib `workout_gate`/`resolve_workout` use `extra={**failure_fields(exc)}` (runtime-correct, but see A-P1-1: the privacy guard refuses that spelling); no explicit `error_type=`/`stack=`/… beside the splat | — | 1 | `tools/shapecheck.py` issues 0; `tools/dupkw.py` 0; `failure_fields` keys (`error_type`, `stack`, `aws_error_code`, `sqlstate`, `pg_primary`) collide with no `LogRecord` attribute | SETTLED-by-reading | — |
 | A-06 | `failure_fields` always gets the innermost handler's own exception | — | 1 | `tools/ffarg.py`: 225 calls; the 4 "mismatches" are helpers taking the exception as a parameter (`_raise(exc)`, `_record_block_save_failure`, two pre-existing) | SETTLED-by-reading | — |
 | A-07 | Operator identifiers kept: every non-exception placeholder of a removed f-string reappears as a field | — | 1 | `tools/idskept.py A.diff`: 12 checked, 0 dropped; the full 3845-line diff read | SETTLED-by-reading | — |
 | A-08 | Levels preserved (`exception`→`error`, `opt(exception=True).warning`→`warning`, `exc_info=True` debug/warning → same) | — | 1 | full diff read | SETTLED-by-reading | — |
@@ -54,6 +61,7 @@ this reviewer saw red; 1 = consequential, reversible; 2 = irreversible / estate-
 | A-12 | `_specs_from_bank`, `BrowserSession.open` message changes are not model-visible (boot text; the spawn error is caught by `open_browser_session`, which logs type only); `services/sandbox/*` (`TransformCodeValidator`, `TransformResultValidator`) has NO production consumer — only `scripts/manual_sandbox_check.py` and `tests/sandbox/` | — | 1 | `rg -l services.sandbox` outside the package | SETTLED-by-reading | — |
 | A-13 | The two rendered-exception test edits are stronger, not weaker: they now pin "type present AND no rendered exception" | — | 0 | A4 (`put_state` back to `opt(exception=True)`) KILLED by `test_agent_sdk_agent_state_wrapper.py`; A5 (`persist_data_view` drops `failure_fields`) KILLED by `test_agent_sdk_dataview_persist_warning.py` | SETTLED | — |
 | A-14 | No prompt, skill, FE type or test parses any changed text (`invalid Python syntax`, `invalid regex`, `Chart rejected`, `citation correction …`, `browser server did not start`, `unresolved`) beyond prefixes that still match (`"invalid search" in …`) | — | 1 | `rg` over `.claude/skills`, `agent_shared/prompts`, `dashboard-obsm/src`, `tests` | SETTLED-by-reading | — |
+| **A-P1-1** | **Lane A's HEAD is red on `test_agent_sdk_ordinary_log_privacy.py::test_served_api_runtime_and_tool_ordinary_logs_do_not_emit_content`.** The stdlib recipe `extra={**failure_fields(exc)}` puts a `None` key in the `extra=` dict literal, which the served-surface privacy guard reports as "extra= key that is not a literal string" — 6 offenders: `resolve_workout.py:902`, `workout_gate.py:477,604,645,758,896`. The guard accepts `extra=failure_fields(exc)` (a direct sanitizer call, `_SANITIZER_CALLS`). The lane's recipe (touched-module tests + `tests/unit`) never ran `tests/agent_sdk/core` | 1 | 1 | `pt.sh cloneA tests/agent_sdk/core/test_agent_sdk_ordinary_log_privacy.py` → 1 failed / 3 passed; same file at `cloneBase` 4 passed and at `cloneB` 4 passed; fix probe in `cloneA` (reverted): `sed 's/extra={\*\*failure_fields(exc)}/extra=failure_fields(exc)/'` on the two files → privacy test + both M-TRACEBACK guards + `test_logger_calls_match_their_binding.py` 233 passed. Lanes C (`ece9c60e`) and D (`3637540d`) have no such site in the guard's served roots (`git grep`) | SETTLED (red observed) | merged as-is, `obs-merge` is red in `tests/agent_sdk` while every `tests/unit` gate stays green — the next reviewer finds a privacy guard broken by a privacy fix |
 | **A-P2-1** | **`run_code` syntax-error feedback regressed against an explicit owner allowance.** `_sandbox_core.validate_code` raises `RunCodeValidationError("syntax_error", "invalid Python syntax") from exc`; `execute` returns `{"error": exc.message}` to the model: no line, column or parser reason. M-TOOL-ERRORS keeps "`run_code`'s own syntax error / stderr" for the model; the ALLOWED entry `(_sandbox_core.py::execute, 'validation')` still says "the message names the line and the rule it must fix" — now false. The M-TRACEBACK guard forbids simply reverting the raise (A1 KILLED), so the text must be rendered at the seat | 2 | 1 | `_sandbox_core.py:198-203,466-469`; plan §4a-bis M-TOOL-ERRORS; `_tool_error_text_debt.py` ALLOWED; mutant A1 | OPEN | the model sends 60 lines with an unclosed `(` on line 41 and hears only "invalid Python syntax"; it re-sends near-identical code or rewrites wholesale, burning run_code turns |
 | **A-P2-2** | **`read_docx` regex search lost the compiler's reason**, the other explicit M-TOOL-ERRORS allowance ("regex errors, `read_docx` search"). `_docx_core.search_paragraphs` raises `ValueError(f"invalid regex {query!r}") from exc`; `read_docx` shows `f"invalid search: {exc}"`. Sibling `_docx_write_core.py:452` still says `f"invalid regex {find!r}: {exc}"` — the two docx tools now disagree | 2 | 1 | `_docx_core.py:140-144`; `read_docx.py:252-255`; `_docx_write_core.py:452` | OPEN | `find="(\d+"` → read_docx: "invalid regex '(\d+'" (no "missing ), unterminated subpattern at position 0"); docx_write on the same pattern says why |
 | A-P3-1 | `chart_create` tells the model "Fix and retry" and now gives it nothing to fix by: "Chart rejected: Chart definition failed schema validation.. Fix and retry — …" (pydantic loc/type gone; doubled period). Ruling-compliant — chart validation is not a named M-TOOL-ERRORS exception → **owner question** (recommendation below) | 3 | 1 | `charting_tool/validator.py:68-81`; `chart_create.py:278-284` | OPEN — owner | a series value is a string where a float is required; the model cannot tell which field and retries blind |
@@ -95,7 +103,9 @@ this reviewer saw red; 1 = consequential, reversible; 2 = irreversible / estate-
 | M-02 | Merging B onto (`557a178f` + A) conflicts ONLY in the register, two hunks. (a) a **DEBT** hunk of 5 lines — B's two `faa_ad_fetcher` entries (still on the A side) vs A's three `sandbox/*` + `participation` entries (still on the B side): **the correct resolution drops all five** (each side paid its own); a union re-enters paid debt. (b) the **REPAIRED** hunk: sorted union, 351 keys (174 + 178 − the shared `improvement/runner.py::run_improvement`) | — | 0 | `tools/resolve_ab.py`; `tools/checkmerged.py`: DEBT 157 (C 90/129, D 67/100), `REPAIRED == seed − DEBT`, SEEDED unchanged, sorted, 0 duplicates; mutant M1 (keep-both resolution of the DEBT hunk) KILLED by the guard | SETTLED | a merger who "keeps both sides" re-enters 5 paid entries; the guard catches it, so the cost is a red merge, not a silent regrowth |
 | M-03 | No conflict in `test_phase1c_nonagent_scope_guard.py` (neither lane touched it; the cli merge's 14-line edit merges clean) and none in any production file | — | 1 | `git diff --name-only --diff-filter=U` after each merge | SETTLED | — |
 | M-04 | Both guards green on the merged clone | — | 1 | `pt.sh cloneM …both guards… -n 0` → 213 passed, exit 0 | SETTLED | — |
-| M-05 | Full unit lane on the merged clone | — | 1 | running | pending | — |
+| M-05 | Full unit lane on the merged clone (`557a178f` + A + B): 6776 passed, 9 failed — all pre-existing or location (see Lane runs) | — | 1 | `logs_unit_M.txt` | SETTLED | — |
+| M-06 | Non-unit touched suites on the merged clone (`tests/agent_sdk sandbox agent_services chat architecture data_views documents parsers file_readers ingestion smoke config registries`, `-n 2`, all live/DB markers deselected): 5041 passed, 5 failed, 4 errors — the ONLY lane-caused red is A-P1-1; the rest reproduce at `735f8213` or are location (see Lane runs) | 1 | 1 | `logs_nonunit_M.txt` | SETTLED | — |
+| M-07 | Re-rehearsed onto today's `obs-merge` `80bfa139` (r8 fixes incl. two M-TOOL-ERRORS detector widenings): same 1 + 2 register hunks, same resolution, `tools/checkmerged.py` identical (DEBT 157, REPAIRED 351); M-TRACEBACK guard, scope guard and the M-TOOL-ERRORS guard green (the r8 detector finds no new site in either lane); only the privacy test red (A-P1-1). Full unit lane NOT re-run on `80bfa139` | — | 1 | `cloneM` branch `rehearsal2` `1794b49f`; guards + privacy test: 261 passed, 1 failed | SETTLED | — |
 
 ## Lane runs
 
@@ -103,6 +113,8 @@ this reviewer saw red; 1 = consequential, reversible; 2 = irreversible / estate-
 |---|---|---|
 | A `tests/unit -n 2 -m "not db"` (cloneA) | 6663 passed, 7 failed, 6 errors, 23 skipped | 5 × `test_cross_repo_reads_name_their_checkout` + 1 × `test_root_anchoring` = clone LOCATION (the same 6 fail at `735f8213` in the same directory); 3 collection errors (`ad_notification_payload_contract`, `chat_turn_facts_value_gates`, `…_writer`) = no sibling beside the clone — with the `core`/`dashboard` symlinks: 87 passed, 2 failed (`value_gates` mirror tests), the same 2 fail at `735f8213` (core-obsm has moved); 1 × `…[deadline]` (known, load-sensitive). The known 8 `test_nonagent_lifecycle_spans` errors did not fire (xdist order) |
 | B `tests/unit -n 2 -m "not db"` (cloneB) | 6743 passed, 9 failed, 8 errors, 22 skipped | 8 × `test_nonagent_lifecycle_spans` (known placeholder-package pollution); 2 × `value_gates` (core drift, base same); 6 × `test_cross_repo_reads_name_their_checkout` (location, base same incl. `test_sibling_variant_picks…`); 1 × `test_package_stubs_link_their_parents` = "dictionary changed size during iteration" over `sys.modules` (a concurrent import race; 9/9 alone) |
+| merged `557a178f`+A+B `tests/unit` | 6776 passed, 9 failed, 22 skipped | 2 × `value_gates` (core drift), 6 × `test_cross_repo_reads_name_their_checkout` (location), 1 × `test_package_stubs_link_their_parents` (the same `sys.modules` race) |
+| merged, non-unit touched suites | 5041 passed, 5 failed, 4 errors | **A-P1-1** (lane A); `test_ftd_insert_to_postgres_ensures_standalone_tables` (known base red); 3 × `tests/config/settings/test_config.py` (same 3 fail at `735f8213`: environment); 2 architecture modules × 2 workers = collection errors for want of an `api` sibling → with an `api` symlink, 18 passed |
 | Lane A's `tests/api/chat` batch under `-n 2` | not repeated | noted per brief: `tests/api` may write `copilot_mro_test`; this review ran no `tests/api`, `tests/db` or `-m db` lane |
 
 ## Mutation log (`mut/results.txt`; `mutant.sh`, baseline-checked, cold bytecode)
@@ -152,3 +164,13 @@ in the input, as `block_save_failure_fields` has), keep list indices for the mod
 metric-label cardinality), and put it in `ChartValidationError`'s message (the raise rule then passes, because the
 describer frees the exception slot). Owner question: add "chart validation" to M-TOOL-ERRORS' named exceptions, or rule
 that loc+type is not "the message". Not needed for `services/sandbox/result_validator.py` — no production consumer (A-12).
+
+**3. For A-P1-1, two correct fixes; pick by whether the recipe should survive.** (a) Minimal, proven: spell the six
+stdlib calls `extra=failure_fields(exc)` — the privacy guard's `_is_sanitized_payload` accepts a direct sanitizer call.
+(b) Estate-wide: teach the privacy guard that a `**<sanitizer call>` entry inside an `extra=` dict literal is sanitized
+(one condition: `key is None and _is_sanitized_payload(value)`), mirroring what it already does for a top-level
+`**failure_fields(exc)` keyword. (b) keeps the plan's own G.104 stdlib recipe — `extra={**failure_fields(exc), ...}` —
+valid on served surfaces, where today it is refused whenever it appears; with (a) alone, the recipe text in G.104 should
+say `extra=failure_fields(exc)` and a stdlib site that needs extra fields has no guard-clean spelling. Lanes C/D have no
+such site in the served roots, but their reviewers should run `tests/agent_sdk/core` and `tests/architecture`: the
+M-TRACEBACK lane recipe (touched-module tests + `tests/unit`) does not reach either.
