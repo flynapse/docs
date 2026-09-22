@@ -395,3 +395,94 @@ sites), G10-09 (`interrupted`), G10-10 (`record_exception=False`).
 **Tier 1 — open**
 
 G10-01, whose census half is settled and whose "no new door" half depends on G10-02.
+
+---
+
+## Re-statement 2026-09-22
+
+Appended by the R2 packet re-stater (Opus), read-only, nothing committed. Rows above are as filed.
+**HEADs read:** utils-obsm `179cc6d` (obs-merge, clean) · copilot-mro-obsm `735f8213` · core-obsm
+`b4d2c33` · api-obsm `e3ba207` · iac `74346bb`. **Column note:** the `Tier` column is §2.3a's; the
+`P1-n`/`P2-n` tags in the Claim-state column are the reviewer's severity ranking, not a tier. The
+recovered (self-commissioned) G.10 review is a DIFFERENT review from this one; its 27 rows are filed
+as `G10R-nn` in `claims-utils-rounds.md`, whose "State 2026-09-22" cells were re-checked at utils
+`849ca21` (2026-09-21 13:31). Four commits landed AFTER that check and matter here — `1a2680e`
+(G10R-08), `5bb5ecb` (G10R-11/27), `f8e31ee` (G10R-19/20/23), `0aa29b1` — all in `4d86ae9..179cc6d`,
+which is utils **review r8, in flight (lane #3)**: implementer proof only today.
+
+**Rulings that superseded rows here (§4a-bis):** M-WEAVIATE-DOOR (trace the three copilot-mro
+helpers → G.28 DONE `7f9e174b` + `4b5aea14` + `7839f0b2`), M-WEAVIATE-LEFTOVERS (a: exclude
+`weaviate.connect` from the dependency panels → `dc4bf340`, iac `97cae73`; b: constant refusal
+messages, ids as attributes → utils `f1ef9b9`, copilot-mro `e15f5962`), M-WEAVIATE-REFUSAL (refusals
+quiet as `invalid_argument`; provisioning failures are errors; the never-raised utils subclass
+deleted `26e7126`; a missing multi-tenant collection is a failure `2a8f2f48`), M-EMBED-INTERNAL (the
+embedding span is INTERNAL → `604a061`), M-TRACEBACK (`failure_fields` everywhere).
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| G10-01 | OPEN (census settled, "no new door" not) | FIXED-AT utils `1cdebad` (G.29, implementer, 18 mutation proofs): the scan now closes transitively over `self.<method>()` and module-level helpers, so a delegating twin is in `touching`; `test_every_instrumented_method_is_a_door_the_scan_can_see` (`instrumented <= touching`, `:835-852`) — the one-liner this file proposed — was RED as proposed and adopted only after the closure made it true. Independent, without mutation: the G.24/G.29 reviewer probed the door shapes and could not break them (`claims-utils-rounds.md` G10R-12). The census half is unchanged (`test_every_weaviate_door_emits_one_client_span`, `:254`) | `1cdebad` message; utils-rounds G10R-12/G24-F16/F18 | tree; utils-rounds |
+| G10-02 | OPEN (P1-1) | FIXED-AT `1cdebad` (implementer): all five blind spots closed — `backup` (and every v4 collection sub-API plus the client's own round trips `is_ready`/`is_live`/`is_connected`/`get_meta`/`connect_to_*`) in `_WEAVIATE_SUB_APIS` (`:600-629`), delegation through `self.` and module helpers, `getattr(x, "query")`, `get_client()`; the scan takes a source string and thirteen probe shapes test it directly (`test_the_source_scan_sees_every_door_shape`, `:822`). The "scan never leaves `class Weaviate`" limb is addressed by G.28 on the copilot-mro side (see G10-21). Independent without mutation: G.24 reviewer (utils-rounds G10R-13, G24-F16/F18/F20). Two limits stay DEFERRED in §6: a handle stashed on `self` (G24-F17) | `1cdebad`; utils-rounds; plan §6 "Deferred from Phase G" | tree; utils-rounds |
+| G10-03 | SETTLED | UNCHANGED in property, EXTENDED in mechanism: `_WEAVIATE_SPAN_ATTRIBUTES` (`weaviate_service.py:102-119`, `f8e31ee`) now DECLARES every key the span may carry and its vocabulary (`db.system`/`db.operation` kept on the deprecated names on purpose — span-metrics promotes `db_system`; the Postgres/Redis instrumentors still emit it); a source scan pins declared = written and the retired names absent (`test_every_attribute_key_the_module_writes_is_declared…`, `:1456`; `test_the_deprecated_semconv_names_are_exactly_the_two…`, `:1466`; runtime subset `:1476`). Six mutations, implementer (`f8e31ee`, unreviewed — r8 in flight) | `f8e31ee` message; tree | tree |
+| G10-04 | SETTLED | SUPERSEDED in mechanism, property intact: the local `_WEAVIATE_NON_ERROR_OUTCOMES` frozenset is GONE; the vocabulary is `utils.observability.outcomes.WEAVIATE_OUTCOMES` (an `OutcomeVocabulary`: non-error {success, miss, degraded, conflict, invalid_argument, truncated}, error {error, interrupted, partial}); an undeclared outcome collapses to `other` with an ERROR span (`1a2680e`, G10R-08 — the controller call "declare the closed vocabulary", ledger Add. 141). `miss` stays non-error; the `not_found` asymmetry argument this row made was upheld against the recovered review (utils-rounds G10R-25 REFUTED-BY this file). Five mutations, implementer; r8 in flight | `1a2680e`; `weaviate_service.py:29,203-213`; utils-rounds G10R-08/G10R-25 | tree; utils-rounds |
+| G10-05 | SETTLED (three sites) | UNCHANGED for the three catalogued sites (tests at `:407/:441/:463` resolve) — and the meaning NARROWED: `partial` is now ERROR "for the swallowed-failure case alone"; a server result cap or a module-default `limit` is the new NON-error `truncated` (G10-06). `error.type` on a self-detected error is the outcome keyword (G24-F11) | `1cdebad`; utils-rounds G24-F10/F11 | tree |
+| G10-06 | OPEN (P1-2) | FIXED-AT `1cdebad` (tests) + `6848ef7` (production, M-COMMIT) — but NOT as this row proposed: the two sites became `truncated` (non-error, `weaviate.result_truncated=True`), not `partial`/ERROR, on the argument that "the Weaviate error share became a function of how often someone exports more than 10k objects" (utils-rounds G24-F10, filed OPEN as a design ruling; no §4a-bis row). Guards: `test_an_export_the_server_cut_short_is_a_truncated_span` (`:1043`), `…_hit_the_local_ceiling…` (`:1063`), `test_a_drop_cut_short_by_the_result_cap…` (`:1109`); a refused patch outranks a cap (`:1130`). G24-F21 extended it to the module-default limits on list/query/delete (`:1263-1330`). Implementer mutations (removing `truncated` from the non-error set → 6 red); G24 reviewer independent without mutation. Residual accepted as debt: an export of EXACTLY 10,000 reads as truncated (G24-F22) | `1cdebad` message; utils-rounds G24-F10/F21/F22 | tree; utils-rounds |
+| G10-07 | OPEN (P1-3) | SUPERSEDED-BY M-WEAVIATE-REFUSAL: caller-side refusals are `invalid_argument` — OK status, `error.type` set (`1cdebad`/`6848ef7`; `WeaviateArgumentError(ValueError)`, G24-F9); tenancy refusals `test_a_tenancy_bug_is_not_a_weaviate_failure` (`:911`), argument refusals `test_refused_arguments_are_not_a_weaviate_failure` (`:946`); the refusal/failure split (`0c60ba4`), then the never-raised utils subclass DELETED (`26e7126`) once utils r4 showed utils has no provisioning seat; a real dependency failure stays ERROR (`:1005`), a malformed response is not a caller bug (`:1022`). Independent: utils r5 U5-23 SETTLED tier 0 (utils-rounds G10R-09). Documented limit: `vector_search` refuses AFTER `get_collection`, so the lazy connect may have dialled (G24-F7 comment corrected; no test pins that case) | utils-rounds G10R-09, G24-F7/F9; §4a-bis M-WEAVIATE-REFUSAL; plan G.60 | tree; utils-rounds |
+| G10-08 | OPEN (P1-4) | PARTLY FIXED / SUPERSEDED-BY M-EMBED-INTERNAL: `embedding_service.py` now opens its own span (`start_as_current_span(…, kind=SpanKind.INTERNAL)`, `:186-188`, `604a061`), so the trace has a child to attribute the Azure round trip to, and the dependencies board counts each embedding call once. NOT changed: `vector_search`/`hybrid_search` still generate the embedding INSIDE the Weaviate CLIENT span, so the Weaviate p95 still includes Azure time — the ruling chose the span kind, not the nesting. `5bb5ecb` made that nesting safe (a child span can no longer take the door's result, `:1365`). No independent review of `604a061` filed beyond the utils rounds (r4/r5 range) | `604a061`; `5bb5ecb`; §4a-bis M-EMBED-INTERNAL | tree |
+| G10-09 | SETTLED | UNCHANGED (checked): `interrupted` is now in `WEAVIATE_OUTCOMES`' error set; `test_a_baseexception_leaves_no_span_unset` at `:423` | tree | tree |
+| G10-10 | SETTLED | UNCHANGED (checked): `record_exception=False`, `set_status_on_exception=False` at `weaviate_service.py:163-164`; the four tests resolve | tree | tree |
+| G10-11 | ASSERTED | UNCHANGED as a guard (`test_no_weaviate_span_carries_tenant_content`, `:313`); STRENGTHENED beside it: the attribute set is now a declared closed set (G10-03) and `test_every_weaviate_span_carries_only_declared_attributes` (`:1476`) refuses an undeclared key at runtime. Still no mutation aimed at the content-free property itself | tree | tree |
+| G10-12 | OPEN (P2-1) | SUPERSEDED-BY M-WEAVIATE-LEFTOVERS (a): the span is KEPT and pinned (`test_the_first_call_nests_the_connect_span_inside_the_operation` `:1177`, `…_once_per_client…` `:1220`, `test_closing_the_client_re_arms…` `:1243`); the double count is removed at the CONSUMER — every fn-dependencies span-metrics selector carries `span_name!="weaviate.connect"` (copilot-mro `dc4bf340`, pinned in `test_grafana_dashboards.py`; r7 held it) and the aws Transaction-Search instruction says the same (iac `97cae73`, iac r3 reviewed). The "same series twice" measurement therefore no longer reaches a panel | plan G.39 PROGRESS; utils-rounds G10R-10; `dependencies.json:25/41/57/73` at HEAD | tree; packet |
+| G10-13 | OPEN (P2-2) | STILL OPEN: `dependencies.json:18` still says "(postgresql, redis)"; `:34` still says "(Weaviate, S3, Bedrock endpoints)" while its `db_system=""` filter excludes every Weaviate span; `legendFormat` `{{db_system}}{{server_address}}` still unseparated; `CATALOGUE.md:138` still lists the values as `postgresql`, `redis`. Recorded as the copilot-mro follow-up "CATALOGUE `db_system` += weaviate" (ledger CHECKPOINT 35 queue). Corrected figure: the board went from ~2 live shapes to ~4, not 1 → 20 (utils-rounds G10R-02) | tree at HEAD; utils-rounds G10R-07 | tree |
+| G10-14 | OPEN (P2-3) | FIXED-AT `f8e31ee` (G10R-20/23, implementer, r8 in flight): `search.result_count` is GONE — rows returned is `db.response.returned_rows` on every door; `search.requested_count` became `db.query.parameter.limit`, recorded at open from the door's signature for every cap-taking door (`test_every_door_that_takes_a_row_cap_records_it`, `:1492`); `search.mode` moved onto the decorator. The `weaviate.*` names (`affected_objects`, `schema_property_count`, `requested_property_drops`, `result_truncated`, `vector_fallback`) remain, now DECLARED as a distinct non-row vocabulary — two declared vocabularies, not three undeclared ones | `f8e31ee` message; `weaviate_service.py:102-119` | tree |
+| G10-15 | OPEN (P2-4) | FIXED-AT `5bb5ecb` (G10R-11, implementer, r8 in flight): `_weaviate_span` holds its span in a `ContextVar` (`_WEAVIATE_SPAN`, `:75`) while the door is open and restores the outer value on close; `_finish_weaviate_span`/`_annotate_weaviate_span` write ONLY to that span and do nothing outside a door. Five tests (`:1352-1401`: helper outside a door, child span inside, nested door, raising door, another thread); two mutations each fail two of them | `5bb5ecb` message; tree | tree |
+| G10-16 | OPEN (P2-5) | FIXED-AT `1cdebad` (tests) + `6848ef7` (production): the count was 29 sites, not ~22 (22 `traceback.format_exc()` + 7 `{e}`), plus a credential leak (`settings.weaviate_url` logged three lines above the docstring forbidding it), the user's BM25 query, and tenant document content `print()`ed in a dry-run delete — all found inside the hunk. The sweep now walks every `utils/**/*.py` with a shrink-only `LEAK_BACKLOG`. Independent: the G.24 reviewer could not break the conversion (utils-rounds G24-F1..F4, G10R-06). Plan G.24 `[x]` | plan G.24/G.29; utils-rounds | tree; plan |
+| G10-17 | OPEN (P2-6) | FIXED-AT `f8e31ee`: the `attributes` parameter is now USED — `@_traced_weaviate("hybrid_search", attributes={"search.mode": "hybrid"})` and the two sibling searches (`:1427/:1634/:1737`); `_describe_weaviate_search` is gone | tree | tree |
+| G10-18 | ASSERTED | UNCHANGED in state; the floors were re-set to truth-minus-one at `1cdebad` (`_MINIMUM_SCANNED_METHODS = 27`; G24-F19), `len(_UNTRACED_BY_DESIGN) == 8` still pinned (`:869`), and the `@wraps` reasoning is now a counted-assertions floor (utils-rounds G10R-04). No independent mutation of the floors recorded | tree; utils-rounds G10R-04/G10R-26/G24-F19 | tree |
+| G10-19 | OPEN (G.23(1)) | STILL OPEN, confirmed at HEAD: `tempo.yaml:61` promotes `peer.service`, `test_tempo_span_metrics.py:34` expects it, and a search of every production `.py` in utils-obsm, copilot-mro-obsm, core-obsm, api-obsm and flynapse-otel finds `peer.service` only in two utils DOCSTRINGS (`embedding_service.py:158`, `dynamodb_service.py:118`) — no emitter. Plan G.23 box still `[ ]` | tree | tree; plan |
+| G10-20 | OPEN (P2-8) | REFUTED (upheld): G.23(2) was STRUCK by the controller on this file's argument and re-verified ("Nothing is owed here") — plan G.23 `(2) ~~…~~ WRONG, and it was MY error` | plan G.23 | plan |
+| G10-21 | OPEN | SPLIT. copilot-mro half FIXED-AT `7f9e174b` (M-WEAVIATE-DOOR: `collection_handle`/`collections_for`/`weaviate_connection` hand out traced handles; one seat for ~26 sites), `4b5aea14` (r6 P2-2 found `memory_index.py` bypassing two doors; raw handles swept) and `7839f0b2` (r7 P3-3: the admin door refuses every data surface; the sweep sees the other raw clients); independent: copilot-mro r6 (found the bypass) and r7 (held "no live Weaviate bypass"). Plan G.28 `[x]`, G.10 closed into it. utils half (`migrate_weaviate_collection.py`'s five raw calls) is ACCEPTED-AS-DEBT by declaration: exempt in `test_network_doors_are_traced.py:260` as "a one-off, operator-run collection migration script on no request path" and in `LEAK_BACKLOG` (implementer decision, no ruling) | plan G.28; copilot-mro-rounds R6-04/R6-11; utils-rounds G10R-01/G10R-14; tree | tree; packet |
+
+### Open claims now, tier 2 first
+
+1. **G10-13 (P2-2)** — two panel descriptions and the catalogue still misdescribe the `db_system`
+   series after Weaviate joined it; queued, not done. (tier 2, OPEN)
+2. **G10-19** — `peer.service` promoted and asserted, emitted by nothing; G.23(1) box open. (tier 2, OPEN)
+3. **G10-08 (P1-4) residue** — the embedding round trip now has its own INTERNAL span, but it is
+   still generated inside the Weaviate CLIENT span, so "Weaviate p95" still contains Azure time.
+   M-EMBED-INTERNAL ruled the kind, not the nesting; nobody has asked whether the nesting is a
+   defect. (tier 2, judgment)
+4. **G10-06 (P1-2) as re-decided** — `truncated` is a NON-error; this file wanted `partial`/ERROR.
+   utils-rounds G24-F10 files it "OPEN (a design ruling)"; no §4a-bis row. (tier 2, judgment)
+5. **G10-11, G10-18** — ASSERTED, no independent mutation aimed at the content-free property or the
+   floors. (tier 2 / tier 2)
+6. **Implementer-only fixes awaiting utils r8 (lane #3):** G10-03's declaration (`f8e31ee`),
+   G10-04's vocabulary (`1a2680e`), G10-14, G10-15, G10-17 — every one a tier-2 signal-contract
+   change proven by the committing lane alone today.
+7. **Tier 1, still open:** the `self`-stashed-handle scan limit (§6), the hybrid→BM25 fallback
+   reporting `success` (§6; visible only as `weaviate.vector_fallback`), the exact-10,000 export
+   false positive (accepted debt).
+
+**Closed since filing:** G10-01, G10-02, G10-07, G10-12 (at the consumer), G10-16, G10-20, G10-21
+(copilot-mro half); G10-05/G10-09/G10-10 unchanged and settled.
+
+### Cross-file staleness (listed, not fixed)
+
+1. `claims-utils-rounds.md` G10R-08 ("STILL OPEN: no ruling traced … none in a shared registry"),
+   G10R-11 ("STILL OPEN at `849ca21`"), G10R-19, G10R-20, G10R-23 ("STILL OPEN at `849ca21`") and
+   G10R-27 ("the span variable is still `operation`") are all overtaken by `1a2680e`, `5bb5ecb` and
+   `f8e31ee` (2026-09-21 19:39–20:04, after that file's `849ca21` check). Its "Cross-file staleness"
+   note about `claims-copilot-mro-rounds.md` G24-01 still stands (fixed `f1ef9b9`, U6-14).
+2. `claims-copilot-mro-rounds.md` G24-02 (the tenancy-refusal classification ruling) — superseded by
+   M-WEAVIATE-REFUSAL and its controller call (`26e7126`, `2a8f2f48`, `a9149afb`); check its state cell.
+3. `claims-E-deployment-and-iac.md` "Recorded, not fixed #1" names `FAMILY_TOKEN`'s three prefixes;
+   it now also matches the legacy prefixes (`9900a933`) — still not `traces_spanmetrics_*`, so the
+   dependency panels G10-13 describes stay outside that lint.
+4. Plan G.10 body still says "**20 operations** … the board went 1 → 20"; the corrected figure
+   (~2 → ~4 live shapes) is in G.28's text and utils-rounds G10R-02.
+
+### Could not trace
+
+- An owner or controller ruling on `truncated` being non-error (G10-06's re-decision): recorded only
+  as the implementer's argument in `1cdebad`'s message and G24-F10's "OPEN (a design ruling)".
+- Whether utils review r8 (`4d86ae9..179cc6d`) has landed: `claims-utils-r8.md` did not exist at
+  the time of this re-statement; every `f8e31ee`/`5bb5ecb`/`1a2680e` cell above is implementer-proved.

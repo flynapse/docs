@@ -112,3 +112,91 @@ removed, and RV4 catalogued 35 inert tests on that branch. These rows inherit gu
 
 - **B1-4** — `tests/unit/db/test_dashboard_profiles_definition.py` and `tests/db/analytics/test_dashboard_profiles_db.py` (RLS enabled/forced, isolation policy, cross-tenant read). Corroborated independently by a live DB query recorded in plan §7 and the ledger, but not mutation-checked.
 - **C1-1 / C1-2** — the span-shape guards originate from their `395a3b5`; they were extended (privacy helper, `server.address`) but the span-name and attribute assertions themselves were not mutated.
+
+---
+
+## Re-statement 2026-09-22
+
+**Re-stated by an Opus re-stater (packet R1), read-only; nothing above this heading was altered.**
+HEADs read: `utils-obsm 179cc6d` · `core-obsm b4d2c33` (plus, for cross-references, `api-obsm e3ba207`, `copilot-mro-obsm 735f8213`,
+`iac 74346bb`, `flynapse-otel d1e531f`). Both trees have been through many rounds since this file's ranges: utils `e6b464e..179cc6d`
+(G.10 span half, G.24/G.29, G.48 S3 doors, G.110 alignment, M-LEGACY-*, M-STACK-HEADERS, utils reviews r5–r7 and their fix batches),
+core `d7f7b54..b4d2c33` (G.5, G.21, G.25, G.49, G.55, G.61/M-CASCADE, M-PII-IDS, M-SIGNUP-ORACLE, M-TRACEBACK, core reviews r6–r8).
+A utils review r8 (`4d86ae9..179cc6d`) and a core r8 fix batch were live while this was written; SHAs come from `git log`/`git show` only.
+Later packet files consulted: `claims-utils-rounds.md` (G10R-*, R1-*, LA/LB-*), `claims-utils-r5/r6/r7.md`, `claims-G10-weaviate-spans.md`,
+`claims-core-rounds.md`, `claims-core-r7/r8.md`, `claims-iac-r3.md`, `claims-C2-api.md`.
+
+**Column note.** This file's `Tier` is §2.3a's; it has no severity column and none is added. Many `File:line` cells above no longer resolve
+(both storage modules were re-shaped by decorators — `_traced_s3`, `_traced_weaviate`, `dependency_spans.py`); the property, not the line, is what
+was re-checked.
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| C1-1 | ASSERTED | SUPERSEDED-BY G.48 (`utils e6005bd`): `s3.download` is now an **INTERNAL** span, not CLIENT — boto3's urllib3 instrumentor already emits the CLIENT transport span, so a CLIENT wrapper double-counted every download (`dependency_spans.py` Rule 1; module docstring `:1-5` corrected at `849ca21`, utils-rounds R1-13). Name and the five attributes this row froze are unchanged (`test_s3_download_emits_a_content_free_child_span` `:87-118` still asserts the exact dict + `server.address`). Implementer proof; utils round 1 reviewed the range (`claims-utils-rounds.md` R1-*) | tree; `claims-utils-rounds.md` R1-13 | tree, packet |
+| C1-2 | ASSERTED | SUPERSEDED-BY the G10R-19/20/23 renames (controller call, ledger Add. 163): `search.result_count` → `db.response.returned_rows`, `search.requested_count` → `db.query.parameter.limit`, `search.mode` moves onto the decorator — FIXED-AT utils `f8e31ee`; the exact-dict guard (`:186-218`) now pins the new names. The public method is now one of 20 `@_traced_weaviate` doors (G.10, `6848ef7`). Implementer proof; utils r8 (in flight) is the independent check. copilot-mro `memory_index.py:468,470` still writes the OLD names (routed, ledger Add. 163) | tree; ledger Add. 163 | tree, ledger |
+| C1-3 | SETTLED | UNCHANGED for the property; the opener moved — `server.address` is set by `dependency_spans.py` / `weaviate_service.py:52,:107` and the two S3 tests (`:328`, `:344`) and the Weaviate exact-dict still pin it | tree | tree |
+| C1-4 | ASSERTED | UNCHANGED for the two keywords (`dependency_spans.py:197-198`, `weaviate_service.py:163`), and the missing post-fix proof now EXISTS at a stronger seat: G.7(b) built `test_utils_spans_withhold_exception_text.py` (AST sweep over every opener + a direct-drive behavioural test; 7 implementer mutation proofs, `utils 7f1817f`), and G.110 moved the leak boundary to the export processor (`flynapse-otel eac44c0`, reviewed). Row's ASSERTED can move to SETTLED only on an independent red — utils-rounds R1-09 records 7 tests red with both keywords planted against `b8e6221` (reviewer probe) | plan G.7(b); `claims-utils-rounds.md` R1-09 | plan, packet |
+| C1-5 | SETTLED | UNCHANGED — `failure_fields` at 32 sites in `weaviate_service.py`; connect-failure test `:352` present | grep | tree |
+| C1-6 | ASSERTED | UNCHANGED for the property (0 `error_type=type(` sites in either module; 29 + 32 `failure_fields` sites); the estate-level guard the row said was missing now exists: M-TRACEBACK (§4a-bis) + the shared exception-text detector (`flynapse-otel`, M-SHARED-CHECK) sweep utils; utils r5–r7 planted through every sink | grep; plan §4a-bis | tree, plan |
+| C1-7 | ASSERTED | UNCHANGED as a helper (`_all_exported_text` `:40`); its blind spot was later closed one layer up — `82d37e5` "Span privacy tests read the LIVE span too: the export boundary had blinded 17 of them" (G.114, after G.110) | `git log` | tree |
+| C1-8 | ASSERTED | UNCHANGED — `miss` still the quiet-404 outcome (`s3_service.py:385`, `:996`), in `_S3_NON_ERROR_OUTCOMES` (`:62-64`, now six values); test `:245` present | grep | tree |
+| C1-9 | ASSERTED | UNCHANGED — `"private-bucket" not in exported` still asserted (`:116`); utils r6 P3-5 / r7 G24-01 residuals went the same direction (no identities in refusals) | grep | tree, packet utils-r6 |
+| C1-10 | ASSERTED | UNCHANGED — `_finish_s3_span` decides status from the outcome (`:67-88`, now via `finish_dependency_span`); the unavailable-client test (`:147-152`) still pins ERROR + `unavailable` and still does NOT assert `error.type` absent on that path | read at HEAD | tree |
+| C1-11 | SETTLED | UNCHANGED — the four `grpc_secure` tests present (`test_weaviate_lazy_connect.py:89-130`) | grep | tree |
+| C1-12 | ASSERTED | UNCHANGED — both port tests present (`:63`, `:76`) | grep | tree |
+| C1-13 | ASSERTED | UNCHANGED — `test_weaviate_hybrid_search_keeps_working_with_a_noop_tracer` (`:287`) present; RV4's known-weak category was later attacked by the G.10 recovered review (`claims-utils-rounds.md` G10R-*) | grep | tree |
+| C1-14 | OPEN | FIXED-AT utils `6848ef7` (production) + `21fc319` (tests) — G.10's span half: 20 `@_traced_weaviate` doors through one factory, enumerated by `_weaviate_operation` (`test_weaviate_client_spans.py:78-80`); INDEPENDENT: `claims-G10-weaviate-spans.md` (G10-01..) and the recovered review in `claims-utils-rounds.md`; G.10 closed as part of G.28 (plan audit 2026-09-21); M-WEAVIATE-DOOR then traced copilot-mro's three helper doors (`7f9e174b`, `4b5aea14`) | tree; plan G.10/G.28 | tree, plan, packet |
+| C1-15 | OPEN | PARTLY FIXED: api `ee6f4d0` (`.env.example:186`, `:190`); iac `0df5c24` (`apprunner.tf:44`, `lambda.tf:115`, plus a guard that every Weaviate-pointing env names the port and the SG admits both ports — iac r3 held "50051 matches utils"). The copilot-mro sites (`.env.sample`, `app/.env.example`, four composes, `weaviate-local`) are STILL 0 hits at `735f8213`; no lane owns them | grep across trees; plan C1.5 | tree, plan, packet iac-r3 |
+| C1-16 | OPEN | PARTLY SUPERSEDED: F.4 decided the shape (`<subject>.outcome`, declared value sets; plan §6 "F.4 has decided"); Weaviate declared — FIXED-AT utils `1a2680e` (`utils/observability/outcomes.py` `OutcomeVocabulary`, `WEAVIATE_OUTCOMES`; G10R-08; implementer, utils r8 pending). S3 STILL a local frozenset, grown 5 → 6 (`conflict`, `invalid_argument`, `noop`, `dry_run` added by G.48); S3/DynamoDB/embedding adoption recorded for §6 (ledger Add. 163) | tree; plan §6; ledger Add. 163 | tree, plan, ledger |
+| C1-17 | OPEN | Weaviate half FIXED-AT utils `6848ef7`/`21fc319` — a single `finally` stamps `interrupted` on all 20 doors (`weaviate_service.py:336-351`), INDEPENDENT: `claims-G10-weaviate-spans.md` G10-09 SETTLED (`MM_nofinally` red), `claims-utils-rounds.md` G10R-03. S3 half STILL OPEN — no `interrupted` in `s3_service.py`; `_traced_s3` catches `Exception` only | tree; packet G10 | tree, packet |
+| B1-1 | ASSERTED | UNCHANGED — `"boolean DEFAULT true"` (`table_definitions.py:109-111`); guard file untouched since `5d40d70` | grep; `git log` | tree |
+| B1-2 | ASSERTED | UNCHANGED — guard untouched; `models.py` was edited 4× since (`b68e41c`, `af6adce` G.61; `9532a15` B-F2/F3) with no commit naming the capture column | `git log` | tree |
+| B1-3 | ASSERTED | UNCHANGED for the property; the script was touched by `f0d7ef5` (G.91: scripts resolve siblings as the matching checkout) and `0753e2d` (M-G117-DEFAULT: `utils` imported at module level — `claims-core-rounds.md` IMP-03); the DB test by `5b49993` (scratch tenants, session-end leak check) | `git log` | tree, packet core-rounds |
+| B1-4 | ASSERTED | UNCHANGED — table + four CHECKs at `table_definitions.py:1589-1605`; guards untouched except `5b49993` (fixture hygiene). The "inherited guard, never mutation-checked" caveat stands: no later round mutated the dashboard_profiles RLS guards | `git log` | tree |
+| B1-5 | ASSERTED | UNCHANGED — `analytics_endpoints.py` and its test untouched since `d7f7b54` | `git log` | tree |
+| B1-6 | ASSERTED | UNCHANGED — `events_store.py` untouched since `d7f7b54` | `git log` | tree |
+| B1-7 | ASSERTED | UNCHANGED — PK `primary_key=["event_id"]` (`:1520`); the four guards untouched (db test: `5b49993` fixtures only) | `git log` | tree |
+| B1-8 | SETTLED | UNCHANGED — `accepted_keys[key] -= 1` at `events_store.py:172`; db test present | grep | tree |
+| B1-9 | ASSERTED | UNCHANGED — `logger.warning` at `events_endpoints.py:138`; `test_events_endpoint.py` touched by `5b49993` (fixtures) and one more hygiene commit, not the assertion | grep; `git log` | tree |
+| B1-10 | ASSERTED | UNCHANGED — neither handler nor abort test changed | `git log` | tree |
+| B1-11 | ASSERTED | UNCHANGED | `git log` | tree |
+| B1-12 | ASSERTED | UNCHANGED — `dashboard_profiles.py` untouched since `d7f7b54` | `git log` | tree |
+| B1-13 | ASSERTED | UNCHANGED | `git log` | tree |
+| B1-14 | ASSERTED | UNCHANGED — `registry.py` untouched since `5d40d70`; `panel_service.py` touched once by `fdccdae` (M-TRACEBACK step 5: type + frames), not the gate | `git log` | tree |
+| B1-15 | OPEN | STILL OPEN — `:169`, `:173` unchanged; §6 entry unchanged | tree; plan §6 | tree |
+| B1-16 | OPEN | STILL OPEN — PK unchanged; §6 entry unchanged; the B2.1 sequencing concern RESOLVED (§6 "RESOLVED by B2.1": the mint omits the key rather than weakening it — `claims-B2-dashboard.md` B2-10 SETTLED), so the collision class did not escalate | plan §6; packet B2 | plan, packet |
+| B1-17 | OPEN | STILL OPEN — `event.event_id or uuid4()` at `events_store.py:82`; no metric, no expiry. The omitter population GREW with B2.1 (insecure-origin browsers) and B2-12 records that no counter was added | tree; packet B2 B2-12 | tree, packet |
+| B1-18 | OPEN | STILL OPEN for the contract; partly SUPERSEDED-BY M-CASCADE + M-COMMENT-PII: `comments` is now deliberately FK-free w.r.t. `tenants` and outlives the teardown (`b68e41c`; `test_the_document_comments_and_their_votes_outlive_the_tenant`, `test_tenant_teardown_db.py:711`), swept only by the manual `delete_unentitled_partition.py --purged-tenant` (OWNER-OWED C1 runs the FK drop). The class grew by ruling; no registry-derived delete list exists; B14 (DB-enforced tenant deletion; core r7 P2-2 found 15/19 delete shapes dodge the code lock) is OWNER-OWED | tree; plan §4a-bis; sheet B14/C1 | tree, plan, sheet |
+| B1-19 | OPEN | UNCHANGED — the two comments stand (`analytics_endpoints.py`, `events_store.py` untouched) | `git log` | tree |
+
+**Counts by state now (36 rows):** UNCHANGED 26 (C1-3, C1-4, C1-5, C1-6, C1-7, C1-8, C1-9, C1-10, C1-11, C1-12, C1-13, B1-1..B1-14, B1-19) ·
+SUPERSEDED-BY 2 (C1-1 G.48 span kind; C1-2 G10R-19/20/23 renames) · FIXED-AT 1 (C1-14) · PARTLY fixed/superseded 4 (C1-15, C1-16, C1-17, B1-18) ·
+STILL OPEN 3 (B1-15, B1-16, B1-17). OWNER-OWED named: B1-18 (C1, B14).
+
+### Open claims now, tier 2 first
+
+Tier 2:
+1. **C1-16 (S3 half)** — S3's `operation.outcome` is still a local frozenset, now six values, while F.4 has decided the shape and Weaviate already declares its set (`1a2680e`). The declared-set migration for S3/DynamoDB/embedding is a §6 entry with no lane.
+2. **B1-16** — tenant-scoped idempotency key, unchanged; the B2.1 escalation risk did not materialise (B2-10).
+3. **B1-18** — no declared teardown contract; M-CASCADE made `comments` a second FK-free survivor by ruling; B14 owner-owed.
+4. **C1-2 (residual)** — the renamed Weaviate attributes are written under the OLD names by copilot-mro `memory_index.py:468,470` until that follow-up lands (ledger Add. 163); the contract is split until then.
+
+Tier 1:
+- **C1-15** — copilot-mro's eight `WEAVIATE_GRPC_PORT` sites still owed (api + iac closed).
+- **C1-17 (S3 half)** — a `BaseException` still leaves an S3 span UNSET.
+- **B1-15**, **B1-17** — unchanged; B1-17's window now holds more clients.
+- **B1-19** — comments only, still unguarded.
+
+### Cross-file staleness (listed, not fixed)
+
+- `claims-utils-rounds.md` G10R-08 reads "STILL OPEN: no ruling traced"; utils `1a2680e` (Add. 163) declared `WEAVIATE_OUTCOMES`.
+- `F3-phase0-and-residual.md` #32/#33/#61 re-stated in that file's own section consistently with C1-16/C1-17/C1-15 here.
+- `claims-C2-api.md` C2-25 and "Owed out of this phase" item 4 still count NINE owed C1.5 sites; two more (the `iac` pair) closed at `0df5c24`.
+- `claims-D-copilot-mro-app.md` "Deferred" list: "C1.5's first clause … 0 hits across all six repos. Assigned to Phase E" — api and iac now hit; Phase E never took it.
+- `claims-copilot-mro-rounds.md` G24-01 (open tier 2) is FIXED-AT utils `f1ef9b9` (utils r6 U6-14 SETTLED).
+
+### Could not trace
+
+- **C1-4** — no independent reviewer is recorded flipping the two keywords AFTER the G.7(b) sweep landed (R1-09's probe predates `e322954`'s fix); the row stays ASSERTED by this file's rule.
+- **B1-4** — no mutation of the `dashboard_profiles` RLS guards (inherited from their branch) is recorded anywhere; the "35 inert tests" caveat still applies to them.
+- **C1-15** — no Phase G item, addendum or lane names the copilot-mro `WEAVIATE_GRPC_PORT` sites after the C1 close; "Phase E" never executed it and Phase E's packet does not list it.

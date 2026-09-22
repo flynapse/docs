@@ -123,3 +123,108 @@ introduced by this range; each is a decision to not act, with its stated reason.
 - **D.9 (their read API: docstring, RBAC intent, wire-or-hold) deferred by its own terms.** The API exists and is RBAC-correct after D.10; the dashboard consumer is Phase B2's question, so wire-or-hold belongs where the consumer is. Reason: no speculative backend ahead of a consumer.
 - **C1.5's first clause (`WEAVIATE_GRPC_PORT` into the copilot-mro env and compose files) still owed** — 0 hits across all six repos. Reason: assigned to Phase E.
 - **Three silent-merge reversals found in Phase D were handed to Phase E, not fixed here:** `datasources.yml` lost `flynapse-postgres` and gained `deleteDatasources` (E.0a); `provisioning/dashboards/flynapse/llm-agents.json` lost both exact-spend panels and moved five queries to the Counter spelling; `oss-profile.md` lost the readonly-role rotation row, the board pointer and the "expectedly unhealthy" note. All three are deployment-half files and belong to the Phase E packet. Recorded here because Phase D is where they were discovered, and because two of them are the 2 Phase E items still counted in the D.13 gate.
+
+---
+
+## Re-statement 2026-09-22
+
+**Re-stated by an Opus re-stater (packet R1), read-only; nothing above this heading was altered.**
+HEADs read: `copilot-mro-obsm 735f8213` (this slice's range ended at `6dc3160e`; Phase E, G-APP `60f40a9f`, G.2 `1d1d2dc8`, G.5 `c80c686d`/`f5b3d580`,
+G.6 `3978073b`/`c401fb18`, G.13 `4bfa4967`, G.28 `7f9e174b`/`4b5aea14`, M-PHOENIX-ON `2b6170b0`, M-RUN-REASON `6aef26e3`, M-FACTS-FAILURES
+`d4792d6b`, M-TOOL-ERRORS `36aa4254`/`5ac2ab1c`, the r6/r7 fix batches, the census/hygiene commits) plus the UNMERGED branches
+`copilot-mro-obsm-cli f1100629` (M-CLI-TELEMETRY + M-CAPTURE-TRUNCATE) and `copilot-mro-obsm-r7b afe79dbb` (r7b fixes); cross-references at
+`api-obsm e3ba207`, `core-obsm b4d2c33`, `utils-obsm 179cc6d`, `iac 74346bb`. Live while this was written: a cli-merge implementer (#5) on this
+tree's `obs-merge`, an r7b reviewer, a copilot-mro r8 reviewer, and four M-TRACEBACK fan-out lanes on `obs-merge-tbA..tbD` — every SHA below
+comes from `git log`/`git show`. Later packet files consulted: `claims-copilot-mro-rounds.md` (N2, 126 rows), `claims-copilot-mro-r7.md`,
+`claims-copilot-mro-r7b.md`, `claims-copilot-mro-cli-r1.md`, `claims-copilot-mro-cli-r2.md`, `claims-utils-rounds.md`, `claims-C2-api.md`.
+
+**Column note.** This file's `Tier` is §2.3a's; it carries no severity column and none is added. "FIXED-AT" names an implementer's commit unless a
+reviewer file is cited; `claims-copilot-mro-rounds.md` records which post-`2b6170b0` fixes were "fixed on implementer proof only" and points
+at copilot-mro r7/r8 as the gate — the same caveat applies below.
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| 1 | ASSERTED | UNCHANGED — `config.py:1091` `default=True`; the settings test was touched once by `2b6170b0` (M-PHOENIX-ON pins `LLM_CONTENT_COPY_SAMPLE_RATE=1.0`, not this field) | grep; `git log` | tree |
+| 2 | ASSERTED | UNCHANGED — policy module untouched since `248590dd` | `git log` | tree |
+| 3 | SETTLED | UNCHANGED — lifecycle test untouched since `248590dd`; `pipeline.py` edited later (G.5/M-FACTS-FAILURES) without moving the policy read | `git log`; read at HEAD | tree |
+| 4 | SETTLED | UNCHANGED — `register_capture` still off the critical path (`pipeline.py:795`) | read at HEAD | tree |
+| 5 | ASSERTED | UNCHANGED — `main.py` untouched since `248590dd`; the disk-reading guard is unchanged | `git log` | tree |
+| 6 | OPEN | UNCHANGED — the real guard is still api-only (`api-obsm tests/startup/shutdown/test_gateway_shutdown_drains_content_captures.py`, present at `e3ba207`); `claims-C2-api.md` / `F3` #65 agree | api tree | tree |
+| 7 | SETTLED | UNCHANGED for the Histogram; the attribute set changed later — M-GENAI-TENANT (`7acfe7c0`, r6 P3-6) withholds `tenant.id` at `_safe_record` (`telemetry.py:1382`); guard file `test_telemetry.py` untouched since `04ad6284` | grep; plan §4a-bis | tree, plan |
+| 8 | OPEN | UNCHANGED — closed outside this range by Phase E (`ea0ac559`), as the row already records; both boards later re-described (`9f44382e`) without reverting the spelling | `git log` | tree |
+| 9 | SETTLED | UNCHANGED — DAO and its test untouched since `2879a1cf` | `git log` | tree |
+| 10 | SETTLED | UNCHANGED for the property; the sweep was touched once by `20ceebe0` (G.26 cross-repo checkout pins, +4/−4 lines) | `git show 20ceebe0 --stat` | tree |
+| 11 | SETTLED | UNCHANGED and later WIDENED — `2c8be638` (P1-1: no capture filename in a log; reads stdlib `extra=` keys), `9e6d8739` (r6 P2-4: `services/llama_index` roots) | `git log` | tree |
+| 12 | ASSERTED | UNCHANGED — `browser_transport.py` untouched since `12b899ed`; still covered only by the surface sweep | `git log` | tree |
+| 13 | OPEN | STILL OPEN for the three synthesis sites (`cited_synthesis.py:112-116` still `reason_chars=len(message)` + `failure_fields(exc)`; no guard catches a revert to `reason=message[:200]`). The FOURTH site moved: `document_source_answer.py` was found still leaking (`state["error"] = str(exc)`) and FIXED-AT `9f23483a` (r6 P1-1, `failure_text(...)`) — `claims-copilot-mro-rounds.md` R6-01 | read at HEAD; packet rounds R6-01 | tree, packet |
+| 14 | SETTLED | UNCHANGED — `chat_management.py` untouched since `b112f860`; both tests untouched | `git log` | tree |
+| 15 | OPEN | STILL OPEN, and the class recurred: `.env.sample` (untouched since `b112f860`) now also disagrees with code on `LLM_CONTENT_COPY_SAMPLE_RATE` (`:82` says `0.0`; code default `1.0` since M-PHOENIX-ON `2b6170b0`) — OWNER-OWED C7 ("agents may not edit env files") | grep; sheet C7 | tree, sheet |
+| 16 | ASSERTED | UNCHANGED — neither file touched since the range | `git log` | tree |
+| 17 | ASSERTED | UNCHANGED for the graft; `agent_pipeline.py` edited twice since (`3978073b` G.6 binds `record_subagent`; `d4792d6b` binds the settled-facts writer) and `test_composition_root.py` once (`1a4791d8`: the stub gains the recorder) — additive, the parameter-list pin still holds | `git log` | tree |
+| 18 | ASSERTED | UNCHANGED — both `**failure_fields(exc)` sites present (`pipeline.py:816-822`); `test_pipeline_lifecycle.py` untouched | read at HEAD | tree |
+| 19 | ASSERTED | UNCHANGED — api still imports `STOP_UNWIND_SECONDS` (`shutdown_budget.py:40`); `scheduler.py` edited once by `6aef26e3` (M-RUN-REASON improvement runs), constant kept | grep api; `git log` | tree |
+| 20 | ASSERTED | UNCHANGED — guard present (`test_nonagent_lifecycle_spans.py:322`) | grep | tree |
+| 21 | OPEN | FIXED-AT `1d1d2dc8` (G.2: `prometheus-client` dropped from `pyproject.toml`; the README `GET /metrics` line gone — 0 hits for `prometheus` in either file); inside r7b's reviewed range (`1d1d2dc8..0d9ecf0b`) | grep; `git log -S` | tree, packet r7b |
+| 22 | OPEN | UNCHANGED — `main.py:280` `**failure_fields(exc)`; still gated by pyflakes, not a test (M-TRACEBACK's register would now flag a reverted `format_exc()` — a partial guard the row did not have) | `git log` | tree |
+| 23 | ASSERTED | UNCHANGED — `archive=None` at `orchestrator.py:2318` | grep | tree |
+| 24 | OPEN | UNCHANGED — `config.py:82` still declares `tool_io_archive_enabled`; the e2e script still prints it | grep | tree |
+| 25 | SETTLED | UNCHANGED — `_toollog_index.py` untouched since `2879a1cf` | `git log` | tree |
+| 26 | OPEN | UNCHANGED | `git log` | tree |
+| 27 | OPEN | STILL OPEN — `has_forecast` (`forecast.py:435`) still has no test naming it (0 hits in `tests/`) | grep | tree |
+| 28 | OPEN | STILL OPEN — 7 parsers + `s3_pdf_processor.py:926` still `setup_logging(name="ingest-parser")`; `distribution=` only at `main.py:12`; no Phase G item, addendum or ruling names the parser service names (M-G117-DEFAULT concerns entrypoints that never call `setup_logging` — a different defect) | grep; plan | tree, plan |
+| 29 | SETTLED | UNCHANGED — guard file untouched since `fb09ca63` | `git log` | tree |
+| 30 | SETTLED | UNCHANGED; the composition-level residual (`get_agent_pipeline` still `@lru_cache(maxsize=1)`, `agent_pipeline.py:721`) is still open — see the Deferred list and `F3` #43 | grep | tree |
+| 31 | ASSERTED | UNCHANGED for the fixture shape; `1a4791d8` extended the stub for G.6's recorder | `git show 1a4791d8 --stat` | tree |
+| 32 | SETTLED | UNCHANGED for `_error_kinds`; `6aef26e3` (M-RUN-REASON) later changed WHAT the entries carry (`<where>: <Type>`, reading old + new shapes); the test file was touched by `614b95ee` (suite-wide session pins), not the assertion | `git log` | tree |
+| 33 | SETTLED | SUPERSEDED in part — `_log_detail` itself was found to append `str(exc)` on `gather(return_exceptions=True)` results and was rebuilt as type + host + status at `9f23483a` (r6 P1-1; `flightops_brief.py:212-231`, `:474`, `:515`, `:586`; test `+40` lines); `claims-copilot-mro-rounds.md` R6-01 (FIXED-AT, implementer; r7 queued). The row's decision (route through the sanitiser, not `type(exc).__name__`) stands; the sanitiser changed | `git show 9f23483a --stat`; packet rounds R6-01 | tree, packet |
+| 34 | OPEN | STILL OPEN as a convention guard — no `tests/unit/infra` test forbids a module-scope `copilot_mro.app.main` import (the directory grew 17 guards since; none is this one). The hygiene census (`b428733d`, `ea28fad2` `repo_modules_restored` on 8 loaders, `2992a8c5`) attacked the same class from the loader side | `ls tests/unit/infra`; ledger Add. 164/167 | tree, ledger |
+| 35 | ASSERTED | UNCHANGED — `test_no_depth_coupled_paths.py` untouched since `3577bf1c` | `git log` | tree |
+| 36 | OPEN, owner-owed | SUPERSEDED-BY M-SCOPEGUARD (decision sheet "already settled": repoint, not delete) — FIXED-AT `60f40a9f` (G-APP: re-anchored on the post-merge range, GREEN; hard-coded revisions, stale path list and branch-name disarm removed; a 4th defect closed — it resolved `utils` through the workspace and read the pre-merge sibling). Later edits `36aa4254`, `5ac2ab1c`, `b1ade15d` (r7). It is the one conflict (union) of the pending cli merge (ledger Add. 148) | file header at HEAD; `git log` | tree, ledger |
+| 37 | ASSERTED | UNCHANGED — both directories absent | `ls` | tree |
+| 38 | ASSERTED | UNCHANGED — `13.2.1` at all three sites; both pin tests present (`:107`, `:129`) | grep | tree |
+| 39 | ASSERTED | UNCHANGED for the relock; `poetry.lock` moved once since (`1d1d2dc8`, the G.2 dependency drop); still no `poetry check --lock` recorded in-range | `git log` | tree |
+| 40 | OPEN | STILL OPEN — `_PENDING` uncapped; file untouched since `248590dd` | `git log` | tree |
+| 41 | OPEN | STILL OPEN at HEAD — `llm_observability.py:191` `error_type=type(exc).__name__`, untouched since `54a01f39`. Now owned: M-TRACEBACK (§4a-bis) + the register `tests/unit/observability/_mro_exception_text_debt.py`; four fan-out lanes (tbA–tbD) are LIVE off `735f8213`. The "~60 sites" figure is stale: the register census is G.104's (ledger: 171/177/90/69 entries across the four lanes) | grep; ledger Add. 174 | tree, ledger |
+| 42 | OPEN, owner-owed | STILL OPEN · OWNER-OWED — nothing schedules the purge (`.env.sample:78` admits it; 0 hits in iac/core/api); the C5 go-live prerequisite is the Appendix A clause; M-CAPTURE-TRUNCATE (`obs-merge-cli` `4c02a10e`, unmerged) removes the purge's S3 branch and the `content_s3_key` column (owner DDL C13) — one store, one 30-day clock, still no scheduler | grep; plan §4a-bis; sheet | tree, plan, sheet |
+| 43 | OPEN, owner-owed | SUPERSEDED-BY M-EVALSGATE (evals gated on G.13 alone; G.8 moved to `agent-evaluation-completion.md`) and M-RESIDENCY FIXED-AT `4bfa4967` (G.13, `IN_ACCOUNT_JUDGE_PROVIDERS` `contracts.py:56`, implementer mutation-proved; controller source-check ledger CP13), hardened on `obs-merge-r7b` `b63a03fd` (P2-5, UNMERGED). The suite + optional `evaluation` group remain merged by design | plan §4b, G.13; tree | plan, tree |
+| 44 | OPEN | UNCHANGED — `_error_snapshot` still stores `"message": str(error)` (`model_gateway.py:113`); the module was touched by `24383dc8` (G.106 `chat <model>` span) without changing it; M-TOOL-ERRORS (A8) did not reach this seat (it is the capture store, not a tool result) | grep | tree |
+| 45 | OPEN | FIXED-AT `16d5d1d1` (census: the test now pins the four live `observability-local` config files; the deleted collector config is no longer named) — implementer; copilot-mro r8 review in flight | `git show 16d5d1d1` | tree |
+
+**Counts by state now (45 rows):** UNCHANGED 30 (1–12, 14, 16–20, 22–26, 29–32, 35, 37–39, 44) · STILL OPEN 8 (13, 15, 27, 28, 34, 40, 41, 42) ·
+FIXED-AT 3 (21, 33 in part, 45) · SUPERSEDED-BY 2 (36 M-SCOPEGUARD, 43 M-EVALSGATE + G.13). OWNER-OWED named: 15 (C7), 42 (C5/C13 + Appendix A).
+
+### Open claims now, tier 2 first
+
+Tier 2:
+1. **Row 42** — capture ON, purge unscheduled (unchanged; the spill half is being deleted, the clock still has no hand).
+2. **Row 28** — the parser service-name resolution still contradicts §5.4's "resolve OURS"; nothing owns it.
+3. **Row 13** — the restored failure reason still has no guard that would see `reason=message[:200]` come back (three sites; the fourth was re-found leaking and fixed at `9f23483a`).
+4. **Row 15** — `.env.sample` is still unguarded against `config.py` and has drifted AGAIN (C7), in the same direction the row warned about.
+5. **Row 6** — the capture drain still fires only through the gateway; unchanged.
+
+Tier 1: rows 22 (pyflakes-gated), 24, 26, 27 (`has_forecast` untested), 34 (loader convention unenforced), 40 (`_PENDING`), 41 (M-TRACEBACK lanes live), 44 (deliberate).
+
+### Deferred list, re-read at HEAD
+
+- `record_subagent` — WIRED at `3978073b` (G.6; `_emitted_series.py` reads `wired`); behavioural proof on `obs-merge-r7b` `3ec66117` (r7b P2-2 had 9/9 mutants surviving the first tests). The "permanently empty" panel sentence is stale.
+- Branch attribution on the canonical tool path, dispatcher-projected standalone tools, the failed-tool step gap — no later item traced; unchanged.
+- "D.6's saving is smaller than claimed" / `content_s3_key` always None — SUPERSEDED-BY M-CAPTURE-TRUNCATE (the column goes; truncation stays; G.7(c)'s plan correction: `sha256`/`content_bytes` describe the stored truncated bytes).
+- `get_agent_pipeline` `@lru_cache` — still open (`agent_pipeline.py:721`).
+- D.9 wire-or-hold — the consumer shipped (B2.3) and the hold is M-TURNCARD (ruled 2026-09-20, unbuilt, no Phase G item) — `claims-B2-dashboard.md` B2-35.
+- C1.5's first clause — api (`ee6f4d0`) and iac (`0df5c24`) closed; copilot-mro's sites still 0 hits; "assigned to Phase E" never happened.
+- The three silent-merge reversals handed to Phase E — closed there (`2e965ea0`, `ea0ac559`) and one residual re-found: G.78 (`0d9ecf0b`, the datasource's env values).
+
+### Cross-file staleness (listed, not fixed)
+
+- `F3-phase0-and-residual.md` #27/#36-equivalent, #62/#21, #63/#45, #59/#41 — re-stated consistently in that file's own section.
+- `claims-C2-api.md` C2-33 (M-WARN split-brain) still names `copilot_mro/app/main.py:136-161` — unchanged here, no Phase G item (see that file's re-statement).
+- `claims-copilot-mro-rounds.md` G24-01 (open tier 2, a utils message) is FIXED-AT utils `f1ef9b9` (utils r6 U6-14 SETTLED).
+- `claims-utils-rounds.md` G10R-08 is closed by utils `1a2680e`; its consumer note (copilot-mro `memory_index.py:468,470` still writing `search.*`) is live and routed (ledger Add. 163) — consistent with row 50 of `F3` (memory still on the legacy shim).
+- Plan §7 "D.13 … 2 owner-blocked (the SHA-pinned branch-hygiene guard)" describes the pre-`60f40a9f` state.
+
+### Could not trace
+
+- **Row 28** — nothing after Phase D mentions the parser names; the D.1 disposition was not executed and no note says why.
+- **Row 27** — no guard for `has_forecast` was ever named after the fix; `claims-copilot-mro-rounds.md` does not carry it.
+- **Row 34** — no lane was ever briefed to write the module-scope-import guard the row says belongs in `tests/unit/infra`.
+- **Row 6** — whether copilot-mro's standalone deployment (its own lifespan runs there) drains captures on shutdown was never re-measured after D; the row's "accepted" stands on the api guard alone.

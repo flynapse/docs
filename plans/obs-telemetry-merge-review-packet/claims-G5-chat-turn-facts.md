@@ -260,3 +260,97 @@ OPEN: G5-02, G5-08, G5-09, G5-10, G5-11, G5-12, G5-13, G5-14, G5-15, G5-16, G5-1
 | **G5-17** | The recovery is not total: if `SAVEPOINT` itself fails, `ROLLBACK TO` raises `InvalidSavepointSpecification`, escapes uncaught, and the block is lost. The stated reasoning covers connection death but the docstring claims more than the code guarantees. |
 | **G5-18** | `except Exception` leaves `KeyboardInterrupt`/`SystemExit` uncaught. No realistic production path found — `save_block` is synchronous, so `CancelledError` cannot be injected — but the gap is unstated. |
 | **G5-19** | Three extra round trips per saved block inside the user-facing save transaction, unmeasured on both sides. The cited precedent dispatches its write to a thread instead. |
+
+---
+
+## Re-statement 2026-09-22
+
+Appended by the R2 packet re-stater (Opus), read-only, nothing committed. Rows above are as filed.
+**HEADs read:** copilot-mro-obsm `735f8213` (obs-merge, clean) · core-obsm `b4d2c33` (obs-merge; 7
+dirty paths from the live core r8 lane, not read) · copilot-mro-obsm-r7b `afe79dbb` (unmerged).
+**Column note:** the `Tier` column is §2.3a's; `P0/P1/P2` in the narrative and the "Defects, ranked"
+section are the reviewer's severity. **Review coverage of the commits cited below:** `c80c686d`,
+`20ceebe0` (tests) sit in the "test-only, uncovered" gap `claims-copilot-mro-rounds.md` records;
+`f5b3d580` (the production writer + G.33 gates) was inside the 6-commit review (Add. 69) which filed
+S69-14 (undeclared carry) and LC-01 but no row on the writer's body; **`d4792d6b` (M-FACTS-FAILURES +
+M-FACTS-ANONYMISE) and `de2665b3` fall in the gap `5ea91b80..62c7413d` between copilot-mro r7 and r8
+and have had NO independent review** — core r8 reviewed core's READ side of it (P2-2 → owner item C15).
+
+**Rulings that superseded rows here (§4a-bis, 2026-09-22):** M-FACTS-FAILURES (B6/G.32: COUNT
+FAILURES NOW — a second write where the turn settles, idempotent with the save-time row; fix the false
+"dip in the series" sentence), M-FACTS-ANONYMISE (B5/G.34: anonymise, keep counts), M-FACT-LIMITS
+(A16/G.71: confidence outside 0–1 → NULL and the 24 h latency ceiling both CONFIRMED as built). Owner
+actions on the sheet: **C12** (the two new `chat_turn_facts` columns `turn_outcome`/`turn_error_type`
+via `post_create_sql`; must run BEFORE core deploys since core `7d5144c` reads `turn_outcome`) and
+**C15** (a one-off UPDATE anonymising chats deleted BEFORE `d4792d6b`).
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| G5-01 | ASSERTED | UNCHANGED at this seat (the two unit tests resolve at `test_chat_turn_facts_writer.py:358/:379`; the bracket is intact at `blocks.py:584-639`). The SIBLING seat got what this row lacked: core's backfill now has a per-row savepoint proved against a REAL Postgres abort (G.69 `d368c7a`; `InFailedSqlTransaction` witness; core-rounds R0b "the savepoint proof is not structurally vacuous", independent). The online writer's ruling is still proved live only by this review's own run | plan G.69; `claims-core-rounds.md` R0a/R0b | tree; core-rounds |
+| G5-02 | OPEN | STILL OPEN: the db lane (`test_chat_turn_facts_db_roundtrip.py`) grew to 11 cases, and `test_a_malformed_turn_now_lands_a_row_with_one_null_instead_of_no_row` (`:355`, G.33) runs "against real Postgres, not against a stub that cannot abort" — but it exercises the VALUE GATES (the row lands), not the savepoint rollback; no db-lane case forces the `ROLLBACK TO` path. Plan G.35 still reads "STILL OPEN: the savepoint half" | tree; plan G.35 | tree |
+| G5-03 | ASSERTED | UNCHANGED (checked): `test_a_retried_save_inserts_no_block_and_writes_no_facts` at `:343`; db `…_writes_no_second_facts_row…` at `:386`. NEW beside it: the settle-time row (`d4792d6b`) is a SECOND idempotency fact — `facts_version 0` placeholder keyed `(tenant_id, block_id)`, superseded by the save-time row through the existing `facts_version <` rule; `test_the_saved_block_supersedes_its_settle_row_and_keeps_the_outcome` (`:522`), `test_a_settle_after_the_save_adds_only_the_outcome` (`:543`) — both SKIP until C12 provisions the columns | `d4792d6b` message; tree | tree |
+| G5-04 | SETTLED | UNCHANGED for the projection and SQL; `FACTS_COLUMNS`, `FACTS_VERSION`, `FACTS_UPSERT_SQL`, `facts_from_block_data` were explicitly left unchanged by `d4792d6b` so core's pin and backfill hold. The projection body did change ONCE since — G.33's value gates landed on BOTH sides in one pass (`20ceebe0` tests, `f5b3d580` copilot-mro production, core G.55) and `test_the_two_mirrors_agree_on_every_refused_shape` (`test_chat_turn_facts_value_gates.py:375`) pins the mirror over 19 refused shapes | tree; plan G.33/G.55 | tree |
+| G5-05 | ASSERTED | UNCHANGED (checked): `model_dump(mode="json")` at `blocks.py:680`; still nothing pins the mode | tree | tree |
+| G5-06 | ASSERTED | UNCHANGED (checked): `:323` | tree | tree |
+| G5-07 | ASSERTED | UNCHANGED (checked): the import is still inside the bracket (`blocks.py:591`); `:464` resolves | tree | tree |
+| G5-08 | OPEN | STILL OPEN — and the docstring was NOT narrowed: `chat_turn_facts.py:372` still reads "nothing in the estate ever UPDATEs `chats.department`" (verified at HEAD). The plan's G.5 entry recorded the correction ("FALSE as literally stated … Narrowed claim stands: no RUNTIME code path") on 2026-09-20, but the module text kept the absolute. No trigger, no guard on the no-UPDATE limb | tree; plan G.5 | tree |
+| G5-09 | OPEN | SUPERSEDED-BY M-FACTS-FAILURES and FIXED-AT `d4792d6b` (implementer, UNREVIEWED): `AgentPipeline.execute` lands a row where every turn SETTLES, on both the structured-failure and the raised path, via `agent_shared/turn_facts.record_settled_turn_facts` (off-loop `to_thread`, never raises, tenant from the binding, bound by both production compositions); the row carries `turn_outcome` (success\|error) and `turn_error_type` (a code or class name, never a message). The false "a gap shows as a dip in the series" sentence is replaced (`blocks.py:575-578`); the contract module says the backfill cannot recreate a failure row. db cases `test_a_turn_that_never_saved_is_counted_by_its_settle_row` (`:513`) + two more SKIP until C12. Mutation-proved by the implementer (crash path not recorded, tenant from the turn, message as category, placeholder at version 1). OWNER-OWED: **C12** (provision the two columns; until then failed-turn inserts warn + swallow — the very class the ruling exists to count stays uncounted) | `d4792d6b` message; owner sheet C12; ledger Add. 120 | tree; sheet |
+| G5-10 | OPEN | FIXED-AT `20ceebe0` (tests) + `f5b3d580` (production) — G.33 (implementer; all five cases first REPRODUCED live against Postgres 16.11 with SQLSTATEs, then SEVEN gateable columns and TWO corruption sites found, not four/one): validation sited in `facts_from_block_data` itself, a rejected value drops the FIELD (NULL) and keeps the ROW, `tool_count`/`tool_failures` gated at the source so a refused count falls through to the derived one; three columns deliberately ungated with reasons (`facts_version`, `citation_count`, identity). db lane proves it live (`:355`). And it found a LEAK the G.5 writer introduced — `"error": str(facts_error)` renders the interpolated VALUES list on a class-22 bind failure — replaced with `failure_fields` (`blocks.py:640-652`), pinned by `test_the_writers_failure_log_carries_no_exception_text` (`:442`). M-FACT-LIMITS confirmed the two judgement values (G.71). No independent review filed a row on the gates (the 6-commit review covered `f5b3d580`'s commit, LC-01 only its prose) | plan G.33, G.71; `claims-copilot-mro-rounds.md` LC-01/S69-14; tree | tree; plan |
+| G5-11 | OPEN | FIXED-AT core `1d6adca` + `bdea4ba` (G.25, implementer, 11 mutation proofs): the pin resolves by scanning every sibling, holding every copy, naming the checkout in the test id and asserting `module.__file__`; constants run over every copy, projection limbs only over copies declaring the whole surface, and a copy declaring PART of it FAILS; a synthetic `FACTS_VERSION = 2` sibling produced 6 named failures. The copilot-mro docstring at `chat_turn_facts.py:27` still says "pinned from core's side" — now TRUE. No independent review row found (core-rounds covers G.69, not G.25) | plan G.25; tree | plan |
+| G5-12 | OPEN | PARTLY FIXED: **M10** (the structural hole) closed on CORE's side — `bdea4ba` compares `facts_upsert_params` vs `_as_params`, and mutation M7 (= this file's M10) failed only that limb while every other test stayed green (plan G.25(b); G.35 parity half CLOSED). copilot-mro's own constants test (`test_the_two_mirrors_agree_on_the_contract_constants`, `:571`) STILL never compares the params builders — one independent witness, not two. **M1** (bool exclusion) now has a direct pin: `_opt_probability(True) is None` / `_opt_count(True) is None` (`test_chat_turn_facts_value_gates.py:265/:275`). **M2** (`len(set(tool_set))`) — no shape or pin found; not traced further | plan G.25(b)/G.35; tree | tree; plan |
+| G5-13 | OPEN | STILL OPEN as filed: `_PARITY_SHAPES` still six shapes, branch coverage still unmeasured; the value-gates file's `_REFUSED` table (19 cases) covers the refused branches only | tree | tree |
+| G5-14 | OPEN | STILL OPEN: the function-local import is still inside the savepoint (`blocks.py:591-595`) with the same rationale; nothing in the plan, the ledger or §4a-bis rules on it | tree; ledger grep (no hit) | tree |
+| G5-15 | OPEN | PARTLY FIXED: the fields now SURVIVE the sinks — the warning uses loguru kwargs (`block_id=…, chat_id=…, tenant_id=…, **failure_fields(facts_error)`, `blocks.py:640-652`) instead of stdlib `extra={…}` (`f5b3d580`, "loguru extra= (limb 4)"; the repo-wide limb-4 guard is `38152866`); and the rejected-field path logs column names only (`_log_rejected_fields`, `:596-612`). STILL OPEN: no counter or metric for a failed facts write — `chat_block_save_failures_total` (M-LEGACY-PANELS) counts block saves, not this projection; `turn_facts.py` books no metric either | tree; `f5b3d580` message | tree |
+| G5-16 | OPEN | STILL OPEN: `_write_chat_turn_facts` still returns `bool` "for the tests that pin this behaviour"; the only call site (`blocks.py:769`) still discards it; no test reads it | tree | tree |
+| G5-17 | OPEN | UNCHANGED (checked): the recovery is still deliberately uncaught (`:635-639`) | tree | tree |
+| G5-18 | OPEN | UNCHANGED (checked): `except Exception` at `:635` | tree | tree |
+| G5-19 | OPEN | STILL OPEN for the save-time write (inline, three round trips); the NEW settle-time write went the other way — `to_thread`, off the loop (`d4792d6b`), which is the precedent this row cited. Still unmeasured on both | tree | tree |
+| G5-20 | OPEN | SUPERSEDED-BY M-FACTS-ANONYMISE and FIXED-AT `d4792d6b` + `de2665b3` (implementer, UNREVIEWED on the copilot-mro side): `delete_chat`'s soft-deletes and the facts anonymisation run in ONE transaction — `user_id → "deleted-user"`, `session_id → NULL`, `cited_documents` entries lose the TITLE (`doc_uid`/`manual_type` kept); rows kept so counts stay true; feedback anonymised in the same transaction (`de2665b3`). db case `test_a_deleted_chats_rows_carry_no_personal_field_and_still_count` (`:413`, ran green); unit + db mutants for "anonymisation dropped". Independent on the READ side: core r8 P2-2 (sev 1, tier 2) — chats deleted BEFORE `d4792d6b` keep the asker's `user_id` and cited titles, shown by `unanswered_questions` and `top_cited_documents` → OWNER-OWED **C15** (one-off UPDATE) + a core CASE (queued). "Indistinguishable" is qualified in the contract module: the backfill must produce the same anonymised shape (writer/backfill parity for deleted blocks) — whether core's backfill was changed to match was not traced | `d4792d6b`/`de2665b3` messages; `claims-core-r8.md` P2-2; owner sheet C15 | tree; core-r8 |
+| G5-21 | ASSERTED | UNCHANGED (checked). The estate-wide answer arrived elsewhere: G.26 → `sibling_checkouts`/`sibling_variant` in `tests/_root.py`, then G.52/G.53 carried the file to every tree (md5 `3d192468`) | tree; plan G.26/G.52/G.53 | tree |
+| G5-22 | ASSERTED | UNCHANGED (checked): 24 cases in `test_chat_blocks_cache_generation.py`; `d4792d6b` taught the stand-in nothing new for the delete path (anonymisation runs on a raw connection) | tree | tree |
+| G5-23 | ASSERTED | UNCHANGED, and CLOSED as a plan item (G.27 VERIFIED DONE; its residual sweep is enumerated inside G.54). Still no test asserts the loader restores rather than pops | plan G.27 | plan |
+| G5-24 | OPEN | SUPERSEDED-BY a CONTROLLER call, not an owner ruling: ledger "Q3 ANSWERED — the Task R precondition is stale for the writer half"; `observability-rebuild.md:639-651` item 11.3 struck for the writer half, kept for the parity-proof half, with the master-R.4 caveat carried. No §4a-bis row exists for it (this file asked for one beside M-SAVEPOINT). G.1 (Task R) is `[x]` — R.3/R.4 re-derived 2026-09-20 | ledger CP 15 "Q3 ANSWERED"; `observability-rebuild.md:639` | ledger; plan |
+
+### Open claims now, tier 2 first
+
+1. **G5-09 / G5-20 as BUILT (`d4792d6b`, `de2665b3`)** — two tier-2 rulings implemented in a commit
+   that no independent review has read (it sits between r7's and r8's ranges). The claims that
+   matter: the settle-time write never costs a turn, `turn_error_type` never carries a message, the
+   anonymisation is transactional with the delete, and the backfill's anonymised shape matches.
+2. **G5-12 (tier 2)** — the params-builder parity is now pinned on core's side only; copilot-mro's
+   constants test still omits it. One witness, not the "second independent witness" G.25 promised for
+   the projection limb.
+3. **G5-08 (tier 2)** — the docstring still asserts the absolute the plan already narrowed.
+4. **G5-14, G5-15 (tier 2)** — the silent-failure path is unchanged (import inside the bracket, no
+   metric); the log fields at least survive the sinks now.
+5. **G5-05, G5-11 (tier 2)** — `model_dump(mode="json")` still unpinned; the drift pin fix is
+   implementer-proved (11 mutants) with no independent row.
+6. **Owner-owed:** C12 (until it runs, failed turns are still uncounted — the ruling's effect is
+   deferred to the provisioning run) and C15 (pre-`d4792d6b` deleted chats).
+7. **Tier 1, still open:** G5-02 (no db-lane rollback case), G5-13, G5-16, G5-17, G5-18, G5-19.
+
+**Closed since filing:** G5-10 (G.33), G5-11 (G.25), G5-23 (G.27), G5-24 (Q3 answered);
+G5-09/G5-20 built pending review and C12/C15.
+
+### Cross-file staleness (listed, not fixed)
+
+1. Plan G.32 and G.34 boxes are still `[ ]` with bodies written before `d4792d6b`; the plan banner
+   itself says the checkboxes lag the code. G.35 is `[~]` and correct.
+2. `claims-copilot-mro-rounds.md` LC-01's fixed text ("the asymmetry ended at core `0609ad2`") and
+   plan G.69's "two stale sites remain CROSS-TREE" (`chat_turn_facts.py:183`,
+   `test_chat_turn_facts_value_gates.py:386`) describe the same two passages from opposite sides;
+   LC-01's "FIXED-AT `f5b3d580`" is the later reading.
+3. `claims-core-r8.md` P2-2's fix list names "a core CASE (queued)" — the core r8 fix lane (#1) was
+   live at the HEADs above; its landing changes G5-20's read-side cell.
+4. `claims-G10-weaviate-spans.md` and this file both cite `copilot-mro-obsm` line numbers for
+   `blocks.py` that moved by ~30 lines after `f5b3d580`/`d4792d6b`; the rows above were left as
+   filed.
+
+### Could not trace
+
+- Whether core's `backfill_chat_turn_facts.py` now produces the anonymised shape for deleted
+  blocks (M-FACTS-ANONYMISE's parity clause) — not read; core-obsm carried 7 dirty paths from a live
+  lane.
+- A mutation or shape covering M2 (`len(set(tool_set))` → `len(tool_set)`) after the value-gates pass.
+- An owner ruling on G5-14 (loud boot failure vs silent missing row): none in §4a-bis, the sheet or
+  the ledger.

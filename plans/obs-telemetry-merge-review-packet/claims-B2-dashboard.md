@@ -234,3 +234,104 @@ resolved in the tree by file **and** by test name.
   For a phase whose spine is "a merge with no raised conflicts is the condition the register exists for",
   two silently merged files — one of them a guard — going untouched is the register's own blind spot on
   this slice.
+
+---
+
+## Re-statement 2026-09-22
+
+**Re-stated by an Opus re-stater (packet R1), read-only; nothing above this heading was altered.**
+HEADs read: `dashboard-obsm 4a7714a` (17 commits after `3afd524`: `5011f4f` browser-signal contract, `fdf7487` G.22, `79d3bc8` G.36(d),
+`3efba84` G.56, `afd6300` M-COMMIT landing, `5265cbc`/`a46c7dc` G.58, `951fdc4` G.77(a), `0f87aec`/`49f6231` M-INVITE-FRAGMENT, `e3a4610`
+M-PERMISSIONS-ENDPOINT, `09bacba`/`2a9b0f4` dashboard r1/r2 fixes, `65f588d` Quality facts panels, `4a7714a` docs); cross-references at
+`core-obsm b4d2c33`, `copilot-mro-obsm 735f8213`. The dashboard tree had NO writer while this was written (its final review, agent #7, is a
+reader). Later packet files consulted: `claims-dashboard-r1.md`, `claims-dashboard-r2.md` (both cover the invite/permissions ranges, not B2's
+files), `claims-core-rounds.md`, `claims-core-r8.md`.
+
+**What changed in B2's own files since `3afd524`: one commit.** `65f588d` edits `analytics-panel-registry.ts` (panel descriptions + a `failed`
+outcome series for the Quality board after M-FACTS-FAILURES) and its test; it does not touch `panelsForProfileTab` / `visibleProfileTabs`
+(`:978`, `:991`). Every other file this slice cites — `product-events.ts`, the department dashboard `page.tsx`, `LlmTurnSummariesCard.tsx`,
+`llm-observability-api.ts`, `useObservability.ts`, `query-keys.ts`, `query-client.ts`, `identity-change.ts`, `analytics-api.ts`, the improvement
+`page.tsx`, `ingest-contract.test.ts`, the profile-page test, the observability tests — has no commit after `3afd524`. So every SETTLED and
+ASSERTED row below is UNCHANGED by construction, and every OPEN row's code is exactly what the assembler read.
+
+**Column note.** This file's `Tier` is §2.3a's; no severity column exists and none is added.
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| B2-1 | OPEN | UNCHANGED (merge topology; later merges on this branch were resolution-only by the same rule) | `git log` | tree |
+| B2-2 | SETTLED | UNCHANGED | `git log` (no commit on `product-events.ts` after `3afd524`) | tree |
+| B2-3 | OPEN | UNCHANGED | `git log` | tree |
+| B2-4 | OPEN | STILL OPEN — `panelsForProfileTab` (`:978`) still takes no capability argument; `65f588d` left both helpers as they were; core's `panel_service.get_panel_data` still re-checks `authorize_panel` (core `panel_service.py`, touched once since by `fdccdae` M-TRACEBACK, not the gate) | read at HEAD | tree |
+| B2-5 | OPEN | UNCHANGED as a both-sides guard file taken as merged; `65f588d` later added cases to it (+104 lines) for the `failed` series, so it has now been edited on OUR side — but theirs' two ungated-profile cases (`:373`, `:408` at filing) were not revisited | `git show 65f588d --stat` | tree |
+| B2-6 | ASSERTED | UNCHANGED — "none violated" still rests on green lanes; the later dashboard reviews r1/r2 (`claims-dashboard-r1/r2.md`) reviewed different ranges and did not re-audit the eleven theirs-only files | packet dashboard-r1/r2 | packet |
+| B2-7 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-8 | OPEN | UNCHANGED (a verification method) | | |
+| B2-9 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-10 | SETTLED | UNCHANGED; plan §6 now records the outcome under the B1 idempotency entry ("RESOLVED by B2.1 … the sentence below described the risk correctly and it did not materialise") | plan §6 | plan |
+| B2-11 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-12 | OPEN | STILL OPEN — `eventIdOf()` omission path still uncounted (`countDroppedProductEvent` callers unchanged); no later item, ruling or lane names an omission counter; core's window (B1-17) still has no metric | grep; `git log`; plan §6 | tree, plan |
+| B2-13 | OPEN | UNCHANGED | `git log` | tree |
+| B2-14 | ASSERTED | UNCHANGED — still no itemised mutation of the ingest-contract regex fix | `git log` | tree |
+| B2-15 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-16 | ASSERTED | UNCHANGED — the authoritative-empty test still inherited from their branch, never mutated | `git log` | tree |
+| B2-17 | OPEN | STILL OPEN — the profile-page suite has no commit after `3afd524`; no case drives `canViewDashboard === false` | `git log` | tree |
+| B2-18 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-19 | SETTLED | UNCHANGED; the core side re-verified at `b4d2c33`: `is_tenant_admin` and its use on `GET /analytics/dashboard-profile` unchanged (`analytics_endpoints.py` has no commit after `d7f7b54`) | `git log` core | tree |
+| B2-20 | OPEN | STILL OPEN — no cross-repo assertion; M-PERMISSIONS-ENDPOINT (`e3a4610`, `permissionsFromBody`) changed HOW the browser learns `view_dashboard` (a `GET /auth/permissions` body instead of `/test-cookie` headers) but not the two-sided invariant; the browser half now validates the whole body and fails closed (dashboard r2 P3-4, `2a9b0f4`) | `git log`; `claims-dashboard-r2.md` | tree, packet |
+| B2-21 | OPEN | STILL OPEN — the profile-widening half is still guarded by nothing; the test file is unchanged | `git log` | tree |
+| B2-22 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-23 | OPEN | UNCHANGED | `git log` | tree |
+| B2-24 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-25 | ASSERTED | UNCHANGED | `git log` | tree |
+| B2-26 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-27 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-28 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-29 | OPEN | STILL OPEN — the hook test still asserts retry/toast only; nothing asserts identity-change eviction of `llmTurns` | `git log` | tree |
+| B2-30 | OPEN | STILL OPEN — both docstrings stand corrected and unguarded; no later prose guard | `git log` | tree |
+| B2-31 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-32 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-33 | SETTLED | UNCHANGED | `git log` | tree |
+| B2-34 | OPEN | UNCHANGED — the four browser-contract files have no commit after `3afd524` except through `5011f4f` (the browser-signal contract, which derives from them and guards the catalogue); no `grafana`/`fn-frontend` reference landed | `git log` | tree |
+| B2-35 | OPEN | STILL OPEN · OWNER RULING TAKEN, FIX NOT BUILT: M-TURNCARD (§4b, 2026-09-20) still has no Phase G item and no commit — copilot-mro `llm_observability.py` (`require_dashboard_caller`, `:121-131`) still gates on `view_dashboard` only, untouched since `54a01f39`; the improvement page's `notInternal` derivation is unchanged; `gcTime` still 5 min. Plan §7 `:4913` STILL lists B2-R1 as an owed ruling although §4b ruled it | grep copilot-mro + dashboard at HEAD; plan §4b, §7 | tree, plan |
+| B2-36 | OPEN | STILL OPEN · OWNER-OWED B2-R2 (decision sheet "older owner questions": "the scope of M-FALLBACK, now that a degraded read shows the un-narrowed panel set", plan `:4509`) | sheet | sheet |
+| B2-37 | OPEN | STILL OPEN · OWNER-OWED B2-R3 (sheet: "still open, verified … Build a writer, or drop the feature") — core `dashboard_profiles.py` has no commit after `d7f7b54`; the only INSERT is still the db test | grep core; sheet | tree, sheet |
+| B2-38 | OPEN | STILL OPEN — `panelsForProfileTab` unchanged (`:978-989`); an all-unknown profile still yields the blank page with no degrade | read at HEAD | tree |
+| B2-39 | OPEN | STILL OPEN — `makeQueryClient()` still sets no `networkMode` | grep | tree |
+| B2-40 | OPEN | STILL OPEN — profile order vs registry order unchanged | read at HEAD | tree |
+| B2-41 | OPEN | STILL OPEN — the mutation-response-contract sweep still walks `useMutation` callers only; dashboard r2 P3-4 (`2a9b0f4`) added deep validation for the permissions READ body by its own test, i.e. a third voluntary read contract, not a structural guard | `claims-dashboard-r2.md`; grep | tree, packet |
+| B2-42 | OPEN | STILL OPEN — both declarations unchanged | grep | tree |
+| B2-43 | OPEN | STILL OPEN, proved neither way — `shouldClearQueryCache` still compares user ids only (`identity-change.ts:20-26`); `llmTurns` key still tenant-less (`query-keys.ts:358`); no later round drove an in-session tenant switch against the observability cache | read at HEAD | tree |
+| B2-44 | OPEN | STILL OPEN — `content_bytes` truthiness render unchanged | `git log` | tree |
+| B2-45 | OPEN | STILL OPEN — the `logger.error` breadcrumb still fires on any error | `git log` | tree |
+
+**Counts by state now (45 rows):** UNCHANGED 26 (B2-1..B2-3, B2-5..B2-11, B2-13..B2-16, B2-18, B2-19, B2-22..B2-28, B2-31..B2-34) · STILL OPEN 19
+(B2-4, B2-12, B2-17, B2-20, B2-21, B2-29, B2-30, B2-35..B2-45) · FIXED-AT 0 · SUPERSEDED-BY 0. OWNER-OWED named: B2-36 (B2-R2), B2-37 (B2-R3);
+B2-35 carries a ruling (M-TURNCARD) with no build. **Nothing in this slice moved between filing and today except one panel-copy commit.**
+
+### Open claims now, tier 2 first
+
+Tier 2 (unchanged from filing, re-confirmed at `4a7714a`):
+1. **B2-35** — M-TURNCARD is ruled and unbuilt; no Phase G item owns it; real question/answer previews still reach the browser on first paint and sit in a 5-minute cache.
+2. **B2-43** — captured previews cached under a tenant-less key, cleared on user id only; still proved neither way.
+3. **B2-36 / B2-37** — B2-R2 and B2-R3 still on the owner's older-questions list; the whole M-FALLBACK design still reasons about a table with no writer.
+4. **B2-4 / B2-21** — the ungated profile arm and the admitted profile-widening remain untested.
+5. **B2-12** — the `event_id` omitter population is still uncounted (core B1-17 window still has no metric).
+6. **B2-20** — the two-sided `view_dashboard` invariant now crosses a NEW seam (`GET /auth/permissions` body) and is asserted in neither repo.
+7. **B2-30** — the corrected privacy docstrings are still unguarded.
+8. **B2-38** — version skew still renders the blank page M-FALLBACK exists to remove.
+
+Tier 1: B2-17, B2-29, B2-39, B2-40, B2-41, B2-42, B2-44, B2-45 — all unchanged.
+
+### Cross-file staleness (listed, not fixed)
+
+- **Plan §7 `:4913`** still lists B2-R1 as an owed ruling; §4b M-TURNCARD ruled it on 2026-09-20 (this file's assembly note already said so; still true).
+- **Plan §6** still carries none of B2's nine "Future Improvements" (B2-38..B2-45 + the throwing `randomUUID`); they remain only in §7's B2 narrative (`:4920-4932`).
+- `F3-phase0-and-residual.md` #6, #53, #54 point here (re-stated in that file as SEE B2-15 / B2-9..11); its #52 = B2-37.
+- `claims-C1-utils-B1-core.md` B1-16/B1-17 and this file's B2-10/B2-12 agree at HEAD (§6 "RESOLVED by B2.1" for the escalation; the omission window still unmeasured).
+- `claims-D-copilot-mro-app.md` "Deferred" list, "D.9 … wire-or-hold belongs where the consumer is": the consumer shipped (B2.3) and the hold is now M-TURNCARD's unbuilt server refusal — that list is stale in the same direction as B2-35.
+
+### Could not trace
+
+- **B2-35** — any record of M-TURNCARD being briefed, built or queued after the ruling. The ledger mentions it once (CP10 "eight owner decisions") and never again; no Phase G checkbox; no commit in copilot-mro touches the route.
+- **B2-43** — no later round attempted the tenant-switch-without-user-change probe.
+- **B2-6** — no per-file record of the eleven theirs-only files ever having an independent reader beyond the green lane.

@@ -192,3 +192,124 @@ counter/histogram only. The failure mode is loud (a panel on such a series repor
 it is a gap, not a hole. And `docker port` is queried once in `start_check` (`validate.sh:89`); an
 empty answer at that instant burns the deadline and reports `state: timeout`, which reads as a
 config failure. A flake, never a false pass. **Tier 1, chunk F3, OPEN.**
+
+---
+
+## Re-statement 2026-09-22
+
+Appended by the R2 packet re-stater (Opus), read-only against every tree, nothing committed. Every
+row above is left as filed; this section says what is true TODAY. **HEADs read:** copilot-mro-obsm
+`735f8213` (obs-merge, clean) · iac `74346bb` (obs-merge; the 7 "dirty" paths are `__pycache__` plus
+the pre-existing untracked `poc_ec2_setup_ubuntu.sh`) · utils-obsm `179cc6d` · core-obsm `b4d2c33` ·
+dashboard-obsm `4a7714a` · copilot-mro-obsm-cli `f1100629` (branch `obs-merge-cli`, NOT merged) ·
+copilot-mro-obsm-r7b `afe79dbb` (branch `obs-merge-r7b`, NOT merged). **Column note:** this file's
+`Tier` column is §2.3a's tier and it carries no reviewer-severity column; nothing below rewrites it.
+"Implementer" in an evidence cell means the proof is the committing lane's own; only an independent
+reviewer's red earns a settled reading.
+
+**What moved the ground under this file since 2026-09-20:** G.6 wired `agent.subagent.*` and
+`agent.ledger.write_failures` (`3978073b`, inventory `60f40a9f`); M-LEGACY-PANELS added 17 legacy
+families and widened `FAMILY_TOKEN` (`9900a933`, `145cb929`); M-GRAFANA's datasource VALUES were
+restored in all three compose stacks (G.78, `0d9ecf0b`, r7b R7B-33 SETTLED); the phase-1c guard was
+repointed (`60f40a9f`); iac's `alarms.tf` was rewritten five times (`2d493c8` → `9fda3db` → `234603b`
+→ `5e476e0` → `607cee0`/`f85284e`, then `97cae73`, `d52e8b8`, iac r3 `d86b378..74346bb`) and gained
+`scripts/validate_metric_vocabulary.py`, which now runs in `terraform-plan.yaml` CI; M-CLI-TELEMETRY
+(G.4) retires `claude_code.*` — on `obs-merge-cli` only (copilot-mro half) and at iac `5f3380c`;
+M-GENAI-TENANT (`93d2a581`) stripped `tenant.id` from the two `gen_ai` histograms.
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| E1 | SETTLED | UNCHANGED (checked) | `STATE_NOTES` still the three regexes (`_emitted_series.py:268-272`); `test_dark_panel_notes_are_present` / `test_pending_rule_notes_are_present_only_for_unemitted_series` still resolve; the only later edits to the module are G.6 (`60f40a9f`) and the legacy series (`9900a933`, `145cb929`, `d091a372`), none touching the grammar | `git log ea0ac559..HEAD -- tests/integration/otel/_emitted_series.py` |
+| E2 | SETTLED | UNCHANGED in mechanism; the inventory GREW: `SERIES` is still 14 entries but `agent.subagent.*` and `agent.ledger.write_failures` are now `wired` (were `dark`), and `LEGACY_SERIES` (17 entries) + `ALL_SERIES` were added | `_emitted_series.py:66-210`; `60f40a9f` message ("`_emitted_series.py` records what G.6 wired"); `9900a933` | tree; plan G.6 |
+| E3 | ASSERTED | UNCHANGED (checked): `test_every_span_signal_is_backed_by_a_span_the_code_really_opens` (`test_emitted_series_inventory.py:318`) is unmodified since filing; no later round recorded a post-fix mutation on the span limb | `git diff ea0ac559..HEAD -- test_emitted_series_inventory.py` touches only the `ALL_SERIES`/`KNOWN_RELATIONS` imports | tree |
+| E4 | SETTLED | UNCHANGED (checked); the measured smoke is still `OTEL_COMPOSE_SMOKE=1`-gated and no later round ran it | `_UNIT_SUFFIX` unchanged at `:297`; `test_oss_profile_smoke.py` not in any later commit | tree |
+| E5 | SETTLED | UNCHANGED (checked); `145cb929` ADDED a stricter limb: a legacy name without its unit suffix is now a lint failure | `145cb929` "the series lint no longer accepts a legacy name without its unit suffix" (implementer) | tree |
+| E6 | SETTLED | SUPERSEDED in substance — the property still holds but its witness moved: `record_subagent` NOW has a production call site (`agent_pipeline.py` binds it on both runtimes, `3978073b`), so the "declared, recorded in the facade, called by nothing" example that made this limb load-bearing no longer exists. The limb itself (`test_a_recorder_has_a_production_call_site_exactly_when_the_series_is_not_dark`, `:290`) is REFUTED as a reachability proof by r7b R7B-19 (see E7) | plan G.6 audit; `claims-copilot-mro-r7b.md` R7B-19 | tree; r7b |
+| E7 | ASSERTED | REFUTED-BY `claims-copilot-mro-r7b.md` R7B-19 (independent): `_call_sites` counts ANY `ast.Attribute` named like the recorder — a bound reference (`observer=obj.method`) satisfies it — so mutant G6M9 (both runtimes' bindings removed) stayed green. The fix (`_call_sites` counts `obj.method(...)` CALLS only; callback-wired recorders declared `CALLBACK_WIRED` and driven behaviourally) is r7b `3ec66117` on `obs-merge-r7b`, **NOT merged**; obs-merge HEAD still carries the refuted body (`test_emitted_series_inventory.py:126-147`, verified) | r7b P2-2; plan G.6 IMPLEMENTATION NOTE | r7b; tree |
+| E8 | SETTLED | UNCHANGED (checked): `test_tool_outcome_filters_use_the_dispatchers_own_literals` resolves at `:400` and is untouched | tree | tree |
+| E9 | SETTLED | UNCHANGED in kind; the hatch WIDENED: `KNOWN_RELATIONS` (`llm_usage`, `llm_model_calls`) joined `KNOWN_LABELS` under the same shadow rule (`test_known_labels_cannot_shadow_a_series` now iterates `KNOWN_LABELS \| KNOWN_RELATIONS` over `ALL_SERIES`) | `git diff ea0ac559..HEAD -- test_emitted_series_inventory.py`; `_emitted_series.py:253-264` | tree |
+| E10 | ASSERTED | UNCHANGED (checked): one body, both lints import it | `test_grafana_dashboards.py`, `test_alert_rules_layout.py` imports unchanged | tree |
+| E11 | SETTLED | UNCHANGED (checked) | `signal_state_offenders` `:391-` | tree |
+| E12 | SETTLED | UNCHANGED (checked) | same | tree |
+| E13 | SETTLED | UNCHANGED at `datasources.yml` (no commit since filing) — and STRENGTHENED beside it: G.78 found the three compose stacks had lost the `POSTGRES_DATASOURCE_{HOST,DB}` / `POSTGRES_READONLY_PASSWORD` values the file interpolates (so the kept datasource provisioned EMPTY); restored in all three stacks + `.env.sample` at `0d9ecf0b`, reviewed r7b R7B-33 SETTLED (G78M1/M2 red, independent) | plan G.78; `claims-copilot-mro-r7b.md` R7B-33 | tree; r7b |
+| E14 | SETTLED | UNCHANGED (checked) | `deleteDatasources` absent | tree |
+| E15 | SETTLED | UNCHANGED as a guard; the PANEL NOTES changed: the exact-spend panels' state moved `LIVE (Phase 5 grants)` → `WIRED …, retrieval unproved` at `9f44382e` (a grant read is not a probe) | `9f44382e`; `claims-phase6-fixpass.md` row "Four Postgres panels" | tree |
+| E16 | SETTLED | UNCHANGED (checked); still a histogram, still `_sum` | `_emitted_series.py:93-98`; `llm-agents.json` | tree |
+| E17 | ASSERTED | UNCHANGED at the panel (WIRED); the emitter half was COULD-NOT-BREAK by the fix-pass reviewer (boot → `emitAppBoot()` unconditional, allow-list passes both keys) and iac `5e476e0` records "the drop counter's onDropped was always wired — P9 simply dropped no batch" for the sibling. No probe window has confirmed the Loki record, so WIRED is still the right state | `claims-phase6-fixpass.md` row `CATALOGUE.md:377` / panel 19 | fixpass |
+| E18 | SETTLED | UNCHANGED grammar; the rule FILE changed three times since: `3978073b` (LedgerWriteFailures DARK → WIRED, since the instrument now exists), `9f44382e` (UnpricedModelCalls lookback 30m → 1h), `57f486c6` + `7130d4d0` (first-event `unless … offset` branch on both any-occurrence rules, then gated against scrape gaps after r7 P3-1). r7b R7B-23: the "fires after the first call" claim at `9f44382e` was REFUTED at that SHA and is fixed at HEAD | `git log -- flynapse-agent-alerts.yml`; r7b R7B-23; copilot-mro-rounds FX-08 | tree; r7b |
+| E19 | SETTLED | UNCHANGED (checked) | the tuples are still absent | tree |
+| E20 | SETTLED | UNCHANGED (checked): `agent-turn-explorer.json` has no commit since filing | tree | tree |
+| E21 | SETTLED | SUPERSEDED in fact: "Ledger write failures = DARK until Task R" is no longer true — G.6 created the instrument and wired it (`3978073b`; inventory entry now `wired`, `instrument_attr="_ledger_write_failures"`), so `platform-health.json:72`'s note flipped to WIRED in the same commit and `test_entries_without_an_instrument_really_have_none` now has no agent entry to exercise (only `claude_code.*`). The board-description half (which panels left Grafana) still stands | `_emitted_series.py:130-137`; `3978073b`; iac `5e476e0` (the same flip on the aws side) | tree |
+| E22 | SETTLED | UNCHANGED (checked): `deployment/otel/validate.sh` has NO commit since `ea0ac559`. A NEW obligation sits beside it: M-CLI-TELEMETRY's four collector overlays carry OTTL proved only in Python, and G.4 records "validate.sh / the CI otelcol-validate job must load the four overlays in the real otelcol 0.160.0 before merge" as OWED (cli branch, not merged) | plan G.4 "OWED (2)" | tree; plan |
+| E23 | SETTLED | UNCHANGED (checked) | same file | tree |
+| E24 | SETTLED | UNCHANGED (checked) | same file | tree |
+| E25 | ASSERTED | UNCHANGED (checked). Context moved: M-PHOENIX-ON flipped `LLM_CONTENT_COPY_SAMPLE_RATE` to 1.0 (`2b6170b0`), which changes what the aws+phoenix composition would CARRY, not whether it builds | `deployment/otel/README.md:41-43` | tree |
+| E26 | OPEN | STILL OPEN (prose, unguarded). Re-read at HEAD: the storage-extension / bind-mount / `max_elapsed_time: 5m` / `otelcol-storage`-forbidden paragraphs are intact (`README.md:147-168`); `PHOENIX_*` scope row intact (`:115-116`). `95ca0e29` and `2b6170b0` added text and contradicted none of it | tree | tree |
+| E27 | ASSERTED | UNCHANGED (checked): neither tuple file has a commit since filing | tree | tree |
+| E28 | OPEN | STILL OPEN (comment); unchanged text at `docker-compose.smoke.yml:1-13` | tree | tree |
+| E29 | OPEN | STILL OPEN as prose, and still TRUE at HEAD: one conventions block (`CATALOGUE.md:28-44`), zero `DARK-L` occurrences, the three-panel paragraph retired (`:13` now calls it "a branch proposal"). Still guarded only at board-uid grain | tree | tree |
+| E30 | OPEN | STILL OPEN — and the 14 selectors have DRIFTED from iac in the histogram forms: iac `9fda3db` settled the CloudWatch histogram shape as NATIVE (counts via `histogram_count()`, no `le` grouping), but `CATALOGUE.md:122, :559, :561, :609, :646` still spell `histogram_quantile(…, sum by (le…) (rate({"…duration"}[…])))` and `:645` still describes the 5xx ratio without `histogram_count()`. The counter/gauge selectors (`{"agent.turn.calls"}`, `{"telegram.turns"}`, `{"optimizer.runs"}`) agree with `alarms.tf`. See Cross-file staleness | `CATALOGUE.md` at HEAD vs iac `alarms.tf:296-322`; iac `9fda3db` message | tree |
+| E31 | OPEN | STILL OPEN: `gen_ai.client.operation.duration` is inventoried `wired` with the note "Emitted, charted by no panel yet" (`_emitted_series.py:99-103`); zero occurrences in `llm-agents.json`, one prose mention in the catalogue. M-GENAI-TENANT (`93d2a581`) stripped `tenant.id` from it; no panel was authored | tree; §4a-bis M-GENAI-TENANT | tree |
+| E32 | OPEN | STILL OPEN as a class (runbook prose unlinted), but the surface was re-edited: `9f44382e` (fix-pass findings), `3978073b`/`57f486c6`/`7130d4d0` (`alerts.md` alert rows), `9900a933` (legacy runbook lines), `95ca0e29` (`aws-profile.md` dead keys). Two prose guards now exist on parts of it: `test_runbook_panel_quotes_match_the_real_panel_titles` (`4bfa4967`) and `test_observability_prose_names_live_keys` (`95ca0e29`) | `git log -- docs/runbooks/observability/` | tree |
+| E33 | OPEN (owner-owed) | FIXED-AT `60f40a9f` (implementer, mutation-proved two ways) — the guard was REPOINTED, not deleted: the `"obs-telemetry-merge"` branch-name disarm is gone, the track-merge boundary is derived from the graph, the stale four-path list was replaced by the post-merge approved surface, and the utils checkout resolves by directory suffix. It is now the "post-merge scope guard" that ~30 later commits extend by named path. Independent measure: r7b lane B ran it green at every SHA (403 → 441 passed, 0 failed) — a green measurement, not a mutation. No longer owner-owed | `60f40a9f` message; `claims-copilot-mro-r7b.md` lane B table; `git log -- test_phase1c_nonagent_scope_guard.py` (31 commits) | tree; r7b |
+| I1 | OPEN | FIXED-AT iac `2d493c8` → `9fda3db` (implementer) and NOW GUARDED: `scripts/validate_metric_vocabulary.py` checks 1–7 read every selector on the aws surface (dotted brace form, no Prometheus suffix, unit suffixes, `FAMILY_SUFFIXED_INSTRUMENTS` for the born-`_total` legacy names) and runs in `terraform-plan.yaml` CI (`9fda3db`; `pull_request` trigger added `234603b`). Independent: the Phase-6 iac fix-pass reviewer ran 7 mutations against the `2d493c8` guard (`claims-phase6-iac-fixpass.md`), the `9fda3db` reviewer re-fetched the AWS pages (ledger CHECKPOINT 11b), and iac r3 ran 35 mutants (18 red) on `013dc89..d52e8b8`. The four agent selectors read `{"agent.turn.calls"}`, `{"agent.model.unpriced_calls"}`, `{"agent.ledger.write_failures"}`, `{"agent.model.cost_usd"}` at `alarms.tf:395-427` | iac tree; `claims-phase6-iac-fixpass.md`; `claims-iac-r3.md`; ledger CP 10b/11b | tree; packet |
+| I2 | OPEN | FIXED-AT iac `5e476e0` (implementer; an adversarial review of that change found and fixed three guard defects, ledger CP 15b): check 6 (`check_state_notes` / `check_state_vocabulary`) holds every state note on the aws surface to the CATALOGUE's three-state grammar, dated, naming a code artefact for WIRED and a PROBES-register entry for LIVE. What it cannot do is stated in code and pinned: a well-formed "DARK until …" on an emitting series still passes (truth needs the deferred cross-repo inventory). The three descriptions read `WIRED 2026-09-20, retrieval unproved: …` at `alarms.tf:392/403/418` | `5e476e0` message; ledger CP 15b | tree |
+| I3 | OPEN | SUPERSEDED-BY G.6: the wording "cannot fire for any reason — it is inert, not quiet" was DELETED at `5e476e0` because its premise (no instrument anywhere) stopped being true when `3978073b` created `agent.ledger.write_failures`; `LedgerWriteFailures` is now `WIRED 2026-09-20, retrieval unproved` (`alarms.tf:416-420`) and the "GREEN HERE MEANS NOTHING" paragraph was removed rather than reworded. `9fda3db` had meanwhile recorded the two-state PromQL alarm model (no INSUFFICIENT_DATA — a missing series sits GREEN), which is why that paragraph mattered while it lasted | `5e476e0`, `9fda3db` messages; `alarms.tf:408-420` | tree |
+| I4 | OPEN | FIXED-AT `2d493c8` (selectors) and guarded by the same validator as I1 (`{"telegram.turns"}` `alarms.tf:446-448`, `{"optimizer.runs"}` `:458-460`). The "outside copilot-mro's inventory" limit stands: iac's validator pins these names by an EXPECTED_SERIES set, not by an emitter read; the iac fix-pass reviewer verified every converted name against its real emitter by hand (`claims-phase6-iac-fixpass.md` "could not break" #2). `9fda3db` marked `TelegramTurnFailureRate` GREEN-on-nothing in this root (no telegram-bot compute) and deliberately did not gate it | iac tree; iac fix-pass file | tree |
+| I5 | OPEN | SUPERSEDED — the header was rewritten again at `5e476e0` (subagents: WIRED, `record_subagent` is bound on both runtimes), `5f3380c` (the `claude_code.*` bullet retired under M-CLI-TELEMETRY), `d52e8b8` (six legacy panels appended), iac r3 `d86b378` (the CLI bullet now `DARK until copilot-mro obs-merge-cli merges …`, pinned to the validator's state grammar — flip to WIRED after the cli merge) and `74346bb`. Check 6 now lints its state notes; the prose remains otherwise unguarded | `git log -- dashboards/llm-agents.json.tftpl`; `claims-iac-r3.md` | tree |
+| I6 | OPEN | SUPERSEDED: `2d493c8` turned BOTH widgets into `type: "text"` (the Logs Insights `invoke_agent` widget could not return data — `invoke_agent` is a span name/attribute value, never a log body), so there is no failed-turn FILTER on the aws board any more; the `agent.outcome = "error"` fact survives as prose. The iac fix-pass reviewer verified the "dead widget" claim and filed the $3/month text-only dashboard as P2-L (still open). Check 6 lints the WIRED/DARK words; the `agent.outcome` fact is AST-backed only on the copilot-mro side, so the two can still drift | `claims-phase6-iac-fixpass.md` P2-L + table row; `dashboards/agent-turn-explorer.json.tftpl` (2 text widgets at HEAD) | tree; packet |
+| Recorded-not-fixed #1 (FAMILY_TOKEN scope) | OPEN | PARTLY NARROWED, STILL OPEN: `FAMILY_TOKEN` now also matches the legacy prefixes `llm_`/`embedding_`/`chat_block_`/`document_hub_`/`memory_` (`_emitted_series.py:286-292`), so a legacy name not in `LEGACY_SERIES` fails; `otelcol_*`, `loki_*`, `tempo_*`, `prometheus_*`, `traces_spanmetrics_*`, `telegram_*`, `optimizer_*`, `http_*` remain outside the lint exactly as recorded. The iac side now has its own vocabulary guard (I1), which covers the two satellite families THERE | tree | tree |
+| Recorded-not-fixed #2 (`validate.sh` temp leak) | OPEN | UNCHANGED (checked): file untouched | tree | tree |
+| Recorded-not-fixed #3 (`up_down_counter` blind; `docker port` flake) | OPEN | UNCHANGED (checked): `_declarations()` still matches counter/histogram only; no later round touched it | tree | tree |
+
+### Open claims now, tier 2 first
+
+- **E30** — CATALOGUE's CloudWatch dialect selectors: still unguarded, and now DRIFTED from iac on the
+  histogram forms (`le` grouping, no `histogram_count()`), while iac's validator cannot reach this
+  file. Needs one pass over `CATALOGUE.md:122, :559, :561, :609, :645-646` (and the `sum by (le`
+  forms at `:114`, `:291`, `:301`, `:340`, `:543`, `:599` are oss-dialect and correct).
+- **E7 / E6 (tier 2 by E6's tier)** — the reachability limb is REFUTED (r7b R7B-19) and its fix sits
+  on the unmerged `obs-merge-r7b` (`3ec66117`). Until that merge lands, every WIRED claim the
+  inventory makes rests on an attribute-name match that a bound reference satisfies.
+- **E3** — span-limb post-fix mutation still unrecorded (ASSERTED).
+- **I6's residue (P2-L)** — a billable text-only dashboard; open in `claims-phase6-iac-fixpass.md`.
+- **I4's scope limit** — the satellite families are pinned by an EXPECTED_SERIES set in iac, hand-verified
+  against emitters, never derived; the published-inventory fix is in §6 ("Deferred from Phase G").
+- **Tier 1, still open:** E26, E28, E29, E31 (no panel; owner never asked for one), E32 (class), the
+  three "Recorded, not fixed" bullets, and E22's NEW owed item (real-otelcol validation of the four
+  CLI overlays, cli branch).
+
+**Closed since filing:** E33 (repointed, `60f40a9f`), I1, I2, I4 (guarded by iac's validator + CI),
+I3 and I5/I6 (superseded by G.6 / the text-widget rewrite / iac r3).
+
+### Cross-file staleness (rows in OTHER files that contradict this file's rows now; listed, not fixed)
+
+1. `claims-phase6-dashboards.md` row 5 says `tool_outcome="failure"` is "value unguarded" — E8 named
+   `test_tool_outcome_filters_use_the_dispatchers_own_literals` on 2026-09-20 and it resolves at
+   `test_emitted_series_inventory.py:400` today. The two files disagreed AT FILING.
+2. `claims-phase6-dashboards.md` row 8 lists five DARK inventory entries; three of them
+   (`agent.ledger.write_failures`, `agent.subagent.calls`, `agent.subagent.duration_seconds`) are
+   `wired` at HEAD (`3978073b`/`60f40a9f`), and the remaining two (`claude_code.*`) are deleted on
+   `obs-merge-cli` (G.4), not yet merged.
+3. `claims-phase6-dashboards.md` row 21 ("`LedgerWriteFailures` ships enabled on a series that cannot
+   fire") and row 34 ("all 18 alarms agree with their oss rule on value, window…") — the series now
+   emits, and the oss `UnpricedModelCalls` window is `[1h]` (`9f44382e`) while iac `alarms.tf:405`
+   still reads `[30m]` and `validate_alarms.py:65` pins 1800 s; the oss first-event `unless … offset`
+   branch (`57f486c6`) has no aws twin. Nothing in either repo compares the two.
+4. `claims-phase6-iac-fixpass.md` cross-repo rows (`CATALOGUE.md:187` `ThrottledCount`,
+   `aws-profile.md:11,13` `duration_count`/`ThrottledCount`) are FIXED at copilot-mro `95ca0e29`
+   (`InvocationThrottles`, `histogram_count()`); the `aws-profile.md:56,183` + `CATALOGUE.md:588` "suffix
+   is open (B1a)" rows are now CONSISTENT with iac again, because `9fda3db` restored the RE-VERIFY on
+   `CollectorTelemetryAbsent`.
+5. `claims-G10-weaviate-spans.md` G10-13 / `claims-utils-rounds.md` G10R-07: `dependencies.json:18`
+   and `CATALOGUE.md:138` still say the `db_system` values are `postgresql, redis` — confirmed at
+   HEAD; queued as a copilot-mro follow-up (ledger CHECKPOINT 35), not fixed by anything above.
+
+### Could not trace
+
+- Whether the `9fda3db` independent reviewer's claims table was ever filed as a packet file: the ledger
+  (CHECKPOINT 10c/11b) records the review and its triage in prose; no `claims-iac-r1/r2` file exists.
+  Packet N6 (satellites, lane #14) is the intended home.
+- The copilot-mro half of G.4 (`_emitted_series` dropping `claude_code.*`, panel 10 removed) is read
+  from the plan and the cli branch's messages; the merge into obs-merge (lane #5) had not landed at the
+  HEADs above, so rows E2/E21's DARK census may change again within the day.

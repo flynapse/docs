@@ -148,3 +148,81 @@ ASSERTED: C2-3, C2-12, C2-26, C2-30. OPEN: C2-1, C2-2, C2-6, C2-10, C2-24, C2-25
 - **`claims-C1-utils-B1-core.md`'s C1-15 is stale**: it records "0 hits in `api-obsm`" as re-verified at
   assembly on 2026-09-20, but `ee6f4d0` had already added `WEAVIATE_GRPC_PORT` to
   `api-obsm/.env.example:186`.
+
+---
+
+## Re-statement 2026-09-22
+
+**Re-stated by an Opus re-stater (packet R1), read-only; nothing above this heading was altered.**
+HEADs read: `api-obsm e3ba207` (the C2 range ended at `9812f44`; since then `66868f8` R22 sweep, `bbbf0fa` G.84, `b6471c8` M-COMMIT landing,
+`1b1d088` G.20/G.14 debt paid to zero, `d6ab632` M-DEADROUTER/M-AUTHLOGS, `cc56667`/`bc8e268`/`f985d8d` G.16/G.19/G.44/G.45/G.50/G.57, the G.53
+pin rounds `08f54f9..590d114`, `0e225bd`/`8d7f587`/`35639cb` the B10/B11 halves, api reviews r6–r8 and their fix batches, `e3ba207` pytest-xdist);
+cross-references read at `copilot-mro-obsm 735f8213`, `core-obsm b4d2c33`, `utils-obsm 179cc6d`, `iac 74346bb`. An api r8 fix implementer was
+live on this tree while this was written; every SHA below is from `git log`/`git show`. Later packet files consulted: `claims-api-rounds.md`
+(N4, filed 2026-09-22), `claims-api-r6.md`, `claims-api-r7.md`, `claims-api-r8.md`.
+
+**Column note.** This file's `Tier` is §2.3a's and it carries no severity column; nothing below re-tiers a row. Post-range commits that touched a
+row's file are named so an auditor knows the SETTLED proofs were taken on an earlier revision of the guard.
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| C2-1 | OPEN | UNCHANGED (a merge topology; nothing later re-decided it). The later merges on this branch were all resolution-only by the same rule | `git log` | tree |
+| C2-2 | OPEN | STILL OPEN — no lock-consistency test exists. The lock moved once since: `e3ba207` `poetry add --lock pytest-xdist` (dev group), `poetry check --lock` clean, identical delta on `api` langgraph-merge `06f3ddd` (ledger Add. 169–170) | `git show e3ba207 --stat`; ledger Add. 169 | tree, ledger |
+| C2-3 | ASSERTED | UNCHANGED for the property (`main.py:134-146`: the answer is assigned to `app.state.degraded_components`, then `boot.degraded(...)`); `main.py` was edited 4× since (`1b1d088`, `0e225bd`, `8d7f587`, `35639cb`), none touching the partition block; the two AST guards untouched | `git log`; read at HEAD | tree |
+| C2-4 | SETTLED | UNCHANGED — `middleware/logging.py` and its test untouched since `55439b4` | `git log` | tree |
+| C2-5 | SETTLED | UNCHANGED — `weaviate_partitions.py` and its test untouched since `9812f44` | `git log` | tree |
+| C2-6 | OPEN | STILL OPEN — bare top-level `startup` package present (`flynapse_api/startup/__init__.py`), collision still unencoded. Note the estate later built naming guards of the SAME class for other names (`7a24dd5` "two naming guards"; G.53's checkout pin), none for this one | `ls`; `git log` | tree |
+| C2-7 | SETTLED | UNCHANGED for the property; the guard file was edited twice since — `7a24dd5` (G.44/G.45 lane, tenant enumeration + naming guards) and `fe2953b` (G.53 re-plan: sibling checkout resolved by git family) — neither touches `_handler_reraises` | `git log`; `git show --stat` | tree |
+| C2-8 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-9 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-10 | OPEN | UNCHANGED (a plan correction) | plan §3 | plan |
+| C2-11 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-12 | ASSERTED | UNCHANGED for `main.py:520`'s fix (no later commit reverted it); still no mutation of that line. The scan file was edited by `1b1d088` (docstring only: it now names `test_gateway_logs_carry_no_exception_text.py` as the sink-level twin) | `git show 1b1d088` | tree |
+| C2-13 | SETTLED | UNCHANGED for the auth handler's line; `middleware/auth.py` edited 3× since (`1b1d088` R22 debt, `0e225bd`, `35639cb` M-PERMISSIONS-ENDPOINT); guard untouched. M-AUTHLOGS (`d6ab632`, G.14) paid the other 15 credential-path sites in the same module | `git log` | tree, plan G.14 |
+| C2-14 | SETTLED | UNCHANGED — scan still finds zero offenders; docstring updated at `1b1d088`. The deliberate scoping ("not an R22 check") is now moot in effect: the R22 twin `test_gateway_logs_carry_no_exception_text.py` exists (`66868f8`) and its debt register is EMPTY (`1b1d088`) | `git show 1b1d088` | tree |
+| C2-15 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-16 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-17 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-18 | SETTLED | UNCHANGED — gate still `settings.is_production` (`weaviate_partitions.py:74`); Q-ENVIRONMENT (C2-34) still open beneath it | grep | tree |
+| C2-19 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-20 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-21 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-22 | SETTLED | UNCHANGED for the property; `routers/health.py` edited once since (`1b1d088`: its one `format_exc` site → `failure_fields`), `test_health_probes.py` untouched | `git show 1b1d088 --stat` | tree |
+| C2-23 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-24 | OPEN | STILL OPEN — `.env.example` untouched since `9812f44` (`DEBUG=false` at `:4`, the mode commented at `:206`); still no test reads `.env.example` for these keys (the only reference, `test_uvicorn_leaves_logging_to_utils.py:405`, is a synthetic fixture) | grep; `git log` | tree |
+| C2-25 | OPEN | UNCHANGED for api's site; the cross-file count is stale: of the nine owed C1.5 sites, api (`ee6f4d0`) AND the two iac sites (`iac 0df5c24`, `apprunner.tf:44`, `lambda.tf:115`, iac r3 held) are closed; copilot-mro's six remain (see `claims-C1-utils-B1-core.md` C1-15 re-statement) | grep across trees | tree |
+| C2-26 | ASSERTED | UNCHANGED for the deviation; still no mutation restores the strict rule. The premise re-holds at `copilot-mro-obsm 735f8213`: `copilot_mro/app/main.py` lifespan still wraps the boot checks and re-raises (`:119-135`). Guard file edited by `7a24dd5`, `fe2953b` (see C2-7) | read at HEAD | tree |
+| C2-27 | SETTLED | UNCHANGED (see C2-7 for the file's later edits) | `git log` | tree |
+| C2-28 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-29 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-30 | ASSERTED | UNCHANGED — the cross-module limitation is still pinned as NOT caught | `git log` | tree |
+| C2-31 | SETTLED | UNCHANGED (see C2-3) | `git log` | tree |
+| C2-32 | SETTLED | UNCHANGED | `git log` | tree |
+| C2-33 | OPEN | STILL OPEN — copilot-mro `copilot_mro/app/main.py:136-160` honours `warn` with no environment gate, logs the placeholder `PARTITION_REFUSAL_REMEDIATION` and `error_type=type(error).__name__`; file untouched since `248590dd`. **No Phase G checkbox was ever written for it** (grep of Phase G for `M-WARN`, `partition_boot_check_mode`, "split-brain" → nothing) although §7 C2 says "Phase G item". The `error_type` line is inside M-TRACEBACK's copilot-mro scope (tbA–tbD lanes live); the gate is not | grep; plan §7 `:5032`; Phase G | tree, plan |
+| C2-34 | OPEN | STILL OPEN · OWNER-OWED Q-ENVIRONMENT — decision sheet "older owner questions: still open, verified"; `config.py:172` `is_production = not debug` unchanged; still the only consumer at `weaviate_partitions.py:74`; no `ENVIRONMENT` field | grep; sheet | tree, sheet |
+| C2-35 | OPEN | FIXED-AT api `1b1d088` ("pay the gateway's rendered-exception debt to zero", G.20/G.14): 0 `format_exc()` sites in `flynapse_api/` (was 12 in the two named files); the repo-wide R22 sweep the row said api lacked exists since `66868f8` (`test_gateway_logs_carry_no_exception_text.py`, armed over all of `flynapse_api`, debt register now empty). Decision sheet "already settled: B-R1 … zero `format_exc` sites". **Implementer proof only** — `claims-api-rounds.md` records `1b1d088` "has never had an independent reader as a commit" (lens A read parts of it uncommitted, LA-02/LA-03). The estate-wide half of B-R1 is now M-TRACEBACK (§4a-bis) | grep; `git log -S`; `claims-api-rounds.md` | tree, packet, sheet |
+
+**Counts by state now (35 rows):** UNCHANGED 29 (C2-1, C2-3..C2-5, C2-7..C2-23, C2-25..C2-32) · STILL OPEN 5 (C2-2, C2-6, C2-24, C2-33, C2-34) ·
+FIXED-AT 1 (C2-35, implementer-proved, unreviewed as a commit). OWNER-OWED named: C2-34 (Q-ENVIRONMENT).
+
+### Open claims now, tier 2 first
+
+Tier 2:
+1. **C2-33** M-WARN split-brain — unchanged since C2 closed, and it has no owner: the promised Phase G item does not exist. copilot-mro standalone still honours `warn` in any environment.
+2. **C2-34** Q-ENVIRONMENT — `DEBUG` is still api's only production discriminator for a tenant-isolation gate; owner ruling still owed.
+3. **C2-35 (residual)** — the twelve sites are gone, but the closing commit `1b1d088` has had no independent reader; a Fable auditor should treat the sweep's empty register as implementer-asserted.
+
+Tier 1: **C2-2** (lock still untested; moved once), **C2-6** (bare `startup` still unencoded), **C2-24** (`.env.example` still unguarded), **C2-25** (six copilot-mro C1.5 sites).
+
+### Cross-file staleness (listed, not fixed)
+
+- `claims-C1-utils-B1-core.md` C1-15 and this file's C2-25 / "Owed" item 4 count nine owed sites; iac `0df5c24` closed two more.
+- `F3-phase0-and-residual.md` #10/#24/#55/#59 are re-stated in that file consistently with C2-18..22, C2-26 and C2-35 here; its #59 (copilot-mro `llm_observability.py:191`) is NOT covered by `1b1d088` (a copilot-mro file).
+- `claims-D-copilot-mro-app.md` row 41 and its "Owed" list still describe B-R1 as "~60 sites, neither sweep reached it" — api's half is paid; copilot-mro's is the M-TRACEBACK register (`_mro_exception_text_debt.py`), not "~60".
+- `claims-api-rounds.md` "What no round covered" lists `1b1d088` and the `/test-cookie` sweep as unaudited — consistent with C2-35's caveat here; not a contradiction.
+
+### Could not trace
+
+- **C2-33** — where the "Phase G item" went. Neither the ledger nor Phase G names it after §7 C2; it may have been assumed into M-TRACEBACK (which covers only the `error_type` line) or simply dropped.
+- **C2-12** — still no record of anyone mutating `main.py:520` itself in any of the eight api rounds.
+- **C2-26** — no round restored the strict rule to measure what it would break on today's five startup modules.

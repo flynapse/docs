@@ -155,3 +155,132 @@ rows are judgment calls the owner may overturn — their guards pin the *outcome
 ### Settled (5) — guard + a recorded mutation
 
 #7 M-GRAFANA · #13 M-TOKENUSAGE · #21 P0-COLLECTOR · #25 P0-GUARD · #38 the read DAO's scope clause.
+
+---
+
+## Re-statement 2026-09-22
+
+**Re-stated by an Opus re-stater (packet R1), read-only against the trees; nothing above this heading was altered.**
+HEADs read: `core-obsm b4d2c33` · `api-obsm e3ba207` · `utils-obsm 179cc6d` · `copilot-mro-obsm 735f8213` (+ unmerged
+`copilot-mro-obsm-cli f1100629`, `copilot-mro-obsm-r7b afe79dbb`) · `dashboard-obsm 4a7714a` · `iac 74346bb` ·
+`flynapse-otel d1e531f` · `telegram-bot f72f291` · `shift-optimizer 8bd4d66`. Fresh implementers were live in
+core, api, telegram-bot, shift-optimizer, flynapse-otel and the cli/tbA–tbD copilot-mro worktrees while this was
+written; every SHA below was read from `git log`/`git show`, never from a working tree. Sources: plan §2.3a, §4a-bis,
+§4b, §6, Phase G and `## Lessons`; the decision sheet `owner-decisions-2026-09-22.md` (C1–C15, B14, "older owner
+questions"); ledger CHECKPOINTS 32–35 and Addenda 101–174; the later packet files named per row.
+
+**Column note.** This file's `Tier` is §2.3a's and it carries no severity column; nothing below re-tiers a row. "FIXED-AT"
+names who proved it — an implementer's own mutation proof is recorded as such and does not make a row SETTLED by an
+independent reviewer; where an independent round re-checked it, that file and row are named.
+
+| row # | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|
+| 1 | ASSERTED | UNCHANGED | core `table_definitions.py:109-111` still `"boolean DEFAULT true"`; copilot-mro `config.py:1091` still `default=True`; the two guard files have no commit after `5d40d70` / Phase D | trees at HEAD; `git log` |
+| 2 | OPEN | STILL OPEN · OWNER-OWED (C5's go-live prerequisite = the Appendix A clause; no C item schedules the purge) | `purge_llm_turn_content.py` is referenced only by `.env.sample:78` ("nothing schedules yet"), its unit test and the M-TRACEBACK debt register; 0 hits in iac, core, api. Note M-CAPTURE-TRUNCATE deletes the purge's S3 branch on `obs-merge-cli` `4c02a10e` (unmerged) | grep at HEAD; plan G.7(c); decision sheet C5/C13 |
+| 3 | OPEN | UNCHANGED — checked: §4d-resolved unchanged, nothing later touched M-TOOLIO | plan §4d-resolved | plan |
+| 4 | OPEN | SUPERSEDED-BY M-OTEL-SCOPE + M-SATELLITE-SCOPE — scope widened to flynapse-otel, telegram-bot and shift-optimizer ("fix, don't publish"); M-VERSIONS fixes the Phase H release order (0.2.0 both); AWS apply, live probes and publishing stay out (sheet C2–C5) | plan §4a-bis | plan |
+| 5 | OPEN | UNCHANGED in substance; process amended twice: reviewers write their claims tables straight into this directory (Lessons 2026-09-22) and a FRESH implementer per batch (ledger Add. 155); Opus-only including sub-agents | plan Lessons; ledger Add. 155 | plan, ledger |
+| 6 | OPEN | SEE `claims-B2-dashboard.md` B2-15 (SETTLED, `9002ed9`), B2-21 (the widening past a tenant's OWN narrowed profile, unguarded) and B2-36 = B2-R2, still OWNER-OWED (sheet "older owner questions") | | packet B2; sheet |
+| 7 | SETTLED | UNCHANGED for the properties this row pins; a residual the row could not see was FIXED-AT copilot-mro `0d9ecf0b` (G.78: `4bcc17e1` had deleted the `POSTGRES_DATASOURCE_*` values the datasource reads from all three compose stacks, so the kept datasource resolved to nothing; restored with a derived guard) — implementer + controller; the range is in r7b's review (`claims-copilot-mro-r7b.md`) | `git log -S'POSTGRES_DATASOURCE_HOST'`; plan G.78 | tree, plan |
+| 8 | OPEN | STILL OPEN as written: no panel-count guard; `frontend.json` is still 19 panels, only descriptions changed since (`9f44382e`, Phase 6 review state notes). Correction the row missed at filing: the pre-existing M9.4 guard (`test_grafana_dashboards.py:467+`, `FRONTEND_PHASE9_EVENTS`) pins that the phase-9 consumer panels chart their events, i.e. the panel SET M-FRONTEND protected is guarded by event, not by count | json panel count; `git log` | tree |
+| 9 | OPEN | SEE `claims-C2-api.md` C2-2 (OPEN — no lock test). The lock moved once since: api `e3ba207` (`poetry add --lock pytest-xdist`, `poetry check --lock` clean per ledger Add. 169) | | packet C2; ledger |
+| 10 | OPEN | SEE `claims-C2-api.md` C2-18..C2-22 (SETTLED, W1–W7/H1–H3); the copilot-mro half is C2-33, STILL OPEN — see row 24 | | packet C2 |
+| 11 | ASSERTED | UNCHANGED — both directories absent at `735f8213` | `ls` | tree |
+| 12 | ASSERTED | UNCHANGED — `grafana/grafana:13.2.1` at the three sites; `test_compose_pins_agree_with_versions_md` present | grep | tree |
+| 13 | SETTLED | SUPERSEDED-BY M-GENAI-TENANT (A2/G.17): the histogram stands, but the attribute set this row froze changed — `tenant.id` is withheld from `gen_ai.client.token.usage` and `gen_ai.client.operation.duration` at the one recording door (`_safe_record`, `_HISTOGRAM_WITHHELD_KEYS`, `telemetry.py:1382`). FIXED-AT copilot-mro `7acfe7c0` (r6 P3-6); implementer proof, inside r7's reviewed range | plan §4a-bis; `telemetry.py` | plan, tree |
+| 14 | OPEN | UNCHANGED — G.9 struck; `backfill_chat_turn_facts.py` scheduled nowhere; G.5 Q1 sits on the sheet's older questions | plan G.9; sheet | plan |
+| 15 | ASSERTED | UNCHANGED — §4b-corrections text unchanged | plan | plan |
+| 16 | ASSERTED | UNCHANGED for the tftpl (still queries the histogram, "a HISTOGRAM (M-TOKENUSAGE)"). The guard cell is stale: an iac-side test now exists — `iac/tests/unit/observability/test_validate_metric_vocabulary.py` names `llm-agents.json.tftpl` (`:74`); G.72 `607cee0`, reviewed by iac r3 (`claims-iac-r3.md`) | tree; plan G.72 | tree, packet iac-r3 |
+| 17 | ASSERTED | UNCHANGED — `archive=None` at `orchestrator.py:2318`; `config.py:82` still declares the flag | grep | tree |
+| 18 | ASSERTED | UNCHANGED | | plan |
+| 19 | OPEN | SUPERSEDED-BY M-EVALSGATE (§4b): the evals project is gated on G.13 alone; G.8 was closed here and moved to `agent-evaluation-completion.md`. The suite and the optional `evaluation` group remain merged (5 modules at HEAD); "the rest does not merge" was never executed and no standing ruling asks for it | plan §4b, G.8 | plan |
+| 20 | OPEN | FIXED-AT copilot-mro `4bfa4967` (G.13: `IN_ACCOUNT_JUDGE_PROVIDERS` in code at `contracts.py:56`, allowlist can only narrow, enforced before the judge LLM is built; implementer mutation-proved, controller source-check at ledger CP13). Hardened by r7b P2-5 `b63a03fd` on `obs-merge-r7b` (cloud-scoped catalogue + endpoint hosts) — UNMERGED, r7b review r2 in flight | plan G.13; tree | plan, tree |
+| 21 | SETTLED | UNCHANGED — `validate.sh` has no commit after `ea0ac559` | `git log` | tree |
+| 22 | ASSERTED | UNCHANGED — `events_endpoints.py` and the abort test have no commit after `d7f7b54` | `git log` | tree |
+| 23 | ASSERTED | UNCHANGED | `git log` | tree |
+| 24 | OPEN | SEE C2-18 (SETTLED, W1) for the gateway. The copilot-mro process is STILL OPEN = C2-33: `copilot_mro/app/main.py:136-160` honours `warn` with no environment gate and logs the placeholder constant; file untouched since `248590dd`; **no Phase G checkbox was ever written for the split-brain** although §7 C2 says "Phase G item" | grep at HEAD; plan §7 :5032 | tree, plan |
+| 25 | SETTLED | UNCHANGED, and the guard was widened later (`2c8be638` stdlib `extra=` keys; `9e6d8739` r6 P2-4 `services/llama_index` roots); the remaining `type(exc).__name__` sites are now the M-TRACEBACK register (`_mro_exception_text_debt.py`) | `git log` | tree |
+| 26 | OPEN | STILL OPEN — no later item re-audited the 35 individually; the residual (#27) is superseded | plan | plan |
+| 27 | OPEN | SUPERSEDED-BY M-SCOPEGUARD (sheet "already settled": repoint, not delete) — FIXED-AT copilot-mro `60f40a9f` (repointed on the post-merge range, GREEN; hard-coded revisions, stale path list and branch-name disarm gone; a 4th defect closed: it resolved `utils` through the workspace and read the pre-merge sibling). Later edits `36aa4254`, `5ac2ab1c`, `b1ade15d` (r7). The file is the one conflict (union) of the pending cli merge | file header at HEAD; ledger Add. 148 | tree, ledger |
+| 28 | OPEN | STILL OPEN — §6 entry unchanged; PK still `primary_key=["event_id"]` (`table_definitions.py:1520`). §6's premise was corrected: core DOES have a conflict-target test (`test_tenanted_write_paths.py`), pinning the tenancy prefix, not the full key | plan §6; tree | plan, tree |
+| 29 | OPEN | STILL OPEN, and the population GREW: B2.1 makes every insecure-origin browser an omitter with no counter (B2-12) | plan §6; `claims-B2-dashboard.md` B2-12 | plan, packet B2 |
+| 30 | OPEN | STILL OPEN for the teardown contract; partly SUPERSEDED-BY M-CASCADE + M-COMMENT-PII for one relation — `comments` now deliberately outlives the tenant (core `b68e41c`, `test_the_document_comments_and_their_votes_outlive_the_tenant`), swept later by the manual `delete_unentitled_partition.py --purged-tenant` (OWNER-OWED C1 runs the FK drop). The FK-free class grew by ruling; no declared delete list exists; B14 (DB-enforced tenant deletion) is OWNER-OWED | plan §4a-bis, §6; core `tests/db/rbac/test_tenant_teardown_db.py:711` | plan, tree, sheet |
+| 31 | OPEN | STILL OPEN — `dashboard_profiles.py:169`, `:173` unchanged since `d7f7b54` | `git log` | tree |
+| 32 | OPEN | PARTLY SUPERSEDED: F.4 decided the shape (`<subject>.outcome`, declared value sets — plan §6 "F.4 has decided"); Weaviate's set is declared — FIXED-AT utils `1a2680e` (`OutcomeVocabulary`, `WEAVIATE_OUTCOMES`; implementer, utils r8 pending); S3 is STILL a local frozenset, now SIX values (`s3_service.py:62`); S3/DynamoDB/embedding adoption recorded for §6 (ledger Add. 163) | tree; plan §6; ledger | tree, plan, ledger |
+| 33 | OPEN | Weaviate half FIXED-AT utils `6848ef7` (production; tests `21fc319`): one `finally` stamps `interrupted` on all 20 doors (`weaviate_service.py:336-351`); INDEPENDENT — `claims-G10-weaviate-spans.md` G10-09 SETTLED (`MM_nofinally` red) and `claims-utils-rounds.md` G10R-03. S3 half STILL OPEN — no `interrupted` in `s3_service.py` | tree; packet G10 | tree, packet |
+| 34 | OPEN | STILL OPEN — only `_PHONE_LABEL_RE` (`llm_content_capture.py:102`); the file has no commit after `2879a1cf`; no test names a phone number | grep; `git log` | tree |
+| 35 | OPEN | STILL OPEN — `_redact_and_bound_text` (`:537-553`) still truncates via `budget.redaction_input` BEFORE `_redact_text`; the 128-char tail scan is the only compensator | read at HEAD | tree |
+| 36 | OPEN | STILL OPEN — unchanged | `git log` | tree |
+| 37 | OPEN | STILL OPEN — `register_capture` is still inside the success `try` (`pipeline.py:795`); the `except Exception` branch (`:807+`) now records the runtime turn AND a settled facts row (M-FACTS-FAILURES, `d4792d6b`) but captures no content | read at HEAD | tree |
+| 38 | SETTLED | UNCHANGED | | tree |
+| 39 | OPEN | SUPERSEDED-BY M-CAPTURE-TRUNCATE (B8): keep truncating, drop the unbuilt spill. Plan correction (G.7(c)): `sha256`/`content_bytes` DO describe the stored truncated bytes (`_fit_snapshot_to_max_bytes`, `truncated=True`) — the row's "do not describe the stored bytes" is refuted. Column, both CHECKs and the purge's S3 branch deleted on `obs-merge-cli` `4c02a10e`+`5333e3cf` (UNMERGED; cli r2 fixes + merge in flight); the DROP is OWNER-OWED C13 | plan G.7(c), §4a-bis | plan |
+| 40 | ASSERTED | UNCHANGED — guard file unchanged since `d1be3e57` (pre-range). The combined figure lands on the turn SPAN (`stamp_turn_usage`, `agent.cost.combined_usd`, `telemetry.py:1641-1658`), not on the counter the panels read | tree | tree |
+| 41 | OPEN | STILL OPEN — `TenantDailySpendHigh` `> 50` / `24h` on `agent_model_cost_usd_total` (`flynapse-agent-alerts.yml:96-97`, "retrieval unproved"); `agent.model.cost_usd` is added only in `record_model_usage` (`telemetry.py:1930`); nothing records SDK-loop spend reaching it | tree | tree |
+| 42 | ASSERTED | UNCHANGED — guard file unchanged since `fb09ca63` | `git log` | tree |
+| 43 | OPEN | STILL OPEN — `@lru_cache(maxsize=1)` on `get_agent_pipeline` (`agent_pipeline.py:721`) | grep | tree |
+| 44 | OPEN | STILL OPEN — the `sdk.*` trailer attributes and `sdk.synthesis_judged` are set only `if span is not None` (`orchestrator.py:3477-3497`), and `span` is `nullcontext(None)` when suppressed (`:2841-2843`); nothing ports them onto `invoke_agent` | read at HEAD | tree |
+| 45 | OPEN | Crashed-turn half FIXED-AT copilot-mro `c401fb18` (G.102: `_withholding_span` sets `error.type` + a bare `Status(ERROR)` on the root turn span, `telemetry.py:1340-1377`) and the crash branch records `outcome="error"` (`pipeline.py:807-833`) — implementer. Cancelled turns STILL uncounted by design: `CancelledError` → `_abort_turn` → re-raise with no `_record_runtime_turn`; the docstring cites upstream `use_span` semantics | `git log -S'_withholding_span'`; read at HEAD | tree |
+| 46 | OPEN | STILL OPEN — `agent.turn.duration_seconds` is created with no boundaries (`telemetry.py:1408-1411`); only the token histogram has a ladder. Side effect of M-LEGACY-TENANT/M-GENAI-TENANT: `tenant.id` stripped from it (`7acfe7c0`) | read at HEAD | tree |
+| 47 | OPEN | STILL OPEN — 8 `attempts=0` sites (`dispatcher.py:456-577`); the failures panel sums `agent_tool_attempts_total{tool_outcome="failure"}` (`llm-agents.json:147`), so a 0-attempt failure adds nothing | grep | tree |
+| 48 | OPEN | PARTLY: `tenant.id` withheld from both gen_ai histograms (M-GENAI-TENANT, `7acfe7c0`); a panel for `gen_ai.client.operation.duration` is on the sheet's older owner questions; the three `error.type` vocabularies are unreconciled. **Not corroborated at HEAD:** "`deployment.environment.name` never set" — `setup_logging(env=…)` → `bootstrap(environment=)` → `flynapse_otel.resource.build` sets it (`resource.py:84`, predates the merge); re-verify RV2's premise before acting on that clause | tree (utils `logging_config.py:65`, flynapse-otel `resource.py:84`); sheet | tree, sheet |
+| 49 | OPEN | STILL OPEN — 7 parsers + `s3_pdf_processor.py:926` still `setup_logging(name="ingest-parser")`; `distribution=` only at `main.py:12`; no Phase G item names it (M-G117-DEFAULT is about entrypoints that never call `setup_logging`, a different defect) | grep | tree, plan |
+| 50 | OPEN | STILL OPEN — memory ops still on the legacy `get_tracing_service` shim (`memory_index.py:46`); `memory.index.delete` still derives `operation.outcome` from its input (`:428-430`) on the absent-partition early return. Partial mitigation: `4b5aea14` (r6 P2-2) routes the handle through the traced Weaviate door, so the underlying delete now has a door span with a real outcome | read at HEAD | tree |
+| 51 | OPEN | PARTLY SUPERSEDED: F.4 decided the key shape (plan §6); the DARK/WIRED/LIVE state vocabulary was settled by a controller ruling (ledger CP 9b "the fourth state, resolved as WIRED"); values declared for Weaviate (`1a2680e`) and not yet for S3/DynamoDB/embedding (§6) | plan §6; ledger CP 9b | plan, ledger |
+| 52 | OPEN | STILL OPEN · OWNER-OWED B2-R3 (sheet "older owner questions … still open, verified") — the only `INSERT INTO dashboard_profiles` is `tests/db/analytics/test_dashboard_profiles_db.py`; the module has no commit after `d7f7b54` | grep; sheet | tree, sheet |
+| 53 | OPEN | SEE `claims-B2-dashboard.md` B2-9 / B2-10 / B2-11 (SETTLED) | | packet B2 |
+| 54 | OPEN | SEE B2-15 — retired: `panelsForTab` / `visibleTabs` are live on the `capability` arm | | packet B2 |
+| 55 | OPEN | SEE `claims-C2-api.md` C2-26 (ASSERTED): §5.6's "revert to strict" was REFUTED on the merged tree (1 offender under strict); the relaxation was kept and hardened (C2-27..C2-29 SETTLED). Guard file later edited by `7a24dd5`, `fe2953b` (G.53) | | packet C2, tree |
+| 56 | OPEN | STILL OPEN — README `:147-164` and `test_collector_profiles.py:709` still forbid an `otelcol-storage` volume in the four in-repo composes; documented, not fixed | read at HEAD | tree |
+| 57 | ASSERTED | UNCHANGED — both guards name the two phoenix overlays (`test_compose_image_pins.py:26,:28`) | grep | tree |
+| 58 | ASSERTED | UNCHANGED | | plan |
+| 59 | OPEN | STILL OPEN at HEAD — `llm_observability.py:191` is `error_type=type(exc).__name__`, file untouched since `54a01f39`. Now inside M-TRACEBACK's scope (§4a-bis): four fan-out lanes (tbA–tbD) are LIVE off `735f8213`. api's own B-R1 sites are gone (`1b1d088`) | grep; ledger Add. 174 | tree, ledger |
+| 60 | ASSERTED | FIXED-AT copilot-mro `3978073b` (G.6: `record_subagent` bound as the subagent observer on both runtimes; `_emitted_series.py:116-125` reads `wired`). r7b P2-2 found 9/9 mutants surviving the first G.6 tests; behavioural test with the real `RuntimeTelemetry` at r7b `3ec66117` (UNMERGED). Row's guard cell ("marks the series DARK") is stale | `git log`; `claims-copilot-mro-r7b.md` | tree, packet |
+| 61 | OPEN | PARTLY FIXED: api `ee6f4d0` (`.env.example:186`); iac `0df5c24` (`apprunner.tf:44`, `lambda.tf:115`; iac r3 held "50051 matches utils"). copilot-mro's sites (`.env.sample`, `app/.env.example`, four composes, `weaviate-local`) are STILL 0 hits at `735f8213` | grep; plan C1.5 | tree, plan |
+| 62 | OPEN | FIXED-AT copilot-mro `1d1d2dc8` (G.2: dependency dropped; `grep prometheus` returns nothing in `pyproject.toml`/`README.md`); inside r7b's reviewed range | grep; `git log -S` | tree |
+| 63 | OPEN | FIXED-AT copilot-mro `16d5d1d1` (census: the test now pins the four live `observability-local` config files instead of the deleted `otel-collector-config.yaml`) — implementer; copilot-mro r8 review in flight | `git show 16d5d1d1` | tree |
+| 64 | OPEN | STILL OPEN — `_PENDING` uncapped; file untouched since `248590dd` | `git log` | tree |
+| 65 | ASSERTED | UNCHANGED — test present; the later `main.py` edits (`1b1d088`, `0e225bd`, `35639cb`) do not touch the drain | `git log` | tree |
+| 66 | ASSERTED | UNCHANGED for the property; the script was touched by `f0d7ef5` (G.91 sibling resolution) and `0753e2d` (M-G117-DEFAULT import order; `claims-core-rounds.md` IMP-03); the DB test by `5b49993` (scratch tenants) | `git log` | tree, packet core-rounds |
+
+**Counts by state now (66 rows):** UNCHANGED 22 (1, 3, 5, 7, 11, 12, 14, 15, 16, 17, 18, 21, 22, 23, 25, 38, 40, 42, 57, 58, 65, 66) ·
+STILL OPEN 21 (2, 8, 26, 28, 29, 31, 34, 35, 36, 37, 41, 43, 44, 46, 47, 49, 50, 52, 56, 59, 64) · SUPERSEDED-BY a ruling 5
+(4, 13, 19, 27, 39) · FIXED-AT 4 (20, 60, 62, 63) · PARTLY fixed/superseded 7 (30, 32, 33, 45, 48, 51, 61) · SEE another file 7
+(6, 9, 10, 24, 53, 54, 55). OWNER-OWED named: 2 (C5/Appendix A), 30 (C1, B14), 39 (C13), 52 (B2-R3); 6/B2-R2 by reference.
+
+### Open claims now, tier 2 first
+
+Tier 2 (§2.3a's column above), still open at the HEADs read:
+
+1. **#2** capture ON, purge scheduled nowhere — only `.env.sample` admits it. Owner-owed (C5 go-live clause).
+2. **#28** tenant-scoped idempotency key (unchanged); **#29/B2-12** the omitter population grew with B2.1 and is still uncounted.
+3. **#30** no declared teardown contract for FK-free tenant-classed relations — and M-CASCADE added `comments` to that class by ruling; B14 owner-owed.
+4. **#32** S3's `operation.outcome` set is still a local frozenset, now six values (Weaviate's is declared).
+5. **#34** phone numbers still not redacted; **#35** truncation still precedes redaction — capture code untouched since Phase D.
+6. **#41** the `$50/day` alert still keys on the metered counter; nothing records SDK-loop spend reaching it.
+7. **#44** the ~25 `sdk.*` attributes are still gated behind the suppressed span.
+8. **#45** cancelled turns still uncounted (crashed-turn status is fixed).
+9. **#46** `agent.turn.duration_seconds` still boundary-less and two-clocked.
+10. **#48** residual: no consumer for `gen_ai.client.operation.duration`; three `error.type` vocabularies (the environment-name clause is refuted at HEAD).
+11. **#49** eight parser entrypoints still share `ingest-parser`; no item owns it.
+12. **#50** memory group still on the legacy shim; delete outcome still input-derived.
+13. **#51** residual: S3/DynamoDB/embedding outcome values not yet declared.
+14. **#24/C2-33** M-WARN split-brain — copilot-mro's own process still honours `warn` ungated; no Phase G item exists.
+
+Tier 1, still open: #8 (no panel-count guard), #26, #31, #33 (S3 half), #36, #37, #43, #47, #52 (B2-R3), #56, #59 (M-TRACEBACK lanes live),
+#61 (copilot-mro sites), #64; #14 by nature.
+
+### Cross-file staleness (rows in OTHER packet files that today's tree contradicts — listed, not fixed)
+
+- `claims-utils-rounds.md` G10R-08 says "STILL OPEN: no ruling traced"; utils `1a2680e` declared `WEAVIATE_OUTCOMES` (ledger Add. 163). Its cross-reference to this file's #32 is now half-stale.
+- `claims-D-copilot-mro-app.md` rows 21, 36, 45 are FIXED/SUPERSEDED (this file's #62, #27, #63); row 43 (evals) is superseded by M-EVALSGATE + G.13; row 42 remains open as here — re-stated in that file's own section.
+- `claims-C1-utils-B1-core.md` C1-15 (owed sites) and C1-16/C1-17 — see that file's re-statement (#61, #32, #33 here).
+- `claims-B2-dashboard.md` B2-35 says the M-TURNCARD fix does not exist — still true at `735f8213` (`llm_observability.py` gates on `view_dashboard` only) — and plan §7 `:4913` STILL lists B2-R1 as an owed ruling although §4b ruled it (M-TURNCARD).
+- `claims-copilot-mro-rounds.md` G24-01 (open tier 2) is FIXED-AT utils `f1ef9b9` (constant tenancy refusals; utils r6 U6-14 SETTLED, MG3 red) with residuals U6-23 / utils r7 P3-1.
+- Plan §7 D.13 "2 owner-blocked (the SHA-pinned branch-hygiene guard)" and this file's #27 pre-correction text describe a guard that has been repointed since `60f40a9f`.
+
+### Could not trace
+
+- **#24 / C2-33** — the plan says "Phase G item"; no `G.<n>` checkbox mentions M-WARN, `partition_boot_check_mode` or the split-brain. Either it was never written or it was folded into another item without a name; a Fable auditor should treat it as unowned.
+- **#40** — no later round measured what share of real spend the `agent.model.cost_usd` counter now sees on the `claude` runtime; the row's ASSERTED stays on the original test only.
+- **#48** — the RV2 lane record that asserted "`deployment.environment.name` never set" was not re-read; only the HEAD code path was checked.
+- **#49** — no addendum, ruling or Phase G item mentions the parser service names after Phase D; the D.1 disposition's "resolve ours" was never executed and nothing records why.

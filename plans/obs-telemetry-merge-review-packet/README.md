@@ -4,6 +4,22 @@ Built 2026-09-20 by four independent Opus assemblers, one per slice, read-only a
 worktrees. Governing plan: `../observability-telemetry-merge-and-completion.md` (§2.3a defines the
 tiering this packet implements).
 
+> **STATUS 2026-09-22 ~02:05 (FULL PAUSE #10): every reviewer is PAUSED with a PARTIAL file in this directory — `claims-utils-r8.md` (MERGE-CLEAN 0/0/1/9 provisional), `claims-copilot-mro-r7b-r2.md` (25 rows; P2 cand R7B2-12), `claims-dashboard-r3.md` (FIX-FIRST on P2-1 provisional; includes DR3-2a rows for `2a9b0f4`), `claims-flynapse-otel-detector-r7.md` (FIX-FIRST 0/1/3/5) + `claims-flynapse-otel-netguard-r1.md` (FIX-FIRST 0/1/5/4), `claims-iac-r4.md` (MERGE-CLEAN 0/0/0/3+1, with a PARTIAL-2 section); `claims-copilot-mro-r8.md` is NOT here yet (partial lives in `~/.claude/scratch/obs-merge/mro-review-r8/claims-copilot-mro-r8.partial.md`; 1 P1 candidate, DB probe unrun); N6 `claims-satellites-rounds.md` still PARTIAL. Every PARTIAL header comes off only when its reviewer resumes and finalises (agent ids in the SDD ledger CHECKPOINT 38). Totals below and the row-count column are still owed. 44 slice files + this README.**
+>
+> **STATUS 2026-09-22 (compaction #9): 38 slice files + N6 partial; every one of the 11 original files now carries a `## Re-statement 2026-09-22` section (R1/R2 done — row states as of the HEADs named in each section; phase6-iac-fixpass holds 25 rows, not 22).** Filed since compaction #8: `claims-api-rounds.md` (N4, 95 rows), `claims-flynapse-otel-rounds.md` (N5), `claims-satellites-rounds.md` (N6, PARTIAL: telegram/shift + G.110/core rows; iac rows, rounds table and totals still to come). Reviews in flight that will file here: utils-r8, copilot-mro-r8, copilot-mro-r7b-r2, dashboard-r3, flynapse-otel-detector-r7, flynapse-otel-netguard-r1, iac-r4. **Still owed:** N6 completion; the totals below (they still describe only the original nine files); a per-file row-count column that matches the files (E: 25 for phase6-iac-fixpass).
+>
+> *(compaction #8 text follows for history)* **STATUS 2026-09-22 (compaction #8): 35 slice files; reviews now file straight into this directory.** Filed
+> since the rebuild began: shift-optimizer-r1; utils-r5, r6, r7 and utils-rounds; dashboard-r1, r2; api-r6, r7, r8;
+> flynapse-otel-detector-r5, r6; copilot-mro-rounds, r7, r7b, cli-r1, cli-r2; core-rounds, r7, r8; telegram-bot-r3,
+> r4, r5; iac-r3; plus G5 and G10. **Still to do** (N4 api-rounds FILED 2026-09-22, 95 rows): N5
+> (flynapse-otel rounds, Add. 20, 50, 62, 79); N6 (satellites: telegram 21/59, shift 18, iac 20, G.110 33, core
+> sweeps G.46 + G.61 text repairs); R1/R2 (re-state the original 11 files against later fixes and rulings, incl.
+> cross-file staleness such as copilot-mro-rounds G24-01); then the totals below. **Until then the totals section
+> describes only the original nine files**, and any OPEN or ASSERTED row in those files is unverified against today's
+> tree. **Tier vs severity:** the packet's Tier is §2.3a's (0 = settled by a mutation-checked guard an INDEPENDENT
+> reviewer saw red; never sent to Fable). Reviewers' own severity (0 = a content leak that ships … 3 = docs) sits in its
+> own column in every file filed since the rebuild.
+
 ## What this is for
 
 An auditor adjudicates **claims**, not code. Each row states a decision that was taken, why, the

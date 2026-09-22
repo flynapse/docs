@@ -78,3 +78,96 @@ change.
   writer, and `automation_store.py`'s own docstring rather than demonstrated.
 - The compose-gated smokes (`OTEL_COMPOSE_SMOKE=1`) were not run; no board was loaded in Grafana.
 - No browser was driven, so no P9-dated `LIVE` claim on `fn-frontend` was independently confirmed.
+
+---
+
+## Re-statement 2026-09-22
+
+Appended by the R2 packet re-stater (Opus), read-only, nothing committed; the table above is left as
+filed. **HEADs read:** copilot-mro-obsm `735f8213` (obs-merge, clean) · copilot-mro-obsm-r7b
+`afe79dbb` (branch `obs-merge-r7b`, NOT merged; lane #6 reviewing it) · core-obsm `b4d2c33`.
+**Column note:** the table has no `#` column; rows are numbered F-1..F-24 below in file order and
+identified by their `File:line` cell. Its `Tier` column is §2.3a's; the `Chunk` column carries the
+reviewer's severity ids (P0-1, P1-2, …) rather than F1/F2/F3, and the one `0→1` cell is the
+controller's 2026-09-20 downgrade recorded in the row itself.
+
+**What happened to the fix pass after this review.** The seven uncommitted production edits this
+review read were committed at `9f44382e` (2026-09-21 04:19) TOGETHER with the fixes answering this
+review's P0-1, P1-1, P1-4, P1-5, the quoted titles and the "EIGHT boards" count (its message names
+them; ledger CHECKPOINT 13 records the responses — "every Phase 6 defect worked, and one of my
+claims was FALSE"). The two defeated guards were hardened at `4bfa4967` (2026-09-20 10:55, after this
+review): guard 1 gained unbackticked/hyphenated/derived-verb limbs with three mutations; guard 2 lost
+its one-sided `assert claims` (defeat a) and its three-segment regex (defeat c). Independent check:
+copilot-mro r7b (`claims-copilot-mro-r7b.md`, "`9f44382e` vs `claims-phase6-fixpass.md`: PARTLY
+covered … I re-checked them": its fixes hold; R7B-34/35/36/37). r7b's own leftovers then landed as
+`300a6fb2` on `obs-merge-r7b` — placeholder vs runbook, `provider.ts:158-159` on the board, a runnable
+ledger query, guard 2's defeat (b) — **unmerged at the HEADs above**, so several rows below are true
+on one branch and false on the other; each says which.
+
+| row # | File:line (as filed) | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|---|
+| F-1 | `oss-profile.md:102-109` query 3 status filter | OPEN (P0-1) | FIXED-AT `9f44382e` (implementer): `status IN ('failed','timed_out','skipped') OR late_run`, with prose on why `late_run` cannot substitute. The `abandoned` clause of this row is REFUTED by r7b R7B-34 (independent): core `dc41caa` never writes `abandoned` (`automation_store.py:161-163`), so query 3 is complete. Still prose, no guard | `9f44382e` message; ledger CP 13; r7b R7B-34 | tree; r7b |
+| F-2 | `oss-profile.md:102-104` `retry_after` on a `failed` row | OPEN (P0-1) | FIXED-AT `9f44382e`: `skipped` joined the filter precisely because non-NULL `retry_after` is written only alongside `skipped` (the implementer traced both writers; ledger CP 13 "the comment's promise was structurally unkeepable"). No guard | ledger CP 13 | tree |
+| F-3 | `oss-profile.md:88,99,109` `now()` vs naive `timestamp` | OPEN (P1-1) | FIXED-AT `9f44382e`: every comparison is `now() AT TIME ZONE 'UTC'`; the implementer confirmed both INSERT paths supply `_utcnow()` so the DDL default never fires; r7b R7B-34 confirmed the columns are naive `timestamp` (`table_definitions.py:1231ff`) — ASSERTED by r7b's reading, no guard | ledger CP 13; r7b R7B-34 | tree; r7b |
+| F-4 | `test_alertmanager_secrets_dir.py:132-177` guard 1 | ASSERTED (DEFEATED) | FIXED-AT `4bfa4967` (implementer): limb 1 matches any capitalised run joined by `_`/`-`, unbackticked; limb 2 gained two DERIVED patterns (an edit-in-place verb within a sentence's reach of the three filenames; `create`/`write` excluded because the section must instruct them); three mutations (unbackticked token, hyphenated token, restatement). r7b R7B-37 recorded the defeats as "not re-run"; r7b's implementer then re-ran mutations A and B "against this tree and both FAIL the guard now" (`300a6fb2` message) — implementer proof both times, no independent red. `300a6fb2` also adds a test holding the placeholder to the same secrets directory (unmerged) | `4bfa4967`, `300a6fb2` messages; r7b R7B-37 | tree; r7b |
+| F-5 | `test_grafana_dashboards.py:231-276` guard 2 | ASSERTED (DEFEATED ×3) | PARTLY FIXED on obs-merge, FULLY on r7b: (a) the vacuous pass — `4bfa4967` asserts each side separately and then their overlap ("proved by renaming the header against both versions: the old assert passes, the new one fails"); (c) the regex — trailing segment optional, so `browser.error`/`browser.web_vital` are compared; the implementer REFUTED this row's count ("10 of 21, including `browser.telemetry.dropped`" → the regex missed 3, only 2 of them named by both documents; `telemetry.dropped` IS matched — uncompared because the catalogue names it in prose, not a panel row); (b) flip-and-misspell — closed only by `300a6fb2` (the catalogue's and the boards' event sets must be EQUAL; the two prose-only rows now spell their event), UNMERGED. Now at `test_grafana_dashboards.py:318` | `4bfa4967`, `300a6fb2` messages; ledger CP 13 | tree |
+| F-6 | `flynapse-agent-alerts.yml:33-42` + `alerts.md:194-198` `for: 30m` on `[30m]` | OPEN (P1-4) | FIXED-AT `9f44382e` ("the rule was fixed, not the claim": lookback `[30m]` → `[1h]`, hold kept; the runbook states the pairing) with a guard from `4bfa4967`, `test_an_any_occurrence_rule_looks_back_further_than_it_holds` (deliberately narrowed to the alerts nothing retries after its first version flagged 14 correct rules). Then SUPERSEDED AGAIN: `57f486c6` added the first-event `count(x unless last_over_time(x[1h] offset 1h))` branch (a lazily created series is born at 1 — r7b R7B-23 REFUTED `9f44382e`'s "fires after the first call" at that SHA, fixed at HEAD) and `7130d4d0` (r7 P3-1) stopped it false-firing on a scrape gap (`test_every_any_occurrence_rule_sees_the_first_event_of_a_label_set`). Independent: r7 P3-1, r7b R7B-23 | `flynapse-agent-alerts.yml:35-63`; r7b R7B-23; copilot-mro-rounds FX-08 | tree; r7b |
+| F-7 | `oss-profile.md:205` "nothing in the logs" | OPEN (P1-5) | FIXED-AT `9f44382e`: "both failure modes are LOGGED, not silent" and the rewrite adds what was missing — that the alert routes through the broken integration, so read Prometheus `/alerts`, the Alertmanager UI or the container log (ledger CP 13 "FALSE, and now corrected"). r7b P3-3 re-checked. Alertmanager was still never run with a missing file | ledger CP 13; r7b | tree |
+| F-8 | `CATALOGUE.md:369`, panel 18 `browser.telemetry.dropped` DARK → WIRED | OPEN (could not break) | STATE HOLDS (WIRED; iac `5e476e0` independently records "the drop counter's onDropped was always wired — P9 simply dropped no batch"). The COMPARISON gap: on obs-merge the catalogue row still names the event only in prose, so guard 2 skips it; `300a6fb2` (unmerged) makes the row spell `browser.telemetry.dropped` and requires set equality | tree; `300a6fb2`; iac `5e476e0` | tree |
+| F-9 | `CATALOGUE.md:370`, panel 12 `browser.settings.mutation` | ASSERTED (tier 0→1) | UNCHANGED (checked); the iac twin `5e476e0` re-derived the same fact ("ten hooks/settings/ producers in the generated browser-signals.json") | tree; iac `5e476e0` | tree |
+| F-10 | `CATALOGUE.md:374`, panel 14 `browser.optimizer.run_triggered` | ASSERTED | UNCHANGED (checked) | tree | tree |
+| F-11 | `CATALOGUE.md:377`, panel 19 `browser.app.boot` | ASSERTED | UNCHANGED (checked); SEE `claims-E-deployment-and-iac.md` E17 | tree | tree |
+| F-12 | frontend 7/8 + llm-agents 11/12 Postgres panels → WIRED | OPEN | STILL OPEN: correct and consistent (`9f44382e`), still compared by nothing — no `browser.*` event, no inventoried metric, so both lints and guard 2 skip them (the `KNOWN_RELATIONS` hatch, `9900a933`, only stops `llm_usage`/`llm_model_calls` reading as unknown series) | tree | tree |
+| F-13 | `oss-profile.md:171-183` vs `slack_webhook_url.placeholder` | OPEN, **tier 2** | SPLIT BY BRANCH: on obs-merge STILL OPEN and STRONGER — `oss-profile.md:196` "The secret files BELONG in the checkout" vs the placeholder's "live outside the repo" (both verified at HEAD; r7b R7B-35 OPEN); FIXED on `obs-merge-r7b` `300a6fb2` (both say "in the checkout, never in the repo"; the placeholder names the git-ignored `alertmanager/secrets/` directory; a new test holds it to the same directory the runbook table and the git-ignore tests use) — UNMERGED, implementer proof | tree; r7b R7B-35; `300a6fb2` | tree; r7b |
+| F-14 | `CATALOGUE.md:369` cites `provider.ts:147` | OPEN | PARTLY FIXED: the catalogue says `provider.ts:158-159` at HEAD (`9f44382e`); the BOARD (`frontend.json:313`, panel 18) still says `:147` on obs-merge; fixed on r7b `300a6fb2` (unmerged). r7b R7B-36 | tree; r7b R7B-36 | tree |
+| F-15 | `alerts.md:321` `"Run failures"` | OPEN | FIXED-AT `9f44382e` (quoted titles match the real titles) and GUARDED since `4bfa4967`: `test_runbook_panel_quotes_match_the_real_panel_titles` (quoted strings following a board uid resolve against that board's titles; ~40 lines because a naive extractor false-positives on backticked label matchers). Implementer proof; r7b re-checked "the panel titles" | `4bfa4967` message; r7b | tree |
+| F-16 | `oss-profile.md:56` `:tenant` | OPEN | SPLIT BY BRANCH: obs-merge `oss-profile.md:61` still `WHERE tenant_id = :tenant` (r7b R7B-36 OPEN, and `9f44382e` promoted it to "the runbook SQL ledger check"); r7b `300a6fb2` sets it with `\set tenant '<tenant id>'` and reads `:'tenant'` — UNMERGED | tree; r7b R7B-36 | tree |
+| F-17 | `oss-profile.md:250-253` "EIGHT boards LOAD" on a default-skipped smoke | OPEN | STILL OPEN as a measurement: the count is right (`9f44382e`) and the smoke is still `OTEL_COMPOSE_SMOKE=1`-gated; no later lane ran it (every reviewer refused docker). r7b R7B-32 found the compose healthcheck guard shape-only (G11M1–M4 decoys pass) → r7b `1f705234` parses the probe (unmerged) | tree; r7b R7B-32 | tree |
+| F-18 | `frontend.json` description defines `DARK until` with zero DARK panels | OPEN | UNCHANGED (checked): the description still defines the DARK form and the board has 0 `DARK until` panels, so the browser limb of `test_dark_panel_notes_are_present` still exercises no DARK note | tree | tree |
+| F-19 | `alerts.md:226-228` "24h lookback … drops a single scrape-boundary spike" | OPEN | UNCHANGED (checked): the sentence is at `alerts.md:244-245` verbatim; `TenantDailySpendHigh` rule unchanged (`[24h]`, `for: 30m`) | tree | tree |
+| F-20 | `flynapse-agent-alerts.yml:69` `sum by (tenant_id)` | OPEN (could not break) | UNCHANGED (checked): now `:97`; still no label guard (the inventory pins series/kind) | tree | tree |
+| F-21 | `oss-profile.md:74-113` column/role correctness | OPEN (could not break) | UNCHANGED (checked) for the columns and the `BYPASSRLS` reader; the queries themselves changed per F-1..F-3 | tree | tree |
+| F-22 | `alerts.md:16,28,…` quoted panel titles | OPEN | FIXED-AT `9f44382e` + guarded (F-15's test covers every quoted title after a board uid) | tree | tree |
+| F-23 | `alerts.md:36-39,57-60,211-213` rewritten windows/holds | ASSERTED | UNCHANGED (checked) for the three rules (5m/10m, 5m/10m, `[10m]`/`for: 5m` at `:79-83`); `LedgerWriteFailures` additionally gained the first-event branch (`57f486c6`) and its runbook row was rewritten with it | tree | tree |
+| F-24 | `oss-profile.md:186-195` placeholder defaults | ASSERTED (downgraded from tier 0) | UNCHANGED (checked) on obs-merge: both `.placeholder` files tracked, the three compose files name them as `${…:-default}`, `secrets/` holds only `.gitignore`; `test_only_the_inner_gitignore_is_tracked_under_the_secrets_dir` unchanged. The placeholder's TEXT changes on r7b `300a6fb2` (unmerged) | tree | tree |
+
+### Open claims now, tier 2 first
+
+1. **F-13 (tier 2)** — the runbook/placeholder contradiction on where secrets live is still live on
+   obs-merge; its fix and its test are on `obs-merge-r7b` only (lane #6 review, then merge).
+2. **F-5 (b) / F-8 / F-14 / F-16** — the same branch split: defeat (b) of guard 2, the event set
+   equality, the board's `provider.ts:147`, the `\set tenant` query. Until `300a6fb2` merges, this
+   file's rows are the truth of obs-merge.
+3. **F-12** — the four Postgres panels' WIRED state is still compared by nothing (tier 1, OPEN).
+4. **F-17** — the provisioning smoke has still not been run by anyone since the fix pass; the count is
+   right, the proof is skipped (tier 1, OPEN).
+5. **F-18, F-19** — untouched prose/vacuity items (tier 1, OPEN).
+6. **F-4** — guard 1's hardening and the re-run of defeats A/B are implementer-proved on both
+   occasions; no independent reviewer has seen guard 1 go red since this file's defeat.
+
+**Closed since filing (obs-merge):** F-1, F-2, F-3, F-6 (superseded twice), F-7, F-15, F-22; F-5
+(a)+(c).
+
+### Cross-file staleness (listed, not fixed)
+
+1. `claims-phase6-dashboards.md` rows 44, 45, 46, 48 record the runbook defects this fix pass
+   answered as "OPEN — and wrong"; all four are fixed at `9f44382e` (re-stated there today).
+2. `claims-copilot-mro-r7b.md` R7B-37 says guard 1's file "has had no change since" the fix pass —
+   `git log` shows `4bfa4967` (2026-09-20 10:55, the hardening) touched
+   `test_alertmanager_secrets_dir.py` after `d8d2570c` and before r7b ran. R7B-37's "defeats stand"
+   was therefore an untested assumption at its own date; `300a6fb2`'s re-run of A/B (both caught) is
+   the later reading. Neither cell was re-run by an independent reviewer.
+3. `claims-copilot-mro-rounds.md` row "`1d1d2dc8..0d9ecf0b` … `9f44382e` may be the fix pass already
+   filed in claims-phase6-fixpass.md — not verified" — now verified by r7b: it is that fix pass PLUS
+   the responses to this review.
+4. The ledger's CHECKPOINT 13 and `4bfa4967`'s message both refute this file's "10 of 21 declared
+   browser events" count (3 missed by the regex, 2 in both documents); the row text above is left as
+   filed.
+
+### Could not trace
+
+- Whether `300a6fb2`'s guard-1 re-run (mutations A and B) used this file's exact wordings: the
+  commit message says "the two recorded defeats (A, B)"; the scratch scripts `attack_guard1.py` etc.
+  were session-scratch and are gone.
+- The r7b r2 review (lane #6) verdict on `300a6fb2`: `claims-copilot-mro-r7b-r2.md` did not exist
+  at the HEADs above.

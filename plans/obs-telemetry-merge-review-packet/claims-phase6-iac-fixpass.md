@@ -516,3 +516,143 @@ iac | commit message; alarms.tf:44; guard:75 | "Ten mutation proofs"; `research 
     inference-profile namespace; the guard certifies presence, not the schema.
 14. P2-N — citation drift (ten vs fourteen mutations; "Open questions"; `:184` vs `:187`; repo-less
     `docs/` paths).
+
+---
+
+## Re-statement 2026-09-22
+
+COMPLETE — all 25 rows re-stated (this section replaced the sixth file a machine restart cut short); iac r4
+(`d52e8b8..74346bb`) is running and will file `claims-iac-r4.md` — pointed to as "pending r4" below.
+
+Appended by the R2 packet re-stater (Opus), read-only against every tree, nothing committed, no test run,
+no terraform, no AWS. The table above is left as filed. **HEADs read:** iac `74346bb` (obs-merge; the
+only untracked paths are `__pycache__` dirs and the pre-existing `poc_ec2_setup_ubuntu.sh`) · copilot-mro-obsm
+`735f8213` (obs-merge, clean) · utils-obsm `179cc6d` (obs-merge) · core-obsm `fe41002` (obs-merge; the
+E-file's re-statement read `b4d2c33` earlier the same day) · dashboard-obsm `4a7714a` · copilot-mro-obsm-cli
+`7880bc44` (branch `obs-merge-cli`, NOT merged; the E-file read `f1100629`). **Column note:** the table has
+no `#` column, so rows are numbered IF-1..IF-25 below in file order and identified by their `File:line`
+cell (the README lists this file at 22 rows; the table holds 25). Its `Tier` column is §2.3a's (1 or 2, no
+0) and its `Chunk` column carries the reviewer's own severity ids (P0-A … P2-N) — there is no separate
+severity column, and nothing below rewrites either. "Implementer" in an evidence cell means the proof is
+the committing lane's own; the "`9fda3db` reviewer" is the read-only adversarial agent the iac implementer
+spawned over its own diff (ledger CHECKPOINT 10c/11b) — separate from the implementer, but commissioned by
+it, so the auditor may weigh it as less than a controller-launched review.
+
+**What moved the ground under this file since 2026-09-20.** The review was filed against `2d493c8`; iac
+then took `9fda3db` (the histogram shape was ANSWERABLE from the vendor page: CloudWatch converts
+explicit-bucket histograms to exponential at ingestion, so the parent's `_count`/`_bucket` spelling was
+wrong too — both API alarms now take their count through `histogram_count()`; the `CollectorTelemetryAbsent`
+RE-VERIFY restored; header narrowed; all five guard-reach defects fixed; CI Python step added; B1a note
+rewritten with the selector list), `234603b` (the `9fda3db` reviewer's triage: two dashboard queries the fix
+had missed, two claims WITHDRAWN — "fails LOUDLY" had no source and "the one-line flip" does not flip — plus
+four residual guard holes and `pull_request`/`fetch-depth: 0` in CI), `5e476e0` (nine stale state claims:
+DARK→WIRED for signals G.6 wired, LIVE→WIRED for the browser four), `607cee0`/`48fc50c`/`f85284e` (G.72
+attribute keys; `b1b_metric_filter_probe.sh`), `89f3592`/`013dc89` (G.107 content flags), then the
+`013dc89..d52e8b8` range reviewed in `claims-iac-r3.md` (M-CLI-TELEMETRY, G.117, C1.5, M-WEAVIATE-LEFTOVERS,
+M-LEGACY-PANELS) and its fix pass `d86b378..74346bb` (ledger Addendum 154). Owner rulings that bear on rows
+here: **M-ALARM-DENOMINATOR** (keep `notBreaching` + a denominator counter, built after the C2 probe),
+**M-LEGACY-PANELS** (15 born-`_total` legacy names now on the aws surface by design), **M-CLI-TELEMETRY**
+(`claude_code.*` retired from the board), **M-G117-DEFAULT** and **M-WEAVIATE-LEFTOVERS** (no row here).
+On the copilot-mro side, G.6 (`3978073b`) created and wired `agent.ledger.write_failures`, and `95ca0e29`
+fixed the three cross-repo prose rows this file filed.
+
+| row # | File:line (as filed) | claim state at filing | state now | evidence | source |
+|---|---|---|---|---|---|
+| IF-1 | `alarms.tf:114-127` `ApiHighErrorRate` bare `rate({histogram})` | OPEN (P0-A, tier 2) | FIXED-AT iac `9fda3db` (implementer): both limbs read `histogram_count(rate({"http.server.request.duration"…}[5m]))` innermost, float arithmetic above it (`alarms.tf:292-300` at HEAD). The `9fda3db` reviewer re-fetched the AWS pages and confirmed the exponential-histogram store and the two-state alarm model (ledger CP 11b), then found the same fix had MISSED two dashboard queries (fixed `234603b`). This row's remedy ("revert to `_count`/`_bucket` — 50 % beats 0 %") is REFUTED-BY `9fda3db`: the classic family is unrepresentable on that endpoint, so `3068b47` was wrong as well (CP 10b). Still no guard on operator-vs-instrument-kind (verified: no test id at HEAD plants a bare `rate({histogram})`). RESIDUAL BET, stated in the file: `histogram_count()` is not named on any AWS page; the "fails LOUDLY" sentence was WITHDRAWN at `234603b` — an unsupported function may sit GREEN. OWNER-OWED sheet **C2** (one `PutMetricAlarm` with a bogus function name) | `9fda3db`, `234603b` messages; ledger CP 10b/11b; `alarms.tf:251-300` | tree; ledger |
+| IF-2 | `alarms.tf:129-145` `ApiP95LatencyHigh` volume limb | OPEN (P0-A, tier 2) | FIXED-AT `9fda3db`: right limb is `sum by (…) (histogram_count(increase({"http.server.request.duration"}[15m]))) >= 20`; `le` dropped from the quantile's grouping (`alarms.tf:312-323`; 0 selectors carry `sum by (le` at HEAD — the two remaining hits are comments). Same bet and same owner item as IF-1 | `alarms.tf:302-323` | tree |
+| IF-3 | `alarms.tf:27-51` header "SETTLED, no longer a B1a question" | OPEN (P0-B, tier 2) | FIXED-AT `9fda3db` (+ `234603b`): the header now says the collector premise "answers a DIFFERENT question", that suffixing is equally receiving-side, that the 2026-09-15 capture sat on the collector pipeline; SHAPE settled from the vendor page, NAME "documented, NOT observed, so it stays a B1a item for the SUMS" (the one worked selector is a gauge); both contrary citations recorded, including the histograms page's own `http_request_duration_seconds` example (`alarms.tf:29-93`). Independent re-fetch by the `9fda3db` reviewer. The underlying question is OWNER-OWED (B1a canary; nearest sheet line C2) | `alarms.tf:29-93`; CP 10b/11b | tree; ledger |
+| IF-4 | `alarms.tf:174-181` deleted `RE-VERIFY (B1a)` on `CollectorTelemetryAbsent` | OPEN (P0-B, tier 2) | FIXED-AT `9fda3db`: "RE-VERIFY (B1a) — RESTORED, because 2d493c8 deleted it on a premise that does not carry it", fires-forever consequence spelled out, the two copilot-mro documents cited by section + verbatim quote (not line), and the one edit named (`absent(otelcol_process_uptime_total)` + the three comparison alarms) (`alarms.tf:363-388`). Verified at HEAD. The condition itself is still open — see IF-24 | `alarms.tf:355-389` | tree |
+| IF-5 | `validate_metric_vocabulary.py:470-509` check 5 circular | ASSERTED (P1-C, tier 1) | FIXED-AT `9fda3db`: `declared_services` derives the deployed set from `OTEL_SERVICE_NAME` literals in this root's `.tf` (`api`, `ingest-parser`; `:704-706`, `:736-770`) plus `SELF_NAMING_DEPLOYED_SERVICES = {"dashboard"}` (`:726-732`) — this row's own remedy ("derive from apprunner.tf/lambda.tf") is REFUTED in part: alone it would have failed all four browser alarms (CP 10b). Vacuity checked against the DERIVED half (`test_check_five_refuses_to_pass_when_it_can_derive_no_deployed_service` `:300`); `test_the_deployed_service_set_is_derived_from_the_root_not_from_the_gates` `:286`; mutation `an-ungated-notbreaching-log-count-alarm-on-a-service-that-is-not-the-gated-one` `:621` (this row's probe a2). Docstring NARROWED at `234603b`: it catches the undeployed-service variant only, not an ungated `notBreaching` alarm on a DEPLOYED service whose filter cannot match (DEFERRED, `:1536-`). Implementer-proved; iac r3 measured the suite green at six commits (a measurement); no independent red on check 5 recorded — pending r4 | `9fda3db`, `234603b`; validator at HEAD | tree |
+| IF-6 | `validate_metric_vocabulary.py:68-81` B1a remediation "one documented edit" | OPEN (P1-D, tier 1) | FIXED-AT `9fda3db` → corrected `234603b`: the note is the two-step it is, with the table — 18 occurrences of 8 families across 5 files (the first version said 5 for `alarms.tf` and 7 families; both wrong, corrected with the counting method) (`:1496-1533`); step 1 keeps `_total`/`_created` so the "over-corrects" point is answered; citation reads `research 04 §10 "Open probes / uncertainties"` (`:143`; `alarms.tf:44-45`); paths marked workspace-relative (`:599`; `alarms.tf:21-22`). Prose, no guard | validator `:1496-1533` | tree |
+| IF-7 | `validate_metric_vocabulary.py:81` no unit suffixes | OPEN (P1-E, tier 1) | FIXED-AT `9fda3db` (`UNIT_SUFFIXES` + a sourced `UNIT_SUFFIXED_INSTRUMENTS` allow-list, `agent.turn.duration_seconds` exempted by creation site) → `234603b` (the real OTel→Prometheus unit map after the `9fda3db` reviewer found nine unit suffixes scoring 0 failures; 8 parametrised proofs `test_every_real_unit_suffix_is_rejected_not_just_the_obvious_ones` `:349`); this row's probe a1 is mutation `the-half-conversion-a-human-makes-a-unit-suffix-with-no-family-suffix` `:614`. INDEPENDENT red: iac r3 V7 (the `_seconds` entry dropped) — `claims-iac-r3.md` IR3-20 SETTLED, tier 0. `document_hub_processing_duration_seconds` joined the exemption at `d52e8b8`. Contrary citation (b) on the AWS histograms page is recorded at `alarms.tf:83-92` as evidence AGAINST this rule — a stated bet, not closed | `:172-233`; `claims-iac-r3.md` IR3-20 | tree; packet |
+| IF-8 | `alarms.tf:256-311, 423-432` four browser alarms, no silence companion | OPEN (P1-F, tier 1) | SUPERSEDED-BY **M-ALARM-DENOMINATOR** (§4a-bis, 2026-09-22): owner ruled KEEP `notBreaching` + ADD one denominator metric filter (every `service.name = dashboard` record, no alarm on it), built AFTER the C2 AWS probe — iac lane idle until C2. In tree: `9fda3db` deliberately added NO `BrowserTelemetryAbsent` (the browser has no heartbeat, so a companion pages every quiet night; `alarms.tf:475-494`), `5e476e0` downgraded the four from `LIVE` (an oss P9 probe) to `WIRED 2026-09-11, retrieval unproved`, and the `AlertDeliveryFailing-sns-*` marginal is stated at `:766-784`. WORSE than filed: the four `$.` patterns are KNOWN NOT TO MATCH (B1b, G.73 — `$.attributes.event_name` names a key that does not exist), so the alarms are dead, not quiet, and "must not be armed". Header `:155-167` still reads "OWNER RULING OWED" — stale prose against the ruling, unfixed. Plan G.73 box still `[ ]`. OWNER-OWED sheet **C2** (`b1b_metric_filter_probe.sh` + `filter-log-events`), then the iac build | §4a-bis M-ALARM-DENOMINATOR; sheet A6/C2; `alarms.tf:95-167, 475-516` | plan; tree |
+| IF-9 | `.github/workflows/terraform-plan.yaml`, `terraform-apply.yaml` no Python step | OPEN (P1-G, tier 1) | FIXED-AT `9fda3db` for the plan workflow: `setup-python` → `pip install pytest pyyaml` → `validate_dashboards.sh` → `validate_alarms.py` → `validate_metric_vocabulary.py` → `pytest tests -q`, all BEFORE credentials/init; `234603b` added the `pull_request` trigger (the guards had run only on push to main, so nothing on this branch was gated) and `fetch-depth: 0` (the lineage scan in `test_alert_targets_untracked.py` was vacuous at depth 1 — a hole the pytest step itself created). Independent: iac r3 ran the same three validators + pytest per commit (IR3-27 SETTLED, measured). `terraform-apply.yaml` still runs NONE (verified: no python/pytest/validate step; last touched `6be3907`) — deliberate, reported as the owner's call; no decision-sheet line names it. Note: nothing is pushed (M-COMMIT), so CI has never actually executed these steps on this branch | `terraform-plan.yaml` at HEAD; CP 10b/11b; IR3-27 | tree; ledger |
+| IF-10 | `validate_metric_vocabulary.py:63` non-recursive glob | OPEN (P2-H, tier 2) | FIXED-AT `9fda3db`: `DASHBOARD_GLOB = "dashboards/**/*.json.tftpl"` (`:129`), `test_a_dashboard_one_directory_down_is_read` (`:412`); the vacuity defence pins EXACT sets — `EXPECTED_DASHBOARDS`, `EXPECTED_SERIES` (all 38 metric-shaped references, delta named on failure) and the gate dict (`test_the_guard_actually_reads_every_metric_family` `:172-207`); `234603b` fixed the pin's own hole (an undotted family arrived with a delta of `set()`). Independent red on the exact-set pin: iac r3 V5 (an entry the surface never addresses) — IR3-19. The `.tpl`-off-the-glob sub-point (probe a3) is unchanged by design ("closes an authoring hole, not a deployment one": `cloudwatch_dashboards.tf` names all eight templates). Note: the row said "recursive glob is cheap"; the file says the same and did it | validator `:129`; test `:70-207` | tree |
+| IF-11 | `validate_metric_vocabulary.py:449` markdown code spans only | OPEN (P2-I, tier 2) | FIXED-AT `9fda3db`: prose between code spans is scanned, gated on `_LOOKS_LIKE_PROMQL` (`:1041-1060`); `234603b` closed the false positive the first form had (the quoted-name pass ran ungated, so "llm_usage_total" in a sentence failed — found by the `9fda3db` reviewer; `test_ordinary_prose_in_a_text_widget_is_not_read_as_a_query` `:364`, `test_prose_that_is_not_a_query_is_left_alone` `:434`). This row's probe a5 is mutation `a-selector-moved-out-of-backticks-into-prose-bypasses-the-dialect-rule` (`:628`). Implementer-proved on the final form; no independent red recorded — pending r4 | validator `:1041-1060`; test ids | tree |
+| IF-12 | `validate_metric_vocabulary.py:503` `service in text` substring | OPEN (P2-J, tier 2) | FIXED-AT `9fda3db`: `_word()` with look-arounds excluding `\w` and `-` (`:710-724`); `234603b` stopped excluding `.` (the first form hid a sentence-final "automation-worker." — found by the `9fda3db` reviewer). `test_a_gated_service_name_is_matched_as_a_word_not_a_substring` (`:321`). Implementer-proved; no independent red on the final form — pending r4 | validator `:710-724` | tree |
+| IF-13 | `alarms.tf:207-213` `LedgerWriteFailures` ungated on a dark signal | OPEN (P2-K, tier 2) | SUPERSEDED-BY G.6: copilot-mro `3978073b` created and wired `agent.ledger.write_failures` (inventory `wired`, `_emitted_series.py:131`; `telemetry.py:1441` at `735f8213`), so iac `5e476e0` rewrote the alarm as `WIRED 2026-09-20, retrieval unproved` and DELETED the "inert, not quiet" paragraph rather than rewording it (`alarms.tf:408-421`). The row's "milder — INSUFFICIENT_DATA not green" premise is REFUTED-BY `9fda3db`: PromQL alarms have a two-state contributor model, a missing series sits GREEN (CP 10b "BENIGN WAS WRONG"; confirmed by the `9fda3db` reviewer's re-fetch). No `var.ledger_signal_wired` was built and none is needed now. SEE `claims-E-deployment-and-iac.md` I3 | `alarms.tf:408-421`; copilot-mro `3978073b` | tree |
+| IF-14 | `alarms.tf:222-231` `TelegramTurnFailureRate` ungated, no bot in this root | OPEN (P2-K, tier 2) | REFUTED in premise / ACCEPTED-AS-DEBT: same two-state refutation as IF-13 (it sits GREEN, not INSUFFICIENT_DATA — severity is higher than filed, tier unchanged). `9fda3db` stated it at the definition ("GREEN HERE MEANS NOTHING IN THIS ROOT", and the description says so; `alarms.tf:432-450`) and DELIBERATELY left it ungated — a PromQL alarm has no `treat_missing_data` knob, so gating one unproved emitter means gating every one; the controller accepted that reasoning (CP 10b). Still ungated at HEAD; iac still deploys no telegram-bot (`grep telegram *.tf` → alarms.tf, cloudwatch_dashboards.tf only) | `alarms.tf:432-450`; CP 10b | tree; ledger |
+| IF-15 | `dashboards/agent-turn-explorer.json.tftpl` two text widgets, billed | OPEN (P2-L, tier 2) | UNCHANGED (checked): both widgets still `type: "text"`; last commit `5e476e0` (state-note wording only); `cloudwatch_dashboards.tf:18` still prices $3/dashboard-month past the first three. STILL OPEN; no owner question was asked. SEE `claims-E-deployment-and-iac.md` I6 | tree | tree |
+| IF-16 | `dashboards/llm-agents.json.tftpl` Bedrock `SEARCH` exact dimension-set | ASSERTED (P2-M, tier 2) | UNCHANGED (checked): widget identical (`:20-21`); `check_namespace_metric` (`:906-921`) still checks name membership and dimension PRESENCE only; no Bedrock wiring in any `.tf` (the one hit is a comment, `cloudwatch_dashboards.tf:12`); `global.*` inference-profile publication unprobed. The shared spec is now consistent (copilot-mro `95ca0e29`, `CATALOGUE.md:218-222`). STILL OPEN as filed | tree | tree |
+| IF-17 | `alarms.tf:336-337` both worker alerts on one switch | SETTLED (P0-2 fix, tier 1) | UNCHANGED (checked): `alarms.tf:597-598` two comprehensions on `var.automation_worker_deployed`; `validate_alarms.py:99-119` `WORKER_GATED_MAPS` + `WORKER_GATE`; the four named mutations still in `test_validate_alarms.py`; iac r3 measured the suite green at six commits. SETTLED stands (implementer mutations; this file's probe a6 was the independent attack) | tree; IR3-27 | tree |
+| IF-18 | `alarms.tf:378, 394` clean destroy on `true → false` | SETTLED (structure) / OPEN (never planned) | UNCHANGED (checked): `for_each = merge(local.log_count_alarms, local.worker_run_error_alarms)` at `:639`/`:655`, `LOG_COUNT_FOR_EACH`/`LOG_FILTER_FOR_EACH` pins at `validate_alarms.py:84,120`; `dev.tfvars:130` `automation_worker_deployed = false`. Still never planned: every later review banned terraform (r3: "no terraform"), sheet **C3** (`terraform init -upgrade`; the local lock is aws 5.100.0 against `~> 6.43`) is the workstation prerequisite, and nothing is pushed so CI's plan has never run on this branch | tree; sheet C3 | tree |
+| IF-19 | `dashboards/{service-overview,telegram-bot,shift-optimizer}` every selector converted | SETTLED counters/gauges; OPEN 8 histogram families | SUPERSEDED in part: the counters/gauges half stands (validator + CI). The histogram half is FIXED-AT `9fda3db`/`234603b` for OPERATOR (`histogram_count`/`histogram_sum`/`histogram_quantile`; Route RED and Token throughput were the two the first fix missed; 0 `sum by (le` selectors at HEAD) and remains a documented bet for NAME (sums suffix, B1a — OWNER-OWED). The "no leftover oss-dialect spelling anywhere in iac" property CHANGED BY RULING: M-LEGACY-PANELS `d52e8b8` put 15 born-`_total` legacy names + `document_hub_processing_duration_seconds` on the aws surface by design, exempted exact-name only (`FAMILY_SUFFIXED_INSTRUMENTS` `:254`, `UNIT_SUFFIXED_INSTRUMENTS` `:221`) — iac r3 IR3-19/IR3-20 SETTLED tier 0 (V3, V4, V5, V7 red, independent). "Every converted name resolves to a real emitter" is still hand-pinned (`EXPECTED_SERIES`), the cross-repo derivation DEFERRED (§6 "Deferred from Phase G") | `9fda3db`, `234603b`, `d52e8b8`; `claims-iac-r3.md` IR3-19/20 | tree; packet |
+| IF-20 | `dashboards/platform-health.json.tftpl` collector-log widget → text | ASSERTED (P1-6/P1-7, tier 1) | UNCHANGED (checked) for the claim: widgets 1, 2 and 6 are `text`, 3-5 `log`; the collector-log reachability half is still unmutated. The board since gained nine legacy panels in one text widget (`d52e8b8`, IR3-22) and its header was corrected at `56e7673` (r3 P3-6: the "NO Prometheus suffix" sentence now scoped to `otelcol_*` and naming the legacy row; a guard requires any such header on a born-suffix board to name the exception — `test_a_no_suffix_claim_names_the_born_suffix_exception` `:222`). `p1-7-a-worker-widget-loses-its-state-note` still at `:575` | tree; `claims-iac-r3.md` IR3-22/25 | tree |
+| IF-21 | `validate_metric_vocabulary.py:435-465` `expression` fields dialect-checked | SETTLED (guard fix, tier 1) | UNCHANGED (checked): mutation `a-live-promql-metric-widget-escapes-the-dialect-rule` at `:597`; `check_dialect` `:870-904`. SETTLED stands (implementer mutation; this file's 65-green run was a measurement) | tree | tree |
+| IF-22 | copilot-mro `CATALOGUE.md:187` `ThrottledCount` in the shared spec | OPEN (contradiction, tier 1) | FIXED-AT copilot-mro `95ca0e29` (implementer): `CATALOGUE.md:218-222` at `735f8213` reads "The metric is `InvocationThrottles`; AWS publishes no `ThrottledCount`", with the `SEARCH` form. Prose, no guard. SEE `claims-E-deployment-and-iac.md` cross-file #4 | copilot-mro tree; `git log -S'InvocationThrottles'` → `95ca0e29` | tree |
+| IF-23 | copilot-mro `aws-profile.md:11,13` `duration_count` / `ThrottledCount` | OPEN (contradiction, tier 1) | FIXED-AT copilot-mro `95ca0e29`: `:11` teaches `{"http.server.request.duration"}` with `histogram_count()` and names `http.server.request.duration_count` as "a series the endpoint does not store"; `:13` `InvocationThrottles` by `ModelId`, "there is no `ThrottledCount`". Prose, no guard | copilot-mro tree | tree |
+| IF-24 | copilot-mro `aws-profile.md:56,183` + `CATALOGUE.md:588` "suffix is an open B1a item" | OPEN (P0-B, tier 2) | FIXED-AT iac `9fda3db` for the CONTRADICTION, exactly as this row asked ("restore the iac warning, not edit them to agree"): iac restored the RE-VERIFY (IF-4) and the two documents were then NARROWED, not flipped, at copilot-mro `95ca0e29` — `aws-profile.md:74`, `:200-208` and `CATALOGUE.md:502`, `:650` now say "settled for histogram SHAPE only … the NAME question for monotonic sums is still genuinely open; the only worked AWS example is a gauge". The three files agree. The QUESTION (does CloudWatch suffix sums) is OWNER-OWED — B1a canary, nearest sheet line C2; until it runs `CollectorTelemetryAbsent` can still page forever from the first armed apply | copilot-mro tree at `735f8213`; `alarms.tf:363-383` | tree |
+| IF-25 | commit message; `alarms.tf:44`; guard `:75` citation drift | OPEN (P2-N, tier 2) | FIXED-AT `9fda3db` for every in-tree cell: `research 04 §10 "Open probes / uncertainties"` (`alarms.tf:44-45`, validator `:143`); the `docs/plans/...` paths say "the docs repo … workspace-relative, iac has no docs/ tree" (`alarms.tf:21-22`, validator `:598-599`); README "six" → eight. "Ten mutation proofs" sits in `2d493c8`'s immutable message; `234603b`'s message records 14 → 17 (26 `id="` at HEAD). The `CATALOGUE.md:184` cell is REFUTED-BY the `9fda3db` message ("did not reproduce — no line-numbered citation of that file exists anywhere in iac"; verified: `git grep ':184' 2d493c8` and `'CATALOGUE.md:'` both empty — the citation lived in the fix pass's handback prose, not the tree) | `9fda3db` message; `git grep` at `2d493c8` and HEAD | tree |
+
+**Counts by state now (25 rows):** FIXED-AT 15 (IF-1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 22, 23, 24, 25) ·
+SUPERSEDED 3 (IF-8 by M-ALARM-DENOMINATOR, IF-13 by G.6, IF-19 in part by M-LEGACY-PANELS) · REFUTED in
+premise / ACCEPTED-AS-DEBT 1 (IF-14) · UNCHANGED (checked) 6 (IF-15, 16, 17, 18, 20, 21). Of the 15 FIXED,
+an INDEPENDENT red is recorded for IF-7 (r3 V7), IF-10 (r3 V5) and IF-19's legacy half (r3 V3/V4/V5/V7);
+IF-9 is independently MEASURED (r3 IR3-27); the rest are implementer-proved, several after the `9fda3db`
+reviewer's attack on the earlier form.
+
+### Open claims now, tier 2 first
+
+1. **IF-1 / IF-2 residue (tier 2, OWNER-OWED C2)** — the two API pagers are correct under the documented
+   shape but rest on `histogram_count()` being in CloudWatch's PromQL subset, which no page names; the
+   "fails LOUDLY" claim was withdrawn, so if it is not, both sit GREEN. One `PutMetricAlarm` with a bogus
+   function settles it. No guard covers operator-vs-instrument-kind; a future bare `rate({histogram})`
+   would pass the validator.
+2. **IF-3 / IF-4 / IF-24 residue (tier 2, OWNER-OWED B1a)** — whether CloudWatch suffixes MONOTONIC SUMS
+   is documented for gauges only. Every `otelcol_*` alarm and every `increase({counter})` rides that gap,
+   and `CollectorTelemetryAbsent` (critical) pages forever from the first armed apply if the answer is yes.
+   The warning is back in iac and the two copilot-mro documents agree; the probe has not run.
+3. **IF-14 (tier 2, ACCEPTED-AS-DEBT)** — `TelegramTurnFailureRate` green-on-nothing in this root, ungated
+   by accepted reasoning and stated at its definition.
+4. **IF-16 (tier 2, OPEN)** — Bedrock `SEARCH` schema exactness on a `global.*` inference-profile namespace,
+   guard checks presence only; unprobed.
+5. **IF-15 (tier 2, OPEN)** — `agent-turn-explorer` is two paragraphs of prose billed at $3/month.
+6. **IF-10 / IF-11 / IF-12 (tier 2, FIXED, implementer-proved on the final form)** — the reach fixes hold
+   at HEAD with named mutations; the only independent attack was on the `9fda3db` form (which found
+   residual holes, closed at `234603b`). Pending r4.
+7. **IF-8 (tier 1, SUPERSEDED, build gated)** — ruled (denominator, keep `notBreaching`), but the four
+   patterns are known-dead (B1b) and the denominator waits on C2 so it is not minted with the same dead
+   selector; `alarms.tf:155` still says "OWNER RULING OWED".
+8. **IF-9 residue (tier 1)** — `terraform-apply.yaml` runs no guard, no `fmt -check`, no `validate`; an
+   apply dispatched without a preceding plan is ungated. Owner's call, on no sheet line. And CI has never
+   actually run on this branch (nothing pushed).
+9. **IF-18 (tier 1, OPEN)** — never planned; sheet C3 first.
+10. **IF-19 residue (tier 1)** — `EXPECTED_SERIES` is a hand-pinned copy of the emitters; the published
+    inventory that would derive it is §6 "Deferred from Phase G".
+11. **IF-20 (tier 1, ASSERTED)** — the collector-log reachability claim behind the text panel is unmutated.
+12. **IF-5 residual (tier 1, DEFERRED)** — an ungated `notBreaching` alarm on a DEPLOYED service whose
+    filter can never match still passes check 5.
+
+**Closed since filing:** IF-1..IF-7, IF-9..IF-13, IF-22..IF-25 (with the residues above).
+
+### Cross-file staleness (rows in OTHER packet files that contradict this file's rows now; listed, not fixed)
+
+1. `claims-E-deployment-and-iac.md` E30 (re-stated 2026-09-22) records copilot-mro `CATALOGUE.md:122, :559,
+   :561, :609, :646` still teaching `histogram_quantile(…, sum by (le) (rate({"…duration"}[…])))` and a bare
+   `rate({"http.server.request.duration"}[5m])` (`:79`, `:123`) in the AWS dialect — confirmed at `735f8213`.
+   That is this file's P0-A shape, FIXED in iac and REGENERATING from the shared spec both dialects are
+   authored from — the same "fixed the instance, left the source" defect this file filed for `ThrottledCount`.
+   E30 is the only packet record of it; no row files it as an iac-side obligation, and iac's validator cannot
+   reach that file.
+2. `README.md` lists this file at 22 rows; the table carries 25. A count discrepancy at filing, not a
+   contradiction of any row; the totals section will need the real number.
+3. `claims-iac-r3.md`'s "Open claims" list (IR3-03, 07, 08, 11, 14, 17, 23, 25, 26) predates its own fix pass
+   (`d86b378..74346bb`, ledger Addendum 154: `d86b378`, `9bb3c3d`, `37f82c4`, `0a31a72`, `4afc68f`, `013c9ae`,
+   `74346bb`, `56e7673`, `d2c7aac`) and is stale in the FIXED direction; pending r4 re-states it. Same tree,
+   not this file's rows.
+4. `claims-phase6-dashboards.md` rows 39, 40, 41, 43 and row 21 — re-stated there 2026-09-22 to the same
+   commits this section names (`9fda3db`, `2d493c8`, G.6); no contradiction, recorded so the auditor need not
+   diff them.
+5. The iac tree itself against the plan: `alarms.tf:155-167` "OWNER RULING OWED -- is `notBreaching` the
+   right treatment" is stale against §4a-bis M-ALARM-DENOMINATOR (ruled 2026-09-22). Prose, unguarded;
+   the lane that would fix it is idle until C2.
+
+### Could not trace
+
+- Whether the `9fda3db` reviewer's claims table was ever filed as a packet file: ledger CHECKPOINT 10c/11b
+  hold the review and its triage in prose; no `claims-iac-r1`/`r2` exists (the E-file records the same gap).
+- An independent red on the FINAL (`234603b`) form of check 5, the prose scan and `_word`: the `9fda3db`
+  reviewer attacked the `9fda3db` form, iac r3 aimed at `013dc89..d52e8b8`, and r4 is running.
+- A decision-sheet line for the ungated `terraform-apply.yaml`: `owner-decisions-2026-09-22.md` has none;
+  the ledger (CP 10b/11b) says "Owner's call" and stops there.
+- `claims-iac-r4.md` (`d52e8b8..74346bb`): did not exist at the HEADs above; nothing here depends on it.
