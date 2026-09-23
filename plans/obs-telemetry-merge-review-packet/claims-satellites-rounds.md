@@ -49,7 +49,7 @@ files.
 
 | tree | branch | HEAD read | since the rows were first verified | note |
 |---|---|---|---|---|
-| `telegram-bot` | `main` | **`47a08b7`** | `e0da52b..47a08b7` = the r5 fix batch (6 commits); of the files these rows cite only `flynapse_client/errors.py` and the repo plan changed — `telemetry.py`, `failure.py` and the four telemetry test files are byte-identical | clean; 31 commits unpushed (`origin/main` = `3102fcc`) |
+| `telegram-bot` | `main` | **`47a08b7`** | `645b334..47a08b7` = the r5 fix batch (7 commits; `e0da52b` is its first); of the files these rows cite only `flynapse_client/errors.py` and the repo plan changed — `telemetry.py`, `failure.py` and the four telemetry test files are byte-identical | clean; 31 commits unpushed (`origin/main` = `3102fcc`) |
 | `shift-optimizer` | `main` | **`2a8e3de`** | `8bd4d66..2a8e3de` = r1's P3-1 (`eb7c48a`) and P3-2 (`2a8e3de`); `run_executor.py` moved by one line, the telemetry tests are unchanged | clean when read; a P3 batch lane is live again — anything past `2a8e3de` is `pending shift P3 batch` |
 | `flynapse-otel` | `main` | **`df503c2`** | `d1e531f..df503c2`: M-FAILURE-HOME utils-parity ports (`9640129`, `0960c16`) and the `search` URL marker (`df503c2`); `bootstrap.py` and every test these rows cite unchanged; `withholding.py` moved four lines below `:326` | clean |
 | `core-obsm` | `obs-merge` | **`16cd1ae`** | `b4d2c33..16cd1ae` = core r8's fix batch (19 commits); none touches a file these rows cite | clean |
