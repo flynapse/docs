@@ -56,7 +56,17 @@ Round packets, by repo (each file carries its own range, verdict and flip record
 - **Record-only:** otel PP-21ab · telegram PP-TG-15 · mro PP-MRO-2/3 · the Add. 274 residuals (ungated write windows, substring over-scrub by design).
 - **Owner sheet:** PP-MRO-1 (a future user-erasure flow needs its own ruling) · PP-14 secret rotation at push · C2 post-deploy trio · C5/C6/C13/C15/C7/C8/C4 · B14 post-push plan · utils branch mapping · Phase H push order (core before dashboard; telegram rides with otel).
 
-## Micro-batch delta (filled at hand-back)
+## Micro-batch delta (landed 2026-09-23, ledger Add. 277)
 
-_Pending: the micro-batch lane's final per-repo SHAs and the audited reviewed-SHA → final-SHA delta go here;
-step 17 (final reality audit) synthesizes the nine verdicts plus this delta._
+The only post-verdict commits. Reviewed SHA → FINAL SHA, one commit per repo, controller-measured:
+
+| repo | reviewed | final | what rode |
+|---|---|---|---|
+| iac | `427fbbd` | `011eb67` | PP-04 equality pin (closes PP-05 too) · PP-06 command-position terraform detection · PP-14 mask reorder (2 files, +62/−2) |
+| utils | `23e849c` | `76d6a0b` | PPU-08 class-name-only log + tests + KNOWN_GAPS (3 files, +30/−3) |
+| shift-optimizer | `ec383cc` | `f5f732c` | PP-01 kw-splat witness · PP-02 note (2 files, +13) |
+| dashboard | `dd014fc` | `ed7db1a` | PP-11 scoped seed parser + witness · PP-10 comment · PP-12 placement (4 files, +36/−9) |
+| core | `6899974` | `c8c4fb3` | PPC-F1 findings-gate widen + STOP test; the C15 db re-run rode with it — 7 passed, Add. 275 request closed (2 files, +44/−5) |
+
+flynapse-otel `c93a9c9` · api `4bc2d4f` · telegram-bot `47a08b7` · copilot-mro `9debf188` are UNTOUCHED —
+reviewed SHA == final SHA. Step 17 (final reality audit) synthesizes the nine verdicts plus this delta.
