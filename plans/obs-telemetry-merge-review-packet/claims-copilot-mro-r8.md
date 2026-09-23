@@ -126,6 +126,13 @@ excerpts it into findings (`collect_explicit.py:357`). `delete_chat` touches non
 delete (a stale tab) lands giver + comment + session un-anonymised — the P1-1 race in the feedback half. **Fix:**
 refuse feedback on a deleted block; decide (owner) whether M-FACTS-ANONYMISE covers the memory and improvement copies.
 
+> **UPDATE (SDD Addenda 253/255/256/263).** The gate half was built in the r8 fix batch, but its cross-session claim
+> was **REFUTED by measurement**: the outer `WHERE block.deleted` predicate was pushed into the `FOR SHARE` sub-select,
+> so a LIVE block — the entire race case — was never locked; a feedback racing an uncommitted delete landed ungated.
+> **FIXED at `0e32212c`** (top-level-lock shape; two-session pair red at `8b1bfaee`, green after; revert-mutants killed
+> against each test). The copies half is now OWNER-RULED (scrub every copy carrying user text; numeric spend rows stay)
+> and the full surviving-copy census is measured in Addendum 263 — the extension lane builds it.
+
 ### P3s
 
 1. **P3-1 (sev 1, tier 1) Undeclared tool-detector misses.** A dict bound BEFORE a handler, filled inside it and
@@ -253,7 +260,7 @@ estate-shaping. Chunk: F1 contract + privacy, F2 the merge itself, F3 the residu
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | R8-01 | copilot-mro | `turn_facts.py:101`; `chat_turn_facts.py:651-657`; `blocks.py:39-44`; `chats.py:371` | Settle-time facts row = plain upsert, no liveness gate | M-FACTS-FAILURES | DB probe (pg_temp): delete-first leaves user/session/chat/department; lock refuses the block; control anonymised | none | yes — r8 probe (defect measured) | 0 | 2 | F1 | REFUTED (P1-1) |
 | R8-02 | copilot-mro | `chat_turn_facts.py:690-720`; `chats.py:371-377` | Delete anonymises facts + feedback in one transaction | M-FACTS-ANONYMISE | DB pins passed in the census; M4 killed (unit fake); M5 (keep session) survives the unit lane, asserted only by the DB pin | `test_a_deleted_chats_rows_…`, `test_a_deleted_chats_feedback_…` | yes — r8 (M4) | 0 | 0 | F1 | SETTLED (for the rows that exist at delete time) |
-| R8-03 | copilot-mro | `api/user_feedback.py:216-300`; `feedback_propagator.py:73-82`; `collect_explicit.py:357`; `feedback.py:16` | Anonymise `chat_feedback` only | de2665b3 "the comment the user TYPED" | Read: comment + giver copied to memory events/payloads and improvement excerpts; feedback after delete not gated | none | no | 2 | 2 | F1 | OPEN (P2-5) |
+| R8-03 | copilot-mro | `api/user_feedback.py:216-300`; `feedback_propagator.py:73-82`; `collect_explicit.py:357`; `feedback.py:16` | Anonymise `chat_feedback` only | de2665b3 "the comment the user TYPED" | Read: comment + giver copied to memory events/payloads and improvement excerpts; feedback after delete not gated | none | no | 2 | 2 | F1 | GATE HALF FIXED `0e32212c` (its first cross-session shape REFUTED by measurement first — Add. 253/255); copies half OWNER-RULED, census in Add. 263, extension lane building |
 | R8-04 | copilot-mro | `turn_facts.py:41-52` | `turn_error_type` = `.error.code` → `.code` → class | "never a message" | 16-shape probe: text-valued `.code` stored; M13 killed | `test_a_failed_turn_carries_a_category_never_a_message` | yes — r8 (M13) | 2 | 1 | F1 | PARTIAL (P3-2) |
 | R8-05 | copilot-mro | `turn_facts.py:97-113`; utils `postgres_service.py:428-431` | Pre-C12: warn + swallow | brief | Measured: ERROR + WARNING, FAILED, no raise, pool clean, 0 rows | none | yes — r8 probe (measured) | 3 | 1 | F1 | PARTIAL (P3-4) |
 | R8-06 | copilot-mro | `chat_turn_facts.py:651-657` | Settle upsert idempotent, one row per turn | M-FACTS-FAILURES | M14 killed; unit pins on the SQL | `test_the_block_projection_supersedes_…` | yes — r8 (M14) | 1 | 0 | F1 | SETTLED |
