@@ -3,6 +3,8 @@
 **Opened 2026-09-19.** Owner request: assess the colleague's `obs-telemetry-merge` work, merge it, find the
 gaps, then finish the gaps plus what is still owed from the observability rebuild plan itself.
 
+> **PUSHED 2026-09-23 (Phase H executed).** All nine repos passed the 16b Fable gate (nine PUSH-CLEAN verdicts) and the step-17 final reality audit (READY-FOR-PUSH, `obs-telemetry-merge-review-packet/step17-final-audit.md`). PROD `copilot_mro` provisioned first (C1 · C9/C12 · counts NOT NULL · provision_rls; RLS verify clean, 111 tenant-columned tables). Pushed: core `c8c4fb3`→master · dashboard `ed7db1a`→agent_sdk · copilot-mro `9debf188`, api `4bc2d4f`, utils `76d6a0b`→langgraph-merge · iac `011eb67`→obs-merge · flynapse-otel `c93a9c9`, telegram-bot `47a08b7`→main · shift-optimizer `f5f732c`→main (remote named `main`). Owner still owes the post-push sheet: PP-14 secret rotation, iac obs-merge→main, C2 post-deploy trio, C5/C6/C13/C15(+reap lists)/C7/C8/C4, B14 plan. See the Close-out section at the end of this file.
+
 Governing documents (do not duplicate them here):
 - `docs/superpowers/specs/2026-09-05-observability-rebuild-design.md` — the ruled design (rev 4), §11 = the 20 owner rulings.
 - `docs/plans/observability-rebuild.md` — master plan + dated ledger (§15) + resume brief (§18).
@@ -5974,3 +5976,34 @@ treat "the file I just edited is unmodified" as the alarm it is.**
   against the same reader is briefed as a fail-closed redesign, not a case list (applied to shift SO-11..13 and the
   flynapse-otel ratchet baseline the same day).
 - **Cap test-hygiene side work that keeps finding smaller holes (owner, 2026-09-22).** The test network guard entered this plan from one api review finding (a smoke test probing AWS metadata) and grew through three review rounds and a shared port, each round finding narrower bypasses; the owner asked what it had to do with telemetry. **Rule:** when a supporting mechanism (not the deliverable) keeps producing P3-only bypasses, fix its P1/P2s, park the bypasses in Future Improvements with the complete fix, and stop dedicated review rounds — say so to the owner before the second extra round, not after the fourth.
+
+---
+
+## Close-out (2026-09-23) — merged, gated, audited, PUSHED
+
+The project completed its full arc: assessment → merge → gap completion → the owner's rulings (all landed,
+including the anonymisation line) → nine per-repo colleague-scope FULL-DIFF Fable reviews (all PUSH-CLEAN,
+zero P0/P1 estate-wide) → the one estate micro-batch (the only post-verdict commits, every hunk mapped by
+the step-17 audit, UNMAPPED: NONE) → FABLE-INDEX → the step-17 final reality audit (READY-FOR-PUSH) →
+prod DB provisioning → the owner's push. The privacy register closed FULLY PAID (DEBT 0 / REPAIRED 508).
+
+**What shipped (final SHAs = the audited states):** copilot-mro `9debf188` · core `c8c4fb3` · utils
+`76d6a0b` · api `4bc2d4f` · dashboard `ed7db1a` · iac `011eb67` · flynapse-otel `c93a9c9` ·
+shift-optimizer `f5f732c` · telegram-bot `47a08b7`. Branch mappings and order as the PUSHED banner records.
+
+**Still open, owner-owned (tracked in `step17-final-audit.md` + SDD Addenda 278–280):** PP-14 approval-secret
+rotation · iac `obs-merge` → `main` through the owner's flow · C2 post-deploy trio (metric shape one-liner →
+6 selector fixes per the Add. 256 grammar table; `_total` suffix check → one `absent()` edit; bogus-function
+alarm probe) · C5/C6/C13/C15 (C15 also reaps the S3 keys + Weaviate doc ids it prints) · C7/C8/C4 ·
+B14 = its own post-push plan · a future user-erasure flow needs its own ruling (PP-MRO-1) · F3 #34/#35
+colleague-era redaction residuals · PP-TG-14 re-triage at detector adoption.
+
+**Housekeeping done at close:** spent worktrees removed after merge-verification (copilot-mro `-r7b`,
+`-tbA`–`-tbD`; `docs-obsm`); their branches deleted merge-checked. Kept: the six `-obsm` trees (the pushed
+states) and the primary checkouts — fold-back/retirement of the pre-merge primaries is the owner's later call.
+
+## Lessons
+
+The run-long lessons live where the work lived: the SDD ledger's addenda (checkpoint discipline, the
+review-trust framework, the `.pth`/sibling-checkout traps, db-lane serialization, the push-truth rule that
+`ls-remote` is the only truth) and the machine-rules sections of CLAUDE.md updated during the project.
