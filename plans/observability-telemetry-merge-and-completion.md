@@ -1919,7 +1919,7 @@ resolved; the merge commit records them and E fixes them.
       holding a genuinely stale copy reddens core.**
 
 - [ ] G.32 **G.5's writer sits exactly where the ruling it CITES says an analytics write must not sit.**
-      **Dashboard side (review r3, 2026-09-22): FIX-FIRST on P2-1** — the duration histogram, turn latency and tool usage mix panels (`analytics-panel-registry.ts:289/:631/:760`) keep their pre-M-FACTS-FAILURES copy although core `7d5144c` changed what they count (a fast-failing outage pulls p50 DOWN); the "every panel whose meaning changed" box was ticked wrongly. Fix = three sentences + three `assert.match` lines + the Unknown clause (P3-7, core `b2d67f2`). Contract parity with core `b730a95` holds.
+      **Dashboard side (review r3, 2026-09-22): FIX-FIRST on P2-1** — the duration histogram, turn latency and tool usage mix panels (`analytics-panel-registry.ts:289/:631/:760`) keep their pre-M-FACTS-FAILURES copy although core `7d5144c` changed what they count (a fast-failing outage pulls p50 DOWN); the "every panel whose meaning changed" box was ticked wrongly. Fix = three sentences + three `assert.match` lines + the Unknown clause (P3-7, core `b2d67f2`). Contract parity with core `b730a95` holds. **STATE 2026-09-22 night (step-16 sweep):** the dashboard-side FIX-FIRST is paid — review r4 closed MERGE-CLEAN 0/0/0/7 and batch 2 (`dd014fc`) closed the remaining P3s incl. the panel-copy corrections; the pre-push dashboard Fable review is in flight. The CORE seat question (G.5's writer vs Ruling 5) stays owner-gated, unchanged.
       **AUDIT 2026-09-21:** `copilot-mro-obsm copilot_mro/app/db/chat_history/blocks.py:569-572` (working
       tree) **still asserts** *"a gap shows as a dip in the series rather than as quietly plausible numbers"*.
       **Correcting that sentence is safe under EITHER ruling** — it is false for the never-saved class
@@ -1983,6 +1983,13 @@ resolved; the merge commit records them and E fixes them.
       hits), so a deleted conversation is still counted. **Unlike `chat_blocks`, which is retained for audit and
       filtered out of every read, this relation is retained AND read.** The implementer flagged only the
       panel-counting half. This is a retention question, not just a parity one.
+      **STATE 2026-09-22 night (step-16 sweep):** the settle-writer liveness gate LANDED (r8 fix batch;
+      two-session lock proofs re-run by the mro r9 closing review), and the feedback-side gate — measured
+      BROKEN cross-session — is FIXED at copilot-mro `0e32212c` (ledger Add. 253/255; revert-mutants killed).
+      Delete-time anonymisation of facts + feedback is live and PROVEN clean by the Add. 263 census; the
+      surviving-copies scope is OWNER-RULED (Add. 256), the full copy census is measured, and the extension
+      lane builds it; C15 (owner-run) covers historical rows. The dashboard halves (P3-4/P3-5) closed via
+      the r4 round + batch 2 (`dd014fc`).
 - [~] G.35 **PARITY HALF CLOSED 2026-09-20 by G.25 (`core-obsm bdea4ba`), mutation-proved.** The structural
       cause named here — the constants test compares `FACTS_COLUMNS`, `FACTS_VERSION`, the vocabulary and
       the upsert SQL **but never `facts_upsert_params` against `_as_params`** — is fixed, and **the claim
