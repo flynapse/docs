@@ -486,7 +486,7 @@ same run.
 | r9-25 | core | range | every commit at its own HEAD | plan §2.4 | table above; the red span is only the known misassembly | the lanes | n/a | — | 1 | F2 | SETTLED | r8-32 |
 | r9-26 | core | `quality.py:13`; g61 §11, §21; workspace plan note | stale or overclaiming text | — | read | none | n/a | 3 | 1 | F3 | FIXED — core `19403fa` + docs `0a8bb5c` (P3-10) | r8-33 |
 | r9-27 | core | `tests/api/automations/test_automation_endpoints.py:56-64`; `test_events_endpoint.py:33-41` | a module skip when `SELECT 1` raises anything | earlier packet flag | 39/39 with the db; the lane is red when a server refuses; `_db_ok` swallows every exception | the lane gates | n/a | 3 | 1 | F2 | SETTLED (no hidden red); residual FIXED in the r9 batch (P3-11) | packet flag |
-| r9-28 | core / copilot-mro | `cost.py:198-217`; `improvement_signals`, `llm_model_calls` | a deleted chat's identity kept outside facts and feedback | M-FACTS-ANONYMISE | read: `improvement_signals.detail` holds the typed comment excerpt + `user_id`/`chat_id`; `llm_usage` spend (carried) | none | n/a | 3 | 2 | F1 | OPEN (owner question) | r8-34 |
+| r9-28 | core / copilot-mro | `cost.py:198-217`; `improvement_signals`, `llm_model_calls` | a deleted chat's identity kept outside facts and feedback | M-FACTS-ANONYMISE | read: `improvement_signals.detail` holds the typed comment excerpt + `user_id`/`chat_id`; `llm_usage` spend (carried) | none | n/a | 3 | 2 | F1 | FIXED `34bab392`+`170e2ab` (anon-copies extension, Add. 274; ruled Add. 256) | r8-34 |
 
 ## Open claims, tier 2 first
 
@@ -538,3 +538,5 @@ It reaches only rows keyed by a non-NULL `chat_id` of a `chats.deleted` chat. It
 settle-writer race (copilot-mro's fix). **Not run by the reviewer.**
 
 > **Flip record (step 16, 2026-09-22):** the 15 rows the core r9 fix batch (`16cd1ae..19403fa`, Addendum 231) answered — r9-02/04/06/07/08/10/11/17/18/19/20/21/22/26/27 — are flipped above. The four P2 seats were independently re-proven by the core r10 NARROW Fable review (claims-core-r10.md, 0/0/0/1) without ever executing C15. Still owner-owed on this file: r9-28 (now RULED — Add. 256 scope ruling; built by the anon-copies extension) and r9-15 (RULED accept — the 300 s window stands, Add. 257).
+
+> **r9-28 UPDATE (Add. 274, 2026-09-23):** BUILT — copilot-mro `34bab392` (delete-seat scrub of the ruled copies, race gates, full-roster binding) + core `170e2ab` (C15 reaches the deleted chat's copies, pg_temp-proved). Row 489 flipped FIXED.

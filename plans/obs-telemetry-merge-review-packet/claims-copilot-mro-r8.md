@@ -132,6 +132,8 @@ refuse feedback on a deleted block; decide (owner) whether M-FACTS-ANONYMISE cov
 > **FIXED at `0e32212c`** (top-level-lock shape; two-session pair red at `8b1bfaee`, green after; revert-mutants killed
 > against each test). The copies half is now OWNER-RULED (scrub every copy carrying user text; numeric spend rows stay)
 > and the full surviving-copy census is measured in Addendum 263 — the extension lane builds it.
+>
+> **UPDATE (Add. 274, 2026-09-23).** The copies half is BUILT: copilot-mro `34bab392` (+`9a68ef23` spend-ledger test, `9debf188` scope-guard approvals) scrubs the ruled copies inside `delete_chat`'s transaction via `deleted_chat_copies.DELETED_CHAT_COPIES` (line-as-data, unit-pinned), with `0e32212c`-shape gates on the two race windows and full-operator-roster binding for memory scrubs (db-proved cross-operator). core `170e2ab` extends C15 the same way (pg_temp proofs only). Residuals for the prepush review: `memory_items.user_id` KEPT on retained notes (judgement call — confirm), distiller/still-running-turn windows outside the two gates (record-only).
 
 ### P3s
 

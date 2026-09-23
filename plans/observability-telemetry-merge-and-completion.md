@@ -1990,7 +1990,7 @@ resolved; the merge commit records them and E fixes them.
       BROKEN cross-session — is FIXED at copilot-mro `0e32212c` (ledger Add. 253/255; revert-mutants killed).
       Delete-time anonymisation of facts + feedback is live and PROVEN clean by the Add. 263 census; the
       surviving-copies scope is OWNER-RULED (Add. 256), the full copy census is measured, and the extension
-      lane builds it; C15 (owner-run) covers historical rows. The dashboard halves (P3-4/P3-5) closed via
+      lane BUILT it (copilot-mro `34bab392`+`9debf188`, core `170e2ab`, Add. 274, 2026-09-23); C15 (owner-run) covers historical rows, now incl. the copies of already-deleted chats. The dashboard halves (P3-4/P3-5) closed via
       the r4 round + batch 2 (`dd014fc`).
 - [~] G.35 **PARITY HALF CLOSED 2026-09-20 by G.25 (`core-obsm bdea4ba`), mutation-proved.** The structural
       cause named here — the constants test compares `FACTS_COLUMNS`, `FACTS_VERSION`, the vocabulary and
