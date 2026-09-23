@@ -1,5 +1,7 @@
 # Review packet — observability & telemetry merge
 
+> **Totals and row counts now live in [FABLE-INDEX.md](FABLE-INDEX.md)** (step 16d, 2026-09-23) — the Fable reviewers' index: the nine pre-push verdicts, the per-repo round map, and the open pool. Totals printed elsewhere in this README are historical.
+
 Built 2026-09-20 by four independent Opus assemblers, one per slice, read-only against the merged
 worktrees. Governing plan: `../observability-telemetry-merge-and-completion.md` (§2.3a defines the
 tiering this packet implements).
