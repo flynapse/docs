@@ -1097,7 +1097,10 @@ Report: `copilot-mro/.dev_runs/obs10-fable-gate/plan-review.md` (three read-only
   traceback (`:862`), the orchestrator crash traceback (`pipeline.py:433-444`)~~ — all three CLOSED by batch 2
   (`a20bd009`/`ab3abbfb`; R22 F-1a). **Still open: `error_code` on `PipelineResult` (ruling R15-NOCODE) — deliberately
   open, re-confirmed at R22 (F-R2 pending the owner): the two unsuccessful-result log sites carry a constant message
-  alone because the result contract has no code field.**
+  alone because the result contract has no code field.** **F-R2 RULED + PICKED UP 2026-09-24:** the owner approved the
+  bounded code — built as task P5 of `docs/plans/privacy-logging-hygiene-batch.md` (reuses `turn_facts.TURN_ERROR_CODES`;
+  `pipeline.py:866` already receives a `StructuredError` code and drops it), plus the api mirror site
+  `automations/executor.py:1416` as its task T5.
   Original record: the image/audio upload routes log `error=str(exc)` and `traceback.format_exc()`; the chat create, delete and
   history routes log full tracebacks (the store re-raises by design, so a Postgres DETAIL reaches them); and the stream
   route SENDS `str(e)` to the client in its SSE `error` frame (`chat_management.py` ~:1727 at `963b7095`). The R15 Fable
@@ -1289,6 +1292,13 @@ Report: `copilot-mro/.dev_runs/obs10-fable-gate/plan-review.md` (three read-only
   (`email/embedding/dynamodb/s3/weaviate/cache_service`). Two ways to close the residual (owner ruling B-R1): a one-line
   sink-level rule in `log_bridge._json_stdout_sink` rendering frames-only + `error_type` for every record carrying an
   exception (closes everything wholesale, loses the message estate-wide), or a named sweep follow-up per family.
+  **B-R1 RULED + PICKED UP 2026-09-24, and the census above is STALE:** research (verified at utils `f1d490b`) showed
+  the sink level is ALREADY frames-only on every utils pipe (`log_bridge.py` patcher + both stdout sinks + the OTLP
+  withholding), and the ~90-site family census was paid down 2026-09-20 (`1cdebad`/`870e75c`). The true residual —
+  message-embedded text the sink cannot identify (38 findings in `dynamodb_service.py` + `migrate_weaviate_collection.py`)
+  plus processes outside utils' sinks (the cognito lambda, flynapse-otel's own stderr router, `basicConfig` entrypoints)
+  plus shared-detector adoption in utils — is lane S of `docs/plans/privacy-logging-hygiene-batch.md`. Evidence:
+  `~/.claude/scratch/privacy-hygiene-batch/research/R1-sink-br1.md`.
 - **FU-SECRETSDIR (R22 F-5):** the three Alertmanager delivery secrets (two Slack webhook URLs, the SMTP password) live in
   the checkout at `copilot-mro/deployment/observability-local/alertmanager/secrets/` — ignored by the root `.gitignore`
   AND the directory's own (`test_alertmanager_secrets_dir.py` proves each rule alone), placeholder-lined files created

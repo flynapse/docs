@@ -544,24 +544,55 @@ Loki path is gone; `product_events` rows arrive from the frontend (with phase 4)
 
 ## 11. Phase 7 — LLM evals workbench (Stream E)
 
-- [ ] 7.1 Phoenix container available as an **optional** addition to the `oss` profile (existing Postgres, auth
+- [x] 7.1 Phoenix container available as an **optional** addition to the `oss` profile (existing Postgres, auth
       on, retention env, one project per tenant + `internal`); client-account variant in the `otel-gateway`
       module remains optional. Phase 11.4 owns removal of the current mandatory compose coupling.
       Test: compose smoke sends one `invoke_agent` trace through the `content` pipeline and finds it in Phoenix.
-- [ ] 7.2 Attribute-mapping probe (spec §12): our `gen_ai.*` span → Phoenix renders model, tokens, cost, tools;
+      *(Evidence: overlay-only Phoenix 20.8.0 (`deployment/docker-compose.phoenix.yml`, auth, retention, loopback),
+      base compose Phoenix-free (11.4); `test_oss_profile_smoke.py` finds the posted `invoke_agent` trace (TC1, 8
+      passed); live 2026-09-24: dev tenant turns in `tenant-17be5d65-…`, the golden-set harness copy in `internal`
+      — `agent-evaluation-completion.md` §9 TF.)*
+- [x] 7.2 Attribute-mapping probe (spec §12): our `gen_ai.*` span → Phoenix renders model, tokens, cost, tools;
       add OpenInference aliases to `transform/genai_aliases` where needed.
-- [ ] 7.3 `eval_results` table (tenant-scoped): `profile`, `registry_revision`, `department`, `golden_set_id`,
+      *(Evidence: TC1's 22-row probe table against the running tool (`agent-evaluation-completion.md` §9 Phase 3),
+      alias fixes `10a1de2d`, smoke delta rows; gap G1 closed by TM (`6ed94fa5`) — live, Phoenix prices the SDK
+      turn span at $0.40576 against the ledger's $0.40942, same token counts.)*
+- [x] 7.3 `eval_results` table (tenant-scoped): `profile`, `registry_revision`, `department`, `golden_set_id`,
       `judge_version`, `metric`, `score`, `run_id`, `created_at`; written by the harness; read via
       `flynapse_readonly` for reports. Tests: DDL + RLS checks; one seeded query "v2 vs v1".
-- [ ] 7.4 Harness → Phoenix: the e2e/eval harness (`tests/e2e/*`) pushes datasets and experiment runs with judge
+      *(Evidence: TA `9f1e0fdf..dd78b53f` — registry + FORCE-RLS db lanes, v2-vs-v1 as `flynapse_readonly`,
+      19/19 key mutants; column names mapped in that plan's §9. Live: dev `copilot_mro` holds 17 rows (12 tenant,
+      5 reserved-tenant) under 17 distinct keys after two idempotent re-runs.)*
+- [x] 7.4 Harness → Phoenix: the e2e/eval harness (`tests/e2e/*`) pushes datasets and experiment runs with judge
       scores keyed by the ledger's `profile` + `registry_revision`. Test: dry-run mode produces the payload
       without a Phoenix endpoint.
-- [ ] 7.5 Per-tenant quality report generator (markdown/PDF via the existing doc-render helper): accuracy, answer
+      *(Evidence: TD `bd478cf1`/`4fcdb5a2`/`709c64ef` — the payload SHAPE check (P6.4) plus a live compose
+      acceptance; live with the real Haiku judge: dataset `golden-set/mro` (40 examples, one version after two
+      pushes), experiment with the full identity on every evaluation, rows under the same run id.)*
+- [x] 7.5 Per-tenant quality report generator (markdown/PDF via the existing doc-render helper): accuracy, answer
       rate, regressions across versions, cost per query — the client-review artefact. Test: fixture results →
       deterministic report.
-- [ ] 7.6 Sampled production copy honouring the opt-out (from 3.6) reaches the tenant's Phoenix project only in
+      *(Evidence: TD `d491a622`/`0daa5443` — byte-identical markdown under shuffled rows, two-tenant isolation
+      through the reporting role, 21/21 mutants; live: the dev tenant's 4-page PDF and the reserved tenant's report,
+      read as a customer in `agent-evaluation-completion.md` §9 TF.)*
+- [x] 7.6 Sampled production copy honouring the opt-out (from 3.6) reaches the tenant's Phoenix project only in
       the same account (data residency, spec §6.5). Test: cross-account exporter config is refused by the
       overlay validation.
+      *(Evidence: TE `0c0be20c..e821ca20` — `deployment/otel/check_residency.py` run by `validate.sh` refuses a
+      cross-account content exporter by name, 128 tests + 16/16 mutants; sampling and opt-out cited to their shipped
+      tests (P8.1).)*
+
+**Phase 7 review (2026-09-24, closed by `docs/plans/agent-evaluation-completion.md`).** Phase 7 was finished
+as its own project after RV3 rejected the colleague's workbench while keeping its measures: score identity and
+`eval_results` (TA), `citation_coverage` rebuilt against `chat_turn_facts` (TB), the Phoenix probe and aliases (TC1),
+an honest plan/run boundary with a live Phoenix test (TC2), datasets/experiments and the per-tenant report (TD),
+exporter-side residency as a refusing mechanism (TE), and the SDK-turn span's usage and profile (TM), each
+reviewed adversarially (Fable RB-A–RB-D, 0 MAJOR open). The first governed live run (TF, bounds cut by the owner
+to a proof) judged 2 dev tenant turns + 1 session and 1 golden-set harness turn with Bedrock Haiku: 10 judge
+calls, CloudWatch-measured at 10 invocations, ≈ $0.027 at list price; both identical re-runs paid nothing. What
+it found — groundedness judged against a truncated content copy, report cost read from a ledger that misses
+in-loop synthesis spend, a 0% answer-rate headline over unknown turns — is filed in that plan's §10. Items
+7.1–7.6 close here; the final whole-branch review of `agent-evals` is that plan's, not this one's.
 
 ---
 
@@ -655,6 +686,7 @@ two-contract architecture or duplicate ownership already assigned to Phase 3.
       reconcile a timer against.
 - [x] 11.4 Make Phoenix optional in the current single-host Docker POC. Keep the separate native services;
       `otel-lgtm` evaluation is deferred.
+      *(Evidence 2026-09-23: re-verified at copilot-mro `9debf188` — `docs/plans/agent-evaluation-completion.md` §9 Phase 0: overlay-only Phoenix, base compose Phoenix-free, `otel-gateway` Phoenix optional and never fed.)*
 - [ ] 11.5 Add the New Relic Collector profile, production queue/retry persistence, retrieved canaries for every
       provider claimed supported, and an explicit Azure production-support go/no-go gate.
       Config-only implementation and the provider catalogue matrix are complete in `copilot-mro` branch
@@ -1370,6 +1402,24 @@ under `docs/plans/observability-telemetry-merge-and-completion.md`, which is the
 (merge strategy, the twenty rulings in its §4, the Phase 0 findings register in its §5, and the Phase G gap
 list that supersedes "next work" above). This master plan keeps the rebuild's own record; read the merge plan
 for what is executing now.
+
+**2026-09-24 — status roll-up (for any future audit of open items; supersedes stale "still owed" lines above).**
+The merge project CLOSED and PUSHED 2026-09-23 (its plan's Close-out is the owner-owed list of record —
+corrected same day: C6/C8/C13/C15 closed, C15 reap lists empty). It delivered the substance of Stream L
+(phase-0 0.5 query-in-logs included — the chat routes no longer log `query=request.message`). **Phase 7
+CLOSED 2026-09-24** as its own project (`docs/plans/agent-evaluation-completion.md`; copilot-mro pushed
+`629a5aa2` incl. the eval-explanation scrub). **`docs/plans/privacy-logging-hygiene-batch.md` opened and
+EXECUTING 2026-09-24** (rulings R-1…R-7 all taken): it owns the B-R1/E-R1/E-R2/F-R2 closures, F3 #34/#35,
+the Phase-7 residual pool (Phoenix annotation scrub, eval-writer liveness gate, `not_evaluated` EXEMPT),
+the §15 Weaviate pin, dashboard G.54 and the three test-isolation bugs. **Still open after that batch, no
+other owner:** the §10 live batch (phase-8 probe + F-R6-6 extended re-probe + C7 wired→live promotions);
+the first iac apply (R19 relative plan gate, control `3b5f414` by SHA) + FU-MOVED + the CloudWatch
+alarm-dialect ruling and monotonic-sum probe; C2 post-deploy trio, C4 budget number, C5 provider canaries +
+I3 queue-restart proof; G.17 / Task R.2 tenant-scoped instrument allow-list; D-R1 App Runner window; PP-14
+secret rotation; B14 (own plan); PP-MRO-1; iac `obs-merge`→`main`; §15 stragglers (Amplify AL2023+Node22,
+Portainer, improvement-findings review → tab flag, B1a/B1b/B1d probes, the 3 Alertmanager secret files →
+receipt check); publishing (utils version bump before first publish, flynapse-otel, api evals lock
+`a615740` push).
 
 ---
 

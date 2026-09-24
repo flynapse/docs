@@ -4679,7 +4679,12 @@ was false. Mutation-proven against the mutation that could not happen. Fixed in 
       and tool I/O for every tenant. M-CAPTURE already makes the Appendix A contract clause a
       go-live prerequisite; this is the concrete form of it. Either schedule the purge or ship
       capture off until it is scheduled.
-- [ ] **M-EVALS' "the rest does not merge" never happened, and no phase owns it.** §5.8 rules
+- [x] **M-EVALS' "the rest does not merge" never happened, and no phase owns it.** *(DISPOSED 2026-09-23:
+      claimed by the agent-evaluation project — fix-forward supersedes "the rest does not merge", per this
+      ledger's own 2026-09-20 correction ("the rejection was about plumbing, not the measures"). See
+      `docs/plans/agent-evaluation-completion.md` §2.3 row 10; the owner ratifies or objects at that
+      project's TA+TB review. M-RESIDENCY's "unenforced" sentence below is stale — G.13 shipped and was
+      audited MET on bullets 1/2/4 at `9debf188`, see that plan's §9 P0.2.)* §5.8 rules
       REJECT-as-workbench and names three things to salvage. The merged tree carries the whole
       suite — `agent_evaluation/{phoenix_adapter,runner,session_runner}.py`, the CLI, the runbook,
       the compose overlay, the collector fragment, a 389-line test — plus an `evaluation` poetry
@@ -5991,12 +5996,15 @@ prod DB provisioning → the owner's push. The privacy register closed FULLY PAI
 `76d6a0b` · api `4bc2d4f` · dashboard `ed7db1a` · iac `011eb67` · flynapse-otel `c93a9c9` ·
 shift-optimizer `f5f732c` · telegram-bot `47a08b7`. Branch mappings and order as the PUSHED banner records.
 
-**Still open, owner-owned (tracked in `step17-final-audit.md` + SDD Addenda 278–280):** PP-14 approval-secret
-rotation · iac `obs-merge` → `main` through the owner's flow · C2 post-deploy trio (metric shape one-liner →
-6 selector fixes per the Add. 256 grammar table; `_total` suffix check → one `absent()` edit; bogus-function
-alarm probe) · C5/C6/C13/C15 (C15 also reaps the S3 keys + Weaviate doc ids it prints) · C7/C8/C4 ·
-B14 = its own post-push plan · a future user-erasure flow needs its own ruling (PP-MRO-1) · F3 #34/#35
-colleague-era redaction residuals · PP-TG-14 re-triage at detector adoption.
+**Still open, owner-owned (tracked in `step17-final-audit.md` + SDD Addenda 278–280), CORRECTED 2026-09-24:**
+PP-14 approval-secret rotation · iac `obs-merge` → `main` through the owner's flow · C2 post-deploy trio
+(metric shape one-liner → 6 selector fixes per the Add. 256 grammar table; `_total` suffix check → one
+`absent()` edit; bogus-function alarm probe) · C5 · C7 · C4 · B14 = its own post-push plan · a future
+user-erasure flow needs its own ruling (PP-MRO-1). **Closed since this section was written:** C6/C8/C13/C15
+were run by the owner 2026-09-23 (C15's S3/Weaviate reap lists were EMPTY). **Picked up by
+`docs/plans/privacy-logging-hygiene-batch.md` (rulings R-1…R-7 all taken 2026-09-24):** F3 #34/#35
+redaction residuals (its tasks P1/P2, ruling R-2); PP-TG-14 stays DEFERRED by explicit re-ruling (R-6);
+that batch also carries the B-R1/E-R1/E-R2/F-R2 closures recorded in phase-10 §13 and R22's gate record.
 
 **Housekeeping done at close:** spent worktrees removed after merge-verification (copilot-mro `-r7b`,
 `-tbA`–`-tbD`; `docs-obsm`); their branches deleted merge-checked. Kept: the six `-obsm` trees (the pushed

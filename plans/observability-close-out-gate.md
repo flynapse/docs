@@ -3,6 +3,14 @@
 Prepared 2026-09-20. Read-only investigation. No plan, code or configuration was edited; three throwaway
 databases were created and dropped, and no other state changed.
 
+> **SUPERSEDED PREMISE — banner added 2026-09-24.** The merge PUSHED 2026-09-23 and the `-obsm` worktrees
+> were removed: **the mainline checkouts now ARE the merged state**, so every "run against the `-obsm`
+> tree" instruction below maps to the primary checkouts. Item-state has moved since this file: C1 proven;
+> C6/C8/C13/C15 closed by the owner 2026-09-23; the current owner-owed list of record is the Close-out
+> section of `observability-telemetry-merge-and-completion.md` plus the 2026-09-24 roll-up in
+> `observability-rebuild.md` §18. Read this file for the gate METHOD and the C/I definitions, not for
+> current status.
+
 **The subject of this gate is the merged tree, not the mainline.** A, C1, B1, D, E and F are merged on branch
 `obs-merge` inside the `<repo>-obsm` worktrees; every mainline checkout is still pre-merge (`core` on
 `master`, `dashboard` on `agent_sdk`, `api`/`utils`/`copilot-mro` on `langgraph-merge`). Features this gate is
