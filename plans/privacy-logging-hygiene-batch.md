@@ -39,23 +39,25 @@ three diagnosed bugs), `R4-ci-weaviate.md` (workflow census, E-R1, Weaviate refs
 
 ## Rulings needed from the owner (each one word; recommendation first)
 
-- [ ] **R-1 — lambdas in scope?** `lambdas/cognito-lambdas/app.py` (the **auth** lambda) logs full
+**ALL SEVEN RULED AS RECOMMENDED (owner, 2026-09-24: "agree on all"). Launch authorized.**
+
+- [x] **R-1 — lambdas in scope?** `lambdas/cognito-lambdas/app.py` (the **auth** lambda) logs full
   tracebacks with loguru `diagnose` ON — that prints **local variable values** on every exception in
   the sign-in path. Recommend: **IN** (worst finding of the batch).
-- [ ] **R-2 — phone redaction scope.** Today only `phone:`/`tel=`-labelled numbers are redacted; even
+- [x] **R-2 — phone redaction scope.** Today only `phone:`/`tel=`-labelled numbers are redacted; even
   "Phone number: …" passes. Matching bare digit runs would also eat ATA refs/part numbers. Recommend:
   **widen labels + separator-formatted numbers, never bare digits** (task P1 below).
-- [ ] **R-3 — Phoenix scrub mechanism.** Deleted chats' traces stay in Phoenix and get re-annotated on
+- [x] **R-3 — Phoenix scrub mechanism.** Deleted chats' traces stay in Phoenix and get re-annotated on
   every later eval run. Recommend: **delete the Phoenix session (= chat id) on chat delete, best-effort
   inline, plus a replayable script over the deleted-chat copies** for misses and pre-scheme traces.
-- [ ] **R-4 — `not_evaluated` exemption from the explanation scrub.** There are exactly 12 fixed
+- [x] **R-4 — `not_evaluated` exemption from the explanation scrub.** There are exactly 12 fixed
   template strings (counts only, no content). Recommend: **EXEMPT** (keep them readable post-delete).
-- [ ] **R-5 — E-R1 disposition.** The `WORKSPACE_READ_TOKEN` steps in `otel-tests.yml:42-55` reference
+- [x] **R-5 — E-R1 disposition.** The `WORKSPACE_READ_TOKEN` steps in `otel-tests.yml:42-55` reference
   a secret that was **never stored**; nothing to rotate. Recommend: **DELETE the two steps** (re-add
   behind a protected environment if ever needed).
-- [ ] **R-6 — telegram-bot `FailureFormatter`** prints third-party tracebacks in full. Recommend:
+- [x] **R-6 — telegram-bot `FailureFormatter`** prints third-party tracebacks in full. Recommend:
   **DEFER** — parked under your PP-TG-14 "re-triage at detector adoption" ruling; not folded in silently.
-- [ ] **R-7 — `persist-credentials: false`** on the 17 self-checkouts. Adjacent hardening beyond the
+- [x] **R-7 — `persist-credentials: false`** on the 17 self-checkouts. Adjacent hardening beyond the
   E-R2 wording. Recommend: **DEFER** (record here; revisit with B14).
 
 ## Lanes
