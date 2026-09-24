@@ -1445,6 +1445,56 @@ B1a/B1b/B1d probes); detector adoption beyond utils (core → api → copilot-mr
 rides with it); the §10 eval-quality gaps (SDK-loop profile certification, groundedness judging a
 truncated copy, citation_coverage blind to headless turns); publishing (utils version bump first).
 
+**2026-09-24 (audit) — reality audit of the list above; THIS paragraph, applied as corrections to the
+previous one, is now the list of record.** An independent read-only audit measured every line of the
+2026-09-24-later list (findings with file:line evidence per row:
+`~/.claude/scratch/privacy-hygiene-batch/audit/open-items-audit.md`). Every closure it spot-checked held
+(otel-tests workflow, Weaviate pin, utils register guard, api `error_code` site, all nine pushed tips).
+Corrections: **(1)** the CloudWatch **alarm-dialect ruling was already RULED 2026-09-15** (phase-10 plan
+ruling #4; AWS provider raised `~> 6.42`, pinned `~> 6.43`, sitting in `iac/main.tf`) — only the APPLY is
+owed; strike the ruling from the open list. **(2)** The list's C4/C5/C7 used the close-out gate's numbering
+and silently dropped the merge OWNER-SHEET items that share those labels — all three still open and now
+restored: **owner-sheet C7** = `.env.sample:82` still ships `LLM_CONTENT_COPY_SAMPLE_RATE=0.0` against the
+code default 1.0 (owner edit — agents don't touch env files); **owner-sheet C4** = the live SAD docker run
+(`--cap-drop ALL` entrypoint abort; socket sticky bit + `require_auth`); **owner-sheet C5** = the Phase H
+DEPLOY (core → dashboard, collector with them — the push half is done, the publish half is the publishing
+item). **(3)** De-duplication: the monotonic-sum probe = C2 trio step (2) = B1a's suffix half, and B1b's
+remaining half = C2 trio step (1) — one post-apply probe session closes all of them; **B1b is PARTIAL**
+(grammar settled 2026-09-22, stored shape unsettled). **(4)** The **B-R2/F-R1 confirmation is OVERTAKEN**:
+B-R1 was ruled (the sink is measured frames-only) and its codebase-policy half IS the detector-adoption
+line — struck from the four provisional confirmations, leaving A-R1 and C-R1 (both built, confirmation a
+formality) and D-R2 (whose coupling has WIDENED: api `shutdown_budget.py` now also imports
+`PENDING_SAVE_BOUND_SECONDS` from copilot-mro). **(5)** Publishing is larger than "utils version bump
+first": **flynapse-otel also needs a bump** (0.1.1, 80 commits stale; utils 0.1.39, 166 commits stale;
+utils' CodeArtifact floor `flynapse-otel ^0.1.0` then rises), the **flynapse-otel repo has ZERO Actions
+secrets** while its publish workflow reads three AWS secrets, and publish/deploy CI fires only from
+`main`/`master` (api: `main`/`develop`) — **utils `main` is 194 commits behind and api `main` 161 behind
+their real mainlines, both pure fast-forwards**; the mainline→`main` mapping the list named only for iac is
+owed for utils and api too (copilot-mro's `main` is 2641 behind — its mapping is its own decision).
+**(6)** The §10 live batch also includes two phase-10 §10 checks the roll-up dropped: the live
+`/rag/stream` turn + reopen showing `persisted: true`, and the rebuilt api/bot image showing
+`service_version=<semver>+<sha7>` on `target_info`. **(7)** iac alert-delivery **arming prerequisites are
+unmet and were unlisted**: GitHub secrets `ALERT_EMAIL_ADDRESS` / `ALERT_SLACK_WEBHOOK_SSM_PARAMETER` do
+not exist, `dev.tfvars` has `alert_delivery_armed = false`, and README Phase-10 owner steps 3/5/6 are
+undone — they ride the first-apply item explicitly now. **(8)** **Appendix A's contract clause is still a
+draft awaiting legal review** — an M-CAPTURE go-live prerequisite, previously unlisted. Measured color on
+items already listed: the 3 Alertmanager secret files are 63–66 B with the builder-commit's own mtime
+second — almost certainly stubs, not owner-filled (a real Slack webhook URL is longer than both webhook
+files); PP-14's `APPROVED_SECRET` was last rotated 2025-07-28 (before both disclosing applies); tracked
+`iac/poc_ec2_setup.sh` runs an UNPINNED `portainer/portainer-ce:latest` (outside the pinned demo script —
+fold into the Portainer decision); when the G.17 guard lands, two copilot-mro test docstrings still saying
+"G.17 is an OPEN" must be updated; the Add.-280 176 MB workspace prod dump is GONE (owner deleted it).
+**First post-push CI signal** (gh, authenticated): copilot-mro **otel-tests GREEN on `1966f998`** (352
+passed, 31 skipped, 5 deselected, no token step — the hygiene T1 fix is proven in CI after two red
+pushes); dashboard Quality and llm-platform ci green; the lambdas push **built and pushed the Cognito
+image to ECR** (no function-update step visible, so whether the Lambda runs it is not provable from CI);
+**iac `obs-merge` has NEVER run CI** (its workflows trigger on push-to-main / PR / dispatch only and no PR
+exists), so its 46 commits — including the guard lane they add — are CI-unexercised until the PR or the
+`obs-merge`→`main` move. Net: the list of record = the 2026-09-24-later list MINUS the alarm-dialect
+ruling and B-R2/F-R1, PLUS owner-sheet C7/C4/C5, the utils/api mainline→`main` mapping, the flynapse-otel
+publish secrets + version bump, the two extra §10 checks, the iac arming prerequisites, and the Appendix A
+legal review.
+
 ---
 
 ## Appendix A — Draft contract clause: conversation content capture (for legal review; ruling 20)

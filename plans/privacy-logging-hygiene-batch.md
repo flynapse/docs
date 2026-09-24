@@ -519,6 +519,17 @@ problem, no more shape patching. Recommendation (1), deferred to its own project
 > its workflow-permissions line reaches the default branch whenever parity-p3 lands there. The
 > 16 hyg worktrees and their branches were removed merge-checked after verification.
 
+**Post-push CI signal (2026-09-24, from the open-items reality audit).** copilot-mro `langgraph-merge`
+@ `1966f998`: **otel-tests SUCCESS — 352 passed, 31 skipped, 5 deselected, no token step** (the two
+prior pushes were red) — **the T1 red-CI fix and the E-R1 token-step deletion are proven in CI**;
+rules-validate and otelcol-validate green. dashboard Quality green; llm-platform ci green on the new
+`parity-p3` branch. The lambdas push triggered "Build and Deploy Cognito Lambda" (success): the
+diagnose-hardened image was **built and pushed to ECR** — no function-update step is visible in the
+workflow, so whether the Lambda now runs the new image is not provable from CI. iac `obs-merge` has
+never run CI (workflows trigger on main/PR/dispatch only; no PR exists) — the iac guard-lane changes
+stay CI-unexercised until the `obs-merge`→`main` move. utils/api `langgraph-merge`: no workflows fire
+on those branches.
+
 **Final Fable 5 pass (the batch's single Fable spend): PUSH-CLEAN — 0 P0/P1** over the pinned
 combined privacy diff (utils `f1d490b..28b87d8` · flynapse-otel `c93a9c9..c8b6d92` · lambdas
 `1153a7a..c30549a` · copilot-mro `629a5aa2..b410e13f` · api `ef81018`+`d814f6b`). All five named
