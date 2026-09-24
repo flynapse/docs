@@ -491,6 +491,13 @@ read only** — no pushes, releases, comments, package publishes or OIDC anywher
 `contents: read` breaks nothing (per-file table in the review record). The one P1: the iac
 caller-cap that `guards.yaml`'s blockless design depends on was unpinned — mutants dropping or
 widening the callers' permissions blocks survived the full iac lane. Fix round R1 (fresh
-implementer) adds the caller-cap assertion to the existing guard-lane test with mutant proofs,
-and wires T5's `error_code` kwarg + test plant now that P5's shape is landed and confirmed
-compatible. T1/T3/T4 are merge-ready as reviewed; review P2/P3s recorded below.
+implementer) added the caller-cap assertion to the existing guard-lane test (iac `9fe70c4`,
+9 lines; both reviewer mutants re-killed, aimed AND against the full 316-test lane, then
+re-verified by the controller's own mutant.sh runs) and wired T5's `error_code` (api `d814f6b`:
+`getattr(result, "error_code", None)`; the test plants a code post-construction so the guard
+passes both with and without P5's field; kwarg-dropped and raw-text mutants killed). T1/T3/T4
+merge-ready as reviewed; review P2/P3s recorded below. **MERGED 2026-09-24 (local, not pushed)
+into the seven non-gated repos: iac `fb2d2f4` · utils `4b67458` · core `21cd644` · dashboard
+`0918191` · flynapse-otel `438d768` · lambdas `693a855` · llm-platform `ab3bcbb` — workflow-only
+files, zero conflicts with the S/D merges already on those mainlines. copilot-mro `hyg-tiny`
+merges after P → I; api `hyg-tiny` merges after P5.**
