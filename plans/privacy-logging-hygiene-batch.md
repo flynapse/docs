@@ -229,6 +229,33 @@ colleague-era (`54a01f39`).
   for the owner to tick.
 - [ ] **C4 packet:** measurement recipe (docker stats against the compose smoke, which boots and tears
   down cleanly) + a recommended budget from the captured numbers; the owner picks the number.
+
+### C4 packet — observability-stack resource budget (measured 2026-09-24; owner picks the number)
+
+**Recipe (reproducible):** from `copilot-mro/deployment`, compose up the base + phoenix + smoke
+overlays as one throwaway project (`-p c4smoke`, services `otel-collector loki prometheus tempo
+phoenix`), wait ~75 s for health, sample `docker stats --no-stream` six times ~12 s apart, then
+`down -v`. Run 2026-09-24: teardown verified clean (no c4smoke containers or networks left).
+
+**Measured (idle steady state, six samples over ~72 s):**
+
+| Service | Memory (peak seen) | CPU | PIDs |
+|---|---|---|---|
+| otel-collector | 99 MiB | <0.1 % | 14 |
+| phoenix | 538 MiB | ~0.5 % | 57 |
+| loki | 79 MiB (slow climb — WAL/index warmup) | <0.9 % | 16 |
+| prometheus | 63 MiB | <0.5 % | 16 |
+| tempo | 40 MiB | <0.8 % | 16 |
+| **whole stack** | **≈820 MiB with Phoenix · ≈280 MiB without** | ~2 % | 119 |
+
+**Recommended budget (4–6× idle headroom for ingest, GC and compaction spikes; the owner picks
+the final numbers):** `mem_limit` — otel-collector 512 MiB · phoenix 2 GiB · loki 512 MiB ·
+prometheus 512 MiB · tempo 256 MiB (stack ceiling ≈3.75 GiB with Phoenix, ≈1.75 GiB without);
+`cpus: 1.0` per service; `pids_limit: 128` per service (max measured 57). Caveats: these are
+idle-floor-derived — the stack was receiving no ingest — so they are a sane first pin, not a
+load test; revisit from real ingest telemetry once the C2 post-deploy trio is live, and declare
+the numbers in the compose files (`deploy.resources` / `mem_limit`), which currently declare
+none.
 - [ ] **B14 packet:** condense the decision sheet's recommendation (1) (DB-enforced tenant-delete
   authorization) into a mini-plan skeleton for its own later project.
 
