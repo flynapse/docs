@@ -305,6 +305,22 @@ colleague-era (`54a01f39`).
 - tests/db/tenancy/test_data_discovery_rls_isolation.py: 12 pre-existing errors — test-DB schema
   drift (`data_discovery_jobs.object_count` NOT NULL) — needs its own triage.
 
+*From the lane D review (P2/P3, recorded not blocking; evidence under
+`~/.claude/scratch/privacy-hygiene-batch/D/review/`):*
+- The depth guard misses 4 uncommon spellings (a variable holding a `'../../..'` string, an
+  array-join of `'..'` segments, spread arguments, a default parameter aliasing `__dirname`) —
+  the Python original misses the same 4, so this is an inherited limit; the guard docstring
+  slightly overstates what intermediate-variable tracking catches (anchors are tracked, `'..'`
+  strings are not).
+- An exemption's reason is only required by the type, so an empty string would compile (same in
+  the Python original).
+- `runErrorVocabulary.test.ts` hard-fails rather than reporting partial coverage when only one
+  of its two backend sibling checkouts exists (not lane D's file; surfaced by the new sibling
+  worktrees).
+- **Operational note:** the dashboard unit lane's result depends on which sibling checkouts
+  exist beside the repo (`core`/`api` by name suffix): with both present two formerly-skipped
+  tests run. On the primary checkout the siblings are the primary repos — the production shape.
+
 *From the lane D implementer (`~/.claude/scratch/privacy-hygiene-batch/D/NOTES.md`):*
 - 29 of the 48 moved files fail Prettier — identically at base; no CI Prettier gate, so not reformatted.
 - The depth guard cannot see paths Playwright resolves against the CONFIG file's directory
@@ -356,7 +372,7 @@ cluster-writing modules, 12 further `-n 4` reruns under load, exact red-before r
 mutants) and judged both deviations sound; its F-1/N-1/N-2/N-3 findings are recorded under
 Future Improvements.
 
-### Lane D — built 2026-09-24, adversarial review running
+### Lane D — built + reviewed MERGE-READY (0 P0/P1) + MERGED, 2026-09-24
 
 Branch `hyg-g54`: `b1027c9` (48 pure renames, R100), `d4f5171` (83 specifiers → `@/`; six path
 comments), `f5123a6` (depth fixes — **9 sites in 7 files, not the researched 5**, incl.
@@ -364,7 +380,14 @@ Playwright `outputDir`; `tests/fixtures/repo-root.ts` re-anchored to `__dirname`
 CJS compatibility), `6826483` (layout + AST depth guards; planted violations go red). Test
 name-set identical to base; typecheck/lint clean; `next build` never run. The one failing test
 needs a sibling `core-hyg` checkout by name (no fallback, fails at base too) — the controller
-created `core-hyg` (core @ `c8c4fb3`) so the lane can run fully green; reviewer verifies.
+created `core-hyg` (core @ `c8c4fb3`) so the lane can run fully green; reviewer verified
+2692/2692 pass exit 0 once both sibling worktrees existed. The adversarial reviewer confirmed
+rename purity (48×R100, nothing else), 3 comment-only production lines, both guards failing on
+archives of the OLD trees naming exactly the 48 flat files and the 9 depth sites, and its own
+plants (including patterns the implementer didn't try) all caught; all three deviations judged
+sound. **MERGED 2026-09-24 (local, not pushed): dashboard mainline `agent_sdk` @ `fbb4fc0`
+(--no-ff; the tip sat exactly at the lane base, so the merged tree is byte-identical to the
+reviewed HEAD).**
 
 ### Lane T — launched 2026-09-24
 
