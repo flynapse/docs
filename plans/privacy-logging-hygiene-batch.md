@@ -232,6 +232,73 @@ colleague-era (`54a01f39`).
 - [ ] **B14 packet:** condense the decision sheet's recommendation (1) (DB-enforced tenant-delete
   authorization) into a mini-plan skeleton for its own later project.
 
+### G.17 packet — tenant-scoped instrument allow-list (authored 2026-09-24; owner ticks)
+
+Census measured fresh at the merged mainlines (utils `28b87d8`, copilot-mro `1966f998`); this
+corrects the plan header's earlier "27 uncapped": **27 instruments receive tenant identity in
+their attribute sets, 4 of them are histograms whose `tenant.id` is stripped at the one
+recording door, so 23 series carry it.** Two seams already enforce the histogram rule (B12 /
+M-CARDINALITY / M-GENAI-TENANT): utils' family registry refuses a histogram declaring
+`tenant_id` at declaration time, and copilot-mro's `_safe_record` withholds `tenant.id` from
+every histogram. Tenant cardinality is bounded by the tenant roster — a business fact — and is
+deliberately never collapsed.
+
+| # | Instrument | Kind | Tenant today | Recommendation |
+|---|---|---|---|---|
+| 1 | `llm_requests_total` (utils) | counter | yes | KEEP |
+| 2 | `llm_tokens_total` (utils) | counter | yes | KEEP |
+| 3 | `embedding_requests_total` (utils) | counter | yes | KEEP |
+| 4 | `embedding_tokens_total` (utils) | counter | yes | KEEP |
+| 5 | `embedding_spend_usd_total` (utils) | counter | yes | KEEP (per-tenant spend is read here) |
+| 6 | `embedding_cache_hits_total` (utils) | counter | yes | KEEP |
+| 7 | `embedding_cache_tokens_avoided_total` (utils) | counter | yes | KEEP |
+| 8 | `chat_block_save_failures_total` (utils) | counter | yes | KEEP |
+| 9–15 | `document_hub_upload/processing/index_upsert/cleanup/notification/attempt_vector_cleanup/query_embedding_fallback_total` (utils) | counters | yes | KEEP |
+| 16 | `agent.turn.calls` (mro) | counter | yes | KEEP |
+| 17 | `agent.model.calls` (mro) | counter | yes | KEEP |
+| 18 | `agent.model.cost_usd` (mro) | counter | yes | KEEP (per-tenant agent spend) |
+| 19 | `agent.model.unpriced_calls` (mro) | counter | yes | KEEP |
+| 20 | `agent.tool.calls` (mro) | counter | yes (turn view) | KEEP |
+| 21 | `agent.tool.attempts` (mro) | counter | yes (turn view) | KEEP |
+| 22 | `agent.subagent.calls` (mro) | counter | yes (turn view) | KEEP |
+| 23 | `agent.ledger.write_failures` (mro) | counter | yes | KEEP |
+| 24 | `llm_request_duration` (utils) | histogram | refused at declaration | NEVER tenant |
+| 25 | `embedding_cost_usd` (utils) | histogram | refused at declaration | NEVER tenant |
+| 26 | `document_hub_processing_duration_seconds` (utils) | histogram | refused at declaration | NEVER tenant |
+| 27a–d | `agent.turn.duration_seconds` · `gen_ai.client.operation.duration` · `gen_ai.client.token.usage` · `agent.subagent.duration` (mro) | histograms | stripped at the door | NEVER tenant |
+
+Recommendation to tick: **(1)** approve rows 1–23 as THE G.17 allow-list (codify the status
+quo); **(2)** histograms stay tenant-free — no action, both seams already enforce it; **(3)**
+close the "list in code" gap Task R.2 named: copilot-mro has no NAMED literal list the way
+utils' family registry is one — add the approved instrument set as a literal plus a guard
+asserting the set of tenant-carrying instruments equals it, so a new instrument cannot gain
+`tenant.id` without editing the ruled list; **(4)** no instrument beyond rows 1–23 gains tenant
+scoping as part of this ruling — a future addition edits the list first.
+
+### B14 packet — DB-enforced tenant-delete authorization: mini-plan skeleton (authored 2026-09-24)
+
+Origin (merge ledger Addendum 121, core review r7 P2-2): the guard that "every tenants-emptying
+statement is delete_tenant" was string-shape analysis, defeated twice (a psycopg
+`sql.Identifier("tenants")` composition passed it; 15/19 shapes caught) — ruled a DESIGN
+problem, no more shape patching. Recommendation (1), deferred to its own project with a
+**compat-battery condition** (step-17 audit item 7):
+
+1. **Inventory** every legitimate `tenants`-deleting path and the DB role each runs as:
+   `delete_tenant`, `delete_unentitled_partition.py --purged-tenant`, provisioning rollback,
+   test fixtures/seeds.
+2. **Privilege change:** one SECURITY DEFINER `delete_tenant` function owned by a privileged
+   role; REVOKE DELETE (and TRUNCATE) on `tenants` from every application role. Migration with
+   test-DB parity; interacts with M-CASCADE (comments survive: the FK no longer cascades) and
+   the RLS verify tooling.
+3. **The compat battery (the ruling's condition):** a battery proving each inventoried
+   legitimate path still deletes through the definer function AND a direct DELETE as each app
+   role fails at the database — run against `copilot_mro_test`, then staging, before prod.
+4. **Retire the string-shape guard** in favor of a privilege probe test (attempt the direct
+   DELETE, expect refusal) — the guard the shapes could defeat becomes unnecessary.
+5. **Deploy order:** migration before any code that assumes it; rollback = re-GRANT.
+   Non-goals: the user-erasure flow (PP-MRO-1, its own ruling) and the residue sweep's own
+   authorization model.
+
 ## Future Improvements
 
 - String extras on stdout (`failure.py:539`): the JSON/human sinks pass string extras unchanged while
