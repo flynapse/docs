@@ -355,7 +355,14 @@ colleague-era (`54a01f39`).
   `-----BEGIN`.
 - **F4 (P2) over-redaction:** tolerance pairs (`+0.005 -0.002`), dates after MOB/Tel labels,
   `contact 21-51-00-800-801` (ATA refs), `(737) 800-2000` and `P/N (123) 456-7890` are
-  redacted; the benign corpus dodges the tolerance form by writing `/`.
+  redacted; the benign corpus dodges the tolerance form by writing `/`. **F4b** (from the P-R1
+  label-alone-on-line widening): the same shapes across a line break (`contact\n21-51-00-…`,
+  `Tel\n<date>`).
+- **F1b (P2, from the re-verify):** v1 parity holds only within the new 16-char gap bound —
+  17+ whitespace characters (or 8+ CRLF lines, or 17+ before the colon) between label and
+  number, or 4+ spaces INSIDE the number, still leak relative to v1. Deliberate and pinned by
+  the 17-newline test; the app's extractors produce no such padding; `\s{0,64}` closes it at no
+  real cost if strict v1 parity is ever wanted.
 - **F6 (P3):** the static log guard does not catch `error_code=<result>.error`; both endpoints
   are behaviorally pinned instead.
 - **P3 (P3):** a failing liveness check at selection aborts the whole eval run rather than
@@ -459,7 +466,7 @@ sound. **MERGED 2026-09-24 (local, not pushed): dashboard mainline `agent_sdk` @
 (--no-ff; the tip sat exactly at the lane base, so the merged tree is byte-identical to the
 reviewed HEAD).**
 
-### Lane P — reviewed 2026-09-24: NOT MERGE-READY (1 P0 + 1 P1) → fix round P-R1 running
+### Lane P — fix round closed, re-verified MERGE-READY, MERGED 2026-09-24
 
 Branch `hyg-privacy`: `00a48807` (P1 — labels/fillers/connectors widened incl. soft hyphen and
 unicode dashes, international `+` and parenthesised-area unlabelled shapes, digit class stopped
@@ -505,8 +512,16 @@ bearer header became our code and is pinned), the reap runs last after cache inv
 a silent-socket test pins the bound (measured 31.4 s → ~5-6 s). 32 mutants killed including
 full re-runs of the original P1 and P4 sets; wide lane at the tip 12753 passed with only the
 known date-relative pair failing. One deliberate widening beyond v1, pinned: a label alone on
-its own line now redacts the following number. Scoped re-verify by the resumed reviewer is
-running (F1/F2 + the three deviations only).
+its own line now redacts the following number. **Scoped re-verify (same reviewer, own probes):
+MERGE-READY at `b410e13f` — differential 0/960, capture probe clean, the reap's network wait is
+exactly one ~5 s bound across 8 probe runs, all re-verify mutants killed, all three deviations
+sound (the dropped header-merge verified unset across nine repos; a headers-only host would 401
+into a counted miss, never a leak). Two new P2s recorded: F1b (v1 parity holds only within the
+16-char gap bound — 17+ whitespace, 8+ CRLF lines, or 4+ spaces inside the number still leak
+relative to v1; deliberate and pinned; `\s{0,64}` closes it if strict parity is ever wanted)
+and F4b (the label-alone-on-line widening over-redacts `contact`/`Tel`/`MOB` followed by an ATA
+ref or date on the next line). MERGED (local, not pushed): copilot-mro `langgraph-merge` @
+`09236d7c`, full-lane rerun in progress; I and T follow per the merge order.**
 
 ### Lane T — reviewed (no P0, one P1), fix round R1 closed, non-gated repos MERGED 2026-09-24
 
