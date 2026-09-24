@@ -334,14 +334,30 @@ colleague-era (`54a01f39`).
   leaves an annotation (the P4 sweep covers it); the plan-mode cost report counts deleted chats'
   judges.
 - P1 unmatched by design: unlabelled `98765 43210` / `555-123-4567` / "call me on …" (no `+`, no
-  label — part/work-order ambiguity); a `+37.774929` coordinate is over-redacted; a soft hyphen
-  INSIDE the label word ("Tele­phone") is not handled.
+  label — part/work-order ambiguity); a `+37.774929` coordinate is over-redacted; soft hyphens
+  INSIDE label words are partially handled — the review corrected the implementer's note:
+  "Tele­phone" IS caught (via the `phone` substring); the real misses are "Mo­bile",
+  "What­sApp", "Con­tact" and "Ph­one".
 - P2 cosmetic: a kept string can end with a partial marker (`***REDAC…[truncated]`).
 - P5's `error_code` is an open vocabulary on crashes (exception class name fallback — matches
   span `error.type` behavior).
 - The `tests/api` xdist-order flakes (business-rule entitlement 200-vs-403; "No module named
   'auth'" in tenancy tests) flake on BASE too — a further isolation bug in Lane I's family,
   beyond I1–I3's scope.
+
+*From the lane P review (P2/P3, recorded not blocking; evidence under
+`~/.claude/scratch/privacy-hygiene-batch/P/review/`):*
+- **F3 (P2):** `_TRUNCATED_LONG_SECRET_RE` scans the whole kept text with quadratic worst case
+  (3.75 s on one 32k `eyJ-` string; base already took 4.7 s — 1.35–1.8× worse on an existing
+  weakness; the 4× DoS metric is unaffected). Anchor the scan at the last `eyJ` /
+  `-----BEGIN`.
+- **F4 (P2) over-redaction:** tolerance pairs (`+0.005 -0.002`), dates after MOB/Tel labels,
+  `contact 21-51-00-800-801` (ATA refs), `(737) 800-2000` and `P/N (123) 456-7890` are
+  redacted; the benign corpus dodges the tolerance form by writing `/`.
+- **F6 (P3):** the static log guard does not catch `error_code=<result>.error`; both endpoints
+  are behaviorally pinned instead.
+- **P3 (P3):** a failing liveness check at selection aborts the whole eval run rather than
+  failing per item — fails closed, nothing written.
 
 *From the lane T implementer (`~/.claude/scratch/privacy-hygiene-batch/T/NOTES.md`):*
 - The 8 otel-tests excluded from CI never run there. Full fix: a protected-environment path that
@@ -441,7 +457,7 @@ sound. **MERGED 2026-09-24 (local, not pushed): dashboard mainline `agent_sdk` @
 (--no-ff; the tip sat exactly at the lane base, so the merged tree is byte-identical to the
 reviewed HEAD).**
 
-### Lane P — built 2026-09-24, adversarial review running
+### Lane P — reviewed 2026-09-24: NOT MERGE-READY (1 P0 + 1 P1) → fix round P-R1 running
 
 Branch `hyg-privacy`: `00a48807` (P1 — labels/fillers/connectors widened incl. soft hyphen and
 unicode dashes, international `+` and parenthesised-area unlabelled shapes, digit class stopped
@@ -462,6 +478,25 @@ pre-existing or base-flaky; DB lane green but for the known data_discovery drift
 ruling on the implementer's commit-policy question: production edits committed on the dedicated
 lane branch by named pathspec are this batch's sanctioned design (the new-files+test-edits-only
 rule governs primary trees outside SDD batches).
+
+**Review (NOT merge-ready: one P0, one P1; fix round P-R1 running).** The reviewer confirmed
+four of the five P0 constraints held — missing-row=live (with a cross-tenant same-id probe:
+invisible under RLS, which is the safe direction), golden untouchable (case/spacing variants,
+GlobalID-only, failed-lookup skip), the DoS bound (≤2×L+512 by construction, 2.00×L measured),
+and proof reproducibility (49 of 59 mutants re-run, all killed; red-befores exact). P2's own
+goal is proven closed: a sweep of every cut offset across 7 secret types gives 0 leaks on the
+tip vs 88 on base. **The P0 (F1):** v2's label-to-number gap is ≤3 characters with no newline
+where v1 accepted `\s*` — so `Phone:` followed by a newline, CRLF, or a run of spaces/tabs
+leaks the number v1 redacted (840 of 960 differential shapes; proven end-to-end into the
+persisted row and the Phoenix projection; exactly the layout PDF/form extraction produces; no
+test pinned the shape either way). **The P1 (F2):** the inline reap's claimed 5 s/call bound is
+false — the client's server-version check and `projects.get` ride the default 10 s/30 s
+timeouts, a hanging endpoint held the reap 33.5 s synchronously inside the async delete
+endpoint, and the reap runs before cache invalidation, so a stall keeps serving stale copies.
+Fix round P-R1: widen the gap (bounded, CRLF/space/NBSP runs; intra-number bounds unchanged;
+the version stays v2, which has never shipped), bound every client call via httpx, move the
+reap after cache invalidation, and pin all of it with the reviewer's own probes plus a
+hanging-socket test. Scoped re-verify follows by resuming the same reviewer.
 
 ### Lane T — reviewed (no P0, one P1), fix round R1 closed, non-gated repos MERGED 2026-09-24
 
