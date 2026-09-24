@@ -359,6 +359,20 @@ colleague-era (`54a01f39`).
 - The api checkout-pin helper prefers the same-NAME sibling over the same-BRANCH sibling, which
   misfires under multi-lane worktrees (the two environmental api unit failures).
 
+*From the lane T review (P2/P3, recorded not blocking; evidence under
+`~/.claude/scratch/privacy-hygiene-batch/T/review/`):*
+- The chat-eval `WEAVIATE_IMAGE` fallback is unread by any test: reverting it to `latest`
+  survived the full local otel lane (the plan scoped the test extension to the standalone file).
+- T4 deploy note additions: the dev Weaviate container WILL be recreated on the next
+  `compose up` (the image string changed; the digest is identical and the bind mount persists);
+  and demo/POC boxes may have pulled a newer `:latest`, making 1.34.8 a downgrade Weaviate can
+  refuse — read `/v1/meta` per box before recreating.
+- The T5 guard's log sink listens at DEBUG, so a TRACE-level or stdlib-`logging` leak at that
+  site would pass unseen.
+- A deselected T1 test that later stops needing the workspace env stays silently deselected
+  (every other drift direction fails loudly in CI).
+- The data-plane pin test would read a stricter digest pin (`1.34.8@sha256:…`) as drift.
+
 *From the lane D implementer (`~/.claude/scratch/privacy-hygiene-batch/D/NOTES.md`):*
 - 29 of the 48 moved files fail Prettier — identically at base; no CI Prettier gate, so not reformatted.
 - The depth guard cannot see paths Playwright resolves against the CONFIG file's directory
@@ -449,7 +463,7 @@ ruling on the implementer's commit-policy question: production edits committed o
 lane branch by named pathspec are this batch's sanctioned design (the new-files+test-edits-only
 rule governs primary trees outside SDD batches).
 
-### Lane T — built 2026-09-24, adversarial review running
+### Lane T — reviewed 2026-09-24: no P0, one P1 → fix round R1 running
 
 Nine `hyg-tiny` worktrees off the pushed bases. T1: the red otel-tests lane reproduced under the
 workflow's own conditions (fresh pytest+pyyaml venv, no siblings, no .env); the true need was
@@ -468,3 +482,15 @@ DOWNGRADE Weaviate may refuse — read `/v1/meta` per box first. T5 landed the c
 one kwarg + test; T5 merges only after P5. api runs under multi-lane worktrees need
 `PYTHONPATH=api-hyg:core-hyg-t:utils-hyg-t:copilot-mro-hyg-t:flynapse-otel-hyg-t` (the checkout
 pin enforces it).
+
+**Review (no P0, one P1).** The reviewer rebuilt the CI replay harness from scratch (the
+implementer's clone carried a hand-edited workflow), matched CI's own failing log, proved the
+exclusion list neither over- nor under-excludes, and confirmed the acceptance still holds on a
+scratch P→I→T merge. The decisive T2 audit: **all 18 workflows use the GITHUB_TOKEN for checkout
+read only** — no pushes, releases, comments, package publishes or OIDC anywhere — so
+`contents: read` breaks nothing (per-file table in the review record). The one P1: the iac
+caller-cap that `guards.yaml`'s blockless design depends on was unpinned — mutants dropping or
+widening the callers' permissions blocks survived the full iac lane. Fix round R1 (fresh
+implementer) adds the caller-cap assertion to the existing guard-lane test with mutant proofs,
+and wires T5's `error_code` kwarg + test plant now that P5's shape is landed and confirmed
+compatible. T1/T3/T4 are merge-ready as reviewed; review P2/P3s recorded below.
