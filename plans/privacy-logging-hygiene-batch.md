@@ -463,7 +463,7 @@ ruling on the implementer's commit-policy question: production edits committed o
 lane branch by named pathspec are this batch's sanctioned design (the new-files+test-edits-only
 rule governs primary trees outside SDD batches).
 
-### Lane T — reviewed 2026-09-24: no P0, one P1 → fix round R1 running
+### Lane T — reviewed (no P0, one P1), fix round R1 closed, non-gated repos MERGED 2026-09-24
 
 Nine `hyg-tiny` worktrees off the pushed bases. T1: the red otel-tests lane reproduced under the
 workflow's own conditions (fresh pytest+pyyaml venv, no siblings, no .env); the true need was
