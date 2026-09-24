@@ -452,6 +452,13 @@ problem, no more shape patching. Recommendation (1), deferred to its own project
   redacted; the benign corpus dodges the tolerance form by writing `/`. **F4b** (from the P-R1
   label-alone-on-line widening): the same shapes across a line break (`contact\n21-51-00-…`,
   `Tel\n<date>`).
+- **F-P3-a (P3, from the Fable gate):** the ≤4× DoS bound is safe only because every capture
+  call passes limit ∈ {512, 32000}; a future caller with a small limit would read a 512-char
+  lookahead per few budget chars, degrading the bound unpinned. Cheap close: cap the lookahead
+  at min(512, limit, budget).
+- **F-P4-a (P3, from the Fable gate):** `find_chat_session`'s ownership check passes when the
+  session's project id AND the project's id are BOTH absent (doubly malformed response); refuse
+  on a falsy id.
 - **F1b (P2, from the re-verify):** v1 parity holds only within the new 16-char gap bound —
   17+ whitespace characters (or 8+ CRLF lines, or 17+ before the colon) between label and
   number, or 4+ spaces INSIDE the number, still leak relative to v1. Deliberate and pinned by
@@ -501,6 +508,38 @@ problem, no more shape patching. Recommendation (1), deferred to its own project
 - `tests/fixtures/` holds 14 flat support files outside the layout rule (not test files).
 - Nested tests' remaining `../../../X` relative imports fail loudly but could move to `@/`.
 - `lib/api/invitations-api.ts:36` names a test file that does not exist (research side-finding).
+
+## Review — final gate + close-out (2026-09-24)
+
+**Final Fable 5 pass (the batch's single Fable spend): PUSH-CLEAN — 0 P0/P1** over the pinned
+combined privacy diff (utils `f1d490b..28b87d8` · flynapse-otel `c93a9c9..c8b6d92` · lambdas
+`1153a7a..c30549a` · copilot-mro `629a5aa2..b410e13f` · api `ef81018`+`d814f6b`). All five named
+P0 constraints HELD, each proven independently of the Opus lanes: full S-diff read with every
+remaining cognito logger site enumerated; the phone differential re-run on the gate's own
+git-archive extracts (0/960) and the DoS bound re-derived from source (total ≤ 2L+512 ≤ 4L for
+L ≥ 128); the liveness SQL read as a plain SELECT (missing row = live by construction) with both
+FOR SHARE lock directions re-proven; scrub refusal-first/GlobalID-only/post-commit-last with the
+5 s bound and bearer pin; `error_code` bounded to the 17-code frozenset or a class name at both
+mro doors and the api site. Eight proof re-runs including four mutants, all killed; pinned SHAs
+verified ancestors of the merged mainlines; every tree left clean. Two new P3s recorded under
+Future Improvements (F-P3-a lookahead cap, F-P4-a falsy-id refusal). Gate record:
+`~/.claude/scratch/privacy-hygiene-batch/F/claims.md`.
+
+**Batch outcome.** Five lanes + fix rounds: 10 Opus agents built and adversarially reviewed
+everything; the process caught and closed one real P0 (phone-gap regression, 840/960 → 0/960),
+two P1s (iac caller-cap unpinned; false reap bound 33.5 s → one ~5 s bound), and one incidental
+find (the Cognito event dump). All merged into LOCAL mainlines with full-lane reruns between the
+copilot-mro merges and estate lanes after; green modulo the pre-existing knowns (2 date-relative
+SQL examples, 12 data_discovery db errors, and the workspace-caused checkout-census failures the
+hyg worktrees themselves trip). Decision packets G.17, C4 (measured) and B14 authored above.
+
+**Owner-owed to close:** tick the three packets · push utils `4b67458` (langgraph-merge) ·
+flynapse-otel `438d768` (main) · lambdas `693a855` (main) · dashboard `0918191` (agent_sdk) ·
+core `21cd644` (master) · iac `fb2d2f4` (obs-merge) · llm-platform `ab3bcbb` (parity-p3) ·
+copilot-mro `1966f998` (langgraph-merge) · api `a8a3fb2` (langgraph-merge). Lane S's merges ride
+as-is (never rebase/squash — the ratchet anchor). After the push the controller removes the 16
+hyg worktrees and their branches merge-checked, which also clears the utils/core census
+failures.
 
 ## Lessons
 
