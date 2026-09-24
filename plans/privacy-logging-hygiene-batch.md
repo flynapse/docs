@@ -323,8 +323,10 @@ colleague-era (`54a01f39`).
 
 *From the lane P implementer (`~/.claude/scratch/privacy-hygiene-batch/P/NOTES.md`):*
 - The inline Phoenix reap runs synchronously inside the async `delete_chat` handler (as the S3
-  and Weaviate reaps already do); a Phoenix outage can block the event loop up to 3 calls × 5 s.
-  Move to a thread or background task.
+  and Weaviate reaps already do). After fix P-R1 the cost of a silent Phoenix is ONE ~5 s bound
+  (every request rides a 5 s httpx timeout and the first failure ends the reap; a slow-drip
+  server is capped per read, not in total), and the reap runs last, after cache invalidation —
+  but it still blocks the event loop for that window. Move to a thread or background task.
 - Live Phoenix 20.8 was never exercised: whether `sessions.get` resolves a user session id
   uniquely across projects, and `bulk_delete` behavior with GlobalIDs, are unverified. The code
   refuses a project mismatch, so a collision is a MISS, never a wrong deletion.
@@ -493,10 +495,18 @@ test pinned the shape either way). **The P1 (F2):** the inline reap's claimed 5 
 false — the client's server-version check and `projects.get` ride the default 10 s/30 s
 timeouts, a hanging endpoint held the reap 33.5 s synchronously inside the async delete
 endpoint, and the reap runs before cache invalidation, so a stall keeps serving stale copies.
-Fix round P-R1: widen the gap (bounded, CRLF/space/NBSP runs; intra-number bounds unchanged;
-the version stays v2, which has never shipped), bound every client call via httpx, move the
-reap after cache invalidation, and pin all of it with the reviewer's own probes plus a
-hanging-socket test. Scoped re-verify follows by resuming the same reviewer.
+Fix round P-R1 (landed 2026-09-24: `ae99040e` F1, `31c75949` F2, `b410e13f` bearer-header pin):
+the label-to-number gap is now `\s{0,16}` (v1's class, bounded; intra-number rules untouched;
+version stays v2, which never shipped) — the reviewer's differential goes 840 → 0/960 and the
+vendor-sheet numbers no longer reach the row or projection, with a v1-parity test block pinning
+every gap class; every Phoenix client call now rides a 5 s httpx timeout (version check and
+project lookup included — the Client ignores `api_key` once an `http_client` is passed, so the
+bearer header became our code and is pinned), the reap runs last after cache invalidation, and
+a silent-socket test pins the bound (measured 31.4 s → ~5-6 s). 32 mutants killed including
+full re-runs of the original P1 and P4 sets; wide lane at the tip 12753 passed with only the
+known date-relative pair failing. One deliberate widening beyond v1, pinned: a label alone on
+its own line now redacts the following number. Scoped re-verify by the resumed reviewer is
+running (F1/F2 + the three deviations only).
 
 ### Lane T — reviewed (no P0, one P1), fix round R1 closed, non-gated repos MERGED 2026-09-24
 
