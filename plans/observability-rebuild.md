@@ -1421,6 +1421,30 @@ Portainer, improvement-findings review → tab flag, B1a/B1b/B1d probes, the 3 A
 receipt check); publishing (utils version bump before first publish, flynapse-otel, api evals lock
 `a615740` push).
 
+**2026-09-24 (later) — the hygiene batch CLOSED + PUSHED; Stream L RETIRED as a label.** The privacy &
+logging hygiene batch completed its full arc same-day (all five lanes built, adversarially reviewed with
+verdict-gated fix rounds, merged, estate lanes green, single Fable pass PUSH-CLEAN, owner ruled "agree
+with all", nine repos pushed and measured — its plan's Review section is the record). That closes, from
+the list above: B-R1/E-R1/E-R2/F-R2, F3 #34/#35, the Phase-7 residual pool it owned (Phoenix scrub,
+liveness gate, `not_evaluated` EXEMPT), the §15 Weaviate pin, G.54, the three isolation bugs, and the api
+evals-lock push (`a615740` rode the api branch). G.17, C4 and B14 are RULED (packets approved 2026-09-24);
+each leaves a small residual: G.17 = write the approved allow-list into copilot-mro as a code-level guard;
+C4 = declare the approved budgets in the compose files; B14 = its own later project (skeleton approved).
+**Stream L is retired as a line item:** it never ran as a named stream, but its substance was delivered by
+the merge project (agent/LLM spans, turn facts, content capture, the 0.5 query-in-logs fix), Phase 7 (the
+eval loop) and the hygiene batch (the privacy edges of that telemetry); its only true residue — confirming
+the once-dark agent panels light correctly on real traffic (spellings, doc-hub/automation counters) —
+folds into the C2 post-deploy checks and must not be re-opened as "Stream L" by a future audit.
+**Still open after all of the above:** the §10 live batch; the first iac apply (R19 gate, control
+`3b5f414`) + FU-MOVED + the CloudWatch alarm-dialect ruling and monotonic-sum probe; C2 post-deploy trio
+(now carrying Stream L's panel confirmation); the G.17/C4 residual builds; C5 provider canaries + I3
+queue-restart proof; D-R1 App Runner window; the four provisional-ruling confirmations + the Alertmanager
+receipt check (R22 record); PP-14 rotation; B14 project; PP-MRO-1; iac `obs-merge`→`main`; §15 stragglers
+minus the Weaviate pin (Amplify AL2023+Node22, Portainer, improvement-findings review → tab flag,
+B1a/B1b/B1d probes); detector adoption beyond utils (core → api → copilot-mro → telegram → shift; PP-TG-14
+rides with it); the §10 eval-quality gaps (SDK-loop profile certification, groundedness judging a
+truncated copy, citation_coverage blind to headless turns); publishing (utils version bump first).
+
 ---
 
 ## Appendix A — Draft contract clause: conversation content capture (for legal review; ruling 20)
