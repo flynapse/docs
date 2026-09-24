@@ -321,6 +321,22 @@ colleague-era (`54a01f39`).
   exist beside the repo (`core`/`api` by name suffix): with both present two formerly-skipped
   tests run. On the primary checkout the siblings are the primary repos — the production shape.
 
+*From the lane T implementer (`~/.claude/scratch/privacy-hygiene-batch/T/NOTES.md`):*
+- The 8 otel-tests excluded from CI never run there. Full fix: a protected-environment path that
+  can install `utils` (OIDC → CodeArtifact) plus loguru and claude-agent-sdk, or a guard
+  asserting the exclusion list equals the set of tests that need the workspace env. The lane was
+  red for 3 pushes before anyone noticed — a lane-health alert would have caught it.
+- The `chat-eval.yml` Weaviate fallback is the one pinned ref no test reads (the plan scoped the
+  test extension to the standalone file). Also from R4: dead named-volume declarations, and the
+  demo service's ExecStop points at the POC compose file.
+- After P5, T5's `error_type` becomes redundant beside `error_code`; the root fix is to stop
+  writing `str(exc)` into `PipelineResult.error` at the two adapter seats (Lane P territory).
+- The iac `guards.yaml` cap is not self-enforcing: nothing asserts every caller declares
+  top-level `permissions`. Estate-wide, no test requires a new workflow to declare
+  `permissions:` at all — a new file silently falls back to the repository default.
+- The api checkout-pin helper prefers the same-NAME sibling over the same-BRANCH sibling, which
+  misfires under multi-lane worktrees (the two environmental api unit failures).
+
 *From the lane D implementer (`~/.claude/scratch/privacy-hygiene-batch/D/NOTES.md`):*
 - 29 of the 48 moved files fail Prettier — identically at base; no CI Prettier gate, so not reformatted.
 - The depth guard cannot see paths Playwright resolves against the CONFIG file's directory
@@ -389,8 +405,22 @@ sound. **MERGED 2026-09-24 (local, not pushed): dashboard mainline `agent_sdk` @
 (--no-ff; the tip sat exactly at the lane base, so the merged tree is byte-identical to the
 reviewed HEAD).**
 
-### Lane T — launched 2026-09-24
+### Lane T — built 2026-09-24, adversarial review running
 
-Nine `hyg-tiny` worktrees created off the pushed bases (mro/api/iac + six workflow-permissions-only
-trees for T2). T5 lands constant + `error_type` immediately; `error_code` wiring is gated on P5's
-landed shape and T5 merges only after P5.
+Nine `hyg-tiny` worktrees off the pushed bases. T1: the red otel-tests lane reproduced under the
+workflow's own conditions (fresh pytest+pyyaml venv, no siblings, no .env); the true need was
+**eight** workspace-env tests, five hidden behind the three collection errors — fixed
+workflow-side with ignore/deselect lists and an explanatory header rather than installing the
+private `utils` package; the workflow's own steps now run green locally (353 passed at tip). T3
+deleted the token steps separately. T2 census found **18 workflows in 9 repos** (the plan's 16
+plus lambdas + llm-platform), none declaring `permissions:` before; 17 got the top-level block,
+`guards.yaml` deliberately none (workflow_call-only, capped by its two callers); iac suite green,
+block-in-guards mutant killed. T4 pinned the five Weaviate refs plus the standalone stack's UI
+image, emptied `PIN_EXEMPT`, added `DATA_PLANE_PINS` + a test, and re-verified the 1.34.8 digest
+live; deploy note extended: recreating a demo/POC box that ever pulled `:latest` ≥1.35 would be a
+DOWNGRADE Weaviate may refuse — read `/v1/meta` per box first. T5 landed the constant +
+`error_type` at `executor.py:1416` with its guard in the existing executor fake-harness file;
+**`error_code` is a marked seam, not wired** (P5's shape hadn't landed) — post-P5 fix round owed:
+one kwarg + test; T5 merges only after P5. api runs under multi-lane worktrees need
+`PYTHONPATH=api-hyg:core-hyg-t:utils-hyg-t:copilot-mro-hyg-t:flynapse-otel-hyg-t` (the checkout
+pin enforces it).
