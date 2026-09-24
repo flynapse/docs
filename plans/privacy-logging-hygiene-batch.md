@@ -276,6 +276,23 @@ colleague-era (`54a01f39`).
 - utils' span sweep overlaps the shared detector's span rules; retire in a later adoption pass.
 - The `_root.py` debt register could adopt the same merge-base ratchet.
 
+*From the lane I review (P2/P3, recorded not blocking; evidence under
+`~/.claude/scratch/privacy-hygiene-batch/I/review/`):*
+- **F-1 (P2):** the work_orders load-time registration leaves `copilot_mro.app.db.row_tenancy`
+  and `.postgres_table_definitions` in `sys.modules` without attaching them to the real
+  `copilot_mro.app.db` package, so a later file's string-target
+  `monkeypatch.setattr("copilot_mro.app.db.row_tenancy…")` raises AttributeError (measured:
+  work_orders + chunking's test_chunk_id_derivation = 3 failed / 13 passed). A plain real-package
+  import in that file (as tests/db/improvement already does) gives 16/16 and 55/55 — the cleaner
+  future shape. No current lane runs the failing pair together.
+- **N-3 (P2):** the work_orders fix is only protected by a selective run (improvement +
+  work_orders without chat_history); the full tests/db lane masks both the original bug and any
+  regression. The collection-finish placeholder check (test-hygiene audit §6 item 7) closes this.
+- **N-1 (P3):** the I3 test's "window spent only in flight" claim holds only because
+  `ModelGateway.invoke` has no await before `transport.invoke`; a 200 ms await there would
+  reintroduce a 10 s timeout failure. The docstring overstates slightly.
+- **N-2 (P3):** on a start-wait timeout the backend task is left uncancelled for loop teardown.
+
 *From the lane I implementer (`~/.claude/scratch/privacy-hygiene-batch/I/NOTES.md`):*
 - `tests/db/chat_history/test_chat_history_roundtrip.py:33-65` has the same collection-time-stub
   /teardown-restore flaw as work_orders had; masked today by agent_state's concrete-import workaround.
@@ -321,9 +338,11 @@ ratchet's no-deletion rule. The adversarial reviewer re-ran resolve proofs, full
 red-befores, 14 mutants, planted 13 leak shapes (all caught), proved the ratchet fails closed
 under squash/rebase, and confirmed the S2 `diagnose=True` equivalence from loguru 0.7.3 source.
 Merge constraint: true merge only (see Review & merge protocol). Findings triage: P2/P3 →
-Future Improvements above; nothing blocking.
+Future Improvements above; nothing blocking. **MERGED 2026-09-24 (local, not pushed): utils
+`28b87d8` (--no-ff), flynapse-otel `c8b6d92`, lambdas `c30549a` — each mainline tip sat exactly
+at the lane base; the register/ratchet guard runs 7/7 green on the merged utils mainline.**
 
-### Lane I — built 2026-09-24, adversarial review running
+### Lane I — built + reviewed MERGE-READY (0 P0/P1), 2026-09-24; merges after lane P
 
 Branch `hyg-isolation`: `7ac98ec4` (I1 + the measured work_orders twin, 13 collection errors → 0),
 `29e9f416` (I2 — real-`__path__` stand-in + scoped restore; deliberately NOT ensure_package, which
@@ -331,7 +350,11 @@ reuses an already-imported real package and leaks with no undo), `6cb02b5c` (I3 
 seam; the deadline window is spent only while the call is in flight; `held_reads` pins the seam;
 20/20 `-n 4` reruns; tolerates 150/1500 ms injected pre-start delay). All test-side. Full
 tests/unit `-n 4`: 7310 passed / 11 skipped. 12 pre-existing data_discovery db errors recorded
-under Future Improvements.
+under Future Improvements. The adversarial reviewer re-measured every claim (reversed run orders,
+its own leak probes, a marker-file proof that I2's real-`__path__` stand-in cannot import the
+cluster-writing modules, 12 further `-n 4` reruns under load, exact red-before reproduction via
+mutants) and judged both deviations sound; its F-1/N-1/N-2/N-3 findings are recorded under
+Future Improvements.
 
 ### Lane D — built 2026-09-24, adversarial review running
 
