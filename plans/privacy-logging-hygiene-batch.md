@@ -321,6 +321,28 @@ colleague-era (`54a01f39`).
   exist beside the repo (`core`/`api` by name suffix): with both present two formerly-skipped
   tests run. On the primary checkout the siblings are the primary repos — the production shape.
 
+*From the lane P implementer (`~/.claude/scratch/privacy-hygiene-batch/P/NOTES.md`):*
+- The inline Phoenix reap runs synchronously inside the async `delete_chat` handler (as the S3
+  and Weaviate reaps already do); a Phoenix outage can block the event loop up to 3 calls × 5 s.
+  Move to a thread or background task.
+- Live Phoenix 20.8 was never exercised: whether `sessions.get` resolves a user session id
+  uniquely across projects, and `bulk_delete` behavior with GlobalIDs, are unverified. The code
+  refuses a project mismatch, so a collision is a MISS, never a wrong deletion.
+- The sweep runs one tenant at a time (no all-tenant mode); ~12 lines of owner-connection code
+  duplicated from `run_phoenix_evals`; traces over 1000 spans need a second (idempotent) pass.
+- P3 residual gaps: a delete landing between the pre-publish check and the Phoenix publish still
+  leaves an annotation (the P4 sweep covers it); the plan-mode cost report counts deleted chats'
+  judges.
+- P1 unmatched by design: unlabelled `98765 43210` / `555-123-4567` / "call me on …" (no `+`, no
+  label — part/work-order ambiguity); a `+37.774929` coordinate is over-redacted; a soft hyphen
+  INSIDE the label word ("Tele­phone") is not handled.
+- P2 cosmetic: a kept string can end with a partial marker (`***REDAC…[truncated]`).
+- P5's `error_code` is an open vocabulary on crashes (exception class name fallback — matches
+  span `error.type` behavior).
+- The `tests/api` xdist-order flakes (business-rule entitlement 200-vs-403; "No module named
+  'auth'" in tenancy tests) flake on BASE too — a further isolation bug in Lane I's family,
+  beyond I1–I3's scope.
+
 *From the lane T implementer (`~/.claude/scratch/privacy-hygiene-batch/T/NOTES.md`):*
 - The 8 otel-tests excluded from CI never run there. Full fix: a protected-environment path that
   can install `utils` (OIDC → CodeArtifact) plus loguru and claude-agent-sdk, or a guard
@@ -404,6 +426,28 @@ plants (including patterns the implementer didn't try) all caught; all three dev
 sound. **MERGED 2026-09-24 (local, not pushed): dashboard mainline `agent_sdk` @ `fbb4fc0`
 (--no-ff; the tip sat exactly at the lane base, so the merged tree is byte-identical to the
 reviewed HEAD).**
+
+### Lane P — built 2026-09-24, adversarial review running
+
+Branch `hyg-privacy`: `00a48807` (P1 — labels/fillers/connectors widened incl. soft hyphen and
+unicode dashes, international `+` and parenthesised-area unlabelled shapes, digit class stopped
+crossing newlines, redaction version → v2 in the same commit), `9fd65ec0` (P2 — redact the kept
+text + a 512-char lookahead window, then cut back so a rule-untouched window tail is dropped;
+budget charged on kept text only; tail backstop for secrets longer than the lookahead; the DoS
+pin untouched and green), `716d88cc` (P3 — liveness gate at selection AND pre-publish, missing
+chats row = LIVE, FOR SHARE races tested, harness/golden/`__SYSTEM__` rows proven landing),
+`85fad314`/`28ef538a`/`03f5c662` (P4 — refusal-first scrub target, GlobalID-only deletion,
+post-commit best-effort inline reap that can never fail the delete, per-tenant idempotent sweep;
+one real bug found and fixed in review-by-self: the sweep no longer touches spans of a chat whose
+session lookup failed), `a26c9ee1` (P5 — `error_code` from the declared vocabulary only,
+class-name fallback, door logs carry the code and never the text, contract doc updated),
+`60326067` (P6 — the 12 not_evaluated reason strings survive the scrub, list pinned by AST to
+what the runners actually spell). 59 mutation runs: 57 killed outright, 2 first-time survivors
+fixed by tightening tests then killed. Wide lane 12724 passed with 10 failures all verified
+pre-existing or base-flaky; DB lane green but for the known data_discovery drift. Controller
+ruling on the implementer's commit-policy question: production edits committed on the dedicated
+lane branch by named pathspec are this batch's sanctioned design (the new-files+test-edits-only
+rule governs primary trees outside SDD batches).
 
 ### Lane T — built 2026-09-24, adversarial review running
 
