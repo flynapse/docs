@@ -214,7 +214,9 @@ colleague-era (`54a01f39`).
    Improvements. Reviewer writes an incremental claims file under
    `~/.claude/scratch/privacy-hygiene-batch/<lane>/`.
 2. Merge per lane after its verdict (copilot-mro order P → I → T, full lane rerun after each);
-   estate-wide full lanes at the end on the merged trees.
+   estate-wide full lanes at the end on the merged trees. **Lane S (utils) must land as a true
+   MERGE — never rebase or squash it**: the S5 ratchet anchors on the adoption commit, and a
+   rewritten history turns the guard red (fails closed, measured) until its anchor is updated.
 3. **Single Fable 5 pass** over the combined privacy diff only (lanes S + P + T5, pinned SHAs) —
    the pre-push gate. P0/P1 fixed before push; everything else recorded.
 4. Owner pushes; nothing is published.
@@ -237,7 +239,64 @@ colleague-era (`54a01f39`).
 - `persist-credentials: false` estate-wide (R-7, if deferred).
 - telegram-bot `FailureFormatter` + PP-TG-14 re-triage (R-6, if deferred).
 - Detector adoption beyond utils (core → api → copilot-mro → telegram → shift, the merge plan's order).
-- basicConfig census remainder from S4, if any.
+- basicConfig census remainder from S4, if any. *(Measured by lane S: zero uncovered in-scope
+  scripts — all 10 copilot-mro basicConfig scripts import utils and are covered by the
+  record-factory fix; telegram-bot stays with R-6.)*
+
+*From the lane S review (P2/P3, recorded not blocking; evidence under
+`~/.claude/scratch/privacy-hygiene-batch/S/review/`):*
+- **Estate-wide loguru pre-sink leak (P2):** loguru formats the exception before any sink runs;
+  if that formatting raises (measured with a SyntaxError carrying a non-integer offset), loguru's
+  own error handler prints the whole record — exception text included — to stderr, through both
+  the lambda sink and utils' default sink. Predates the lane. Fix sketch: a patcher moves the
+  record's exception into an extra so loguru never formats it and sinks render from the extra.
+- dynamodb health bodies still carry raw `Error.Code` unchecked at :1667/:1717-1718;
+  `aws_error_code()` exists and would close it (P2).
+- Stale prose: `log_bridge.py:58` ("33 format_exc sites left"), the stdout-sinks test :128
+  ("still writes 32 times"), spans guard :156 ("sibling LOG sweep" — deleted) (P3).
+- The S1 mutant script targets the deleted old guard; superseded by S5's L1–L6 (P3).
+- dynamodb `delete_by_prefix`/`delete_by_contains` dry-run lines log prefix values and sample
+  item keys/values — predates the lane, outside S1's named sites (P3).
+- flynapse-otel's stderr handler silently drops a record whose format fails where utils writes a
+  constant + template — no leak, but the failure goes invisible (P3).
+- The Lambda runtime's stdlib root handler would render third-party library records in full; no
+  live site today, no declared limit (P3).
+- Cognito PostConfirmation still logs the opaque `userAttributes.sub` (P3; not a name/email/phone).
+
+*From the lane S implementer:*
+- utils' `intercept._TypesAndFramesFormatter` duplicates `flynapse_otel.logging.TypesAndFramesFormatter`;
+  utils should import the otel copy once both lanes are merged (deferred: the symbol exists only
+  on hyg-sink until then).
+- dynamodb debug lines still log key VALUES (get/update/delete_item, put_item id) — identifiers,
+  not payloads.
+- stdlib `Handler.handleError` still prints the template + args on a failed %-format (declared in
+  the `_stdlib_records` docstring).
+- lambdas repo has no `tests/_root.py` and no layout/depth guards; its smoke test uses `parents[2]`.
+- telegram-bot's telemetry test docstring names the deleted utils guard path (out of lane S's trees).
+- utils' span sweep overlaps the shared detector's span rules; retire in a later adoption pass.
+- The `_root.py` debt register could adopt the same merge-base ratchet.
+
+*From the lane I implementer (`~/.claude/scratch/privacy-hygiene-batch/I/NOTES.md`):*
+- `tests/db/chat_history/test_chat_history_roundtrip.py:33-65` has the same collection-time-stub
+  /teardown-restore flaw as work_orders had; masked today by agent_state's concrete-import workaround.
+- 43 of 63 `ensure_package` caller files have no restoring helper (grep heuristic; census in
+  `I/ensure-package-no-restore-census.txt`). Self-enforcing fix = the collection-finish placeholder
+  check from the test-hygiene audit (§6 item 7, never landed); `_sdk_loader.repair_stubbed_copilot_packages`
+  skips anything with a `__path__` so it never repairs these.
+- A production clock seam in `lang_agent/controls.py` would let the I3 test stop patching a module
+  global.
+- tests/db/tenancy/test_data_discovery_rls_isolation.py: 12 pre-existing errors — test-DB schema
+  drift (`data_discovery_jobs.object_count` NOT NULL) — needs its own triage.
+
+*From the lane D implementer (`~/.claude/scratch/privacy-hygiene-batch/D/NOTES.md`):*
+- 29 of the 48 moved files fail Prettier — identically at base; no CI Prettier gate, so not reformatted.
+- The depth guard cannot see paths Playwright resolves against the CONFIG file's directory
+  (the `outputDir` kind); the one live site was fixed by hand.
+- The depth guard tracks variables per name across the whole file, not per scope (can over-report,
+  like the Python original).
+- `tests/fixtures/` holds 14 flat support files outside the layout rule (not test files).
+- Nested tests' remaining `../../../X` relative imports fail loudly but could move to `@/`.
+- `lib/api/invitations-api.ts:36` names a test file that does not exist (research side-finding).
 
 ## Lessons
 
@@ -246,3 +305,46 @@ _(plan-scoped; append after any owner correction: what was tried, what was corre
 ## Implementation notes
 
 _(per lane, filled as work lands)_
+
+### Lane S — built + reviewed MERGE-READY (0 P0/P1), 2026-09-24
+
+Branch `hyg-sink`: utils `105edf5`/`27b19c8`/`e2591d0`/`87d46d1`/`3f78805`, flynapse-otel
+`3d2605a`/`9b0ff9f`, lambdas `4e0a58d`/`606c1b0`. Full lanes green modulo 5 pre-existing
+workspace-caused utils failures (cross-repo checkout census; also fail at base). Recipe
+correction: utils tests need `POSTGRES_DB=copilot_mro_test` or the conftest db_guard refuses.
+Notable deviations, all reviewed sound: S1 paid dynamodb+migrate down whole (old guard could only
+excuse whole modules); S2 additionally removed the Cognito EVENT DUMP (email/phone/username/code
+logged every invocation) in the separable commit `606c1b0` — reviewer verdict TAKE; S4 fixed the
+RECORD factory instead of per-script edits (covers all 10 copilot-mro basicConfig scripts through
+their utils import); S5 landed register+policy one commit before guard adoption to satisfy the
+ratchet's no-deletion rule. The adversarial reviewer re-ran resolve proofs, full lanes,
+red-befores, 14 mutants, planted 13 leak shapes (all caught), proved the ratchet fails closed
+under squash/rebase, and confirmed the S2 `diagnose=True` equivalence from loguru 0.7.3 source.
+Merge constraint: true merge only (see Review & merge protocol). Findings triage: P2/P3 →
+Future Improvements above; nothing blocking.
+
+### Lane I — built 2026-09-24, adversarial review running
+
+Branch `hyg-isolation`: `7ac98ec4` (I1 + the measured work_orders twin, 13 collection errors → 0),
+`29e9f416` (I2 — real-`__path__` stand-in + scoped restore; deliberately NOT ensure_package, which
+reuses an already-imported real package and leaks with no undo), `6cb02b5c` (I3 — held-clock
+seam; the deadline window is spent only while the call is in flight; `held_reads` pins the seam;
+20/20 `-n 4` reruns; tolerates 150/1500 ms injected pre-start delay). All test-side. Full
+tests/unit `-n 4`: 7310 passed / 11 skipped. 12 pre-existing data_discovery db errors recorded
+under Future Improvements.
+
+### Lane D — built 2026-09-24, adversarial review running
+
+Branch `hyg-g54`: `b1027c9` (48 pure renames, R100), `d4f5171` (83 specifiers → `@/`; six path
+comments), `f5123a6` (depth fixes — **9 sites in 7 files, not the researched 5**, incl.
+Playwright `outputDir`; `tests/fixtures/repo-root.ts` re-anchored to `__dirname` for Playwright
+CJS compatibility), `6826483` (layout + AST depth guards; planted violations go red). Test
+name-set identical to base; typecheck/lint clean; `next build` never run. The one failing test
+needs a sibling `core-hyg` checkout by name (no fallback, fails at base too) — the controller
+created `core-hyg` (core @ `c8c4fb3`) so the lane can run fully green; reviewer verifies.
+
+### Lane T — launched 2026-09-24
+
+Nine `hyg-tiny` worktrees created off the pushed bases (mro/api/iac + six workflow-permissions-only
+trees for T2). T5 lands constant + `error_type` immediately; `error_code` wiring is gated on P5's
+landed shape and T5 merges only after P5.
