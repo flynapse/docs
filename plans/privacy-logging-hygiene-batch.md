@@ -73,27 +73,27 @@ Research correction the implementer must know: the sink layer is **already frame
 human sink :328-340, OTLP withholding in flynapse-otel `withholding.py:563`). What remains is text the
 sink cannot identify (no exception object) and processes that never reach these sinks.
 
-- [ ] **S1 — utils message-embedded sites.** `dynamodb_service.py` :747, :1645 (`{e}`/`Error.Message`
+- [x] **S1 — utils message-embedded sites.** `dynamodb_service.py` :747, :1645 (`{e}`/`Error.Message`
   in the message), :1373/:1378 (`{kwargs}` payloads — request payloads in a log body);
   `scripts/migrate_weaviate_collection.py` :124, :176 (and the text preceding the baked traceback at
   :388). Replace with constant messages + `failure_fields`; kwargs become key-names-only. Red-before
   guard extension in `tests/unit/observability/test_utils_logs_no_exception_text.py`; mutation proof
   per site (`mutant.sh` aimed at the guard).
-- [ ] **S2 — cognito lambda (gated on R-1).** `lambdas/cognito-lambdas/app.py`: its own sink at :24-25
+- [x] **S2 — cognito lambda (gated on R-1).** `lambdas/cognito-lambdas/app.py`: its own sink at :24-25
   (string format, `diagnose` default ON), `logger.exception` at :426/:465, `str(e)` at :63/:124/:136.
   Reconfigure the sink `diagnose=False, backtrace=False` with a frames-only format; replace the three
   message-embedded sites with type names. Self-contained (no new dependency on utils/otel unless one
   already exists). Add the lambda's first log-privacy test; note the repo's own test layout must follow
   the two-level rule from day one.
-- [ ] **S3 — flynapse-otel stderr router.** `flynapse_otel/logging.py:87-89` routes the
+- [x] **S3 — flynapse-otel stderr router.** `flynapse_otel/logging.py:87-89` routes the
   `opentelemetry` logger through a plain formatter — swap to the frames-only rendering already in
   `failure.py`; pin with a planted-exception test.
-- [ ] **S4 — `basicConfig` entrypoints (bounded).** Census scripts that configure stdlib logging
+- [x] **S4 — `basicConfig` entrypoints (bounded).** Census scripts that configure stdlib logging
   without `setup_logging` (the G.117 class) in utils + copilot-mro `scripts/`; adopt `setup_logging`
   (or the `ExtrasInMessageRecord` factory where a root handler is forbidden — constraint: utils must
   NOT install a root handler on this path or `basicConfig(level=)` breaks). Cap: fix what the census
   finds, list the remainder in Future Improvements with counts.
-- [ ] **S5 — adopt the shared detector in utils.** Replace utils' own guard (membership backlog +
+- [x] **S5 — adopt the shared detector in utils.** Replace utils' own guard (membership backlog +
   floor, no merge-base ratchet) with `flynapse_otel.testing` exception-text detector (corpus 1617
   rows) + ratchet register, per the merge plan's adoption order (utils first; **no other repo adopts in
   this batch**). Acceptance: ratchet green at HEAD, one seeded regression is caught (mutation-style
@@ -106,7 +106,7 @@ sink cannot identify (no exception object) and processes that never reach these 
 All in `copilot_mro/app/services/agent_shared/llm_content_capture.py` unless noted; capture code is
 colleague-era (`54a01f39`).
 
-- [ ] **P1 — #34 phone redaction (gated on R-2).** Widen `_PHONE_LABEL_RE` (:102-105): label set
+- [x] **P1 — #34 phone redaction (gated on R-2).** Widen `_PHONE_LABEL_RE` (:102-105): label set
   (phone/ph/mob/mobile/telephone/tel/contact/whatsapp + "phone number"), optional filler words before
   the separator, and separator-formatted international forms adjacent to a label. Never bare digit
   runs. New tests: labelled/prose-labelled/formatted numbers redacted; ATA refs, dates, part numbers
@@ -114,19 +114,19 @@ colleague-era (`54a01f39`).
   U+00AD soft hyphens and en-dashes appear inside AMM-derived text and have broken regexes here
   before; one test plants each. Bump `LLM_TURN_CONTENT_REDACTION_VERSION` (:25) to v2 in the same
   commit as the pattern change.
-- [ ] **P2 — #35 truncate-before-redact.** `_redact_and_bound_text` (:537-553) cuts at :545 then
+- [x] **P2 — #35 truncate-before-redact.** `_redact_and_bound_text` (:537-553) cuts at :545 then
   redacts at :546. Fix shape: cut with a bounded margin, redact, re-cut to budget — the DoS guard
   (`test_llm_content_capture_privacy_red.py:494-527`, redactor input ≤ 4× budget, monkeypatches
   `_redact_generic_text` by name) must stay green. Extend or retire the 128-char tail compensator
   (:556-562) — it has no email/JWT/AWS-key/phone clause; its pinning tests (:260-361) update with it.
   Mutation proof: a secret straddling the old cut boundary is now caught.
-- [ ] **P3 — eval-writer liveness gate.** Two seats: (i) runner-side — skip judging (and therefore the
+- [x] **P3 — eval-writer liveness gate.** Two seats: (i) runner-side — skip judging (and therefore the
   Phoenix annotation, which `runner.py:126-140` writes BEFORE Postgres) for chats with `deleted=true`;
   (ii) write-side — `results_store.py:68-77` refuses when the chats row exists and is deleted. **The
   gate must treat a missing chats row as live** (golden-set/harness/db rows have none — the join-gate
   pattern silently drops them; follow the `signals.py:35-50` pattern). Tests: deleted chat → no new
   annotation, no new row; golden-set row still lands; the `not_evaluated` path per R-4.
-- [ ] **P4 — Phoenix scrub on delete (gated on R-3).** On `delete_chat` (single transaction,
+- [x] **P4 — Phoenix scrub on delete (gated on R-3).** On `delete_chat` (single transaction,
   `chats.py:372-431`), best-effort scrub of the Phoenix session (session id = chat id on current
   traces) — failure never fails the delete, and the miss is replayable: a script sweeping the
   deleted-chat copies (`deleted_chat_copies.py`) deletes their sessions in bulk and finds pre-scheme
@@ -136,32 +136,32 @@ colleague-era (`54a01f39`).
   keys, `internal` project, `__SYSTEM__` tenant): it operates only on ids drawn from the deleted-chat
   copies, and a test proves a golden session id passed by mistake is refused. Tests with a faked
   client: inline scrub called with the right id; failure path logged frames-only; script idempotent.
-- [ ] **P5 — F-R2 `error_code`.** Add an optional bounded `error_code` to `PipelineResult`
+- [x] **P5 — F-R2 `error_code`.** Add an optional bounded `error_code` to `PipelineResult`
   (`_result.py:15-40`): populate at `pipeline.py:866` from the `StructuredError` code **already in
   hand and dropped today**, and at `pipeline.py:840` via `turn_facts.turn_error_type` (the existing
   17-code vocabulary — reuse, don't invent); thread through `legacy_adapter.py:407/:543`. Log it at
   the two constant-message sites (`chat_management.py:1260-1264`, :1641-1646). Update
   `integration-contract.md` §2. Tests: code present on failed results, absent on success; the
   log-privacy guard (`test_agent_sdk_ordinary_log_privacy.py:642/661`) and lifecycle pins stay green.
-- [ ] **P6 — scrub exemption (after R-4).** Apply the ruled treatment of the 12 `not_evaluated`
+- [x] **P6 — scrub exemption (after R-4).** Apply the ruled treatment of the 12 `not_evaluated`
   templates (`runner.py:266-291`, `citation_coverage.py:167-190`, `session_runner.py:321-328`) in
   `SCRUB_EVAL_EXPLANATIONS_SQL` (`deleted_chat_copies.py:218-225`); pin with a prefix-id control test
   as the scrub plan did.
 
 ### Lane I — isolation bugs (worktree `copilot-mro-hyg-iso`, branch `hyg-isolation`)
 
-- [ ] **I1 — memory `sys.modules` leak (reproduced: 62 passed / 8 errors).** The `memory_db` fixture
+- [x] **I1 — memory `sys.modules` leak (reproduced: 62 passed / 8 errors).** The `memory_db` fixture
   (`tests/unit/memory/test_memory_operator_attribution.py:409-418`, real-name copy :57-63) leaves a
   stand-in package behind; `test_nonagent_lifecycle_spans.py` then errors on `app/api/memory.py:35`.
   Fix: save/restore `sys.modules` in the fixture's teardown. Same flaw fixed in
   `tests/db/work_orders/test_work_order_tree_roundtrip.py:33-50,70` (latent twin). Proof: the R3 repro
   command flips to 70 passed / 0 errors; each file still green alone.
-- [ ] **I2 — `test_seed_dev_tenant.py` alone (reproduced).** Its stand-in `copilot_mro.app.services`
+- [x] **I2 — `test_seed_dev_tenant.py` alone (reproduced).** Its stand-in `copilot_mro.app.services`
   (:301-317) is not a package, so `scripts/seed_dev_tenant.py:1052` → `:319` can't import
   `weaviate_boot_check`. Fix: make the stand-in a real package (set `__path__`, or stub via
   `tests/_package_stubs.ensure_package` — reuse, don't hand-roll). Proof: the file passes ALONE and in
   its lane.
-- [ ] **I3 — `[deadline]` flake.** `test_backend_lifecycle_and_failures.py:806-845`: the 50 ms
+- [x] **I3 — `[deadline]` flake.** `test_backend_lifecycle_and_failures.py:806-845`: the 50 ms
   deadline (:822) can expire under xdist before the model call starts; the :826 wait then times out.
   Fix: a deadline generous under load with the :831 wait kept strictly larger; assert the mechanism
   (deadline observed) not the timing. Proof: 20 consecutive runs green under `-n 4` (one slot-gated
@@ -169,13 +169,13 @@ colleague-era (`54a01f39`).
 
 ### Lane D — dashboard G.54 (worktree `dashboard-hyg`)
 
-- [ ] **D1 — move the 48 flat files** into `tests/unit/{chat(25), optimizer(15), auth(4), memory(3),
+- [x] **D1 — move the 48 flat files** into `tests/unit/{chat(25), optimizer(15), auth(4), memory(3),
   security(1)}` (per-file table in R3's report; six files have a recorded second choice — take the
   first). Fix the 83 `'../../X'` imports (prefer the `@/` alias, which the runner resolves), **no
   blind replace** (`optimizer-wizard-state.test.ts:752` holds a path-like string as test data);
   update the six stale path comments. Acceptance: unit lane 2533+/0 with canonical flags, `npm run
   typecheck` clean, `npx next lint --file` over moved files clean.
-- [ ] **D2 — layout guards (the rule becomes self-enforcing).** New `tests/unit/infra/` node:test
+- [x] **D2 — layout guards (the rule becomes self-enforcing).** New `tests/unit/infra/` node:test
   guards: two-level layout + globally-unique basenames (TS port of `test_test_layout_rules.py`), and
   the depth-coupled-path guard — fixing the five existing depth-coupled sites it flags (e.g.
   `auth/public-paths-single-source.test.ts:37`, `automations/deepLinkConsumption.test.ts:178`).
@@ -184,25 +184,25 @@ colleague-era (`54a01f39`).
 
 ### Lane T — tiny estate items (worktrees `copilot-mro-hyg-t` branch `hyg-tiny`, `api-hyg`, `iac-hyg`, + one-file edits in utils/core/dashboard/flynapse-otel workflows)
 
-- [ ] **T1 — fix the red `otel-tests` CI lane first** (red on the last 3 pushes: 3 collection errors —
+- [x] **T1 — fix the red `otel-tests` CI lane first** (red on the last 3 pushes: 3 collection errors —
   the lane installs only pytest+pyyaml but now collects tests importing `loguru`/`utils`). Diagnose,
   then either scope collection to the otel statics or install the two deps; acceptance = a green run
   reachable from the workflow's own steps executed locally.
-- [ ] **T2 — E-R2 `permissions: contents: read`**, top-level, in all 16 workflow files (7 repos; plus
+- [x] **T2 — E-R2 `permissions: contents: read`**, top-level, in all 16 workflow files (7 repos; plus
   lambdas + llm-platform per the estate-wide wording). iac: top-level in `terraform-plan.yaml` /
   `terraform-apply.yaml` ONLY — the guard-lane test (`test_workflows_gate_on_the_guards.py:44-47,145`)
   whitelists `guards.yaml` keys, and a called workflow inherits its caller's cap. The approval flow
   (secret comparison + stored `GIT_TOKEN`) is untouched by `contents: read`.
-- [ ] **T3 — E-R1 (gated on R-5).** Delete `otel-tests.yml:42-55` (the never-stored
+- [x] **T3 — E-R1 (gated on R-5).** Delete `otel-tests.yml:42-55` (the never-stored
   `WORKSPACE_READ_TOKEN` steps), or move per the owner's alternative.
-- [ ] **T4 — Weaviate pin.** Pin `semitechnologies/weaviate:1.34.8` (live dev digest-verified) at:
+- [x] **T4 — Weaviate pin.** Pin `semitechnologies/weaviate:1.34.8` (live dev digest-verified) at:
   `deployment/docker-compose.yml:222`, `deployment/demo/docker-compose.yml:35`,
   `deployment/poc/docker-compose.yml:187`, `deployment/weaviate-local/weaviate-docker-compose.yml:4`,
   and the `chat-eval.yml:37` fallback; correct the stale `1.22.4` doc snippet. Extend the existing
   image-pin test to cover the standalone file it misses. **Deploy note for the owner:** demo/POC boxes
   are unmeasured — recreating their containers on the pin may upgrade them in place; bind mounts
   persist data, and the restart trap (stop/start, never re-provision) applies.
-- [ ] **T5 — api executor log site.** `api/flynapse_api/automations/executor.py:1416-1420` logs
+- [x] **T5 — api executor log site.** `api/flynapse_api/automations/executor.py:1416-1420` logs
   `result.error` in an f-string — constant message + `error_type` (+ `error_code` once P5 is merged;
   T5 merges after P5). Guard test in api's suite; joins the Fable-pass scope.
 
@@ -223,11 +223,11 @@ colleague-era (`54a01f39`).
 
 ## Decision packets (controller-authored appendices, no agents)
 
-- [ ] **G.17 packet:** the current census (27 instruments carry `tenant_id` uncapped — deliberate, not
+- [x] **G.17 packet (RULED: approved as authored, owner 2026-09-24):** the current census (27 instruments carry `tenant_id` uncapped — deliberate, not
   a violation; merge-pass recommendation: do NOT tenant-scope the four new instruments; histograms
   already stripped per M-GENAI-TENANT) → a one-page allow-list table with per-instrument recommendation
   for the owner to tick.
-- [ ] **C4 packet:** measurement recipe (docker stats against the compose smoke, which boots and tears
+- [x] **C4 packet (RULED: recommended budgets approved, owner 2026-09-24):** measurement recipe (docker stats against the compose smoke, which boots and tears
   down cleanly) + a recommended budget from the captured numbers; the owner picks the number.
 
 ### C4 packet — observability-stack resource budget (measured 2026-09-24; owner picks the number)
@@ -256,7 +256,7 @@ idle-floor-derived — the stack was receiving no ingest — so they are a sane 
 load test; revisit from real ingest telemetry once the C2 post-deploy trio is live, and declare
 the numbers in the compose files (`deploy.resources` / `mem_limit`), which currently declare
 none.
-- [ ] **B14 packet:** condense the decision sheet's recommendation (1) (DB-enforced tenant-delete
+- [x] **B14 packet (RULED: skeleton approved, owner 2026-09-24):** condense the decision sheet's recommendation (1) (DB-enforced tenant-delete
   authorization) into a mini-plan skeleton for its own later project.
 
 ### G.17 packet — tenant-scoped instrument allow-list (authored 2026-09-24; owner ticks)
@@ -510,6 +510,14 @@ problem, no more shape patching. Recommendation (1), deferred to its own project
 - `lib/api/invitations-api.ts:36` names a test file that does not exist (research side-finding).
 
 ## Review — final gate + close-out (2026-09-24)
+
+> **PUSHED 2026-09-24 — BATCH CLOSED.** Owner ruled "agree with all" on the three packets and
+> authorized the push; all nine repos pushed and measured by ls-remote at the tips below. Two
+> riders went with the branches, unavoidable as ancestors: api's previously-local evals-lock
+> commit `a615740`, and lambdas' image-level diagnose fix `1153a7a` (its remote sat at
+> `c5a29d8`). llm-platform's push CREATED `parity-p3` on the remote (first push of that branch);
+> its workflow-permissions line reaches the default branch whenever parity-p3 lands there. The
+> 16 hyg worktrees and their branches were removed merge-checked after verification.
 
 **Final Fable 5 pass (the batch's single Fable spend): PUSH-CLEAN — 0 P0/P1** over the pinned
 combined privacy diff (utils `f1d490b..28b87d8` · flynapse-otel `c93a9c9..c8b6d92` · lambdas
