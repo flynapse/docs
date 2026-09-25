@@ -436,6 +436,12 @@ NAMED `main`). Roots `shift_optimizer`, `scripts`. New files in `tests/unit/tele
   (`8f27e4f`) tracks sink KINDS, so a `raise SystemExit(token)` added inside `_run_turn` is still absorbed (the token
   already reaches a raise there); the retired guard refused it. Complete fix: the detector reports the sinks a
   helper-call's value reaches (or folds per-kind sink counts into the site fingerprint); then drop the pin.
+  Interim small fix (re-review): a plain AST read pin (~15 lines) holding `_run_turn`'s `token` and
+  `continue_chat_id` to one load each, as `stream_turn`'s arguments — catches `SystemExit(token)`, but not a
+  `SystemExit` of a derived value, and flags harmless new reads of the token.
+- **FI-TG-5 — The reach pin compares `Finding.detail` byte for byte** (it embeds a 40-character `unparse` of each
+  argument), so a cosmetic flynapse-otel change to `detail`'s format fails the pin while the register stays clean.
+  A structured field on `Finding` would be sturdier (fix-wave re-review).
 - **FI-CORE-3 / FI-MRO-12 — `request_identity` SANCTIONED seats are absorbable** (widening the `except` at core
   `request_identity.py:98`/`:120` still reconciles clean; api and telegram pin their seats by shape) — add a seat
   shape pin like api's (L2 M-1).
@@ -445,6 +451,8 @@ NAMED `main`). Roots `shift_optimizer`, `scripts`. New files in `tests/unit/tele
   allowed by the floors ruling) (L1 M-5).
 - **FI-MRO-13 — Stale floor comment:** `FAILURE_FIELDS_FLOORS` reindex entry says `# true 6`; after `2e88cdfb` the
   true count is 7 (floor 5 still valid).
+- **FI-CORE-4 — Pre-existing count slip, same family as FI-CORE-2:** `tests/api/tenancy/test_tenant_teardown.py:1040`
+  says "the two fixed sentences the success body carries" but iterates three names (fix-wave re-review).
 
 ## Owner decisions raised by this batch (not yet ruled)
 
@@ -555,7 +563,18 @@ _(per task, filled as work lands)_
   (detail pin reads HTTPException under broad handlers — a widened relay handler was unseen), `2e88cdfb` (D1 reindex
   schema-probe leak), `190e9972`, `1f24b66e` (docstrings); telegram-bot `8f27e4f` (`REGISTERED_HELPER_REACH` pin — a
   new log line inside `_run_turn` was absorbed); core `bf14bad` (422 entry SANCTIONED + docstring slips); shift
-  `3e13fcf` (true `_record_failure` reason). Scoped re-review of all four ranges pending at this note; then merge.
+  `3e13fcf` (true `_record_failure` reason).
+- Scoped re-review (Opus): all 7 ADDRESSED — PASS; every fix mutant KILLED (the L1 widening plus two more relays; the
+  reindex revert; the token log, `exit()` and a derived-value log in `_run_turn`); the declared `SystemExit(token)`
+  residual survives as disclosed (FI-OTEL-12). Two Minor wording slips fixed by the controller before merge, text
+  only: copilot-mro `971813c5` (the detail pin retires only once body findings also carry handler breadth — else
+  deleting it reopens I-1) and core `36ca70d` ("two Refusal-raising validators").
+
+**Fix wave MERGED 2026-09-25 (--no-ff, nothing pushed):** copilot-mro `ea56f459` · core `17699d9` · shift-optimizer
+`f86c6c5` · telegram-bot `a1d1f2a` (api untouched: `f616c3b`). Post-merge at the mainlines: copilot-mro
+observability/document_hub/agent_shared/improvement 3247 passed, 1 skipped · core observability + 422 + disclosure
+sweep 682 passed · shift telemetry 228 passed · telegram-bot full unit 2457 passed. Fix worktrees removed, branches
+deleted.
 
 **Environmental reds (all lanes):** `tests/unit/infra/test_cross_repo_reads_name_their_checkout.py` variant/twin
 tests fail on disk shape (primary checkout suffix `''`, missing or extra `<repo>-*` worktrees) — pre-existing,
