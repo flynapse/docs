@@ -69,7 +69,9 @@ utils `4b67458` · flynapse-otel `438d768`.
   duplicate guard (harmless) or, for a retirement, a shape the replay did not cover.
 - **R-DET-PPTG14:** PP-TG-14 re-triaged as a REAL stderr leak with a one-base drop-in fix (rebase `FailureFormatter`
   on `TypesAndFramesFormatter`) — fixed inside Task 7. Cost if wrong: the bot's stderr lines change shape for
-  third-party records only.
+  third-party records only. *This supersedes, for exception text ONLY, the earlier position that stdout/stderr prints
+  third-party records verbatim; a library's own non-exception words still print as written (see OD-1 for the pilot
+  words that still reach stderr through two PTB records).*
 
 ## Lanes and order
 
@@ -134,25 +136,25 @@ adoption commit). Nothing is pushed.
 packet"). Rows 1–15 are utils' and already live in utils' family registry (R2 §A5: equal). This task codifies
 copilot-mro's rows 16–23. Evidence: R2 §A1–A4.
 
-- [ ] Add a named literal `TENANT_SCOPED_INSTRUMENTS` (frozenset of exactly the eight names `agent.turn.calls`,
+- [x] Add a named literal `TENANT_SCOPED_INSTRUMENTS` (frozenset of exactly the eight names `agent.turn.calls`,
   `agent.model.calls`, `agent.model.cost_usd`, `agent.model.unpriced_calls`, `agent.tool.calls`,
   `agent.tool.attempts`, `agent.subagent.calls`, `agent.ledger.write_failures`) to
   `copilot_mro/app/services/agent_shared/telemetry.py`, beside `_HISTOGRAM_WITHHELD_KEYS` (~:1416–1421), with a
   comment naming the ruling: an instrument gains `tenant.id` only by being added here.
-- [ ] New guard `tests/unit/agent_shared/test_tenant_scoped_instruments.py`, derived from BEHAVIOUR, not source
+- [x] New guard `tests/unit/agent_shared/test_tenant_scoped_instruments.py`, derived from BEHAVIOUR, not source
   text: build `RuntimeTelemetry` on an SDK `MeterProvider` with an `InMemoryMetricReader` (as
   `test_genai_metric_labels._telemetry` does), take a `for_turn` view carrying a tenant, drive every metric
   recorder (R2 §A4(b) lists them, including the priced and unpriced model-usage paths). Assert: (1) every
   instrument object on the telemetry instance produced at least one point (driver completeness — a new
   instrument the driver misses fails); (2) the set of metric names whose points carry `tenant.id` EQUALS the
   literal; (3) no histogram is in the literal or carries `tenant.id`.
-- [ ] Mutation proofs (each must turn the guard red; record mutation + failing test name): drop `tenant.id`
+- [x] Mutation proofs (each must turn the guard red; record mutation + failing test name): drop `tenant.id`
   from `for_turn`; add `tenant.id` to the subagent attributes of a non-listed path or a new counter; empty
   `_HISTOGRAM_WITHHELD_KEYS`; remove one name from the literal.
-- [ ] Text-only updates of the stale "G.17 is OPEN" prose: `tests/integration/otel/test_browser_derived_metrics.py`
+- [x] Text-only updates of the stale "G.17 is OPEN" prose: `tests/integration/otel/test_browser_derived_metrics.py`
   (~:28, :83, :301), `deployment/otel/base.yaml` (~:281, :287), `deployment/otel/README.md` (~:249). That test
   runs in the pytest+pyyaml-only CI lane — do not add imports to it.
-- [ ] Run: the new guard, `tests/unit/agent_shared/`, `tests/integration/otel/` (non-docker), `tests/unit/infra/`.
+- [x] Run: the new guard, `tests/unit/agent_shared/`, `tests/integration/otel/` (non-docker), `tests/unit/infra/`.
 - Recorded fact (no change): in production only five of the eight counters carry a tenant today; the tool and
   subagent counters get one only through `for_turn`, because both runtimes bind those observers unscoped
   (`agent_pipeline.py:263-275, 691-699`). The ruled list keeps all eight (packet rows 20–22 "turn view").
@@ -162,39 +164,39 @@ copilot-mro's rows 16–23. Evidence: R2 §A1–A4.
 **Ruling:** owner approved the C4 packet's budgets (2026-09-24): otel-collector 512 MiB · phoenix 2 GiB · loki
 512 MiB · prometheus 512 MiB · tempo 256 MiB; `cpus: 1.0` and `pids_limit: 128` per service. Evidence: R2 §B.
 
-- [ ] Add service-level `mem_limit`, `cpus`, `pids_limit` (R-C4-SYNTAX) to every BASE definition of the five
+- [x] Add service-level `mem_limit`, `cpus`, `pids_limit` (R-C4-SYNTAX) to every BASE definition of the five
   services (15 blocks) in: `deployment/docker-compose.yml`, `deployment/observability-local/observe-docker-compose.yml`,
   `deployment/poc/docker-compose.yml`, `deployment/demo/docker-compose.yml`, `deployment/docker-compose.phoenix.yml`,
   `deployment/poc/docker-compose.phoenix.yml`. Overlay blocks (no `image:`), including the smoke overlay and the
   phoenix files' otel-collector partials, get none.
-- [ ] New guard `tests/integration/otel/test_compose_resource_budgets.py`, pure YAML (runs in the CI otel lane),
+- [x] New guard `tests/integration/otel/test_compose_resource_budgets.py`, pure YAML (runs in the CI otel lane),
   modelled on `test_grafana_service_health_and_env.py` (`_ComposeLoader` for `!override`/`!reset`, glob-found
   compose files, base blocks = those with `image:`): one `BUDGETS` literal citing the C4 ruling; every base block
   of the five services declares exactly it; no override block sets `mem_limit`/`cpus`/`pids_limit`/`deploy`; the
   scan finds at least 15 base blocks, per service (non-vacuity).
-- [ ] Mutation proofs: change one file's value; drop one block's key; add a key to an overlay — each red.
-- [ ] The commit message states the behaviour change: the collector's `memory_limiter` (`base.yaml:34-37`,
+- [x] Mutation proofs: change one file's value; drop one block's key; add a key to an overlay — each red.
+- [x] The commit message states the behaviour change: the collector's `memory_limiter` (`base.yaml:34-37`,
   80 %) now computes against the 512 MiB cgroup (~410 MiB hard / ~307 MiB soft) instead of host RAM.
-- [ ] If docker is reachable: render every touched stack with `docker compose config` and boot the C4 recipe
+- [x] If docker is reachable: render every touched stack with `docker compose config` and boot the C4 recipe
   (packet) once with the limits in force — all five healthy. If not reachable: record that the boot is owed.
 
 ### Task 3: I3 — the file-backed queue survives a collector crash (copilot-mro, lane M)
 
 **Scope:** R-I3-SCOPE. Design and pitfalls: R2 §C3 (follow it; deviations need a reason in the report).
 
-- [ ] New `tests/integration/otel/test_collector_queue_survives_restart.py`, marker `compose_stack`, skipped
+- [x] New `tests/integration/otel/test_collector_queue_survives_restart.py`, marker `compose_stack`, skipped
   unless `OTEL_COMPOSE_SMOKE=1` and `docker info` succeeds; stdlib + docker CLI only; raw `docker run` on a
   private network with pinned images from `_versions_md.image_pin` and ephemeral loopback ports, modelled on
   `test_alertmanager_delivery_failures.py:250-340`; reuse the smoke helpers rather than copying them.
-- [ ] Positive run: collector with `base.yaml` + `backend-oss.yaml` + `durability-production-oss.yaml` and a
+- [x] Positive run: collector with `base.yaml` + `backend-oss.yaml` + `durability-production-oss.yaml` and a
   uid-10001-owned named volume at `OTEL_FILE_STORAGE_DIR`, backends absent; send N spans + N logs with unique ids;
   wait for the exporters' retry line (proves they reached the queue); `kill -9` and remove; start a new
   collector on the same volume; start Tempo + Loki under their aliases; within a ≥ 60 s deadline all N ids
   arrive; the new collector's `otelcol_exporter_sent_spans_total` / `…_sent_log_records_total` equal N exactly.
-- [ ] Negative control (mandatory): same flow without the durability overlay loses every pre-crash id (canary
+- [x] Negative control (mandatory): same flow without the durability overlay loses every pre-crash id (canary
   proves the backend path works; wait past `max_interval`).
-- [ ] Teardown removes every container, network and volume it created, pass or fail.
-- [ ] A real green run is required to close the task (a skip is not a proof); record the run's output and
+- [x] Teardown removes every container, network and volume it created, pass or fail.
+- [x] A real green run is required to close the task (a skip is not a proof); record the run's output and
   duration in the report. If docker is still unreachable, report BLOCKED with the test committed.
 - Recorded finding (no change): every compose stack mounts the collector's `/tmp` as tmpfs, so the shipped
   queue directory is wiped on stop; durability holds only where a volume is mounted (`base.yaml:443-445`).
@@ -204,13 +206,13 @@ copilot-mro's rows 16–23. Evidence: R2 §A1–A4.
 Worktree `core-res` / branch `res-detector` / base `21cd644`. `AGAINST="origin/master"`. Roots `core`, `scripts`,
 `setup`. New files in `tests/unit/observability/`. Env: shared api venv, `POSTGRES_DB=copilot_mro_test`. R1 §core.
 
-- [ ] Pre-adoption fix: `core/exceptions/__init__.py:1` star re-export → explicit re-export (T8), so the refusal
+- [x] Pre-adoption fix: `core/exceptions/__init__.py:1` star re-export → explicit re-export (T8), so the refusal
   policy resolves. Prove the old re-exported names are unchanged (every name previously exported still imports).
-- [ ] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS`; `refusal_types` = the seven R1 §core item 3 names.
+- [x] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS`; `refusal_types` = the seven R1 §core item 3 names.
   Expected register ≈ 4 entries (`request_identity.py:71/99/121` — SANCTIONED, T9; `http_errors.py:203` —
   OVER-REPORT). Re-measure; the register equals what the scan finds.
-- [ ] Floors (≥ 3 calls rule) from R1 §core item 6, re-counted at the worktree HEAD.
-- [ ] RETIRE: none. KEEP the log guard (misses the return hand-off, T11b), the span guard (misses `_describe()`),
+- [x] Floors (≥ 3 calls rule) from R1 §core item 6, re-counted at the worktree HEAD.
+- [x] RETIRE: none. KEEP the log guard (misses the return hand-off, T11b), the span guard (misses `_describe()`),
   and the column/router/refusal/comment/response-body guards (different properties). Record the two detector
   gaps in the report for the plan's Future Improvements.
 
@@ -220,17 +222,17 @@ Worktree `api-res` / branch `res-detector` / base `a8a3fb2`. `AGAINST="origin/la
 `flynapse_api`. New files in `tests/unit/telemetry/`. Env: shared api venv; run SERIALLY (`-n 0` — a
 `pytest_sessionfinish` hook sets the exit status). R1 §api.
 
-- [ ] Pre-adoption fix (REAL log leak): `flynapse_api/middleware/rate_limit.py:147-150` `_degrade` logs the Redis
+- [x] Pre-adoption fix (REAL log leak): `flynapse_api/middleware/rate_limit.py:147-150` `_degrade` logs the Redis
   exception's repr → constant message + `failure_fields(cause)`; planted-sentinel test proves no exception text in
   the record (red before).
-- [ ] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS`; `column_recorders` = the six R1 §api item 3 names (adds
+- [x] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS`; `column_recorders` = the six R1 §api item 3 names (adds
   zero findings, arms the column rules).
 - [x] Register: the eight raised-message sites → `LATENT`; `executor.py:991,1009` → `OVER-REPORT`;
   `executor.py:1019` and `one_shot.py:236` (`reason` token) → triage each with evidence (`OVER-REPORT` if the
   value is a closed vocabulary, else `OPEN LEAK`) — *post-review: executor's reason leak FIXED (fix round 1)*; `startup/weaviate_partitions.py:91` → `SANCTIONED` (owner
   carve-out `_REMEDIATION_ATTRIBUTES`).
-- [ ] Floors (≥ 3 calls rule) from R1 §api item 6, re-counted.
-- [ ] RETIRE: `tests/unit/telemetry/test_gateway_logs_carry_no_exception_text.py` (59/59) and
+- [x] Floors (≥ 3 calls rule) from R1 §api item 6, re-counted.
+- [x] RETIRE: `tests/unit/telemetry/test_gateway_logs_carry_no_exception_text.py` (59/59) and
   `tests/unit/telemetry/test_api_spans_withhold_exception_text.py` (16/16) — each after its replay. KEEP the
   response-body sweep (60/61, aliased response class T11a), the run-error-column guard (rules 2–3), and
   `tests/_leak_taint.py` while any kept guard imports it.
@@ -243,18 +245,18 @@ merges. `AGAINST="origin/langgraph-merge"`. Roots `copilot_mro`, `scripts`, `dep
 `POSTGRES_DB=copilot_mro_test`. Scan ≈ 56 s / 608 MB (T10) — one scan per process, and say how the lane's
 wall-clock changed. R1 §copilot-mro.
 
-- [ ] Pre-adoption fix (REAL log leaks): the seven `_logger().opt(exception=True)` sites in
+- [x] Pre-adoption fix (REAL log leaks): the seven `_logger().opt(exception=True)` sites in
   `improvement/prompt_hook.py` (~:210) and `improvement/rules_renderer.py` (~:227, :265, :302 and siblings) →
   constant message + `failure_fields(exc)`; planted-sentinel test (red before).
-- [ ] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS` plus the repo reader `block_save_failure_fields` from
+- [x] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS` plus the repo reader `block_save_failure_fields` from
   `copilot_mro.app.api.chat_management_helper`, sinks `{log}` (T4 applies to the self-test).
-- [ ] Register: the broad-exception body echoes (`data_discovery.py` `_detail(exc)` funnels, `document_hub.py`
+- [x] Register: the broad-exception body echoes (`data_discovery.py` `_detail(exc)` funnels, `document_hub.py`
   funnels, `chat_files.py:123,238,381`, `chat_management.py:981,1058,1154,1501`) → `OPEN LEAK body` (their fix is
   a refusal-type conversion like core's B-F2 — it changes dashboard-visible messages, so it is its own owner
   decision); the R1 §copilot-mro item 4 SANCTIONED/OVER-REPORT rows as classified there, each re-verified;
   `ingest_operator.py:108` → triage with evidence.
-- [ ] Floors (≥ 3 calls rule), re-counted.
-- [ ] RETIRE: `tests/unit/observability/test_mro_spans_withhold_exception_text.py` (8/8 + 6/6) and
+- [x] Floors (≥ 3 calls rule), re-counted.
+- [x] RETIRE: `tests/unit/observability/test_mro_spans_withhold_exception_text.py` (8/8 + 6/6) and
   `tests/unit/api_surface/test_no_traceback_response_bodies.py` (5/5) — each after its replay. KEEP the log guard
   `test_no_exception_text_in_logs.py` (138/140 — T11c) with its debt register and ratchet, and the tool-results
   guard (not a detector sink).
@@ -266,16 +268,16 @@ Worktree `telegram-bot-res` / branch `res-detector` / base `47a08b7`. `AGAINST="
 `/home/aditya/Code/telegram-bot/.venv` (the shared venv lacks `telegram`), NO xdist (run without `-n`). R1
 §telegram-bot and §PP-TG-14.
 
-- [ ] Pre-adoption fix — PP-TG-14 (owner-deferred to this re-triage; measured REAL: third-party `exc_info` and
+- [x] Pre-adoption fix — PP-TG-14 (owner-deferred to this re-triage; measured REAL: third-party `exc_info` and
   `%s`-exception records print full messages to stderr): rebase `FailureFormatter`
   (`telegram_bot/failure.py:85-109`) on `flynapse_otel.logging.TypesAndFramesFormatter`, keeping the bot's
   `[Type …]` suffix and `stack` extra. Test with a chained sentinel exception for all three record kinds in R1's
   table (red before for the two third-party kinds); re-run `test_logs_withhold_exception_text.py`.
-- [ ] Policy: readers `failure_fields@telegram_bot.failure` and `headline_of@flynapse_client.errors`;
+- [x] Policy: readers `failure_fields@telegram_bot.failure` and `headline_of@flynapse_client.errors`;
   `seed_attributes={"error"}`. Expected register ≈ 5 keys; each re-verified.
-- [ ] Floors (≥ 3 calls rule) with the counter widened to the detector's `DEFAULT_LOGGER_NAMES` (T7 — the bot
+- [x] Floors (≥ 3 calls rule) with the counter widened to the detector's `DEFAULT_LOGGER_NAMES` (T7 — the bot
   logs through `LOGGER`).
-- [ ] RETIRE: `tests/unit/telemetry/test_logs_carry_no_exception_text.py` (72/72 with the seed) after its replay.
+- [x] RETIRE: `tests/unit/telemetry/test_logs_carry_no_exception_text.py` (72/72 with the seed) after its replay.
   KEEP `test_span_openers_pass_withholding_literals.py` (31/33, T11d), `test_raises_in_handlers_are_unchained.py`,
   and the behavioural withholding tests.
 
@@ -285,11 +287,12 @@ Worktree `shift-optimizer-res` / branch `res-detector` / base `f5f732c`. `AGAINS
 NAMED `main`). Roots `shift_optimizer`, `scripts`. New files in `tests/unit/telemetry/`. Env: shared api venv,
 `POSTGRES_DB=copilot_mro_test`. R1 §shift-optimizer.
 
-- [ ] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS`; no column recorders (the column-writer guard already
+- [x] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS`; no column recorders (the column-writer guard already
   pins that door). Register ≈ 8 entries as R1 classifies them, each re-verified.
-- [ ] Floors: shift has only 3 calls in 2 modules, so the ≥ 3 rule selects none; carry both modules EXACT instead
-  (`app/db/postgres.py` 2, `services/run_executor.py` 1), as utils does for small counts.
-- [ ] RETIRE: `tests/unit/telemetry/test_no_exception_text_on_spans.py` (48/48). SPLIT
+- [x] Floors: shift has only 3 calls in 2 modules, so the ≥ 3 rule selects none; carry both modules EXACT instead
+  (`app/db/postgres.py` 2, `services/run_executor.py` 1), as utils does for small counts. *Post-review: `run_executor`
+  is floored at 2 — the brief's count missed the `RunSignals.log` property (`:346`, `:367`); reviewer-confirmed.*
+- [x] RETIRE: `tests/unit/telemetry/test_no_exception_text_on_spans.py` (48/48). SPLIT
   `tests/unit/telemetry/test_no_exception_text_in_logs.py`: its exception-text rules (59/61 — the two misses are
   format-string rules) retire; the format-string rules move to a new `test_log_messages_are_not_format_strings.py`
   (as utils keeps its own). KEEP `test_kept_error_raise_sites.py` and `test_run_error_column_writers.py`.
@@ -333,12 +336,24 @@ _(per task, filled as work lands)_
 - **Fix round 1 (F1):** "carries tenant" was any-point; now any-point ⇒ listed AND every point of a listed counter
   carries it (reviewer's unpriced-path mutant now KILLED). `base.yaml:281` left as is (still true).
 
-#### Notes: Task 2 — C4 compose budgets: DONE (res-mro `82b3cca9`; review clean) — BOOT CHECK OWED
+#### Notes: Task 2 — C4 compose budgets: DONE (res-mro `82b3cca9`; review clean) — boot check DONE after docker returned
 - 15 base blocks / 6 files; guard `tests/integration/otel/test_compose_resource_budgets.py` (pure YAML).
 - Also added the demo compose + both phoenix files to `test_phase1c_nonagent_scope_guard.py`'s approved paths
   (reviewer proved it necessary and exact).
 - Owed: boot with limits in force, with a load step (phoenix `pids_limit: 128` is tightest); memory_limiter
   watches heap only (tmpfs invisible to it); WSL2 swap can add up to `mem_limit` again (no `memswap_limit`).
+
+#### Notes: Task 3 — I3 queue-survives-crash proof: DONE (res-mro `1fe80187`, `3775a60e`; review clean)
+- `tests/integration/otel/test_collector_queue_survives_restart.py` (marker `compose_stack`, gated on
+  `OTEL_COMPOSE_SMOKE=1` + docker). Live green ×3 (implementer ×2, reviewer ×1): positive ~60 s, in-memory
+  negative control ~107 s. Confirmed live at 0.160: retry line `Exporting failed. Will retry the request after
+  interval.`; sent counters UNSUFFIXED (`otelcol_exporter_sent_spans{exporter=…}`); busybox chown to 10001.
+- Mutants: file_storage removed from the tempo / loki exporter → exactly that signal lost; collector B on tmpfs
+  instead of the volume → both lost (reviewer). Scope: process crash, not host power loss (queue fsync off).
+- Was BLOCKED ~1 h on Docker Desktop's WSL integration (owner re-enabled it); Task 2's owed boot check ran then
+  (all five healthy under load; PIDs ≤ 47; no OOM; see task-2 report).
+
+**Lane M MERGED:** copilot-mro langgraph-merge `89b3e2d4` (--no-ff of `3775a60e`).
 
 #### Notes: Task 4 — core detector: DONE + MERGED (core master `cb4f56e`; review clean)
 - `33a6288` explicit re-export (T8) · `4a2b0bb` adoption: register 4 (3 SANCTIONED request_identity T9 · 1
@@ -351,6 +366,38 @@ _(per task, filled as work lands)_
   `one_shot.py:221` RunReasonError gate (R-DET-TRIAGE amended: a column/persisted leak with an in-repo precedent
   fix is fixed). Final register 7 LATENT · 2 OVER-REPORT · 1 SANCTIONED · 0 OPEN LEAK.
 - Env: api runs need `POSTGRES_DB=copilot_mro_test` + `SIBLING_CHECKOUTS=copilot-mro=/home/aditya/Code/copilot-mro`.
+
+#### Notes: Task 6 — copilot-mro detector: DONE + MERGED (copilot-mro langgraph-merge `e4534758`; review clean after 1 fix round)
+- `60975403` the 7 rules-injection `_logger().opt(exception=True)` warnings → constant + handler-local
+  `failure_fields` (red-before sentinel test) · `b664473a` phase-1c scope approval for the two modules ·
+  `7916e237` adoption: register 66 keys / 77 findings (40 OPEN LEAK body · 15 SANCTIONED · 11 OVER-REPORT), policy
+  = failure_fields + `block_save_failure_fields` reader, 82 floors · `f532447e` span guard retired (15/15; carve-out
+  edges 6/6 caught by the register — stricter), its driven half split to `test_turn_span_withholds_exception_text.py` ·
+  `b6563d6b` api_surface traceback pin retired · `2cbc913e` pointers.
+- **Fix round 1 (I-1):** the retired pin's receiver-agnostic `detail=` rule split back out as
+  `tests/unit/observability/test_detail_keywords_carry_no_caught_text.py` (`68d70dd0`); it found and `39d29467` fixed a
+  live leak — `document_hub/reindex.py:648` put an S3 `head_object` failure's text into a plan item the reindex script
+  prints.
+- Base deviation (ruled): based on `82b3cca9` (Tasks 1+2) rather than waiting for lane M's merge.
+- Report file write was refused by the harness for this implementer; the controller saved it from the hand-back.
+
+#### Notes: Task 7 — telegram-bot detector + PP-TG-14: DONE + MERGED (telegram-bot main `c7292c9`; review clean)
+- `d024402` `FailureFormatter` rebased on `TypesAndFramesFormatter` (third-party `exc_info` and `%s`-exception records
+  no longer print their text; bot lines byte-identical) · `017dce8` adoption: 5 keys / 9 findings (4 SANCTIONED,
+  1 OVER-REPORT), readers `failure_fields@telegram_bot.failure` + `headline_of@flynapse_client.errors`, seed `error`,
+  11 floors · `7f6a600` log guard retired (72/72 leaks, 24/24 encoded rules; 8 `configuration_error` re-bindings
+  → new binding pin) · `66c0eba` wording.
+
+#### Notes: Task 8 — shift-optimizer detector: DONE + MERGED (shift-optimizer main `2332195`; review clean after 1 fix round)
+- `943f853` adoption: 8 entries (6 SANCTIONED, 2 OVER-REPORT), floors exact (run_executor 2 — see Task 8) ·
+  `a7687db` span guard retired (61/61; opener census + splat proof moved into the register test) · `a4b8f2d` log guard
+  split (61/61 exception-text rules retired; 3 format-string rules → `test_log_messages_are_not_format_strings.py`;
+  door-as-value, handler log-call equality, stdlib-logging ban kept in the register test) · `2c53671`.
+- **Fix round 1 (I-1 + M-1):** `516dcd0` split-out rules — loguru `.catch` on ANY receiver, and span-call names as
+  strings / dict keys (the detector recognises neither).
+
+**All eight tasks merged locally 2026-09-25; nothing pushed.** copilot-mro `e4534758` · core `cb4f56e` · api `f616c3b`
+· telegram-bot `c7292c9` · shift-optimizer `2332195`.
 
 **Environmental reds (all lanes):** `tests/unit/infra/test_cross_repo_reads_name_their_checkout.py` variant/twin
 tests fail on disk shape (primary checkout suffix `''`, missing or extra `<repo>-*` worktrees) — pre-existing,
