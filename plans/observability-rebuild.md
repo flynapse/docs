@@ -1523,6 +1523,18 @@ oss restart proof. New owner decisions OD-1..OD-6 are in that plan (bot stderr p
 gated CI run, copilot-mro body echoes ×40 + `/brief`, queue fsync). Push rule: if a remote moved, MERGE it in —
 never `pull --rebase` (the ratchet fails closed on rewritten history).
 
+**2026-09-25 (owner rulings).** **A-R1, C-R1, D-R2 CONFIRMED** (the provisional-ruling confirmations are closed).
+**Portainer residual DONE:** `iac/poc_ec2_setup.sh` pins `portainer-ce:2.45.0`, `iac/demo_ec2_setup.sh`'s stale
+"open owner question" comment now records the keep ruling, and copilot-mro `deployment/otel/VERSIONS.md` names both
+scripts (edits to existing files, left uncommitted per the commit rule). **Shared raw-ASGI helper for the two C9
+abort tests: LEAVE duplicated** (closed). **PP-14 rotation is the owner's own action; not listed again.**
+**Owner-sheet C7 committed** (copilot-mro `e0cdea42`). **Amplify:** AWS docs confirm the check is real — Amazon
+Linux 2 does not support Node 20+, AL2023 defaults to Node 22, new apps default to AL2023 but EXISTING apps keep their
+image until switched (Build settings → Build image settings → Edit); `dashboard/amplify.yml` pins no Node, so on
+AL2023 it builds on 22. The live read (`aws amplify list-apps`) was blocked by an expired SSO token — still an owner
+check. Residual-builds OD-1…OD-6 ruled (that plan): OD-1 hide and OD-5 fix are follow-up builds; OD-4 runs after the
+owner pushes copilot-mro.
+
 ---
 
 ## Appendix A — Draft contract clause: conversation content capture (for legal review; ruling 20)
