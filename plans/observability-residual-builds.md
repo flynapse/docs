@@ -58,7 +58,8 @@ utils `4b67458` · flynapse-otel `438d768`.
   in-memory negative control. aws/azure/newrelic stay config-only (credentials). Cost if wrong: none — narrower
   than I3's full wording, which stays open for the other providers.
 
-- **R-DET-TRIAGE:** detector findings are registered with a TRUE dated reason of one of four kinds (SANCTIONED /
+- **R-DET-TRIAGE** (amended 2026-09-24 at Task 5 review: a column/persisted leak with an in-repo precedent fix
+  is FIXED, not registered): detector findings are registered with a TRUE dated reason of one of four kinds (SANCTIONED /
   OVER-REPORT / LATENT / OPEN LEAK); log/stdout leaks with the house fix are fixed pre-adoption; body/raise shapes
   whose fix changes an HTTP or error contract are registered OPEN LEAK and listed in Future Improvements (owner
   decision). Cost if wrong: copilot-mro's ~12 body-echo sites stay open until that decision.
@@ -224,9 +225,9 @@ Worktree `api-res` / branch `res-detector` / base `a8a3fb2`. `AGAINST="origin/la
   the record (red before).
 - [ ] Policy: `failure_fields` = `ESTATE_FAILURE_FIELDS`; `column_recorders` = the six R1 §api item 3 names (adds
   zero findings, arms the column rules).
-- [ ] Register: the eight raised-message sites → `LATENT`; `executor.py:991,1009` → `OVER-REPORT`;
+- [x] Register: the eight raised-message sites → `LATENT`; `executor.py:991,1009` → `OVER-REPORT`;
   `executor.py:1019` and `one_shot.py:236` (`reason` token) → triage each with evidence (`OVER-REPORT` if the
-  value is a closed vocabulary, else `OPEN LEAK`); `startup/weaviate_partitions.py:91` → `SANCTIONED` (owner
+  value is a closed vocabulary, else `OPEN LEAK`) — *post-review: executor's reason leak FIXED (fix round 1)*; `startup/weaviate_partitions.py:91` → `SANCTIONED` (owner
   carve-out `_REMEDIATION_ATTRIBUTES`).
 - [ ] Floors (≥ 3 calls rule) from R1 §api item 6, re-counted.
 - [ ] RETIRE: `tests/unit/telemetry/test_gateway_logs_carry_no_exception_text.py` (59/59) and
@@ -322,3 +323,35 @@ _(plan-scoped; append after any owner correction: what was tried, what was corre
 ## Implementation notes
 
 _(per task, filled as work lands)_
+
+#### Notes: Task 1 — G.17 guard: DONE (res-mro `f5fa2eb6`, `ed502f8b`, fix `f3a49524`; review clean after 1 fix round)
+- Literal `TENANT_SCOPED_INSTRUMENTS` (8 names) in `agent_shared/telemetry.py`; guard
+  `tests/unit/agent_shared/test_tenant_scoped_instruments.py` derived from recorded points.
+- **Deviation (reviewer-accepted):** turn / ledger / model-usage recorders are driven the way production calls
+  them (unscoped facade, tenant as an argument); only tool and subagent go through `for_turn` — an all-`for_turn`
+  driver let a `record_turn` tenant-drop mutant survive.
+- **Fix round 1 (F1):** "carries tenant" was any-point; now any-point ⇒ listed AND every point of a listed counter
+  carries it (reviewer's unpriced-path mutant now KILLED). `base.yaml:281` left as is (still true).
+
+#### Notes: Task 2 — C4 compose budgets: DONE (res-mro `82b3cca9`; review clean) — BOOT CHECK OWED
+- 15 base blocks / 6 files; guard `tests/integration/otel/test_compose_resource_budgets.py` (pure YAML).
+- Also added the demo compose + both phoenix files to `test_phase1c_nonagent_scope_guard.py`'s approved paths
+  (reviewer proved it necessary and exact).
+- Owed: boot with limits in force, with a load step (phoenix `pids_limit: 128` is tightest); memory_limiter
+  watches heap only (tmpfs invisible to it); WSL2 swap can add up to `mem_limit` again (no `memswap_limit`).
+
+#### Notes: Task 4 — core detector: DONE + MERGED (core master `cb4f56e`; review clean)
+- `33a6288` explicit re-export (T8) · `4a2b0bb` adoption: register 4 (3 SANCTIONED request_identity T9 · 1
+  OVER-REPORT http_errors 422), policy = failure_fields + 7 refusal types, 17 floors. Nothing retired.
+
+#### Notes: Task 5 — api detector: DONE + MERGED (api langgraph-merge `f616c3b`; review clean after 1 fix round)
+- `e2d3b65` rate-limit log leak fixed · `89cf1be` adoption · `6c8a2f4` gateway log guard retired, its Weaviate
+  carve-out SEAT rule split into a shape check (the register alone matched the seat call's own text) ·
+  `25dae5a` span guard retired · **fix round 1 `a68f7b3`:** `executor.py` reason leak FIXED with the
+  `one_shot.py:221` RunReasonError gate (R-DET-TRIAGE amended: a column/persisted leak with an in-repo precedent
+  fix is fixed). Final register 7 LATENT · 2 OVER-REPORT · 1 SANCTIONED · 0 OPEN LEAK.
+- Env: api runs need `POSTGRES_DB=copilot_mro_test` + `SIBLING_CHECKOUTS=copilot-mro=/home/aditya/Code/copilot-mro`.
+
+**Environmental reds (all lanes):** `tests/unit/infra/test_cross_repo_reads_name_their_checkout.py` variant/twin
+tests fail on disk shape (primary checkout suffix `''`, missing or extra `<repo>-*` worktrees) — pre-existing,
+proven identical at base; they change as this batch's worktrees come and go.
