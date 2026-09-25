@@ -18,7 +18,7 @@ Push: Claude may push this work (owner, 2026-09-25); fast-forward or merge only 
   own venv, no xdist. Known env reds: `test_cross_repo_reads_name_their_checkout.py` variants (they move as worktrees
   come and go), Postgres-dependent tests, load-sensitive timing tests.
 
-## Owner decisions needed before the OD-5 build (OD-1 needs none)
+## Owner decisions (ALL RULED by the owner 2026-09-25 as recommended: D1 approve · D2 include · D3 accept · D4 accept)
 
 - **D1 — one ruled policy widening.** copilot-mro's register test refuses ANY new refusal type against the adoption
   baseline. OD-5 needs exactly one (`Refusal`). Proposal: a literal, dated allowance naming that one type inside the
