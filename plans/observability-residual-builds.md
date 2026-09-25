@@ -71,7 +71,8 @@ utils `4b67458` · flynapse-otel `438d768`.
   on `TypesAndFramesFormatter`) — fixed inside Task 7. Cost if wrong: the bot's stderr lines change shape for
   third-party records only. *This supersedes, for exception text ONLY, the earlier position that stdout/stderr prints
   third-party records verbatim; a library's own non-exception words still print as written (see OD-1 for the pilot
-  words that still reach stderr through two PTB records).*
+  words that still reach stderr through two PTB records).* **Superseded 2026-09-25 by OD-1 (HIDE):** stderr now
+  stands in third-party arguments exactly as the OTLP route does (`obs-followups-od1-od5.md` Task 1).
 
 ## Lanes and order
 

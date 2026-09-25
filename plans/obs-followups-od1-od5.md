@@ -43,14 +43,14 @@ Push: Claude may push this work (owner, 2026-09-25); fast-forward or merge only 
 ## Tasks
 
 ### Task 1: OD-1 — stderr renders third-party records like the OTLP route (telegram-bot, lane TG)
-- [ ] Move the stand-in rule (`telemetry.py:520-621`) into `failure.py` behind one public helper; `_scrubbed_copy`
+- [x] Move the stand-in rule (`telemetry.py:520-621`) into `failure.py` behind one public helper; `_scrubbed_copy`
       uses it (OTLP unchanged); `FailureFormatter` formats a copy with it.
-- [ ] `Job` stands in as its name on both sinks (R-OD1-JOB).
-- [ ] Tests per R3 §4: real-PTB stderr assertions for records A and B (sentinel text + `first_name` absent; update id,
+- [x] `Job` stands in as its name on both sinks (R-OD1-JOB).
+- [x] Tests per R3 §4: real-PTB stderr assertions for records A and B (sentinel text + `first_name` absent; update id,
       template, frames present); real `configure_logging` fresh-interpreter case; PP-TG-14 expectation updates;
       bot-line byte-identity parametrised; moved unit tests re-pointed; mutation proofs (a) and (b) KILLED.
-- [ ] One-off census over the full unit lane: every bot record's stood-in body equals its plain message.
-- [ ] Register guard run: 0 new findings. Prose that becomes false edited (R3 §5).
+- [x] One-off census over the full unit lane: every bot record's stood-in body equals its plain message.
+- [x] Register guard run: 0 new findings. Prose that becomes false edited (R3 §5).
 
 ### Task 2: OD-5 foundation (copilot-mro, lane M0) — needs D1
 - [ ] New framework-free `app/utils/refusal.py` (base + three builtin-preserving subclasses; Document Hub upload
@@ -86,6 +86,14 @@ one fix wave, one scoped re-review, then push.
 - **FI-OTEL-13 — estate-wide ruled widenings:** a `ruled=` parameter on flynapse-otel's policy ratchet instead of a
   per-repo literal allowance (D1).
 
+- **FI-TG-7 — OTLP ships exception text passed BESIDE the exception** (pre-existing at `a1d1f2a`): a record passing an
+  exception AND its text (`"%s: %s", exc, str(exc)`, or a template quoting it) exports the text in the OTLP body;
+  stderr withholds it since Task 1. No PTB/APScheduler/httpx call site of this shape is known. Complete fix: in
+  `_scrubbed_copy`, run the exception-quote withholding against the original record before the credential scrub.
+- **FI-TG-8 — standing byte-identity census** (Task 1 review M4): the bot-line identity guard is 12 synthetic kinds; the
+  census over real call sites ran once. A future bot line passing `%s` of a list would silently print `['<str>', …]`
+  (fail-closed). Complete fix: keep the census plugin as a standing test over every `telegram_bot.*` record.
+
 ## Lessons
 
 _(plan-scoped; append after any owner correction)_
@@ -93,3 +101,16 @@ _(plan-scoped; append after any owner correction)_
 ## Implementation notes
 
 _(per task, filled as work lands)_
+
+#### Notes: Task 1 — OD-1: DONE + MERGED (telegram-bot main `bff16ea`; review clean, Spec ✅ / Quality approved)
+- `effb186` stand-in rule moved into `failure.py` (`stood_in_body`); OTLP `_scrubbed_copy` calls it (byte-identical
+  output except `Job` → its name); `FailureFormatter` formats a copy · `fa6fcf6` docstring · `93cb62c` mypy override
+  for `apscheduler.*` (ruled in) · `a28133f` malformed library call prints template + stood-in args (closes the
+  `handleError` raw-args path) · **pre-review fix `9d40f7d`:** the formatter's copy keeps the original msg/args so
+  exception-text withholding stays at `a1d1f2a` parity (an exception passed beside its text had started printing).
+- Proofs: unit 2473 passed; census 0 mismatches (619 records, 154/206 sites + 52 read by hand); mutants (a) stand-in
+  dropped, (b) Update passed through, (c) Job name lost, C1 revert, (v) helper mutates its record — all KILLED
+  (implementer and reviewer, independently). Reviewer planted 33 records on both routes: every pilot-content shape
+  hidden on stderr; OTLP unchanged except the Job case.
+- Deferred minors (final review triages): docstring reflow `failure.py:251`; `telemetry.py:46-49` parity sentence;
+  FI-TG-8.
