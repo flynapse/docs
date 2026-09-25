@@ -1507,6 +1507,20 @@ copilot-mro → telegram-bot → shift-optimizer; PP-TG-14 re-triaged inside the
 `docs/plans/observability-residual-builds.md`. The owner asked for explanations of the three provisional
 confirmations (A-R1, C-R1, D-R2) and the Amplify AL2023/Node 22 step; both still open pending the owner's word.
 
+**2026-09-25 (residual-builds batch, checkpoint).** Plan `docs/plans/observability-residual-builds.md` (ledger
+`.superpowers/sdd/observability-residual-builds/progress.md`, CHECKPOINT 1). All eight tasks DONE, reviewed and MERGED
+LOCALLY, nothing pushed: **G.17** literal + behaviour guard (copilot-mro) · **C4** budgets on 15 compose base blocks
+(boot under load proven once Docker's WSL integration returned) · **I3** collector queue-survives-crash proof (oss,
+traces+logs, live green ×3, in-memory negative control) · **detector adoption** in core `cb4f56e`, api `f616c3b`
+(rate-limit + executor reason leaks fixed; two guards retired), copilot-mro `e4534758` (rules-injection + reindex
+leaks fixed; span guard + traceback pin retired; `detail=` pin split out), telegram-bot `c7292c9` (**PP-TG-14
+fixed** — stderr formatter withholds library exception text), shift-optimizer `2332195`. Final whole-batch review
+(3 Opus lenses) FIX-FIRST → fix wave built on `res-final-fix` (unmerged at checkpoint; scoped re-review running).
+Strike from the list of record: G.17 residual, C4 residual, owner-sheet C7, detector adoption beyond utils, I3's
+oss restart proof. New owner decisions OD-1..OD-6 are in that plan (bot stderr pilot words, swap, phoenix CPU, first
+gated CI run, copilot-mro body echoes ×40 + `/brief`, queue fsync). Push rule: if a remote moved, MERGE it in —
+never `pull --rebase` (the ratchet fails closed on rewritten history).
+
 ---
 
 ## Appendix A — Draft contract clause: conversation content capture (for legal review; ruling 20)
