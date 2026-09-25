@@ -1,0 +1,95 @@
+# Observability follow-ups — OD-1 (bot stderr hides pilot words) + OD-5 (copilot-mro body echoes → refusals)
+
+Owner rulings 2026-09-25 (from `observability-residual-builds.md` §Owner decisions): **OD-1 → HIDE**, **OD-5 → FIX**.
+Research: `~/.claude/scratch/obs-residuals/research/R3-od1-tg-stderr.md` (OD-1) and
+`R4-od5-mro-body-echoes.md` (+ `R4-probe/`) (OD-5). Ledger:
+`/home/aditya/Code/.superpowers/sdd/obs-followups-od1-od5/progress.md`.
+Model policy: implementers and reviewers Opus (owner: "SDD driven, Opus agents"); final review Opus.
+Push: Claude may push this work (owner, 2026-09-25); fast-forward or merge only — never rebase/squash (ratchet).
+
+## Global constraints
+
+- One implementer per worktree; worktrees at sibling depth (`/home/aditya/Code/<repo>-<lane>`), plain `git worktree`,
+  scratch under `~/.claude/scratch/obs-followups/<lane>/`.
+- Every test run through `pytest-slot.sh`; mutation proofs through `mutant.sh`; red-before for every behaviour change.
+- Commits by named pathspec; never `git add -A`, amend, rebase or squash. The exception-text register must EQUAL the
+  scan after every task; the register only shrinks.
+- Env: `DEBUG=false POSTGRES_DB=copilot_mro_test PYTHONPATH=<worktree>`; copilot-mro uses the api venv; telegram-bot its
+  own venv, no xdist. Known env reds: `test_cross_repo_reads_name_their_checkout.py` variants (they move as worktrees
+  come and go), Postgres-dependent tests, load-sensitive timing tests.
+
+## Owner decisions needed before the OD-5 build (OD-1 needs none)
+
+- **D1 — one ruled policy widening.** copilot-mro's register test refuses ANY new refusal type against the adoption
+  baseline. OD-5 needs exactly one (`Refusal`). Proposal: a literal, dated allowance naming that one type inside the
+  register test, going inert once pushed. First post-adoption widening in the estate. Recommend: approve.
+- **D2 — two detector-blind siblings.** Data Discovery `runner.py:61` and `level1.py:1375` persist exception text into
+  `failure_message`, which the dashboard renders and notifications carry. Recommend: include (one type check each).
+- **D3 — status for non-refusal failures.** Data Discovery / Document Hub errors that are not deliberate refusals move
+  from 400/403/404 to 500 (dashboard shows "Something went wrong" toast plus the page's fixed sentence). Recommend:
+  accept (core precedent; a non-refusal is the server's failure).
+- **D4 — `/brief` fallback.** Pilots see "The METAR source failed." instead of scrubbed upstream text.
+  Recommend: accept.
+
+## Controller rulings (pre-flight)
+
+- **R-OD1-JOB:** a PTB/APScheduler `Job` argument stands in as its name on both sinks (job names are the bot's own,
+  not pilot content; without it stderr loses them). Cost if wrong: one small revert.
+- **R-OD1-MOVE:** move the OTLP stand-in rule into `telegram_bot/failure.py` (not duplicate); OTLP output unchanged.
+- **R-OD5-MIXINS:** one `Refusal` base plus builtin-preserving subclasses (value / lookup / permission), status set at
+  the raise site; one shared relay helper; unsure-bucket sites default to the generic fallback (fail-safe: a missed
+  conversion degrades a message, never leaks).
+
+## Tasks
+
+### Task 1: OD-1 — stderr renders third-party records like the OTLP route (telegram-bot, lane TG)
+- [ ] Move the stand-in rule (`telemetry.py:520-621`) into `failure.py` behind one public helper; `_scrubbed_copy`
+      uses it (OTLP unchanged); `FailureFormatter` formats a copy with it.
+- [ ] `Job` stands in as its name on both sinks (R-OD1-JOB).
+- [ ] Tests per R3 §4: real-PTB stderr assertions for records A and B (sentinel text + `first_name` absent; update id,
+      template, frames present); real `configure_logging` fresh-interpreter case; PP-TG-14 expectation updates;
+      bot-line byte-identity parametrised; moved unit tests re-pointed; mutation proofs (a) and (b) KILLED.
+- [ ] One-off census over the full unit lane: every bot record's stood-in body equals its plain message.
+- [ ] Register guard run: 0 new findings. Prose that becomes false edited (R3 §5).
+
+### Task 2: OD-5 foundation (copilot-mro, lane M0) — needs D1
+- [ ] New framework-free `app/utils/refusal.py` (base + three builtin-preserving subclasses; Document Hub upload
+      policy error rebased as a 409 refusal with its dict detail); new `app/api/refusals.py` shared relay helper.
+- [ ] Policy names the one refusal type; the ruled widening allowance (D1) in the register test; plant test copies
+      the refusal module into its tmp tree; census-pin skeleton with one site file per family.
+- [ ] Unit tests of the helper and subclasses (base preservation, status override, dict detail).
+
+### Task 3: OD-5 Data Discovery (lane M1, after Task 2) — needs D2, D3
+- [ ] Relay funnel via the shared helper; route-reachable fixed / caller-safe raises converted with their statuses;
+      internal and library text falls to the fixed fallback; D2 siblings if ruled in.
+- [ ] Red-before sentinel test per error kind; census file; delete the 21 register entries.
+
+### Task 4: OD-5 Document Hub (lane M2, after Task 2) — needs D3
+- [ ] Relay funnel via the helper; substring status ladder removed (status at the raise); route enum parse refused
+      with a fixed sentence; conversions; sentinel tests; census file; delete the 12 entries.
+
+### Task 5: OD-5 chat uploads/read + `/brief` (lane M3, after Task 2) — needs D4
+- [ ] R1–R7 relays via the helper (status at the raise; "disabled" 403 kept); R2/R3 fallbacks; `/brief` fallback;
+      conversions; sentinel tests (replacing `test_brief_endpoint_logic.py:585-596`); census file; delete 7 entries.
+
+## Review & merge protocol
+
+Per task: implementer → task reviewer (re-runs proofs) → fix rounds → merge `--no-ff` into the mainline. Tasks 3–5
+share only the register JSON (disjoint entry blocks) → mechanical union at merge. Final whole-batch review (Opus),
+one fix wave, one scoped re-review, then push.
+
+## Future Improvements
+
+- **FI-TG-6 — `BaseRequest` raw-body line** (`telegram/request/_baserequest.py:399`): a non-JSON response body prints
+  verbatim on BOTH sinks (a direct string argument). Unlikely to carry pilot words (proxy/HTML error pages); complete
+  fix: stand in direct string arguments of that one logger/template, or cap and hash the body.
+- **FI-OTEL-13 — estate-wide ruled widenings:** a `ruled=` parameter on flynapse-otel's policy ratchet instead of a
+  per-repo literal allowance (D1).
+
+## Lessons
+
+_(plan-scoped; append after any owner correction)_
+
+## Implementation notes
+
+_(per task, filled as work lands)_
