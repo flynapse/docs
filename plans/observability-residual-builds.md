@@ -319,6 +319,153 @@ NAMED `main`). Roots `shift_optimizer`, `scripts`. New files in `tests/unit/tele
 - Compose stacks mount the collector's `/tmp` as tmpfs; if a durability overlay is ever layered onto a compose
   stack it needs a real volume, and the tmpfs counts against the 512 MiB budget (R2 §B2, §C1).
 
+### From the final whole-batch review (L1/L2/L3, 2026-09-25) — ready text from `final-review-L3-completeness.md` Q4
+
+#### flynapse-otel (detector)
+- **FI-OTEL-1 — Follow a caught exception's text RETURNED by a helper (T11b), to logs, spans, stdout and bodies.**
+  Missing: `core`'s log guard shape (a handler returns `{'error': str(exc)}`, the caller logs it) and span shape
+  (`_describe()` returns `f"failed: {exc}"` into `set_attribute`) are not flagged; the same blindness let
+  `copilot_mro` `document_hub/reindex.py:290-299` (D1) and `api/flightops_brief.py:246-247` through. Deferred: a
+  detector change in a sibling repo, out of this batch. Complete fix: taint a function's return when it returns
+  text derived from a caught exception, and flag the callers' sinks; then retire core's two kept guards (after a
+  replay) and shrink mro's kept log guard to its authored-refusal rule.
+- **FI-OTEL-2 — A `detail=` keyword on ANY call as a sink; more generally a stream-callback argument, a yielded
+  value and a returned record's field.** Missing: the detector reads `detail` only on `HTTPException`/response
+  classes/raises/route returns. Deferred: sibling-repo change. Complete fix: add the receiver-agnostic `detail`
+  sink (and the other three), replay mro `test_detail_keywords_carry_no_caught_text.py`'s planted shapes, retire it.
+- **FI-OTEL-3 — `log.catch` on ANY receiver**, as `log.logger-exception` already is (`_module.py:1509/1564` gate on
+  `is_logger`), plus an imported loguru `Logger` class alias. Deferred: sibling-repo change. Complete fix: match
+  `.catch` / `getattr(_, "catch")` receiver-agnostically with corpus rows (parameter receiver as context manager,
+  decorator, value); retire shift's `catch_references`.
+- **FI-OTEL-4 — Narrow the span-name-string carve-out** (`_module.py:1553-1554` skips every dict key) to keys of
+  withholding-splat mappings; retire shift's `span_names_as_strings`.
+- **FI-OTEL-5 — Door-as-value (T11f):** `print` or a std stream's `write` taken as a value, a logger door stored on
+  `self` or returned by a function. Complete fix: extend `log.door-as-value` / `output.*` to any non-callee
+  reference; retire shift's `door_values`; re-check the retired core/api/telegram guards' shapes.
+- **FI-OTEL-6 — Follow a re-export inside the scan** for bare `use_span` / `Status` names (mro M-1: a re-exported
+  name escapes; no live case).
+- **FI-OTEL-7 — An aliased response class in a helper (T11a)**; then api's kept response-body sweep can retire
+  after a replay.
+- **FI-OTEL-8 — Policy notions the register now fakes:** a sanctioned BODY sanitiser (core `caller_safe_*`), a
+  typed attribute of a named class in a log sink (api's Weaviate seat), a sanctioned helper that must be imported
+  from its home and bound once (telegram `configuration_error`, `headline_of`), and estate-home refusal types (T9:
+  `utils.request_tenancy.TenancyDecisionError`, 3 core + 3 mro SANCTIONED entries). Each retires a repo-local pin
+  or entry.
+- **FI-OTEL-9 — Public vocabulary and discovery:** export `HTTP_EXCEPTIONS` and `DEFAULT_LOGGER_NAMES`; make
+  `discover` read dot-directories under an explicit root (or expose the module list) so repo-local rules and the
+  scan agree on the file set (shift X1).
+- **FI-OTEL-10 — Shared register-test helpers** (Q3-d) and the **R-SPLAT runtime proof** moved from shift into
+  flynapse-otel.
+
+#### copilot-mro
+- **FI-MRO-1 — OPEN LEAK body echoes (owner decision OD-5), 40 register entries.** `app/api/chat_files.py:123`
+  (403/400 by substring), `:238` (404), `:381` (400); `app/api/chat_management.py:981, :1058, :1154, :1501`;
+  `app/api/data_discovery.py:71-99` (`_detail`/`_raise`, 20 funnels); `app/api/document_hub.py:110-118`
+  (`_raise_for_error`, 11 funnels). Plus the detector-blind `app/api/flightops_brief.py:246-247`. Deferred: the fix
+  changes dashboard-visible messages. Complete fix: a refusal type the services raise for caller-facing sentences,
+  everything else a fixed sentence plus a `failure_fields` log line; add the class to `refusal_types`, move the keys
+  to `repaired`; `DocumentHubUploadPolicyError` becomes a policy refusal type in the same change.
+- **FI-MRO-2 — Register reason precision.** `_station_brief`/`build_brief` reasons should name their behavioural pin
+  `tests/unit/flightops/test_brief_endpoint_logic.py` (the register absorbs a `_log_detail` regression; review m4);
+  the `request_identity._raise_http` reason's caller list should add `improvement.py`. Body OVER-REPORTs
+  (`health_check` ×7, `tool_failures.seated`, `validator` ×2, `migrate_ifim.run`) could leave the register by
+  inlining their describers into the sink expression.
+- **FI-MRO-3 — C4 guard hardening.** Identify the five services by image repository (the `_versions_md` pins), resolve
+  `extends:` before classifying, and flag an unbudgeted instance under another service name; drop the redundant
+  aggregate assert and fix the "phoenix overlays" wording at `:44`. If OD-2 rules swap in, add `memswap_limit` to
+  the budget keys; otherwise narrow the docstring to "the ruled keys".
+- **FI-MRO-4 — memory_limiter measures Go heap, not the cgroup.** The ~102 MiB between the 410 MiB hard limit and
+  512 MiB must hold runtime overhead plus the tmpfs `/tmp`; a persistent queue on tmpfs would OOM-kill before
+  back-pressure. Complete fix: any stack layering a durability overlay mounts a volume (extends the existing tmpfs FI).
+- **FI-MRO-5 — Compose smoke start deadline.** Phoenix boots in 94–135 s on the dev box; `_otel_smoke.py:54` allows
+  120 s, so the gated smoke can flake independent of C4. Raise to ~180 s or wait per service.
+- **FI-MRO-6 — G.17 driver completeness per recorder (Task 1 F2).** Wrap every public `record_*` / `*_sink` on
+  `RuntimeTelemetry` with a call-tracking proxy; each must be driven or named in a spans-only exemption set with its
+  reason, so a new recorder fails until driven.
+- **FI-MRO-7 — G.17 guard runtime** 2.4–5.4 s under the repo conftest (the neighbour's direct-import style the brief
+  mandated); a dynamic loader would bring it under 2 s.
+- **FI-MRO-8 — otel test helpers** (Q3-a compose loader, Q3-b docker gate/helpers/payload builders; the I3 deadline
+  becomes its own ≥ 60 s constant).
+- **FI-MRO-9 — I3 proof polish:** re-read the sent counters after a settle before asserting exactly N; remove
+  containers with `-v`; correct the replay-window comment (the 5 s batch timeout is margin, not a term).
+- **FI-MRO-10 — Note on M-TOOL-ERRORS:** a failed tool's summary also reaches the SSE step stream
+  (`progress_translator.py:222-229`), so the recorded tool-result debts (`workout_gate.py:483`,
+  `build_workout.py:730`) have that sink too.
+- **FI-MRO-11 — detail pin non-vacuity per root:** its `_modules()` silently reads nothing for a missing root (the
+  register's `discover` raises); assert each root exists, or take the roots from the register module.
+
+#### core
+- **FI-CORE-1 — Kept log + span guards** retire only after FI-OTEL-1 lands (return hand-off gaps, measured).
+- **FI-CORE-2 — Policy docstring slips** (`_core_exception_text_policy.py:16, :19`): TenantTeardownRefused has three
+  fixed sentences (the class docstring `tenant_service.py:271` also says two); CommentPermissionError's message names
+  the caller's own user id. **DONE in the final fix wave (core `bf14bad`).**
+
+#### api
+- **FI-API-1 — Non-vacuity plant for span writers:** add a caught-text `set_attribute`, a `record_exception` and a
+  status description to the plant, and their rules to the required set (the retired span guard self-checked them).
+- **FI-API-2 — Seat pin:** count `ast.arg` and `except … as` names as bindings (a parameter named
+  `WeaviatePartitionError` survives; inherited from the retired guard).
+- **FI-API-3 — Reason and prose:** cite `tests/integration/automations/test_one_shot_dispatch.py::test_a_stray_reason_attribute_is_not_written_to_the_column`
+  as the one_shot gate's pin; optionally write the busy/no-verdicts constants directly at `executor.py:995/:1013` so
+  the entry can leave the register; LATENT raise sites → constant raise messages; wrap the 128-char docstring line.
+
+#### telegram-bot
+- **FI-TG-1 — stderr user content (owner decision OD-1)** and a bounded reader for `RetryAfter.retry_after` (an int;
+  operators lose the seconds after PP-TG-14).
+- **FI-TG-2 — Pin and prose:** count a star import as a binding in `_bindings`; the pin comment `:124-126` should
+  say the old guard refused six of the eight; one plan sentence that `report_failure` is held behaviourally only;
+  `failure.py:101-102` and `telemetry.py:45-47` should say the base still withholds URL credentials and rendered
+  tracebacks on a no-exception record; rename `…_left_on_stdout` (`test_stdlib_logs_to_otlp.py:131`).
+- **FI-TG-3 — Report items:** `document_watch._read`'s two entries leave the register with the class name inline;
+  the bot's `stack` extra quotes source lines (port `frame_headers`); `configuration_error` as a reader; the telemetry
+  session fixture should re-attach its OTLP handler per test (21 order-dependent failures, identical at base).
+
+#### shift-optimizer
+- **FI-SHIFT-1 — Censuses and plant:** carry `SPAN_MARKING_MODULES` and `LOGURU_MODULES` as tripwires (or record the
+  drop), and widen the non-vacuity plant to the span-writer rules (as FI-API-1).
+- **FI-SHIFT-2 — dq1:** restructure the two exact-type body doors so the type check sits in the sink expression, or
+  pin their shape; behavioural door tests hold them today.
+- **FI-SHIFT-3 — Dot-directories:** the split-out rules' `_trees()` inherit `discover`'s dot-directory skip, which
+  the retired guards' `rglob` did not have; walk the roots directly or assert the two sets agree (none exist today).
+
+#### Added by the controller from L1/L2 and the fix wave
+- **FI-OTEL-11 — Message renderers by NAME on any receiver** (the retired shift/mro guards matched `format_exc`-style
+  renderers on any receiver; a third-party renderer or a wrapper passed into a non-HTTPException `detail=` is now
+  unflagged — L1 M-3).
+- **FI-OTEL-12 — Sinks INSIDE a registered helper, per sink not per kind.** telegram's `REGISTERED_HELPER_REACH` pin
+  (`8f27e4f`) tracks sink KINDS, so a `raise SystemExit(token)` added inside `_run_turn` is still absorbed (the token
+  already reaches a raise there); the retired guard refused it. Complete fix: the detector reports the sinks a
+  helper-call's value reaches (or folds per-kind sink counts into the site fingerprint); then drop the pin.
+- **FI-CORE-3 / FI-MRO-12 — `request_identity` SANCTIONED seats are absorbable** (widening the `except` at core
+  `request_identity.py:98`/`:120` still reconciles clean; api and telegram pin their seats by shape) — add a seat
+  shape pin like api's (L2 M-1).
+- **FI-ALL-1 — Scan roots cover every production module** is asserted only in telegram-bot; the other four would
+  silently miss a new top-level package (L2 M-6). Add the check, or derive roots from `git ls-files`.
+- **FI-TG-4 — Floors lost the exact total** (106 failure lines → per-module floors; up to 13 lines deletable unseen;
+  allowed by the floors ruling) (L1 M-5).
+- **FI-MRO-13 — Stale floor comment:** `FAILURE_FIELDS_FLOORS` reindex entry says `# true 6`; after `2e88cdfb` the
+  true count is 7 (floor 5 still valid).
+
+## Owner decisions raised by this batch (not yet ruled)
+
+- **OD-1 — pilot words on the bot's stderr.** Two PTB records (the `Update` repr when a CallbackContext cannot be
+  built; the raw getUpdates batch on a parse failure) print the pilot's message/caption/button payload at CRITICAL
+  to stderr (the OTLP copy already withholds it). Keep, or render them like the OTLP route (operators lose the payload
+  when debugging a parse failure).
+- **OD-2 — swap.** `mem_limit` alone lets a container use the same amount again in swap before an OOM kill (WSL2).
+  Keep, or set `memswap_limit` = `mem_limit` (hard ceiling; 15 lines across six files; joins the guard's keys).
+- **OD-3 — phoenix CPU.** 1.0 CPU saturates under content-span bursts (all landed within ~10 s; boot 94–135 s).
+  Keep, or raise to 2.0.
+- **OD-4 — first hosted run of the I3 proof.** Dispatch `otel-tests` with `gated: true` once after the push (~3 min),
+  or let the first real gated dispatch find any runner limit.
+- **OD-5 — copilot-mro body echoes (40 OPEN LEAK entries + `flightops_brief._failure_message`).** Keep (raw
+  ValueError/PermissionError/LookupError text reaches the dashboard), or convert to refusal types (users see generic
+  text for non-refusal failures; the frontend's specific strings change).
+- **OD-6 — collector queue fsync.** Off: survives a process crash, not host power loss. On: survives power loss, at
+  an fsync per queue write.
+- Carried from the owner walk: the three provisional confirmations (A-R1, C-R1, D-R2) and the Amplify AL2023/Node 22
+  console check; the Portainer residual (pin `iac/poc_ec2_setup.sh` to 2.45.0, fix the stale demo comment) awaits a yes.
+
 ## Lessons
 
 _(plan-scoped; append after any owner correction: what was tried, what was corrected, the rule next time)_
@@ -398,6 +545,17 @@ _(per task, filled as work lands)_
 
 **All eight tasks merged locally 2026-09-25; nothing pushed.** copilot-mro `e4534758` · core `cb4f56e` · api `f616c3b`
 · telegram-bot `c7292c9` · shift-optimizer `2332195`.
+
+#### Notes: final whole-batch review + fix wave (2026-09-25)
+- Three Opus lenses (L1 retirements, L2 correctness, L3 completeness), all FIX-FIRST, 0 Critical. L2 proved all five
+  registers green at the mainlines and the ratchet safe across six simulated push/rebase/squash scenarios (owner:
+  if a remote moved, MERGE it in — never `pull --rebase`). L1: every retired guard's leak corpus fully re-caught
+  (api 88, mro 27, tg 72, shift 106); losses were implicit rules only.
+- Fix wave (three per-tree Opus fixers, branch `res-final-fix` in `<repo>-fix` worktrees): copilot-mro `65a1eff8`
+  (detail pin reads HTTPException under broad handlers — a widened relay handler was unseen), `2e88cdfb` (D1 reindex
+  schema-probe leak), `190e9972`, `1f24b66e` (docstrings); telegram-bot `8f27e4f` (`REGISTERED_HELPER_REACH` pin — a
+  new log line inside `_run_turn` was absorbed); core `bf14bad` (422 entry SANCTIONED + docstring slips); shift
+  `3e13fcf` (true `_record_failure` reason). Scoped re-review of all four ranges pending at this note; then merge.
 
 **Environmental reds (all lanes):** `tests/unit/infra/test_cross_repo_reads_name_their_checkout.py` variant/twin
 tests fail on disk shape (primary checkout suffix `''`, missing or extra `<repo>-*` worktrees) — pre-existing,
