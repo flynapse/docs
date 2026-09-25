@@ -583,6 +583,10 @@ observability/document_hub/agent_shared/improvement 3247 passed, 1 skipped · co
 sweep 682 passed · shift telemetry 228 passed · telegram-bot full unit 2457 passed. Fix worktrees removed, branches
 deleted.
 
+**PUSHED 2026-09-25 by Claude on the owner's word** (fast-forward, remotes 0 behind, no force): core `17699d9` ·
+copilot-mro `e0cdea42` (incl. the owner's `.env.sample` C7 commit) · api `f616c3b` · telegram-bot `a1d1f2a` ·
+shift-optimizer `f86c6c5`. OD-4: gated `otel-tests` dispatched on `e0cdea42` (run 36133015686).
+
 **Environmental reds (all lanes):** `tests/unit/infra/test_cross_repo_reads_name_their_checkout.py` variant/twin
 tests fail on disk shape (primary checkout suffix `''`, missing or extra `<repo>-*` worktrees) — pre-existing,
 proven identical at base; they change as this batch's worktrees come and go.

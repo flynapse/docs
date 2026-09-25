@@ -1533,7 +1533,8 @@ Linux 2 does not support Node 20+, AL2023 defaults to Node 22, new apps default 
 image until switched (Build settings → Build image settings → Edit); `dashboard/amplify.yml` pins no Node, so on
 AL2023 it builds on 22. The live read (`aws amplify list-apps`) was blocked by an expired SSO token — still an owner
 check. Residual-builds OD-1…OD-6 ruled (that plan): OD-1 hide and OD-5 fix are follow-up builds; OD-4 runs after the
-owner pushes copilot-mro.
+owner pushes copilot-mro. **PUSHED same day** (Claude, on the owner's word): core `17699d9` · copilot-mro `e0cdea42` ·
+api `f616c3b` · telegram-bot `a1d1f2a` · shift-optimizer `f86c6c5`; OD-4 gated run dispatched.
 
 ---
 
