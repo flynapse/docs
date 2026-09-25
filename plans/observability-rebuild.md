@@ -1495,6 +1495,18 @@ ruling and B-R2/F-R1, PLUS owner-sheet C7/C4/C5, the utils/api mainline→`main`
 publish secrets + version bump, the two extra §10 checks, the iac arming prerequisites, and the Appendix A
 legal review.
 
+**2026-09-24 (owner walk of the list of record).** **Owner-sheet C7 DONE:** copilot-mro `.env.sample:82`
+now documents `LLM_CONTENT_COPY_SAMPLE_RATE=1.0` (the code default, M-PHOENIX-ON) with `0.0` as the off
+switch — edited on the owner's word, left uncommitted in the primary checkout per the commit rule.
+**Portainer RULED: KEEP** (demo box keeps it at the VERSIONS.md pin `2.45.0`); residual = the tracked
+`iac/poc_ec2_setup.sh:16-18` still runs an unpinned `portainer/portainer-ce:latest`, and
+`iac/demo_ec2_setup.sh:20-22`'s "removal is an open owner question" comment is now stale — both small iac
+edits, not yet authorized. **Batch approved ("SDD-driven, Opus agents"):** the G.17 guard, the C4 compose
+budgets, the I3 collector-restart proof and the exception-text detector adoption beyond utils (core → api →
+copilot-mro → telegram-bot → shift-optimizer; PP-TG-14 re-triaged inside the telegram lane) — plan
+`docs/plans/observability-residual-builds.md`. The owner asked for explanations of the three provisional
+confirmations (A-R1, C-R1, D-R2) and the Amplify AL2023/Node 22 step; both still open pending the owner's word.
+
 ---
 
 ## Appendix A — Draft contract clause: conversation content capture (for legal review; ruling 20)
