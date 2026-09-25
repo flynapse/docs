@@ -669,6 +669,8 @@ default). Q3, Q4, Q9 are answered.
 - [x] **Q2. OWNER RULED 2026-09-23: "simple table is fine for now" — the `chat_turn_facts` projection is
       the citation source, consciously superseding the M-EVALS wording ("structured citation offsets");
       the spans path stays in §10 for any future offsets-needing measure. TB is unblocked.**
+      **AMENDED 2026-09-25 (owner D2, `docs/plans/eval-quality-gaps.md`):** citation state travels on the
+      content copy and `citation_coverage` v3 reads it there; `chat_turn_facts` stays the analytics projection.
       *(Original question, kept for the record:)* Where should citations come from for the rewritten
       measure — the structured spans (authoritative,
       needs a new span attribute and a redaction decision) or the per-turn analytics projection (already
@@ -1363,11 +1365,13 @@ done this way, and what the complete solution would look like.)*
   the SDK-turn span in `_llm_span_specs` — **recommended as one pre-TF micro-task with G1/G2**;
   owner decides alongside Q1 ratification, since this is direct evidence on what "profile" can mean
   in production. **RULED 2026-09-23: approved → task TM; Q1 ratified (profile = the answering
-  model's profile).**
+  model's profile).** Residual (SDK loop rides no certified profile) → **`docs/plans/eval-quality-gaps.md`
+  Task 5 (2026-09-25).**
 - **Owner ratification bundle — RULED IN FULL (2026-09-23; full record in the SDD ledger):**
   1. Q1: `profile` = the ANSWERING model's profile; judge identity stays separate, per-run flags.
   2. Q2: citations counted from `chat_turn_facts` (amends M-EVALS' "structured citation offsets"
-     letter) — ratified.
+     letter) — ratified. **Amended 2026-09-25 by owner D2 → `docs/plans/eval-quality-gaps.md`** (citation
+     state from the content copy).
   3. Retrieved-nothing → `pass` stands as shipped (capture-health complete fix stays TB-filed above).
   4. `eval_results.explanation` on chat delete = **SCRUB** — null the explanation, keep the score
      row. ~~Post-TF work item: wire the scrub into the chat-delete path (it sits outside
@@ -1496,6 +1500,7 @@ done this way, and what the complete solution would look like.)*
     truncated or its evidence count is below the turn's citation count — honest and free; or the
     harness reads the evidence from `llm_turn_content` by (tenant, block), as `citation_coverage` reads
     `chat_turn_facts`, so the judge sees what the answer cited. Deferred: app code, frozen for TF.
+    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Tasks 1–2 (owner D1).**
   - **`citation_coverage` can never resolve a headless or harness turn.** The settle-time facts writer
     (M-FACTS-FAILURES) upserts `INSERT … SELECT … FROM chats WHERE chat_id = …`; a turn with no
     `chats` row inserts nothing and still returns `WRITTEN` (rowcount ignored), silently. Dev
@@ -1503,6 +1508,7 @@ done this way, and what the complete solution would look like.)*
     `not_evaluated`. Complete fix: the harness driver saves the turn the way the chat route does
     (chat + `save_block`, which writes the full projection incl. `citation_count`) under its tenant —
     and the writer logs a zero-row settle rather than reporting it written.
+    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Tasks 1–3 (owner D2: state on the copy).**
   - **The report's cost per query misses in-loop synthesis spend; the turn ledger misses post-turn
     memory calls.** Golden turn: `llm_model_calls` sums $0.4163 (SDK loop + two Haiku calls) against
     `llm_usage.total_cost_usd` $0.5814 — the $0.165 of in-loop direct Bedrock spend (`cited_synthesis`)
@@ -1512,6 +1518,7 @@ done this way, and what the complete solution would look like.)*
     signal. Complete fix: price a turn from `llm_usage.total_cost_usd` (with its `cost_complete` flag)
     plus the `llm_model_calls` rows booked after it settled — or book in-loop direct calls into
     `llm_model_calls` so one ledger is whole.
+    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Task 4 (owner D4), with readability (a).**
   - **Phoenix under-prices a synthesis-heavy turn by ~29%.** SDK span now within 0.9% of the ledger on
     identical tokens (G1 closed by TM); the trace total is 71% of the turn — the gap is exactly the
     in-loop direct spend on no priced LLM span. TM-filed "residual under-report … small, not zero" —
