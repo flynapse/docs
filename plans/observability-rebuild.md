@@ -1515,7 +1515,9 @@ traces+logs, live green ×3, in-memory negative control) · **detector adoption*
 (rate-limit + executor reason leaks fixed; two guards retired), copilot-mro `e4534758` (rules-injection + reindex
 leaks fixed; span guard + traceback pin retired; `detail=` pin split out), telegram-bot `c7292c9` (**PP-TG-14
 fixed** — stderr formatter withholds library exception text), shift-optimizer `2332195`. Final whole-batch review
-(3 Opus lenses) FIX-FIRST → fix wave built on `res-final-fix` (unmerged at checkpoint; scoped re-review running).
+(3 Opus lenses) FIX-FIRST → fix wave re-reviewed PASS and MERGED 2026-09-25 — final local SHAs: copilot-mro
+`ea56f459` · core `17699d9` · shift-optimizer `f86c6c5` · telegram-bot `a1d1f2a` · api `f616c3b` (batch CLOSED
+locally; the owner pushes).
 Strike from the list of record: G.17 residual, C4 residual, owner-sheet C7, detector adoption beyond utils, I3's
 oss restart proof. New owner decisions OD-1..OD-6 are in that plan (bot stderr pilot words, swap, phoenix CPU, first
 gated CI run, copilot-mro body echoes ×40 + `/brief`, queue fsync). Push rule: if a remote moved, MERGE it in —
