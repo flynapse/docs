@@ -585,7 +585,8 @@ deleted.
 
 **PUSHED 2026-09-25 by Claude on the owner's word** (fast-forward, remotes 0 behind, no force): core `17699d9` ·
 copilot-mro `e0cdea42` (incl. the owner's `.env.sample` C7 commit) · api `f616c3b` · telegram-bot `a1d1f2a` ·
-shift-optimizer `f86c6c5`. OD-4: gated `otel-tests` dispatched on `e0cdea42` (run 36133015686).
+shift-optimizer `f86c6c5`. **OD-4 DONE:** gated `otel-tests` on `e0cdea42` (run 36133015686) GREEN — 383 passed,
+5 skipped; the I3 crash proof (2/2) and the C4 budget guard (3/3) ran on the hosted runner.
 
 **Environmental reds (all lanes):** `tests/unit/infra/test_cross_repo_reads_name_their_checkout.py` variant/twin
 tests fail on disk shape (primary checkout suffix `''`, missing or extra `<repo>-*` worktrees) — pre-existing,
