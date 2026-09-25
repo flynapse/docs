@@ -36,6 +36,9 @@ Push: Claude may push this work (owner, 2026-09-25); fast-forward or merge only 
 - **R-OD1-JOB:** a PTB/APScheduler `Job` argument stands in as its name on both sinks (job names are the bot's own,
   not pilot content; without it stderr loses them). Cost if wrong: one small revert.
 - **R-OD1-MOVE:** move the OTLP stand-in rule into `telegram_bot/failure.py` (not duplicate); OTLP output unchanged.
+- **R-T2-DHERR:** Task 2 rebases `DocumentHubUploadPolicyError` (`document_hub/errors.py`) onto `Refusal` (409, dict
+  detail) so the shared helper's dict path is exercised by a real class; Task 4 does not touch `errors.py`.
+  `ReadOnlyValidationError` (Data Discovery connectors) is rebased in Task 3.
 - **R-OD5-MIXINS:** one `Refusal` base plus builtin-preserving subclasses (value / lookup / permission), status set at
   the raise site; one shared relay helper; unsure-bucket sites default to the generic fallback (fail-safe: a missed
   conversion degrades a message, never leaks).
@@ -101,6 +104,10 @@ _(plan-scoped; append after any owner correction)_
 ## Implementation notes
 
 _(per task, filled as work lands)_
+
+**Status at compaction checkpoint 1 (2026-09-25):** Task 1 merged (telegram-bot `bff16ea`, unpushed until the batch
+final review); Task 2 in flight on `copilot-mro-od5` (`fu-od5` from `e0cdea42`); Tasks 3–5 follow in parallel after
+Task 2 merges. Execution: SDD, Opus implementers + reviewers. Ledger holds agent ids and next steps.
 
 #### Notes: Task 1 — OD-1: DONE + MERGED (telegram-bot main `bff16ea`; review clean, Spec ✅ / Quality approved)
 - `effb186` stand-in rule moved into `failure.py` (`stood_in_body`); OTLP `_scrubbed_copy` calls it (byte-identical

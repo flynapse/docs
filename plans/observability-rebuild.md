@@ -1536,6 +1536,15 @@ AL2023 it builds on 22. Live read (owner logged in): `flynapse-dashboard` (creat
 owner pushes copilot-mro. **PUSHED same day** (Claude, on the owner's word): core `17699d9` · copilot-mro `e0cdea42` ·
 api `f616c3b` · telegram-bot `a1d1f2a` · shift-optimizer `f86c6c5`; OD-4 gated run GREEN (383 passed; I3 2/2 on the hosted runner).
 
+**2026-09-25 (next builds picked).** From the list of record the owner picked, beyond OD-1/OD-5
+(`docs/plans/obs-followups-od1-od5.md`; OD-1 MERGED telegram-bot `bff16ea`): the **§10 eval-quality gaps**
+(groundedness sees every quote; citation state on the trace; own SDK-loop profile; report cost from `llm_usage`; one
+~$0.62 proof run approved — plan `docs/plans/eval-quality-gaps.md`), **PP-MRO-1 user erasure** (all rulings taken —
+plan `docs/plans/user-erasure.md`), **B14** DB-enforced tenant delete (function owned by `postgres`, deletes only,
+one provisioning run, test → prod; plan after the DB-roles decisions), and a **DB-roles consolidation** (inventory
+`~/.claude/scratch/db-roles/R1-db-roles.md`; found: App Runner lacks the grant-role credentials; `db_query` runs
+LLM-written SQL as the app role). All SDD-driven, Opus agents.
+
 ---
 
 ## Appendix A — Draft contract clause: conversation content capture (for legal review; ruling 20)
