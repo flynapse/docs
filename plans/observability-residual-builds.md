@@ -454,7 +454,14 @@ NAMED `main`). Roots `shift_optimizer`, `scripts`. New files in `tests/unit/tele
 - **FI-CORE-4 — Pre-existing count slip, same family as FI-CORE-2:** `tests/api/tenancy/test_tenant_teardown.py:1040`
   says "the two fixed sentences the success body carries" but iterates three names (fix-wave re-review).
 
-## Owner decisions raised by this batch (not yet ruled)
+## Owner decisions raised by this batch (RULED by the owner 2026-09-25)
+
+- **OD-1 → HIDE** (render the two PTB records like the OTLP route) · **OD-2 → no `memswap_limit`** · **OD-3 → keep
+  phoenix at 1.0 CPU** · **OD-4 → run the gated `otel-tests` dispatch once, after the owner pushes copilot-mro** (the
+  I3 test is not on origin until then) · **OD-5 → FIX** (convert the body echoes) · **OD-6 → fsync OFF for now**.
+  OD-1 and OD-5 are follow-up builds (research first, then a plan); the rest need no code.
+
+The original questions, as put to the owner:
 
 - **OD-1 — pilot words on the bot's stderr.** Two PTB records (the `Update` repr when a CallbackContext cannot be
   built; the raw getUpdates batch on a parse failure) print the pilot's message/caption/button payload at CRITICAL
