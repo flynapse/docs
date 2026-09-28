@@ -1,7 +1,7 @@
 # Eval quality gaps — full groundedness evidence, trace-carried citation state, SDK-loop profile, honest report
 
 > **SDD-driven.** Controller: the owner's Opus session. **Model policy:** implementers and reviewers are Opus 5.5,
-> with a fresh agent per task, one implementer per working tree, and at most 2 running at once (the owner may raise it).
+> with a fresh agent per task, one implementer per working tree, and at most 2 running at once (the owner raised it to 6, shared across the three follow-up programs, for this batch).
 > **Ledger:** `/home/aditya/Code/.superpowers/sdd/eval-quality-gaps/progress.md`.
 > **Scratch:** `~/.claude/scratch/eval-quality-gaps/<lane>/`.
 
@@ -80,7 +80,9 @@ force-push: the exception-text register's ratchet compares against the merge-bas
   - profile `bedrock-sdk_loop`, role `sdk_loop`, revision `pilot-r4`.
 
 **R-D1 (owner) — groundedness input.**
-- The judge reads every distinct quote; only identical refs collapse.
+- The judge reads every distinct quote. The copy keys a sourced ref on its source and its quote (a source-less badge on
+  its whole self), and the harness hands each distinct quote text to the judge once. Badge refs (DATA, export, upload)
+  are never judge evidence.
 - It judges only when every retriever span says `evidence_complete=true`; otherwise the result is a free
   `not_evaluated`.
 - The gate never uses the root's `flynapse.content_copy.truncated`. That flag also fires on tool-I/O truncation, so it
@@ -134,9 +136,9 @@ proven.
   attributes as flat dotted keys (`test_phoenix_real_span_shapes.py`).
 
 **Pre-flight (controller).**
-- [ ] Cut `eval-quality-gaps` at `e0cdea42`. Baseline the lanes, and write the red set and the fixed interface to the
+- [x] Cut `eval-quality-gaps` at `e0cdea42`. Baseline the lanes, and write the red set and the fixed interface to the
       ledger.
-- [ ] In the parent plan, add the D2 amendment on §7 Q2 and on §10 item 2. Point TF's three §10 items (truncated
+- [x] In the parent plan, add the D2 amendment on §7 Q2 and on §10 item 2. Point TF's three §10 items (truncated
       evidence, headless `citation_coverage`, report cost) and TM claim-4 at this plan. Commit that with this plan.
 
 ## Tasks
@@ -147,18 +149,20 @@ proven.
 `tests/unit/agent_shared/test_content_copy_citation_state.py`. `test_llm_content_capture.py:232` pins the exact `outcome`
 dict and must be updated. Grep for any other test that pins the `outcome` shape or a copy span's exact attribute set,
 and list each one in the report.
-- [ ] `_deduped_evidence_refs` (telemetry.py:1298-1314) also keys on `cited_text`, or on `text` where a ref has one.
+- [x] `_deduped_evidence_refs` (telemetry.py:1298-1314) also keys on `cited_text`, or on `text` where a ref has one.
       That is the harvest's own identity (`_cited_core.py:495`). `evidence_count` then counts the refs kept.
-- [ ] `_retriever_span_specs` stamps `evidence_complete`, true only if the child was not shortened for projection,
-      `limits` has no `omitted_evidence_refs`, and no ref sequence has `_truncated_items`.
-- [ ] The `outcome` of `_build_v2_snapshot` (llm_content_capture.py:1425) gains two fields:
+- [x] `_retriever_span_specs` stamps `evidence_complete`, true only if the child was not shortened for projection,
+      `limits` has no `omitted_evidence_refs` and no `evidence_refs_truncated` (ruling E1-M1), and no retained ref
+      carries `_truncated_items`.
+- [x] The `outcome` of `_build_v2_snapshot` (llm_content_capture.py:1425) gains two fields:
   - `citation_count`: the length of the list `AgentPipeline._pipeline_result` hands on (the backend's
     `metadata.citations`, else `evidence_refs`), counted before any capture bound.
-  - `needs_clarification`: from `post_turn_signals`, false if those are absent.
+  - `needs_clarification`: from the finalized outcome's `metadata["needs_clarification"]`, else `post_turn_signals`,
+    else false. Amended by ruling E1-C1, because finalize clears the signals.
 
   Both survive every fit step, including `minimal` (:1300). The v1 builder is left alone: it runs only without an
   accumulator, and its copies abstain.
-- [ ] The root span stamps both scalars when the row carries them (telemetry.py ~:1777-1792), and neither otherwise.
+- [x] The root span stamps both scalars when the row carries them (telemetry.py ~:1777-1792), and neither otherwise.
       The root `truncated` flag keeps its meaning.
 
 **Red-before:**
@@ -189,21 +193,21 @@ and list each one in the report.
 - adds `.../evaluation/{test_copy_evidence_gate,test_copy_to_candidate_seam}.py`.
 
 Task 2 starts after Task 1 merges.
-- [ ] `EvaluationCandidate` (contracts.py:615) gains the three fields, type-checked. A non-bool or non-integral value
+- [x] `EvaluationCandidate` (contracts.py:615) gains the three fields, type-checked. A non-bool or non-integral value
       reads as None and is never coerced, except that an integral float widened by the dataframe reads as its integer.
-- [ ] Adapter. `evidence_complete` is true only when every retriever row says true. The count and the flag come from the
+- [x] Adapter. `evidence_complete` is true only when every retriever row says true. The count and the flag come from the
       root. Both shapes real Phoenix returns are read: nested `attributes.flynapse` on the root, flat dotted keys on
       children.
-- [ ] `runner._missing_judge_inputs` (:335-360): groundedness whose evidence is present but incomplete returns "Evidence
+- [x] `runner._missing_judge_inputs` (:335-360): groundedness whose evidence is present but incomplete returns "Evidence
       is incomplete in the content copy." That is a free `not_evaluated`, and plan mode (`planner.py`) counts no judge
       call for it.
-- [ ] `citation_coverage` v3 takes the candidate only and keeps v2's label table. Either field absent →
+- [x] `citation_coverage` v3 takes the candidate only and keeps v2's label table. Either field absent →
       `not_evaluated` ("The content copy carries no citation state."). Version `citation-coverage-v3`, so every v2
       verdict is re-evaluated.
-- [ ] Retire `CitationFacts`, `CitationFactsLookup`, `PostgresCitationFacts`, `CITATION_FACTS_SQL`, the runner's
+- [x] Retire `CitationFacts`, `CitationFactsLookup`, `PostgresCitationFacts`, `CITATION_FACTS_SQL`, the runner's
       `citation_facts` parameter, and `run_phoenix_evals._citation_facts` (:180, :378-385). Grep every docstring that
       names them, e.g. `results_store.py:120`.
-- [ ] Runbook notes: groundedness judges distinct quotes and abstains on incomplete or old copies; `citation_coverage`
+- [x] Runbook notes: groundedness judges distinct quotes and abstains on incomplete or old copies; `citation_coverage`
       v3 reads the copy.
 
 **Red-before:**
@@ -221,7 +225,7 @@ the version at v2.
 ### Task 3: The settle writer reports when nothing landed
 **Owns:** `copilot_mro/app/services/agent_shared/turn_facts.py`,
 `tests/unit/chat_history/test_chat_turn_facts_settled.py`, `tests/db/chat_history/test_chat_turn_facts_db_roundtrip.py`.
-- [ ] `record_settled_turn_facts` (:112-160) stops ignoring `_default_execute`'s rowcount (:87-109):
+- [x] `record_settled_turn_facts` (:112-160) stops ignoring `_default_execute`'s rowcount (:87-109):
   - 1 → `WRITTEN`;
   - 0 with no chat row → `NO_CHAT`, plus one WARNING carrying the tenant and block ids;
   - 0 with a chat row → `ALREADY_SETTLED`, with no warning.
@@ -239,15 +243,15 @@ the version at v2.
 ### Task 4: The quality report prices turns from the turn ledger and states unknown outcomes
 **Owns:** `copilot_mro/app/services/agent_evaluation/quality_report.py`,
 `tests/unit/observability/evaluation/test_quality_report.py`, `tests/db/evaluation/test_quality_report_db.py`.
-- [ ] `COST_SQL` (:109-119) prices each scored turn from `llm_usage.total_cost_usd` on `(tenant_id, block_id)`. It reports
+- [x] `COST_SQL` (:109-119) prices each scored turn from `llm_usage.total_cost_usd` on `(tenant_id, block_id)`. It reports
       turns with a ledger row, turns with `cost_complete = false`, and the complete-cost sum. Cost per query divides by
       the complete-cost turns and says so. The reporting role already has the grant (`provision_rls.py:269-275`).
-- [ ] A separate upkeep column: `llm_model_calls` rows with role `memory` and origin ≠ `sdk_loop`, never added to the
+- [x] A separate upkeep column: `llm_model_calls` rows with role `memory` and origin ≠ `sdk_loop`, never added to the
       headline. First prove from both runtimes' writers that no memory call is already folded into `llm_usage`. If one
       is, stop and report.
-- [ ] Answer rate (:485-490): answered ÷ (turns − unknown), with the unknown count stated. With nothing classified,
+- [x] Answer rate (:485-490): answered ÷ (turns − unknown), with the unknown count stated. With nothing classified,
       print "no scored turn has a known outcome" and no percentage.
-- [ ] Hand the controller the runbook's report sentence (:536-541) as exact text.
+- [x] Hand the controller the runbook's report sentence (:536-541) as exact text.
 
 **Red-before:**
 - **Cost source:** `llm_usage` at 0.5814 against ledger rows summing to 0.4163 gives a 0.5814 headline (today 0.4163).
@@ -265,14 +269,14 @@ the headline.
 `copilot_mro/app/services/lang_agent/{profiles,model_certifications}.py`,
 `copilot_mro/app/services/{agent_pipeline,agent_shared/pipeline}.py`, `tests/unit/agent_shared/test_model_plan_and_usage.py`,
 and a new `tests/unit/agent_shared/test_sdk_loop_profile_identity.py`.
-- [ ] Append `ModelRole.SDK_LOOP = "sdk_loop"`, and extend the vocabulary pin (:162) with a comment like `DECISION`'s.
-- [ ] `profiles.py` gets one public loop-profile builder. It goes through `_claude_profile` and stamps the registry's own
+- [x] Append `ModelRole.SDK_LOOP = "sdk_loop"`, and extend the vocabulary pin (:162) with a comment like `DECISION`'s.
+- [x] `profiles.py` gets one public loop-profile builder. It goes through `_claude_profile` and stamps the registry's own
       revision literal, so the revision has a single source. The literal becomes `pilot-r4`, with an r3→r4 history
       line. `ACTIVATIONS_BY_REVISION` gains `pilot-r4`, activating nothing.
-- [ ] `_build_claude_pipeline` (agent_pipeline.py:238-293) builds the profile from `settings.agent_sdk_model or
+- [x] `_build_claude_pipeline` (agent_pipeline.py:238-293) builds the profile from `settings.agent_sdk_model or
       DEFAULT_MODEL`, on `aws_bedrock` only; a non-Claude model refuses to compose. It passes the id and revision into
       `AgentPipeline` beside provider and model. `agent_claude` still never imports `lang_agent`.
-- [ ] `_resolve_runtime_identity` (pipeline.py:362-384) returns all four fields on the fixed-model path; the lang path is
+- [x] `_resolve_runtime_identity` (pipeline.py:362-384) returns all four fields on the fixed-model path; the lang path is
       unchanged. The accumulator's `runtime` block then carries the profile, and the SDK-turn span (telemetry.py:982)
       picks it up with no telemetry change. The TM seam test in `test_telemetry.py` pins this. Read it; don't edit it.
 
@@ -293,33 +297,64 @@ golden-set section.
 - **Environment:** api dir and venv, checkout first on PYTHONPATH, `CLAUDE_CODE_USE_BEDROCK=1`, OTLP 127.0.0.1:4318,
   Phoenix 127.0.0.1:6006, dev `copilot_mro`.
 - **Evidence:** ids and counts only, written to `~/.claude/scratch/eval-quality-gaps/proof/`.
+- **Readout (content-free).** Span attributes are read read-only through Phoenix REST (`GET
+  $PHOENIX_ENDPOINT/v1/projects/internal/spans`, paged, with the runbook's auth header where Phoenix needs one), piped
+  straight into a short Python filter that prints, per span, only its id, parent id, kind and whichever of these it
+  carries: `gen_ai.retrieval.evidence_count`, `flynapse.content_copy.evidence_complete`,
+  `flynapse.content_copy.truncated`, `flynapse.citation_count`, `flynapse.needs_clarification`, `gen_ai.model.profile`,
+  `gen_ai.model.registry_revision`. The filter reads both the nested `attributes.flynapse` shape and flat dotted keys.
+  The response body is never written anywhere; only the filter's output goes to `proof/`. Plan mode's identity joins
+  every LLM span's profile and revision, so it cannot stand in for the SDK-turn child's own attributes (final review
+  H-1).
+- **Time windows (final review CORR I-1).** A re-projected copy's root takes its time from the row's
+  `outcome.completed_at_unix_nano`, so the TF M01 re-projection is dated 2026-09-23, not the proof day. `--since <proof
+  start>` therefore sees only the new turn. The re-projection is located for the readout by the trace/span id the
+  re-projection step reports, never by `--since`, and it is not judged: widening `--since` would pull in the original
+  TF root and a two-turn session and reach the judge-call cap.
 
 - [ ] **Preconditions (free).**
   - The owner has run `aws sso login --profile bedrock`.
   - `phoenix.evals` and `litellm` import.
   - `eval_results` exists, and the collector and Phoenix are up.
   - The TF M01 row has not expired (tenant `17be5d65-…`, block `golden-mro-tf1-M01-blk`, 54 refs).
-- [ ] **Gap 1, same answer, $0.** Re-project M01 under tag `tf1` from a scratch COPY of `agent-evals-tf/golden-bank.jsonl`
+  - The reporting role authenticates: `generate_quality_report.py --tenant 17be5d65-… --database copilot_mro --out
+    <proof>/report-pre` prints its JSON line. Task 4 measured `password authentication failed for user
+    "flynapse_readonly"` on this cluster (ruling E4-C1). If it fails, stop for the owner before the paid turn.
+- [ ] **Gap 1 on the copy, $0.** Re-project M01 under tag `tf1` from a scratch COPY of `agent-evals-tf/golden-bank.jsonl`
       that carries one superseding M01 record with `projected: false`. The original bank is never edited.
-  - **Expect:** a new `internal` root whose retriever span has more than 6 and at most 54 quotes, the marker true, and
-    no root citation attributes (the row predates the change).
-  - **If the marker is false:** record which condition tripped it.
-- [ ] **Gaps 2 + 3, one paid turn (≈ $0.58).** Run `--dry-run` first, then the driver with `--golden-set mro --examples M01
-      --tenant-id 17be5d65-… --run-tag eqg1` and its own bank.
-  - **Expect:** the log shows `NO_CHAT`.
-  - **Expect:** the root's `flynapse.citation_count` equals the bank's `evidence_refs`, and `needs_clarification=false`.
-  - **Expect:** the SDK-turn child carries `gen_ai.model.profile=bedrock-sdk_loop` and `registry_revision=pilot-r4`.
+  - **Expect (readout, by the re-projection's own ids):** a new `internal` root whose retriever span has more than 6
+    and at most 54 quotes, the marker true, and no root citation attributes (the row predates the change).
+  - **If the marker is false:** record which of the four conditions tripped it (`telemetry._evidence_complete`): the
+    retriever span's own `flynapse.content_copy.truncated`; the row's `content.limits` keys `omitted_evidence_refs` or
+    `evidence_refs_truncated`; or a retained ref carrying `_truncated_items`. Key names and counts only. This is honest
+    abstention, not a defect.
+- [ ] **Gaps 1–3 on a new turn, one paid turn (≈ $0.58).** Run `--dry-run` first, then the driver with `--golden-set mro
+      --examples M01 --tenant-id 17be5d65-… --run-tag eqg1` and its own bank.
+  - **Expect:** the log shows exactly one WARNING `chat_turn_facts: settled turn not recorded — no chat row`, carrying
+    the run tenant and `golden-mro-eqg1-M01-blk`. That is the settle writer's `NO_CHAT`; the token itself is returned,
+    never logged.
+  - **Expect (readout):** the root's `flynapse.citation_count` equals the bank's `evidence_refs`, and
+    `needs_clarification=false`; the retriever span carries the marker true and the turn's full distinct-quote count.
+  - **Expect (readout):** the SDK-turn child carries `gen_ai.model.profile=bedrock-sdk_loop` and
+    `gen_ai.model.registry_revision=pilot-r4`.
   - **Stop:** before judging if the banked cost exceeds $0.90.
 - [ ] **Plan mode (free).** `--golden-set mro --since <proof start> --limit 50 --provider bedrock --model
-      global.anthropic.claude-haiku-4-5-20251001-v1:0` should match 2 roots with at most 8 judge calls (stop if more).
-      The new turn's identity should show `bedrock-sdk_loop` and `pilot-r4`.
+      global.anthropic.claude-haiku-4-5-20251001-v1:0` should match 1 root (the new turn) with at most 8 judge calls
+      (stop if more). The new turn's identity `profile` should include `bedrock-sdk_loop` (the token joins every LLM
+      span's profile, e.g. `bedrock-classification,bedrock-memory,bedrock-sdk_loop`) and its `registry_revision` should
+      read `pilot-r4`. The readout, not plan mode, proves the SDK-turn child's own revision.
 - [ ] **Run, then an identical re-run.** Judge calls equal plan mode's count, then 0 on the re-run.
-  - **Groundedness:** judged on both full quote sets; record the labels as they come.
-  - **`citation_coverage` v3:** `pass` on the new turn (under `__SYSTEM__`, with no facts source), and `not_evaluated`
-    on the re-projection.
-  - **CloudWatch:** invocations equal judge calls. Compare groundedness input tokens against TF's 12,897.
+  - **Groundedness:** judged on the new turn's full distinct-quote set (Gap 1's judge path); record the label as it
+    comes.
+  - **`citation_coverage` v3:** `pass` on the new turn (under `__SYSTEM__`, with no facts source).
+  - **CloudWatch:** invocations equal judge calls. Compare the run minute's input tokens against TF's 12,897. That
+    figure was the whole TF golden-run minute: 3 calls on one root (relevance, groundedness, trajectory); CloudWatch
+    cannot split tokens by measure. Expect roughly one TF-sized minute plus about 4–5K tokens for groundedness now
+    reading M01's full quote set (≈ 19.6K chars, against TF's 2,179).
 - [ ] **Reports (free).** Regenerate the dev-tenant and `__SYSTEM__` reports. Cost comes from `llm_usage` plus the
-      upkeep column, and the answer rate states its unknowns instead of showing "0.0%".
+      upkeep column, and the answer rate states its unknowns instead of showing "0.0%". The `__SYSTEM__` report's
+      revision comparison sets TF's M01 (`pilot-r3`, TF's biased `unfaithful` included) against the new M01
+      (`pilot-r4`); the difference is the evidence fix plus the relabel, not a model change, and the proof notes say so.
 
 **Bounds.** One paid turn, never retried without the owner. At most 8 judge calls. All-in cap $1.00.
 
@@ -333,7 +368,7 @@ golden-set section.
 
 ## Review & merge protocol
 
-- [ ] **Per task.** A fresh adversarial Opus reviewer gets the task section, the interface and the diff.
+- [x] **Per task.** A fresh adversarial Opus reviewer gets the task section, the interface and the diff.
   - It re-runs the red-befores and mutants itself; reports are indexes, not evidence.
   - It returns a claims table with an OPEN count. Critical and Important findings block; Minor ones are fixed or filed.
   - Once cleared, the task merges `--no-ff` into `eval-quality-gaps`.
@@ -353,8 +388,10 @@ golden-set section.
   re-fetches drift. Complete fix: capture synthesis inputs as a bounded evidence set with its own marker, under a new
   measure version.
 - **More than ~85 quotes → abstain.** Past that, the child exceeds 64 KiB and reads as incomplete. That is honest, and
-  rare today. Complete fix: split the refs across several retriever spans, each with its own marker, and require all of
-  them rather than raising the cap.
+  rare today. Complete fix: split the refs across several retriever spans, each with its own marker, rather than raising
+  the cap. The interface ("every retriever copy span"), R-D1 ("every retriever span says true") and the adapter's
+  `_extract_evidence` already read N retriever spans, so the split is a projection change only
+  (`telemetry._retriever_span_specs`) (ruling E1-M5).
 - **`sdk_loop` ledger rows keep NULL profile columns.** The rows aggregate per model, subagents included;
   `agent_claude` must not import `lang_agent`; and eval subjects read spans. Complete fix: thread the id into
   `record_sdk_model_usage` and stamp only the loop model's row, together with TM's per-model LLM children.
@@ -369,6 +406,53 @@ golden-set section.
   projection changes recur.
 - **TF's biased M01 `unfaithful` score stays in dev `eval_results`.** It keeps the same key, so it is skipped, never
   re-judged. Complete fix: an operator supersede path, if this matters beyond dev.
+
+Recorded at the final review (2026-09-28); detail in `.superpowers/sdd/eval-quality-gaps/final-review-completeness.md`
+§5:
+- **`citation_coverage` cannot label `fail` on the Claude SDK path (E2-m1; absorbs parent §10's TB-filed item).**
+  - *What is missing:* the copy carries no count of evidence a turn *retrieved*. On the SDK path `evidence_refs` IS the
+    citation list (`query_adapter.py:395`), so an uncited turn has no retriever span and scores `pass`.
+  - *Why deferred:* it predates this plan (v2 read the same list). The persisted explanation was corrected in the fix
+    wave so the record stays honest.
+  - *Complete fix:* stamp a content-free `flynapse.retrieved_evidence_count` on the copy root, counted from the
+    retrieval tools' results. A `citation-coverage-v4` reads it for the `fail` row. Alternatively, the owner relabels
+    the measure "did the turn cite anything".
+- **Lang-runtime turns show no headline cost (E4-C2).**
+  - *What is missing:* a lang turn writes no `llm_usage` row, so it counts under "no ledger row".
+  - *Complete fix:* the lang runtime writes the same turn-ledger row at settle. Failing that, the report adds a
+    separately labelled per-call fallback column, never mixed into the complete cost.
+- **Upkeep columns count attempts that moved no money (T4-m2).**
+  - *What is missing:* failed and budget-refused gateway attempts are NULL-cost memory rows, which inflate the upkeep
+    and unpriced counts. It never reaches the headline.
+  - *Complete fix:* count a row as unpriced only with tokens or `outcome='success'`, or split the column into calls and
+    attempts.
+- **`_truncated_items` is projected as a ref (T1-C2).**
+  - *What is missing:* 120 citations read `evidence_count` 101, and the fit arithmetic ignores the entry. The marker is
+    false in exactly that case, so the judge abstains.
+  - *Complete fix:* `_deduped_evidence_refs` drops the entry from the projected refs and the count.
+- **One badge predicate, owned by its producer (T2-i1).**
+  - *What is missing:* the production grounding judge (`_judge_core.py:73`) skips DATA/export refs but not
+    `upload_ref`, and its comment mis-states the export text. Telemetry, the adapter and the judge each define "badge"
+    differently.
+  - *Complete fix:* `is_badge_citation` plus `BADGE_REF_KEYS` in `_cited_core`, used by the judge and telemetry,
+    mirrored by the adapter under a parity test.
+- **A copy whose fit dropped every ref gets the wrong reason (final review CORR M-1, T2 review i3).**
+  - *What is missing:* under the `minimal`/`tiny` fits no retriever span is emitted, so groundedness reads "Missing
+    retrieval evidence." rather than "Evidence is incomplete". Both are free abstentions.
+  - *Complete fix:* emit an evidence-less retriever span with the marker false when refs were omitted and none survived.
+- **No compose case posts `evidence_complete=false` (T2 review i4).** *Complete fix:* one posted marker-false turn in
+  `test_phoenix_evaluation_boundary.py`, asserting a free `not_evaluated`.
+- **Nothing pins memory spend outside the `llm_usage` snapshot (T4 review I-2).**
+  - *What is missing:* disjointness rests on ordering, so a reorder would double-price silently.
+  - *Complete fix:* a Claude-runtime unit test that the memory hooks run only after `run_query` returns and never fold
+    into the accumulator snapshot.
+- **The planner restates the runner's selection (final review m-4).** *Complete fix:* one runner function yields the
+  planned work items, and `plan_candidates` calls it; the drift test then goes.
+- **The capture mirrors `_pipeline_result`'s citation rule (final review m-2).** *Complete fix:* one
+  `handed_on_citations(outcome)` helper beside `RuntimeOutcome`, called by both; the parity test becomes a unit test.
+- **Plan mode as the proof's readout (final review H-1, optional).** *Complete fix:* the plan payload gains a
+  content-free per-candidate block (root span id, evidence count, marker, citation count, needs_clarification), so
+  future proofs need no Phoenix REST read for the copy's statements.
 
 ## Lessons
 
@@ -406,3 +490,33 @@ after the OD-5 push.
 - `WRITTEN` only when a row landed; `NO_CHAT` (one ids-only WARNING) when no chat row exists; `ALREADY_SETTLED` for a
   repeat settle; a failing presence read is `FAILED` (pinned in the fix round). Every headless turn now logs one
   `NO_CHAT` WARNING — the intended signal; Task 6 will show it.
+
+#### Notes: Task 2 — harness: DONE + MERGED (`ebec8197`; review APPROVED, 0 Critical / 0 Important)
+- Groundedness is judged only when every retriever span vouches `evidence_complete=true`; an unmarked (pre-batch) copy
+  abstains for free. `citation_coverage` v3 reads the copy's root and nothing else. The v2 facts path is retired end to
+  end.
+- Beyond the task text: badge refs (no `source_id` plus a `data_view_ref`/`export_ref`/`upload_ref`) are never judge
+  evidence, but still count as citations. `deleted_chat_copies.NOT_EVALUATED_REASONS` gains the two new reasons and
+  drops the four v2 ones (E2-C1). Three unowned fixtures gained `evidence_complete=True` (E2-C3). The compose helper
+  stamps the marker (E2-C2).
+- Learning: on the Claude SDK path the retriever span IS the citation list (`query_adapter.py:395`), so
+  `citation_coverage`'s `fail` row cannot fire there (E2-m1; see Future Improvements).
+- Merge note: no textual conflict with the erasure branches (they do not touch `deleted_chat_copies.py`); this branch's
+  10-reason list goes in as is, and the AST guard enforces it.
+
+#### Notes: Task 4 — quality report: DONE + MERGED (`4c8dfced`, runbook sentence `d661c599`; review APPROVED after one test + wording round)
+- The headline is `llm_usage.total_cost_usd` summed over the cost-complete turns and divided by their count, with the
+  ledger-row and incomplete counts beside it. Upkeep is `llm_model_calls` rows with role `memory` and origin ≠
+  `sdk_loop`, in its own column and never added. The answer rate is over known outcomes, with the unknown count stated,
+  and there is no rate when none is known.
+- Pre-check proven by both the implementer and the reviewer: no memory call reaches `llm_usage` on either runtime.
+  Claude writes the row inside `run_query` and memory runs after it; lang writes none.
+- The `flynapse_readonly` path was not exercised on this machine (E4-C1); a superuser read-only run of the same SQL
+  stands in. Task 6 now checks the role before the paid turn.
+
+**Status at the final review (2026-09-28):** `eval-quality-gaps` @ `d661c599` carries Tasks 5, 1, 3, 2 and 4.
+Post-merge: unit 7545 passed, with one known lang_agent load flake; db 66 passed. Final review: two Opus lenses, both
+with no code-level Critical or Important finding. Three Important Task 6 procedure gaps (the readout, the NO_CHAT log
+text, the reporting-role precondition) and the time-window correction are written into Task 6 above. One fix wave
+(test, prose and one persisted explanation string) is in flight, then a scoped re-review, Task 6, and the mainline
+merge after OD-5's push.
