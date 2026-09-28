@@ -63,9 +63,9 @@ Push: Claude may push this work (owner, 2026-09-25); fast-forward or merge only 
 - [x] Unit tests of the helper and subclasses (base preservation, status override, dict detail).
 
 ### Task 3: OD-5 Data Discovery (lane M1, after Task 2) — needs D2, D3
-- [ ] Relay funnel via the shared helper; route-reachable fixed / caller-safe raises converted with their statuses;
+- [x] Relay funnel via the shared helper; route-reachable fixed / caller-safe raises converted with their statuses;
       internal and library text falls to the fixed fallback; D2 siblings if ruled in.
-- [ ] Red-before sentinel test per error kind; census file; delete the 21 register entries.
+- [x] Red-before sentinel test per error kind; census file; delete the 21 register entries.
 
 ### Task 4: OD-5 Document Hub (lane M2, after Task 2) — needs D3
 - [x] Relay funnel via the helper; substring status ladder removed (status at the raise); route enum parse refused
@@ -143,3 +143,16 @@ set), final whole-batch review, one fix wave, push telegram-bot + copilot-mro. N
   review fix: the register rebuilt byte-minimal against `eca6bd9f` (the first rewrite re-encoded 28 unrelated `—`
   lines — the file is mixed-serialised; edit textually, never re-dump) + the sentinel also reads stdlib logging.
 - Red-before 89 failed / 90 passed at `eca6bd9f` (the greens are cases the old relay already answered safely).
+
+**Status at compaction checkpoint 3 (2026-09-27, later):** Tasks 1–4 complete and merged (telegram-bot `bff16ea`;
+copilot-mro `langgraph-merge` `eca6bd9f` T2, `683808f3` T4, `573eb638` T3). Task 5 in task review. Nothing pushed.
+
+#### Notes: Task 3 — Data Discovery: DONE + MERGED (`573eb638`; review APPROVED after one test-only fix round)
+- 63 raises across 32 sites became refusals (statuses as the old type ladder gave them; "disabled" keeps 400; repository
+  not-found keeps 400); `ReadOnlyValidationError` → `ValueRefusal`; the relay answers a non-refusal with the fixed 500;
+  D2: the runner's and Level 1's persisted failure text is a refusal's words only. Review fix `fa41c21e`: every one of
+  the 63 sentences is exact-pinned (9 were not — incl. a snapshot sentence a path could have leaked into).
+- Merge: the register was unioned with Task 4's by `~/.claude/scratch/obs-followups/merge-t3/union_register.py` (base
+  blocks minus both lanes' deletions, kept blocks byte-identical, `repaired` = sorted union); the script reproduces
+  each lane's file byte-for-byte on its own, which is its proof.
+- Learning: a census that counts constructions per site cannot see what a sentence SAYS — pin every sentence exactly.

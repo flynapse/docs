@@ -397,3 +397,12 @@ red set empty (the one baseline red needed the database); compose boundary test 
   interface, R-D1 and `_extract_evidence`; splitting refs across spans is a projection change only.
 - Learning: a plan that names a field's SOURCE must be checked against the object the reader actually sees (finalized
   vs in-flight) — seam tests on hand-built objects hid it.
+
+**Status at compaction checkpoint 2 (2026-09-27, later):** `eval-quality-gaps` @ `9a7cb05a` carries Tasks 5, 1, 3;
+Tasks 2 and 4 in task review. Then: merges, final review, one fix wave, the governed proof run (Task 6), mainline merge
+after the OD-5 push.
+
+#### Notes: Task 3 — settle writer: DONE + MERGED (`9a7cb05a`; review APPROVED after one test-only round)
+- `WRITTEN` only when a row landed; `NO_CHAT` (one ids-only WARNING) when no chat row exists; `ALREADY_SETTLED` for a
+  repeat settle; a failing presence read is `FAILED` (pinned in the fix round). Every headless turn now logs one
+  `NO_CHAT` WARNING — the intended signal; Task 6 will show it.

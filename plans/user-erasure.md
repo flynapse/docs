@@ -361,3 +361,22 @@ Task 1/2/5 db proofs.
   (Task 6) run it on the grant pool inside `db_tenancy(<erased tenant>, …)`. B14 reuses this path.
 - Owed: the grant round (no DELETE on `user_erasures` for the app and grant roles) once Task 1's table is on the path;
   the db probe after provisioning.
+
+**Status at compaction checkpoint 2 (2026-09-27, later):** P1 Tasks 1, 2, 4, 5 COMPLETE (db proofs green on the
+provisioned `copilot_mro_test`); Task 3 in task review. Then: the P1 phase review (three Opus lenses) → owner pause →
+merges → push. Owner decision 27 was taken (yes): the test DB is migrated + provisioned from the erasure branches,
+including `REVOKE DELETE ON user_erasures` from the app and grant roles. Known side effect: on branches without the
+erasure registry, `tests/db/tenancy/test_schema_conformance.py` shows 4 reds (only `user_erasures` undeclared).
+
+#### Notes: Task 5 addendum — the ledger is never deleted (fix round 2, `2b128dfb`)
+- `NO_DELETE_RELATIONS = ("user_erasures",)`: DELETE revoked from the app and grant roles; the app role keeps
+  SELECT/INSERT/UPDATE (state transitions); the grant role holds nothing on the ledger; `--verify-only` reports any
+  DELETE or a missing app privilege. Core's db tests now clean up as the owner (core `3183c69`).
+- Carry into Tasks 11/12: the due sweep and the D12 replay cannot read the ledger through the grant role — decide the
+  read path then (owner-run CLI or a scoped grant).
+
+#### Notes: Task 3 — api (IN REVIEW, `ue-api` `f616c3b..cd54e69`, core pinned to `core-erase`)
+- Gateway refuses exactly `erasure_pending` (fixed 403); `pending` unchanged; every 2xx applies its declared auth-cache
+  eviction (so core's 202 request evicts); a frozen owner's automations stand down at next fire. Accepted gaps →
+  Future Improvements: the run row shows the generic `entitlements_unresolved`; automations stood down during a freeze
+  stay off after a cancel.
