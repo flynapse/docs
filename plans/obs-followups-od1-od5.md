@@ -97,6 +97,34 @@ one fix wave, one scoped re-review, then push.
   census over real call sites ran once. A future bot line passing `%s` of a list would silently print `['<str>', …]`
   (fail-closed). Complete fix: keep the census plugin as a standing test over every `telegram_bot.*` record.
 
+Recorded at the final review (2026-09-28):
+- **The register test never requires a deleted entry's key in `repaired` (final review m5).**
+  - *Current behaviour:* a mutant dropping one `repaired` key survives the whole observability lane. The check lives
+    in flynapse-otel's shared ratchet (`_ratchet.py:74`), not in this repo.
+  - *Complete fix:* the ratchet asserts `repaired ⊇ (baseline keys − current keys)` for every consuming repo.
+- **DD and DH failure logs name the router's relay helper, not the route (parked (b)).**
+  - *Current behaviour:* this was already so at base, and the route is still the outermost frame of `stack`. The
+    docstring now says so.
+  - *Complete fix:* `refusal_or` takes a `depth` argument, so a router helper can pass `depth=2` and name the route.
+- **Chat doors catch only `ValueError` (T5-C2, parked (f)).**
+  - *Current behaviour:* fail-safe, because no other refusal class is reachable at those doors today.
+  - *Complete fix:* `refusal_or` in the upload doors' `except Exception`, and `except (ValueError, Refusal)` in the
+    others.
+- **An unidentified `tests/unit` flake under load (T3 O1, parked (e)).** The final review did not reproduce it.
+  - *Prime suspect:* the lang_agent `[deadline]` tests with 75/100 ms wall-clock deadlines, the same family as the
+    pre-existing `-n 4` isolation reds (T5 C4: 16 at base).
+  - *Complete fix:* deadlines driven by an injected clock, not wall time.
+- **Four copies of the stdlib log handler in the refusal sentinels (final fix wave concern 2).** The DH, DD, chat and
+  `/brief` sentinels each render records the same way, but in four fixture shapes. *Complete fix:* one
+  `tests/_stdlib_log_lines.py` handler that all four import.
+- **The Phase-1c scope guard re-arms at every `--no-ff` merge (routed from the erasure P1 review, COMP §3.6).**
+  - *Current behaviour:* `_track_merge_commit` anchors on the NEWEST first-parent merge whose second parent descends
+    from the phase-1c end. On `langgraph-merge`, the post-merge limb therefore measures only work after the latest
+    feature merge; it is effectively disarmed on the mainline, and a lane's own-tree red vanishes once merged.
+  - *Complete fix:* anchor on a fixed, recorded commit (the phase-1c merge itself). Re-baseline
+    `MRO_POST_MERGE_PRODUCTION_PATHS` once to every production path changed since, each with its ruling. That needs an
+    owner decision on whether the approved set should keep growing or be retired.
+
 ## Lessons
 
 _(plan-scoped; append after any owner correction)_
@@ -133,7 +161,9 @@ set), final whole-batch review, one fix wave, push telegram-bot + copilot-mro. N
   `e2565747` census pin + family site files · `e2668cac` scope-guard paths · `7c8bfe55` non-refusal logged at `error`
   when the fallback status ≥ 500, else `warning` (ruling T2-C1) · `e897c067` review fixes: every refusal class carries a
   sample and a chained-cause sentinel proves no class renders its cause/context (I1); two-family pin test (M1);
-  allowance comment corrected (M2); failure log attributed to the calling route via `opt(depth=1)` (M3).
+  allowance comment corrected (M2); failure log attributed to `refusal_or`'s CALLER via `opt(depth=1)` (M3) — the
+  route, or (DD `_raise`, DH `_raise_for_error`) the helper its router funnels every failure through; the route is
+  the outermost frame of `stack` (final review m3).
 - Learning: a census that pins classes by NAME cannot see what a class RENDERS — the sentinel over every discovered
   subclass (with a mandatory sample) is what closes it. Rule carried to T3–T5: each family samples only its own classes.
 
