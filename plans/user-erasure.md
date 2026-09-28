@@ -579,3 +579,50 @@ unproven by the fakes.
 - Should optimizer job notes be kept as they are?
 - Should free text or contact JSON that names the person, but carries no id, stay unplaced as a receipt limit?
 - Orphan-operator notifications need DDL to close. Do they go in the receipt and Future Improvements?
+
+**Status at compaction checkpoint 5 (2026-09-28, late).**
+
+*Phase 2: all done except Task 8. Everything is merged LOCALLY and nothing from P2 is pushed.*
+- **Task 9:** core `master` `ae33072`.
+- **Task 10:** shift-optimizer `main` `ba3c070`.
+- **Task 6:** copilot-mro `langgraph-merge` `7eff5fac` (branch tip `01aa8145`). Approved after 2 fix rounds.
+- **Task 7:** `21ff2d66` (branch tip `14618f67`). Approved after 3 fix rounds.
+- **Post-merge at `21ff2d66`:** unit 7961 passed, 0 failed; db `user_erasure` + `chat_history` + `document_hub` 94
+  passed; api `document_hub` 273 passed.
+- **Task 8** is in flight on `ue-t8`, cut at `21ff2d66`.
+- The copilot-mro mainline's pushed tip is the eval batch's `925c716d`. The two P2 merges sit on top of it, locally only.
+
+*Rulings added since checkpoint 4 (the ledger and `p2-context.md` hold the detail).*
+- **R-PARTIAL-COUNTS.**
+  - Core's ledger replaces a step's counts, and a rerun is keyed on the not-yet-erased shape.
+  - So any exception a seam raises after a commit carries `partial`: a `SeamErasure` holding what that attempt committed.
+  - Composers sum their parts' partials and re-raise with the sum. Task 11 sums a step's counts across attempts.
+  - **Addendum:** the counts are exact at page grain. Paginated helpers take an optional per-page callback, which
+    defaults to off, so their other callers are unchanged.
+- **Task 7's liveness is bound to the attempt it judged.** A document whose attempt changed during the pass is held,
+  counted as an orphan, and left to the rerun.
+- **Task 6.**
+  - Compaction digests of the person's chats are deleted by chat.
+  - A chat-share recipient's email is scrubbed.
+  - The statement ceiling comes from the pool setting.
+- **Test-run economy** (owner). Implementers run targeted tests while they work and each full lane once per round.
+  Baselines come from the controller's post-merge logs (see `test-lane-speed.md`).
+
+*New Future Improvements, to write into the section above at P2 close.*
+- **Task 7 M-5:** after a failure part-way through a re-key, the retry splits its counts differently; the total stays
+  exact.
+- **Task 7 M-7:** an attempt that was queued long ago and begins between the listing and the read gets settled. The
+  executor's re-read fences it.
+- **Task 6 N-3:** two raises after the guard can never be reached.
+- **Task 7 M-3** (FI-6): the owner id in the re-keyed copies' object metadata.
+
+*Carried into Task 11, in addition to checkpoint 4's list.*
+- Sum each step's counts across attempts, including every failed attempt's `partial`.
+- The receipt's "what may remain" names these:
+  - inline or zombie DocHub executors that can outlive the declared bound (Task 7 N-2);
+  - an `updated_at` PATCH extending the hold on a queued shared attempt (Task 7 N-3);
+  - the attempt-start window (Task 7 M-7).
+
+*Next.* Task 8's report, then its task review and fix loop, then its merge and post-merge lanes. Then the P2 phase
+review (three Opus lenses), triage, and the OWNER PAUSE with the four questions above. Then push core, shift-optimizer
+and copilot-mro P2, and remove the P2 worktrees and branches. Then P3.

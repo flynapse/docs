@@ -59,6 +59,7 @@ integration lane, not the unit lane.
    - [x] `pytest-slot.sh` (in utils, `utils/dev/.claude/`) now prints how long each run waited. Each finished run also
      appends a line to `~/.claude/scratch/slots/runs.log` with its slot, wait, run time, exit status, free memory, load
      and working directory. The edit is uncommitted, for the owner to commit.
+   - [x] The log has been live since 2026-09-28 07:02 PDT. Its first entry shows a 324 s wait for a 1 s run.
    - [ ] Review slot and CPU sizing from `runs.log` after a week of runs.
 3. **Run the full lanes less often.**
    - Implementers run only the tests they touch while they work, and each full lane once per round, at the end.
@@ -71,7 +72,15 @@ integration lane, not the unit lane.
 4. **Speed up the slowest scan tests.** This is a Future Improvement, for a later small batch.
 5. **Fix the lang_agent `[deadline]` load flake** (owner, 2026-09-28: "fix lang_agent only for now"). Branch
    `la-deadline-fix`; ledger `.superpowers/sdd/lang-agent-deadline-flake/`.
-   - [ ] Fixed, reviewed and merged.
+   - [x] Fixed (`71be517b`, `9ab0d1a7`; test only). The cause is TIMING, not isolation: the deadline was set before
+     setup, which under load used 43–75 ms of a 75/100 ms window. The fix holds the clock until the test's own
+     blocking point, and the fixed waits become derived guards. 30/30 green under a simulated starved host; two
+     mutants KILLED; unit 7780 passed.
+   - [ ] Review (in flight), then merge into `langgraph-merge`. It rides with the P2 push.
+   - Follow-ups the implementer reported, for the review to rule on:
+     - `test_lang_sad_activation.py` has the same race and can pass without proving anything.
+     - The admission test's `cancellation` param proves only "closed before admission".
+     - There could be one shared held-clock helper in `_fixtures.py`.
 
 ## Future Improvements
 
