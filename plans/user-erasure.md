@@ -60,11 +60,16 @@ state the backup bound; replay completed erasures from the ledger after any rest
   provisioning in `provision_rls.py`; whichever lands first builds it, the other reuses — never concurrently.
 - **R-WINDOW:** one-shot runs have no not-before (`automation_store.py:1036-1060`) and the scheduler defaults OFF (api
   `automations/settings.py:42-43`): the window lives in the ledger (`erase_after`); a daily global builtin enqueues a
-  `user_erasure` one-shot per due row; immediate requests enqueue at once; a core CLI `--run-due` covers scheduler-off.
+  `user_erasure` one-shot per due row; immediate requests enqueue after the freeze commits; an owner-run CLI in the api
+  environment (it needs the seam wiring; core imports no service) covers scheduler-off with `--run-due` (amended
+  2026-09-27, P1 review COMP I-2).
 - **R-FREEZE:** `users.status = erasure_pending` (prior value in the ledger), refused explicitly by the gateway and the
   automations identity check (status is otherwise deliberately unconsulted, `auth.py:587`); memberships untouched.
-- **R-DOOR:** no platform-operator HTTP identity exists, so the platform door is an owner-run core CLI. `DELETE
-  /users/{id}` (no caller in the tree) becomes an erasure request under its `users_modify` gate.
+- **R-DOOR:** no platform-operator HTTP identity exists, so the platform door is an owner-run CLI: core's CLI may only
+  request, cancel and list; running an erasure (run one, `--run-due`, `--replay-completed`) is the api-side CLI's
+  (amended 2026-09-27, P1 review COMP I-2). `DELETE /users/{id}` (no caller in the tree) becomes an erasure request
+  under its `users_modify` gate. Every request path refuses (fixed 503) in a process whose seams are not registered, so
+  nobody is frozen where no erasure can finish (P1 review CORR I-1).
 - **R-DOCHUB-REKEY:** shared docs de-attribute copy-then-delete — read paths re-derive object keys from
   `owner_user_id` (`document_hub/keys.py:1-15`), so a row rewrite alone breaks the document.
 - **R-PLACEMENTS (research gaps):** `comments.mentions` → remove the id; other recipients' notification payloads
@@ -92,7 +97,8 @@ state the backup bound; replay completed erasures from the ledger after any rest
 
 - [ ] Each phase: all tasks reviewed and merged → phase-level adversarial review (P2/P3: three Opus lenses —
   correctness, plan-completeness, simplicity) → triage → owner review pause before the next phase.
-- [ ] Owner provisions `copilot_mro_test` (migrate + `provision_rls.py`) after Tasks 1 and 5 merge; P2 DB lanes wait on it.
+- [x] `copilot_mro_test` migrated + provisioned from the erasure branches (owner decision 27, 2026-09-27),
+  re-provisioned for `NO_DELETE_RELATIONS`.
 
 ## Tasks
 
@@ -103,6 +109,8 @@ Owned: `core/core/db/table_definitions.py` (`user_erasures` + registry entry); n
   id, tenant, surrogate id, sub, requested_by (opaque), via, mode, RTBF flag, state (requested → frozen → erasing →
   completed | cancelled | failed), prior user status, `erase_after`, per-step state/counts/orphans + receipt (numbers
   and step names only), timestamps. No name, email or free text. One open request per (tenant, user), partial index.
+  Also `prior_cognito_enabled` (T2-M1); DELETE revoked from the app and grant roles (`NO_DELETE_RELATIONS`, T5 fix
+  round 2).
 - [x] Ledger store with guarded transitions (terminal rows never move), the `erasure_pending` literal and the 7-day
   constant; `lifecycle.py`, the twin of `tenant_lifecycle.py`: named seams register `erase` + `residue`, a declared
   required set, unregistered or partial → a RuntimeError subclass (never ValueError), reset for tests.
@@ -126,17 +134,19 @@ core's router mount site; tests (incl. edits to `tests/api/tenancy/test_user_upd
 
 ### Task 3: api — a frozen user reaches nothing (P1, lane A, after Task 1 merges)
 Owned: `api/flynapse_api/middleware/auth.py`, `api/flynapse_api/automations/identity.py`; api unit tests.
-- [ ] Gateway identity resolution refuses exactly `erasure_pending` (403, fixed text naming no one); `pending` and
+- [x] Gateway identity resolution refuses exactly `erasure_pending` (403, fixed text naming no one); `pending` and
   every other value behave as today; correct the stale divergence sentence at `auth.py:76-79`. The automations
   identity check stands a frozen user's definitions down at next fire with a reason token.
-- [ ] Proofs: red-before for both; `pending` signup activation still passes. Mutants: refuse every non-active status
+- [x] Proofs: red-before for both; `pending` signup activation still passes. Mutants: refuse every non-active status
   (the pending test must go red); drop the automations check.
 
 ### Task 4: copilot-mro — `scrub_chat_copies`, behaviour-preserving (P1, lane M1)
-Owned: `copilot_mro/app/db/chat_history/chats.py`, `deleted_chat_copies.py`; `tests/{unit,db}/chat_history/`.
-- [x] Factor `delete_chat`'s transaction body into `scrub_chat_copies(cursor, tenant, chat id, now)`: roster rebind;
-  the chat-row soft-delete stays the FIRST write (race-gate lock order, `chats.py:22-33`), keyed on tenant + chat id at
-  any deleted state, never overwriting an existing `deleted_at`; blocks; facts + feedback; `anonymise_copies` —
+Owned: `copilot_mro/app/db/chat_history/chats.py`, `postgres_table_definitions_modules/chat_turn_facts.py` (the two
+ANONYMISE statements, ruling T4-C2); `tests/{unit,db}/chat_history/`. `deleted_chat_copies.py` unchanged.
+- [x] Factor `delete_chat`'s transaction body into `scrub_chat_copies(cur, *, tenant_id, chat_id, user_id, department,
+  now)` (the caller bound to the chat's tenant, else `ScrubTenancyMismatch`): roster rebind; the chat-row soft-delete
+  stays the FIRST write (race-gate lock order, `chats.py:22-33`), keyed on tenant + chat + the chat row's owner and
+  department (`IS NOT DISTINCT FROM`) at any deleted state, never overwriting an existing `deleted_at`; blocks; facts + feedback; `anonymise_copies` —
   returning counts and reap keys. Plus `reap_chat_copies` (spills, compaction docs, generation + caches, Phoenix
   session). `delete_chat` keeps its ownership read, return values and log fields, and calls both.
 - [x] Proofs: every existing chat_history unit + db test passes UNMODIFIED (list them); new db cases — a chat
@@ -164,7 +174,10 @@ Owned: new `copilot_mro/app/db/chat_history/erased_user_copies.py`; `tests/unit/
 - [ ] One txn under the tenant's full roster: delete `user_preference` and `scope='user'` memory; tenant-scope notes and
   facts keep payload, ids → `deleted-user`/NULL (D1); events by `actor_user_id` scrubbed; findings' evidence texts of
   the user's signals removed BEFORE the signals scrub; signals, facts and feedback by user id (not only per chat);
-  data-discovery ids and findings `reviewer` → `deleted-user`; then the Task 5 function on the grant pool.
+  data-discovery ids and findings `reviewer` → `deleted-user`; then `ERASE_USER_LLM_RECORDS_SQL` on the grant pool
+  inside `db_tenancy(<erased tenant>, …)` (an unbound or other-tenant session is refused with 22023; a NULL argument
+  returns no row, which is a refusal and never zero). The residue is read bound to the tenant's FULL roster (P1
+  review CORR M-4).
   Post-commit: MemoryItemMT docs removed / re-upserted (orphans counted).
 - [ ] Drift guard (unit, registry-derived): an unplaced column matching user_id, `*_user_id`, `*_by`, `actor*`,
   `author*`, `reviewer*`, `owner_user_id`, `*email`, `mentions`, `recipient*` (or such a Weaviate property) fails; a
@@ -209,15 +222,26 @@ Owned: new `shift_optimizer/app/services/user_erasure.py`; unit + db tests in th
   predicate (record whether RLS or the test catches it).
 
 ### Task 11: core — the orchestrator, completion and receipt (P3, lane C)
-Owned: new `user_erasure/service.py`; `user_erasure/freeze.py` (immediate enqueue); new `core/scripts/erase_user.py`; tests.
+Owned: new `user_erasure/service.py`; `user_erasure/freeze.py` (immediate enqueue AFTER the freeze commits,
+`user_id=None` — P1 review COMP I-5; the platform door's rule in `_CANCELS_FROM`; the teardown-only request path D11
+needs — COMP I-1); `user_erasure/erasure_endpoints.py` (+ `GET /users/erasures`; fold `erasure_http.py` in — SIMP M-6);
+new `core/scripts/erase_user.py` (request, cancel, list only — R-DOOR amended); tests.
 - [ ] `run_erasure(request id)`: erasing → each registered seam's `erase` in declared order (copilot-mro,
-  shift-optimizer, core-local), step state persisted after each → all-zero residue (R-VERIFY) → ONE txn:
-  `UserService.delete_user` (cascade) + the `authorization_events` row (delete / `user`, subject = surrogate, change =
-  request id + counts, the request's via) + ledger completed → after commit Cognito AdminDeleteUser (not-found =
-  success; a failure is an orphan the replay retries). Immediate requests enqueue the one-shot at request time.
+  shift-optimizer), then core's own `core_copies` erase (a recorded step, not a registered seam — P1 review SIMP M-2),
+  step state persisted after each → Cognito AdminDeleteUser as the LAST `erasing` step (not-found = success, so a
+  retry converges; `account_exists` joins the residue — COMP I-3), after checking no other tenant holds the sub (CORR
+  N-3) → all-zero residue (R-VERIFY) → ONE txn on the completion cursor: `DELETE FROM users` (cascade; `UserService.
+  delete_user` opens its own connection — remove it or make it this cursor's helper, COMP M-3) + the
+  `authorization_events` row (delete / `user`, subject = surrogate, change = request id + counts, the request's via) +
+  ledger completed. Immediate requests enqueue the one-shot after the freeze commits (a lost enqueue is caught by the
+  due sweep: `erase_after = requested_at`).
+- [ ] Repeat requests: an immediate/RTBF request over an open windowed one escalates it or refuses with its own 409,
+  never silently returns the weaker row (CORR M-3). The due sweep and the replay tolerate a missing tenant and a missing
+  `users` row (CORR N-4). Reconcile Cognito accounts left disabled with no open request (CORR N-2, widens T2-FC3).
 - [ ] Receipt: per-store disposition + bounds (Loki 14 d, Tempo 72 h, CloudWatch 30 d, Phoenix 30 d, S3 noncurrent 30 d
-  after deletion, backups and host SDK transcripts per the owner items). CLI (platform door): request (window or
-  `--immediate` RTBF), run one, `--run-due`, `--replay-completed` (D12).
+  after deletion, backups and host SDK transcripts per the owner items). `GET /users/erasures` (gated by
+  `users_modify`): the tenant's ledger rows — ids, state, timestamps, `cancellable`, receipt — so a receipt stays
+  reachable after the `users` row is gone (COMP I-6). The replay record follows the owner's D12 ruling (COMP I-4).
 - [ ] Proofs: unit with fake seams — order, resume from each failed step, a completed request answers done, non-zero
   residue blocks the users delete; db — the event survives, the ledger has no name/email column. Mutants: users
   delete before the residue check; the event written outside the txn.
@@ -225,15 +249,20 @@ Owned: new `user_erasure/service.py`; `user_erasure/freeze.py` (immediate enqueu
 ### Task 12: api — wiring, the job kind, the due sweep (P3, lane A, after Tasks 8–11 merge)
 Owned: new `api/flynapse_api/user_erasure_wiring.py` + its call in `routers/users.py` beside the partition wiring; new
 `automations/user_erasure_job.py`; `automations/tasks.py`; the kind registration site; api tests.
-- [ ] Register the copilot-mro, shift-optimizer and core-local seams all-or-nothing (RuntimeError at assembly, as
+- [ ] Register the copilot-mro and shift-optimizer seams all-or-nothing (RuntimeError at assembly, as
   `partition_wiring`); `user_erasure` one-shot kind → `run_erasure` under the row's binding; a daily global builtin
   enqueues due rows (window passed, no run in flight).
+- [ ] The executing CLI lives here (R-DOOR amended, P1 review COMP I-2 — it needs the seam wiring; core imports no
+  service): an owner-run `python -m flynapse_api.user_erasure_cli` — run one, `--run-due` (covers scheduler-off),
+  `--replay-completed` (D12).
 - [ ] Proofs (worktree-pinned): all seams registered; the kind runs a fake erasure; each due row enqueued once.
 
 ### Task 13: core — the channel door erases the person too, D11 (P3, lane C, after Task 11)
 Owned: `core/core/resources/channel_provisioning/channel_provisioning_endpoints.py`; core channel tests.
-- [ ] Before `delete_tenant`: run the channel user's erasure immediately and synchronously (`system`, via api),
-  Cognito delete included, then the existing teardown; a failed erasure aborts before the tenant delete (retryable,
+- [ ] Before `delete_tenant`: run the channel user's erasure immediately and synchronously (`requested_by='system'`,
+  `via='api'`, mode immediate, rtbf false) through T11's teardown-only request path — the channel user is the personal
+  tenant's sole Tenant Owner, whom `request_erasure` otherwise refuses as the last active owner (P1 review COMP I-1).
+  A new `via` value needs an ALTER migration: the CHECK is baked in at CREATE (CORR N-4). Cognito delete included, then the existing teardown; a failed erasure aborts before the tenant delete (retryable,
   404-on-repeat kept). Check the bot's `/goodbye` prose; a needed text change goes to a telegram-bot lane.
 - [ ] Proofs: Cognito delete called, ledger completed, the tenant event still written; failure leaves the tenant intact.
 
@@ -290,7 +319,11 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
 
 1. Per database (`copilot_mro_test` → dev `copilot_mro` → prod), owner-run: `migrate_tenancy_schema.py`
    (`user_erasures`) → `provision_rls.py` (definer, EXECUTE, ledger grants) → `--verify-only` clean. Optimizer DB: none.
-2. Merge/deploy order: copilot-mro, shift-optimizer, core → api (imports all three) → dashboard → iac.
+   Dev `copilot_mro`: run it when core merges — the dev stack runs from the merged checkouts, and the erasure routes
+   500 until the table exists.
+2. Merge/deploy order: core → copilot-mro, shift-optimizer → api → dashboard → iac (measured at the P1 review:
+   copilot-mro's provisioning and `test_grant_role_privileges.py` read core's registry; the api imports core's
+   `user_erasure`).
 3. AWS (deferred until implementation is done): iac apply (Cognito policy + S3 lifecycle) BEFORE the routes are used
    on AWS — without the IAM grant every request fails closed at the Cognito disable.
 4. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` or a
@@ -301,7 +334,8 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
 - [ ] **D9 legal opinion:** airworthiness `reviewed_by`/`review_note`, `authorization_events` actor/subject (incl. the
   erasure's own event), RBAC provenance columns, the ledger's opaque ids, and free-text knowledge kept under D1.
 - [ ] **D12 backup bound:** no backup/snapshot config exists in iac or deployment; state the bound for the receipt;
-  replay with `--replay-completed` after any restore.
+  replay with `--replay-completed` after any restore. The ledger lives in the database a restore rewinds, so a replay
+  needs an off-database record of completed requests (P1 review COMP I-4) — owner ruling owed before Task 11.
 - [ ] SDK/CLI transcripts under `~/.claude/projects` on the API host: confirm retention or disable persistence.
 - [ ] Scheduler: the delayed half runs only where the scheduler is embedded/worker; otherwise a daily `--run-due`.
 - [ ] D2 side question: should ordinary chat delete also hard-purge after N days (today it retains forever)?
@@ -314,6 +348,59 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
 - Loki delete requests, once structured-metadata filtering is verified on 3.7.7.
 - One shared `deleted-user` constant in utils instead of three pinned literals.
 - Current-version expiry for `parse-sidecars/` (its docstring promises a lifecycle iac never declared).
+
+Recorded at the P1 phase review (2026-09-27); each was deferred by a ledger ruling:
+- **Terminal ledger rows are immutable only in Python (P1 review CORR M-2, COMP M-5).**
+  - *What is missing:* the app role keeps UPDATE on every column of `user_erasures`, because the transitions need it. So a
+    completed row can be rewritten (to `cancelled`, receipt NULL, another `user_id`), which hides it from a replay just as a
+    DELETE would. The state machine is enforced only by the ledger store.
+  - *Why deferred:* there is no live path. `db_query` runs read-only behind a table allowlist, and the revoke of DELETE
+    already covers removal.
+  - *Complete fix:* a BEFORE UPDATE trigger that refuses any change to a row whose old state is terminal, and any change
+    to the identity columns (request id, tenant, user ids, requested_by, via, mode, rtbf, prior status, prior Cognito
+    state, requested_at). It is provisioned beside the no-DELETE revoke and verified by `--verify-only`.
+- **DB CHECK on `users.status` (T2-M6).**
+  - *What is missing:* the status vocabulary, including `erasure_pending`, is enforced by the app only.
+  - *Why deferred:* a CHECK needs a data migration of legacy values first.
+  - *Complete fix:* migrate legacy values, then add the CHECK from the one vocabulary constant.
+- **A Cognito account left disabled with no open request (T2-FC3, widened by P1 review CORR N-2).**
+  - *What is missing:* two paths reach this state, and nothing re-enables the account:
+    - a double failure (a lost disable answer plus a failed undo);
+    - a single process death between AdminDisableUser and the freeze's COMMIT (e.g. a deploy draining the worker).
+    A retry then records `prior_cognito_enabled = false`, so a later cancel will not re-enable.
+  - *Complete fix:* a reconcile pass (part of the due sweep) that lists disabled pool accounts whose users row has no open
+    request and status is not `erasure_pending`, and re-enables them with an ops event. It is carried into Task 11's brief.
+- **The boto3 Cognito client may be built from two threads on first use (T2-R2), and the estate has three copies of
+  the client factory (P1 review SIMP M-4).**
+  - *Complete fix:* one shared, lock-guarded, bounded (5 s) factory in core, used by `cognito_accounts.py`,
+    `cognito_identities.py` and `tenant_claim_writer.py`.
+- **The stand-down reason and notifications for a frozen owner (T3-C1, T3-M4).**
+  - *What is missing:* the specific token `owner_erasure_pending` rides only on the exception. The run row records the
+    generic `entitlements_unresolved`, and each stood-down automation still writes a bell row for the frozen owner.
+  - *Why deferred:* surfacing it touches the executor, recorder, loop and dashboard.
+  - *Complete fix:* the run row carries the specific reason, and a frozen owner gets no notification.
+- **Automations stood down during a freeze stay off after a cancel (T3-C2).**
+  - *Current behaviour:* the owner re-enables them by hand.
+  - *Complete fix:* the cancel re-arms the definitions that the freeze stood down, recorded by id in the ledger's steps.
+- **xdist + `SIBLING_CHECKOUTS` warning-serialisation crash (T3-C4).** It is pre-existing, and the api lanes pass with
+  `-W ignore::UserWarning:_scripts_workspace_root_impl`. *Complete fix:* make the warning picklable, or emit it once
+  in the controller process.
+- **Definer hardening (T5-C4).**
+  - A dedicated NOLOGIN owner role holding only the column UPDATE the rewrite needs, instead of `postgres`.
+  - `--verify-only` compares the function body's hash with the DDL constant.
+  - A retire step for an old definer signature when the signature changes.
+- **The `requested` state no committed row can hold (P1 review SIMP M-3).**
+  - *Current state:* `open_request` inserts `requested` and the same transaction moves it to `frozen`. The state carries
+    edges, stamps, CHECK entries and test rows for nothing.
+  - *Why kept:* it is plan-prescribed (Task 1), and removing it needs a CHECK re-migration.
+  - *Complete fix:* insert `frozen` directly and drop `requested` from the transitions and the CHECK.
+- **Small simplifications left (P1 review SIMP M-11a, M-11c).**
+  - `freeze._CANCELS_FROM` stays a one-entry map until the platform cancel exists (Task 11 fills it).
+  - `update_user`'s pre-read freeze raise duplicates the guarded UPDATE's re-read. It is harmless, and removable when
+    that function is next touched.
+- **The copilot-mro Phase-1c scope guard re-arms at every `--no-ff` merge (P1 review COMP §3.6).** It anchors on the
+  newest first-parent merge, so on the mainline its post-merge limb measures only work after the latest feature merge.
+  This belongs to the observability program's guard and is routed to its ledger.
 
 ## Lessons
 
@@ -375,8 +462,22 @@ erasure registry, `tests/db/tenancy/test_schema_conformance.py` shows 4 reds (on
 - Carry into Tasks 11/12: the due sweep and the D12 replay cannot read the ledger through the grant role — decide the
   read path then (owner-run CLI or a scoped grant).
 
-#### Notes: Task 3 — api (IN REVIEW, `ue-api` `f616c3b..cd54e69`, core pinned to `core-erase`)
+#### Notes: Task 3 — api: DONE (`ue-api` `f616c3b..0d0c626`; review APPROVED; fix round 1 test-only + core prose `05e1e9d`)
 - Gateway refuses exactly `erasure_pending` (fixed 403); `pending` unchanged; every 2xx applies its declared auth-cache
   eviction (so core's 202 request evicts); a frozen owner's automations stand down at next fire. Accepted gaps →
   Future Improvements: the run row shows the generic `entitlements_unresolved`; automations stood down during a freeze
   stay off after a cancel.
+- Fix round 1 (review M1/M5/M2): prefix-sharing values pinned in both status lists (a `startswith("erasure")` gate now
+  goes red); a bind spy proves the refusal precedes the tenancy bind; a tenant-pinned door test; a pin that core's user
+  read selects `status`; core's two stale "ignores users.status" sentences reworded. Merge gate: api merges only after
+  core (it imports `core.resources.user_erasure`).
+
+**Status at the P1 phase review (2026-09-27):** Tasks 1–5 COMPLETE. Three Opus lenses reviewed all four branches:
+correctness 0/1/5, plan-completeness 0/6/8, simplicity 0/0/11 (Critical/Important/Minor). Triage is in the ledger's
+"P1 TRIAGE" block. A fix wave with one fresh implementer per lane (core, copilot-mro M1, copilot-mro M2) closes: the
+unguarded request doors (a person frozen where no erasure can finish); cancel compensation on a lost enable; the
+scrub's session-binding dependency; the scope-guard approval; the third-role census; the sweep keeping the ledger;
+`core_local` no longer a seam; and the test-double and vocabulary simplifications. The hand-off gaps (D11 teardown path,
+the api-side executing CLI, Cognito delete as the last erasing step, enqueue after commit, the tenant erasure list,
+the completion delete on one cursor) are written into Tasks 11–13 above. The D12 off-database replay record needs an
+owner ruling. Merges wait for the owner.
