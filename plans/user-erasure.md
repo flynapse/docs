@@ -99,28 +99,28 @@ state the backup bound; replay completed erasures from the ledger after any rest
 ### Task 1: core — erasure ledger, seam registry, vocabulary (P1, lane C)
 Owned: `core/core/db/table_definitions.py` (`user_erasures` + registry entry); new `core/core/resources/user_erasure/`
 (`__init__`, `ledger.py`, `lifecycle.py`); `core/core/db/authorization_events.py` (`ENTITY_KINDS` + `user`); tests.
-- [ ] `user_erasures`: tenant-classed, NO FK to `tenants`/`users` (outlives both, like `authorization_events`); request
+- [x] `user_erasures`: tenant-classed, NO FK to `tenants`/`users` (outlives both, like `authorization_events`); request
   id, tenant, surrogate id, sub, requested_by (opaque), via, mode, RTBF flag, state (requested → frozen → erasing →
   completed | cancelled | failed), prior user status, `erase_after`, per-step state/counts/orphans + receipt (numbers
   and step names only), timestamps. No name, email or free text. One open request per (tenant, user), partial index.
-- [ ] Ledger store with guarded transitions (terminal rows never move), the `erasure_pending` literal and the 7-day
+- [x] Ledger store with guarded transitions (terminal rows never move), the `erasure_pending` literal and the 7-day
   constant; `lifecycle.py`, the twin of `tenant_lifecycle.py`: named seams register `erase` + `residue`, a declared
   required set, unregistered or partial → a RuntimeError subclass (never ValueError), reset for tests.
-- [ ] Proofs: unit — registry fail-closed, transitions exhaustive, `record_event` takes `user` and still refuses
+- [x] Proofs: unit — registry fail-closed, transitions exhaustive, `record_event` takes `user` and still refuses
   near-misses; db — RLS isolates tenants, the row survives its tenant's and user's deletion, a second open request is
   refused. Mutants: drop the index predicate; allow completed → erasing; registry skips instead of raising.
 
 ### Task 2: core — request, freeze, cancel, Cognito (P1, lane C, after Task 1)
 Owned: new `user_erasure/{freeze,cognito_accounts,erasure_endpoints}.py`; `core/core/resources/user/user_endpoints.py`;
 core's router mount site; tests (incl. edits to `tests/api/tenancy/test_user_update_ownership.py`).
-- [ ] Request = ledger row + freeze: refuse the tenant's last active owner; status → `erasure_pending`; Cognito
+- [x] Request = ledger row + freeze: refuse the tenant's last active owner; status → `erasure_pending`; Cognito
   AdminDisableUser + AdminUserGlobalSignOut; auth-context cache invalidation (as `delete_user` declares it). A Cognito
   failure refuses the request with no ledger row (fail closed, as `cognito_identities.py`). Cancel within the window
   (same gate): prior status restored, AdminEnableUser, ledger cancelled.
-- [ ] Routes POST / GET (status + receipt) / DELETE (cancel) on `/users/{id}/erasure`, gated exactly as
+- [x] Routes POST / GET (status + receipt) / DELETE (cancel) on `/users/{id}/erasure`, gated exactly as
   `_require_user_delete_allowed`; bare `DELETE /users/{id}` answers 202 as a request. `cognito_accounts.py`: disable,
   enable, sign-out, delete, exists — configured pool only, no attribute reads.
-- [ ] Proofs (fake Cognito): 403 without `users_modify` (self included), last-owner refusal, Cognito failure leaves
+- [x] Proofs (fake Cognito): 403 without `users_modify` (self included), last-owner refusal, Cognito failure leaves
   status and ledger untouched, cancel restores exactly, a repeat request returns the open one. Mutants: skip the
   last-owner check; freeze without sign-out; cancel without restoring status.
 
@@ -147,12 +147,12 @@ Owned: `copilot_mro/app/db/chat_history/chats.py`, `deleted_chat_copies.py`; `te
 ### Task 5: copilot-mro — the postgres-owned definer for the append-only LLM records (P1, lane M2)
 Owned: the DDL constant beside `postgres_table_definitions_modules/llm_turn_content.py`; `scripts/provision_rls.py`;
 `tests/unit/db/`, `tests/db/tenancy/`.
-- [ ] One SECURITY DEFINER function (R-LLM-DEFINER) taking tenant, user ids, chat ids, returning three counts; static
+- [x] One SECURITY DEFINER function (R-LLM-DEFINER) taking tenant, user ids, chat ids, returning three counts; static
   schema-qualified statements, pinned search_path with `pg_temp` last, STRICT; refuses a blank tenant, empty ids and
   `deleted-user` as an input id. Phase 2b applies it with REVOKE ALL FROM PUBLIC + GRANT EXECUTE to `flynapse_grant`
   in one transaction; `--verify-only` reports it missing, not `prosecdef`, unpinned, owner ≠ `postgres`, or any other
   EXECUTE holder; the append-only verification of the three relations is unchanged.
-- [ ] Proofs: unit on the DDL text and verify findings (fake catalog rows); db probe after the owner provisions — app
+- [x] Proofs: unit on the DDL text and verify findings (fake catalog rows); db probe after the owner provisions — app
   and readonly EXECUTE → 42501; grant EXECUTE touches only the named tenant (a second tenant under the same user id
   untouched); app-role UPDATE/DELETE on the three still 42501. Mutants: drop REVOKE FROM PUBLIC; drop the tenant
   predicate; grant EXECUTE to the app role.
