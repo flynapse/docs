@@ -522,3 +522,7 @@ snapshot `copilot_mro_20260928T084630Z.dump`, provision and verify clean); 31 no
 is proven); 32 a cancel re-enables the automations the freeze disabled (moved into Task 11); 33 keep `requested` for
 now. The owner confirmed that the dashboard (Task 14) is the primary door and the CLI covers only the back office.
 
+**Status at compaction checkpoint 3 (2026-09-28):** P1 is merged locally: core `master` `3f05e5f`, copilot-mro
+`langgraph-merge` `82c504e2`, api `langgraph-merge` `8949109`. The push waits for the last post-merge lane
+(copilot-mro db). Dev `copilot_mro` is migrated and provisioned. Next: push, clean up the P1 worktrees and branches,
+then Phase 2 (Tasks 6–10).

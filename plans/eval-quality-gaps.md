@@ -520,3 +520,9 @@ with no code-level Critical or Important finding. Three Important Task 6 procedu
 text, the reporting-role precondition) and the time-window correction are written into Task 6 above. One fix wave
 (test, prose and one persisted explanation string) is in flight, then a scoped re-review, Task 6, and the mainline
 merge after OD-5's push.
+
+**Status at compaction checkpoint 3 (2026-09-28):** `eval-quality-gaps` @ `7f97250a` carries Tasks 5, 1, 3, 2 and 4, plus the
+final fix wave. The persisted explanation now reads "No citation needed: the content copy carries no retrieved
+evidence."; the rest of the wave is prose, a `sys.modules` snapshot and the upkeep-role pin. The scoped re-review was
+clean. The owner has logged in to Bedrock, and Task 6 (the governed proof run) is in flight. Then: merge into
+`langgraph-merge`, push, clean up, and close out.

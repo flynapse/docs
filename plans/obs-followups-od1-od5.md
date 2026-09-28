@@ -186,3 +186,8 @@ copilot-mro `langgraph-merge` `eca6bd9f` T2, `683808f3` T4, `573eb638` T3). Task
   blocks minus both lanes' deletions, kept blocks byte-identical, `repaired` = sorted union); the script reproduces
   each lane's file byte-for-byte on its own, which is its proof.
 - Learning: a census that counts constructions per site cannot see what a sentence SAYS — pin every sentence exactly.
+
+**Status at close (2026-09-28): CLOSED and PUSHED.** telegram-bot `main` is at `af1d4d6` (OD-1 plus final fix m4),
+and copilot-mro `langgraph-merge` at `3e07e372` (OD-5 Tasks 2–5 plus final fixes m1–m3). The final whole-batch review
+(Opus) found 0 Critical and 0 Important issues and 5 Minor ones. One fix wave followed, and its scoped re-review said
+ready to push. The residual n1 docstring clause and the parked items are Future Improvements above.
