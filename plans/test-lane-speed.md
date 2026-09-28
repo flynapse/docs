@@ -69,6 +69,9 @@ integration lane, not the unit lane.
    - [x] Written into the user-erasure P2 lane context, and sent to the running Task 6 implementer.
    - [ ] Carry the rule into every later brief (standing).
 4. **Speed up the slowest scan tests.** This is a Future Improvement, for a later small batch.
+5. **Fix the lang_agent `[deadline]` load flake** (owner, 2026-09-28: "fix lang_agent only for now"). Branch
+   `la-deadline-fix`; ledger `.superpowers/sdd/lang-agent-deadline-flake/`.
+   - [ ] Fixed, reviewed and merged.
 
 ## Future Improvements
 
