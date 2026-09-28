@@ -52,13 +52,12 @@ integration lane, not the unit lane.
    host has 32 GB, and the earlier VM crashes were host memory starvation.
    - The change applies only after `wsl --shutdown`. That stops every agent and the Docker stack, and it can bring
      back the Postgres stale-bind-mount trap.
-   - Claude's edit to the file was refused by the auto-mode classifier, so the owner makes the edit and restarts at a
-     quiet point.
-   - [ ] Owner edits `.wslconfig` and restarts WSL.
+   - [x] `.wslconfig` now reads `processors=20` (Claude edited it on the owner's request, 2026-09-28).
+   - [ ] Owner runs `wsl --shutdown` at a quiet point, then checks `nproc` reads 20.
 2. **Keep 6 slots, and measure the waits.** Six slots at `-n 4` is 24 workers, which is about right on 20 CPUs.
    - [x] `pytest-slot.sh` (in utils, `utils/dev/.claude/`) now prints how long each run waited. Each finished run also
      appends a line to `~/.claude/scratch/slots/runs.log` with its slot, wait, run time, exit status, free memory, load
-     and working directory. The edit is uncommitted, for the owner to commit.
+     and working directory. Committed in utils as `47b125f` on `langgraph-merge` (not pushed).
    - [x] The log has been live since 2026-09-28 07:02 PDT. Its first entry shows a 324 s wait for a 1 s run.
    - [ ] Review slot and CPU sizing from `runs.log` after a week of runs.
 3. **Run the full lanes less often.**
