@@ -262,7 +262,10 @@ Owned: `core/core/resources/channel_provisioning/channel_provisioning_endpoints.
 - [ ] Before `delete_tenant`: run the channel user's erasure immediately and synchronously (`requested_by='system'`,
   `via='api'`, mode immediate, rtbf false) through T11's teardown-only request path — the channel user is the personal
   tenant's sole Tenant Owner, whom `request_erasure` otherwise refuses as the last active owner (P1 review COMP I-1).
-  A new `via` value needs an ALTER migration: the CHECK is baked in at CREATE (CORR N-4). Cognito delete included, then the existing teardown; a failed erasure aborts before the tenant delete (retryable,
+  A new `via` value needs an ALTER migration: the CHECK is baked in at CREATE (CORR N-4). The door's
+  partition-failure log names `delete_unentitled_partition.py --purged-tenant` plus direct partition removal, never
+  the bare script: its `--tenant` mode deletes the torn-down tenant's ledger rows (P1 fix M2 re-review). Cognito
+  delete included, then the existing teardown; a failed erasure aborts before the tenant delete (retryable,
   404-on-repeat kept). Check the bot's `/goodbye` prose; a needed text change goes to a telegram-bot lane.
 - [ ] Proofs: Cognito delete called, ledger completed, the tenant event still written; failure leaves the tenant intact.
 
@@ -394,6 +397,14 @@ Recorded at the P1 phase review (2026-09-27); each was deferred by a ledger ruli
   - A dedicated NOLOGIN owner role holding only the column UPDATE the rewrite needs, instead of `postgres`.
   - `--verify-only` compares the function body's hash with the DDL constant.
   - A retire step for an old definer signature when the signature changes.
+- **The residue sweep's `--tenant` mode deletes the erasure ledger (P1 fix M2 re-review).**
+  - *Current behaviour:* `delete_unentitled_partition.py --tenant` deletes every `tenant_id` table's rows for an id
+    missing from `tenants`, `user_erasures` included. Only `--purged-tenant` keeps `NO_DELETE_RELATIONS`. That bites a
+    registered-then-torn-down tenant, which after Task 13 is every `/goodbye` personal tenant.
+  - *Why deferred:* the script connects only to `copilot_mro_test`, and it sweeps `authorization_events` the same way
+    under an existing ruling.
+  - *Complete fix (required before `ALLOWED_DATABASES` widens or the channel residue sweep is automated):* `--tenant`
+    refuses an id that holds retained-table rows or has a tenant-delete event.
 - **The `requested` state no committed row can hold (P1 review SIMP M-3).**
   - *Current state:* `open_request` inserts `requested` and the same transaction moves it to `frozen`. The state carries
     edges, stamps, CHECK entries and test rows for nothing.
