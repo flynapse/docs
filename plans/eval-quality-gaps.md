@@ -373,3 +373,27 @@ golden-set section.
 ## Lessons
 
 ## Implementation notes
+
+**Status at compaction checkpoint 1 (2026-09-27):** integration branch `eval-quality-gaps` (worktree
+`copilot-mro-eqg`) carries Tasks 5 and 1 (`2102a74b`, `d947e90b`); Task 2 and Task 4 building, Task 3 in review. Env
+red set empty (the one baseline red needed the database); compose boundary test green at `d947e90b`. Ledger
+`/home/aditya/Code/.superpowers/sdd/eval-quality-gaps/progress.md`.
+
+#### Notes: Task 5 — SDK-loop profile: DONE + MERGED (`2102a74b`; review APPROVED)
+- `bedrock-sdk_loop` @ `pilot-r4` on Bedrock only; a non-Claude `AGENT_SDK_MODEL` refuses at composition (on Bedrock,
+  a model the rate card cannot match stops the Claude runtime — fail-closed per R-D3; nothing deployed sets the
+  variable). Tests prove the revision is single-sourced (registry probe) and drive a real Bedrock composition through
+  capture to the SDK-turn span.
+
+#### Notes: Task 1 — content copy: DONE + MERGED (`d947e90b`; review APPROVED after one fix round)
+- **Plan amendment (controller ruling E1-C1, from a Critical review finding):** `needs_clarification` reads the
+  finalized outcome's `metadata["needs_clarification"]` first, then `post_turn_signals`, then false — the capture only
+  ever sees the FINALIZED outcome, whose `post_turn_signals` the lifecycle nulls, so the plan's "from
+  `post_turn_signals`" would have been false on every production turn (a clarification turn would score FAIL under v3).
+- Also: a stale first-fit `omitted_evidence_refs` is dropped on rebuild (kept, b80caf90); `limits.evidence_refs_truncated`
+  (one quote over the per-string cap) makes the marker false; source-less badge refs keep whole-dict identity; the row
+  pass no longer re-captures input it already holds.
+- Future Improvement wording to correct at close-out (E1-M5): several retriever spans are already allowed by the
+  interface, R-D1 and `_extract_evidence`; splitting refs across spans is a projection change only.
+- Learning: a plan that names a field's SOURCE must be checked against the object the reader actually sees (finalized
+  vs in-flight) — seam tests on hand-built objects hid it.

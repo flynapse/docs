@@ -56,11 +56,11 @@ Push: Claude may push this work (owner, 2026-09-25); fast-forward or merge only 
 - [x] Register guard run: 0 new findings. Prose that becomes false edited (R3 §5).
 
 ### Task 2: OD-5 foundation (copilot-mro, lane M0) — needs D1
-- [ ] New framework-free `app/utils/refusal.py` (base + three builtin-preserving subclasses; Document Hub upload
+- [x] New framework-free `app/utils/refusal.py` (base + three builtin-preserving subclasses; Document Hub upload
       policy error rebased as a 409 refusal with its dict detail); new `app/api/refusals.py` shared relay helper.
-- [ ] Policy names the one refusal type; the ruled widening allowance (D1) in the register test; plant test copies
+- [x] Policy names the one refusal type; the ruled widening allowance (D1) in the register test; plant test copies
       the refusal module into its tmp tree; census-pin skeleton with one site file per family.
-- [ ] Unit tests of the helper and subclasses (base preservation, status override, dict detail).
+- [x] Unit tests of the helper and subclasses (base preservation, status override, dict detail).
 
 ### Task 3: OD-5 Data Discovery (lane M1, after Task 2) — needs D2, D3
 - [ ] Relay funnel via the shared helper; route-reachable fixed / caller-safe raises converted with their statuses;
@@ -68,7 +68,7 @@ Push: Claude may push this work (owner, 2026-09-25); fast-forward or merge only 
 - [ ] Red-before sentinel test per error kind; census file; delete the 21 register entries.
 
 ### Task 4: OD-5 Document Hub (lane M2, after Task 2) — needs D3
-- [ ] Relay funnel via the helper; substring status ladder removed (status at the raise); route enum parse refused
+- [x] Relay funnel via the helper; substring status ladder removed (status at the raise); route enum parse refused
       with a fixed sentence; conversions; sentinel tests; census file; delete the 12 entries.
 
 ### Task 5: OD-5 chat uploads/read + `/brief` (lane M3, after Task 2) — needs D4
@@ -121,3 +121,25 @@ Task 2 merges. Execution: SDD, Opus implementers + reviewers. Ledger holds agent
   hidden on stderr; OTLP unchanged except the Job case.
 - Deferred minors (final review triages): docstring reflow `failure.py:251`; `telemetry.py:46-49` parity sentence;
   FI-TG-8.
+
+**Status at compaction checkpoint 2 (2026-09-27):** Tasks 1, 2, 4 complete and merged (telegram-bot `bff16ea`;
+copilot-mro `langgraph-merge` `eca6bd9f` T2, `683808f3` T4); Tasks 3 and 5 implemented and in task review
+(`fu-od5-dd` @ `5e06f5e2`, `fu-od5-chat` @ `2fd95aa3`). Then: merge T3/T5 (union the register JSON + scope-guard
+set), final whole-batch review, one fix wave, push telegram-bot + copilot-mro. Nothing pushed yet.
+
+#### Notes: Task 2 — OD-5 foundation: DONE + MERGED (`langgraph-merge` `eca6bd9f`; review APPROVED after one fix round)
+- `7c4bc2a0` foundation (`app/utils/refusal.py`, `app/api/refusals.py` `refusal_or`, DH upload-policy error →
+  `(Refusal, RuntimeError)` 409 dict, policy names `Refusal`, `RULED_POLICY_WIDENINGS`, plant test copies) ·
+  `e2565747` census pin + family site files · `e2668cac` scope-guard paths · `7c8bfe55` non-refusal logged at `error`
+  when the fallback status ≥ 500, else `warning` (ruling T2-C1) · `e897c067` review fixes: every refusal class carries a
+  sample and a chained-cause sentinel proves no class renders its cause/context (I1); two-family pin test (M1);
+  allowance comment corrected (M2); failure log attributed to the calling route via `opt(depth=1)` (M3).
+- Learning: a census that pins classes by NAME cannot see what a class RENDERS — the sentinel over every discovered
+  subclass (with a mandatory sample) is what closes it. Rule carried to T3–T5: each family samples only its own classes.
+
+#### Notes: Task 4 — Document Hub: DONE + MERGED (`langgraph-merge` `683808f3`; review APPROVED after one fix round)
+- `60e5a130` raises → refusals (status at the raise) · `2aab5d0b` relay via `refusal_or`, fixed 500 "Document Hub request
+  failed", ladder removed, `group_by` fixed 400 · `8b4da575` 12 register entries repaired + scope guard · `a2852bb1`
+  review fix: the register rebuilt byte-minimal against `eca6bd9f` (the first rewrite re-encoded 28 unrelated `—`
+  lines — the file is mixed-serialised; edit textually, never re-dump) + the sentinel also reads stdlib logging.
+- Red-before 89 failed / 90 passed at `eca6bd9f` (the greens are cases the old relay already answered safely).

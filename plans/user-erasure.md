@@ -134,12 +134,12 @@ Owned: `api/flynapse_api/middleware/auth.py`, `api/flynapse_api/automations/iden
 
 ### Task 4: copilot-mro — `scrub_chat_copies`, behaviour-preserving (P1, lane M1)
 Owned: `copilot_mro/app/db/chat_history/chats.py`, `deleted_chat_copies.py`; `tests/{unit,db}/chat_history/`.
-- [ ] Factor `delete_chat`'s transaction body into `scrub_chat_copies(cursor, tenant, chat id, now)`: roster rebind;
+- [x] Factor `delete_chat`'s transaction body into `scrub_chat_copies(cursor, tenant, chat id, now)`: roster rebind;
   the chat-row soft-delete stays the FIRST write (race-gate lock order, `chats.py:22-33`), keyed on tenant + chat id at
   any deleted state, never overwriting an existing `deleted_at`; blocks; facts + feedback; `anonymise_copies` —
   returning counts and reap keys. Plus `reap_chat_copies` (spills, compaction docs, generation + caches, Phoenix
   session). `delete_chat` keeps its ownership read, return values and log fields, and calls both.
-- [ ] Proofs: every existing chat_history unit + db test passes UNMODIFIED (list them); new db cases — a chat
+- [x] Proofs: every existing chat_history unit + db test passes UNMODIFIED (list them); new db cases — a chat
   soft-deleted with unscrubbed copies is fully scrubbed while `delete_chat` still returns False for it; counts [n, 0]
   on rerun; `deleted_at` preserved. Mutants: soft-delete moved after the anonymisation (add a race test if none goes
   red); the `deleted = false` guard reinstated on the scrub path.
@@ -318,3 +318,46 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
 ## Lessons
 
 ## Implementation notes
+
+**Status at compaction checkpoint 1 (2026-09-27):** P1 in flight, SDD with Opus agents; nothing merged or pushed
+(erasure tasks merge into the shared mainlines only after the P1 phase review — the copilot-mro mainline carries the
+OD-5 push first). Ledger `/home/aditya/Code/.superpowers/sdd/user-erasure/progress.md` holds every ruling (prefix
+`Ruling:`), agent ids and the P1 close sequence. Owner decision 27 (migrate + provision `copilot_mro_test`) blocks the
+Task 1/2/5 db proofs.
+
+#### Notes: Task 1 — ledger, registry, vocabulary: CODE-COMPLETE (core `ue-core` `17699d9..9ff3daf`, review APPROVED)
+- Rulings that refine the task text: `mode` ∈ {windowed, immediate} + `rtbf` (CHECK rtbf ⇒ immediate; immediate
+  without rtbf is the `/goodbye` case); `failed` is resumable (failed → erasing), terminal = {completed, cancelled},
+  `failed` stays open in the one-open-request index; `REQUIRED_SEAMS = (copilot_mro, shift_optimizer, core_local)`;
+  steps/receipt jsonb with identifier-pattern keys and int values only; ids and `requested_by` are opaque tokens
+  `[A-Za-z0-9_:-]{1,128}`; `prior_status` is an identifier token; `external_id` nullable; the window is enforced in
+  the guarded UPDATE (immediate requests never held); `finished_at` only on completed/cancelled.
+- Learning: `users.status` is free text a user can write on their own row — anything copied from it into a record
+  that outlives the person is a personal-data channel. Root fix routed to Task 2.
+- Pending: 14 db proofs (RLS isolation, survival past tenant + user deletion, one open request).
+
+#### Notes: Task 2 — request, freeze, cancel, Cognito: IN REVIEW (same branch `9ff3daf..0365624`)
+- Built: routes, freeze/cancel, `cognito_accounts.py`, `users.status` vocabulary {pending, active, inactive} +
+  `erasure_pending` written by the erasure service only; a frozen row refuses every PUT.
+- Review fix round 1 (rulings T2-I1/M1–M4): cancel only for a windowed request inside its window and only from the
+  door that opened it (`via='api'`), one predicate for the ledger guard and the `cancellable` flag; the account's prior
+  Cognito state recorded (`prior_cognito_enabled`) so a cancel never revives a pre-disabled account; bounded Cognito
+  calls (5 s, 2 attempts) off the event loop; cross-tenant proofs.
+- Owed to Task 3 (api): the api applies auth-cache evictions only on 200/201/204 — a 202 eviction is dropped.
+
+#### Notes: Task 4 — `scrub_chat_copies`: DONE (copilot-mro `ue-m1` `e0cdea42..acd32b42`; review APPROVED; db proofs green)
+- Behaviour-preserving factor of chat delete's transaction; the only visible change: `delete_chat` answers False when
+  the row vanished between the ownership read and the transaction. The facts/feedback anonymisations now key on the
+  not-yet-anonymised shape (a rerun changes 0 rows; first-run results byte-identical). The scrub refuses a caller bound
+  to another tenant; the reap derives every tenant-scoped key from the scrubbed chat, never the ambient binding.
+- Learning: a reap that reads the AMBIENT tenant binding silently reports "0 left" when called under the wrong tenant —
+  derive tenancy from the record being erased.
+
+#### Notes: Task 5 — LLM-records definer: CODE-COMPLETE (copilot-mro `ue-m2` `e0cdea42..f5d82ae4`, review APPROVED)
+- One postgres-owned SECURITY DEFINER function + a reusable "declared definer" path in `provision_rls.py` (applied in
+  phase 2b with owner set, REVOKE ALL FROM PUBLIC and GRANT EXECUTE to `flynapse_grant` in one transaction;
+  `--verify-only` reports missing / not definer / unpinned search_path / wrong owner / any extra EXECUTE holder incl.
+  WITH GRANT OPTION). The function refuses unless the session's tenant binding equals its tenant argument — callers
+  (Task 6) run it on the grant pool inside `db_tenancy(<erased tenant>, …)`. B14 reuses this path.
+- Owed: the grant round (no DELETE on `user_erasures` for the app and grant roles) once Task 1's table is on the path;
+  the db probe after provisioning.
