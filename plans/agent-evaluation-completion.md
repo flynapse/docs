@@ -1366,7 +1366,7 @@ done this way, and what the complete solution would look like.)*
   owner decides alongside Q1 ratification, since this is direct evidence on what "profile" can mean
   in production. **RULED 2026-09-23: approved → task TM; Q1 ratified (profile = the answering
   model's profile).** Residual (SDK loop rides no certified profile) → **`docs/plans/eval-quality-gaps.md`
-  Task 5 (2026-09-25).**
+  Task 5 (2026-09-25).** **CLOSED 2026-09-28** (merged + pushed `925c716d`; Task 6 proof: the SDK child carries `bedrock-sdk_loop` @ `pilot-r4`).
 - **Owner ratification bundle — RULED IN FULL (2026-09-23; full record in the SDD ledger):**
   1. Q1: `profile` = the ANSWERING model's profile; judge identity stays separate, per-run flags.
   2. Q2: citations counted from `chat_turn_facts` (amends M-EVALS' "structured citation offsets"
@@ -1500,7 +1500,7 @@ done this way, and what the complete solution would look like.)*
     truncated or its evidence count is below the turn's citation count — honest and free; or the
     harness reads the evidence from `llm_turn_content` by (tenant, block), as `citation_coverage` reads
     `chat_turn_facts`, so the judge sees what the answer cited. Deferred: app code, frozen for TF.
-    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Tasks 1–2 (owner D1).**
+    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Tasks 1–2 (owner D1).** **CLOSED 2026-09-28** (pushed `925c716d`; proof: all 52 quotes judged, `faithful`).
   - **`citation_coverage` can never resolve a headless or harness turn.** The settle-time facts writer
     (M-FACTS-FAILURES) upserts `INSERT … SELECT … FROM chats WHERE chat_id = …`; a turn with no
     `chats` row inserts nothing and still returns `WRITTEN` (rowcount ignored), silently. Dev
@@ -1508,7 +1508,7 @@ done this way, and what the complete solution would look like.)*
     `not_evaluated`. Complete fix: the harness driver saves the turn the way the chat route does
     (chat + `save_block`, which writes the full projection incl. `citation_count`) under its tenant —
     and the writer logs a zero-row settle rather than reporting it written.
-    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Tasks 1–3 (owner D2: state on the copy).**
+    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Tasks 1–3 (owner D2: state on the copy).** **CLOSED 2026-09-28** (pushed `925c716d`; proof: 56/56 citations resolved with no facts table).
   - **The report's cost per query misses in-loop synthesis spend; the turn ledger misses post-turn
     memory calls.** Golden turn: `llm_model_calls` sums $0.4163 (SDK loop + two Haiku calls) against
     `llm_usage.total_cost_usd` $0.5814 — the $0.165 of in-loop direct Bedrock spend (`cited_synthesis`)
@@ -1518,7 +1518,7 @@ done this way, and what the complete solution would look like.)*
     signal. Complete fix: price a turn from `llm_usage.total_cost_usd` (with its `cost_complete` flag)
     plus the `llm_model_calls` rows booked after it settled — or book in-loop direct calls into
     `llm_model_calls` so one ledger is whole.
-    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Task 4 (owner D4), with readability (a).**
+    → **Picked up 2026-09-25: `docs/plans/eval-quality-gaps.md` Task 4 (owner D4), with readability (a).** **CLOSED 2026-09-28** (pushed `925c716d`).
   - **Phoenix under-prices a synthesis-heavy turn by ~29%.** SDK span now within 0.9% of the ledger on
     identical tokens (G1 closed by TM); the trace total is 71% of the turn — the gap is exactly the
     in-loop direct spend on no priced LLM span. TM-filed "residual under-report … small, not zero" —

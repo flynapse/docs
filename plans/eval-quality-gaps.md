@@ -386,14 +386,15 @@ golden-set section.
   - It re-runs the red-befores and mutants itself; reports are indexes, not evidence.
   - It returns a claims table with an OPEN count. Critical and Important findings block; Minor ones are fixed or filed.
   - Once cleared, the task merges `--no-ff` into `eval-quality-gaps`.
-- [ ] **Final review.** Two fresh Opus reviewers read `e0cdea42..eval-quality-gaps`, with full unit and db lanes at the
+- [x] **Final review.** Two fresh Opus reviewers read `e0cdea42..eval-quality-gaps`, with full unit and db lanes at the
       tip. One checks correctness (the Task 1↔2 contract; Task 5's identity → capture → span); the other checks
       completeness and simplicity.
-- [ ] **One fix wave**, with a fresh implementer in one worktree, then a scoped re-review.
-- [ ] **Task 6.** A defect it exposes stops the batch for the owner; no second fix wave unless the owner asks.
-- [ ] **Merge.** Merge `--no-ff` into `langgraph-merge` in the primary checkout, leaving owner WIP untouched. Re-run the
+- [x] **One fix wave**, with a fresh implementer in one worktree, then a scoped re-review.
+- [x] **Task 6.** A defect it exposes stops the batch for the owner; no second fix wave unless the owner asks. (Run 1
+      exposed one; the owner chose fix 2 as decision 34. Run 2 passed all three gaps.)
+- [x] **Merge.** Merge `--no-ff` into `langgraph-merge` in the primary checkout, leaving owner WIP untouched. Re-run the
       merged lanes, push, remove the worktrees, and delete branches with `-d`.
-- [ ] **Close-out.** The controller writes the Implementation notes and closes the parent plan's covered §10 items.
+- [x] **Close-out.** The controller writes the Implementation notes and closes the parent plan's covered §10 items.
 
 ## Future Improvements
 
@@ -465,6 +466,40 @@ Recorded at the final review (2026-09-28); detail in `.superpowers/sdd/eval-qual
   planned work items, and `plan_candidates` calls it; the drift test then goes.
 - **The capture mirrors `_pipeline_result`'s citation rule (final review m-2).** *Complete fix:* one
   `handed_on_citations(outcome)` helper beside `RuntimeOutcome`, called by both; the parity test becomes a unit test.
+Recorded at close-out (2026-09-28):
+- **Row headroom on long answers (Task 6 run 2).**
+  - *What is missing:* the proof turn's `llm_turn_content` row came to 202,816 of its 262,144-byte ceiling. A turn with
+    about 20 more refs would overflow it, keep only the first four refs, read as incomplete, and abstain.
+  - *Why deferred:* abstaining is the honest outcome, and it is free. No golden-set turn is that long today.
+  - *Complete fix:* this is the same split as "Too many quotes → abstain": several retriever spans, each with its own
+    marker. The row ceiling then bounds each span's share, not the whole turn.
+- **Two prose corrections (fix 2 review N-1).**
+  - The runbook's lines on the row ceiling (around 68–70) imply the refs alone fill the row. The ceiling covers the
+    whole row, and an overflow keeps the first four refs.
+  - The contract docstring says `document` is at most 200 characters. That holds on the SDK path only.
+  - *Complete fix:* two sentence edits, the next time either file is touched.
+- **Loader placeholders can orphan loaded children (post-merge fix, review concern 2).**
+  - *What is missing:* `registered_packages` removes a placeholder level on exit even when modules loaded beneath it
+    stay cached. The post-merge fix closed that gap at `postgres_table_definitions_modules` (`4e8738e1`). The same
+    shape remains one level up, at `copilot_mro.app.db`, but no test in a lane that uses the loader reaches it.
+  - *Complete fix:* a lazy `copilot_mro/app/db/__init__.py`, so no test needs a placeholder there. That would also
+    retire the five hand-rolled `_install_db_stub` copies in `tests/db/chat_history`.
+- **All of `tests/db` is red today (post-merge fix review, concern 3).**
+  - *What is missing:* running `tests/db/chat_history/test_chat_anonymisation_rerun_db.py` together with
+    `tests/db/improvement/test_improvement_tables.py` gives 2 passed and 13 errors:
+    `cannot import name 'initialize_postgres_tables' from 'copilot_mro.app.db'`.
+  - *Scope:* it is identical on the previously pushed `82c504e2`. The hand-rolled stubs in three user-erasure P1 files
+    brought back the 13-error failure that the 2026-09-21 census recorded. Every lane this batch runs is unaffected.
+  - *Complete fix:* the lazy package `__init__` above, or `ensure_package` in place of the hand-rolled stubs.
+  - Belongs in the copilot-mro open-items register. It is not written there because that file holds owner WIP.
+- **Post-merge fix nits (review minors).**
+  - The `registered_packages` docstring says every such import fails with "(unknown location)", which is true only
+    when the parent is a placeholder. It also omits the `sys.modules` fallback.
+  - The regression test file's first line repeats the promise that the fix corrected.
+  - The loader comment names one placeholder level; there are three.
+  - 25 table modules load, not 24.
+  - The regression test hand-copies the quality-report test's load, so the two can drift.
+
 - **Plan mode as the proof's readout (final review H-1, optional).** *Complete fix:* the plan payload gains a
   content-free per-candidate block (root span id, evidence count, marker, citation count, needs_clarification), so
   future proofs need no Phoenix REST read for the copy's statements.
@@ -559,3 +594,39 @@ clean. The owner has logged in to Bedrock, and Task 6 (the governed proof run) i
   1. Merge into `langgraph-merge`.
   2. Push. If unreviewed erasure P2 merges sit on top of the eval merge, push by SHA.
   3. Clean up and close out.
+
+#### Notes: Task 6 — governed live proof: DONE (run 2 after fix 2; all three gaps PASS)
+- **Run 1** (`7f97250a`) exposed one defect. The retriever child carried whole refs, about 70% of them display data, so
+  a 52-quote turn overflowed the 64 KiB child cap and the judge saw only 6 quotes. Owner decision 34 chose to slim the
+  refs (fix 2, `3d95d06c`).
+- **Run 2** used one paid M01 turn on the dev tenant, trace `dd2167c2…`, and cost about $0.58 against the $1.00 cap.
+  - Gap 1: `evidence_complete` true; groundedness judged all 52 quotes and returned `faithful`.
+  - Gap 2: exactly one ids-only NO_CHAT warning; 56 citations, matching the bank's 56; v3 resolved under `__SYSTEM__`
+    with no facts table.
+  - Gap 3: the SDK child carries `bedrock-sdk_loop` @ `pilot-r4`.
+  - 3 judge calls were made, and 0 on the identical re-run; CloudWatch agrees. The run's evidence is in
+    `~/.claude/scratch/eval-quality-gaps/proof/`.
+- **Owner item raised by the run:** the app's S3 client failed its SSO token refresh at startup. The owner logged in to
+  the dev profile again on 2026-09-28.
+
+#### Notes: mainline merge + push (2026-09-28)
+- `eval-quality-gaps` was merged `--no-ff` into `langgraph-merge` as `cee26494`; `merge-tree` was clean.
+- The post-merge db lane (evaluation + chat_history) failed at collection. Those two groups had never been collected
+  together. The erasure P1 file `test_chat_anonymisation_rerun_db.py` could not import the table-module package after
+  the evaluation loader's `registered_packages` block: the placeholder level was removed while its 25 loaded children
+  stayed cached.
+- A fresh Opus implementer fixed it at the loader in test code (`4e8738e1`, with a regression test). A fresh Opus
+  reviewer approved it: 0 blocking, mutant M1 KILLED. It merged as `925c716d`, whose tree is identical to `4e8738e1`.
+- Lanes on that tree:
+  - unit: 7782 passed, 0 failed;
+  - db evaluation + chat_history + tenancy: 567 passed;
+  - compose boundary (prefix 3): 1 passed.
+- **PUSHED** `82c504e2..925c716d` to `origin/langgraph-merge`: 40 commits, with no user-erasure P2 commits among them.
+  The copilot-mro commit `9402ab66` (VERSIONS.md) went with it.
+- Worktrees `copilot-mro-eqg`, `copilot-mro-eqg-fix2` and `copilot-mro-eqg-mfix` were removed. Branches `eqg-t1..t5`,
+  `eqg-fix`, `eqg-fix2`, `eqg-mergefix` and `eval-quality-gaps` were deleted with `-d`.
+- **Learning:** two lanes that each pass on their own branch can fail together after a merge, when their test loaders
+  share `sys.modules` state. The post-merge db lane must collect every group the merge brings together, and a lane
+  added by one side must be run next to the other side's files.
+
+**Status: CLOSED 2026-09-28.** The parent plan's covered §10 items are marked closed.
