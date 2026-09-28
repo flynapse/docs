@@ -526,3 +526,56 @@ now. The owner confirmed that the dashboard (Task 14) is the primary door and th
 `langgraph-merge` `82c504e2`, api `langgraph-merge` `8949109`. The push waits for the last post-merge lane
 (copilot-mro db). Dev `copilot_mro` is migrated and provisioned. Next: push, clean up the P1 worktrees and branches,
 then Phase 2 (Tasks 6–10).
+
+**Status at compaction checkpoint 4 (2026-09-28).**
+
+*Phase 1.* P1 is pushed: core `3f05e5f`, copilot-mro `82c504e2`, api `8949109`. The P1 worktrees are removed.
+
+*Phase 2 (started on the owner's word).*
+- **Closed and merged locally, unpushed:**
+  - Task 9, core `master` `ae33072`.
+  - Task 10, shift-optimizer `main` `ba3c070`.
+  - Post-merge lanes are green for both.
+- **In review:**
+  - Task 6 (`ue-t6` `12a43886`), in task review.
+  - Task 7 (`ue-t7` `db0f2bb4`), where fix round 1 is in scoped re-review.
+- **Task 8:** the brief is prepared, and it is dispatched once Tasks 6 and 7 are merged.
+
+*P2 controller rulings, all recorded in the ledger.*
+- **R-DELEGATE.** Task 6 places Document Hub and chat columns as delegated to Tasks 7 and 8.
+- **R-LEDGER-KEYS.** Every count or residue key a seam or core step emits must fullmatch core's ledger identifier
+  pattern. Column placements are spelled `<table>__<column>`, and each seam has a test for this. The Task 10 review
+  found dotted keys that the ledger would refuse; Tasks 6 and 7 had the same defect.
+- **R-LINKS-LAST (Task 8).**
+  - Chat ids and attachment ids are gathered first.
+  - The chats are scrubbed one by one.
+  - In-flight work is drained, bounded, and fails the step on timeout.
+  - The residue is read until zero with the same gathered sets.
+  - Only then are `chats` / `chat_blocks` purged and the user prefixes swept.
+  - This splits D2's "scrub and purge in one transaction" into a scrub per chat now and a purge at the end.
+- **Task 7's fixes.**
+  - A private document still mid-processing stays an orphan until DocHub's abandonment cutoff passes, then is purged
+    again.
+  - A shared document stuck in processing is settled with DocHub's own `mark_processing_failed`.
+  - Together these bound the processing hold at about 30 minutes.
+- **Task 10's fixes.**
+  - The erase is one transaction.
+  - The residue is one read-only snapshot.
+  - The pool's statement timeout is set explicitly.
+
+*Carried into Task 11.*
+- Drain the person's automation runs before core's own step: after the freeze, covering claimed and running runs,
+  bounded, and failing the step on timeout.
+- Read every residue before the `users` row is deleted.
+- Make the re-erase window outlast DocHub's 30-minute hold.
+- Put no person id in the one-shot's params.
+- Have the receipt name downloaded exports as out of reach.
+
+*Carried into Task 18.* Read the memory index after a live erasure, because clearing a Weaviate property with a null is
+unproven by the fakes.
+
+*Owner questions for the P2 phase review.*
+- Should private comments be deleted rather than anonymised?
+- Should optimizer job notes be kept as they are?
+- Should free text or contact JSON that names the person, but carries no id, stay unplaced as a receipt limit?
+- Orphan-operator notifications need DDL to close. Do they go in the receipt and Future Improvements?

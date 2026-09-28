@@ -541,3 +541,21 @@ final fix wave. The persisted explanation now reads "No citation needed: the con
 evidence."; the rest of the wave is prose, a `sys.modules` snapshot and the upkeep-role pin. The scoped re-review was
 clean. The owner has logged in to Bedrock, and Task 6 (the governed proof run) is in flight. Then: merge into
 `langgraph-merge`, push, clean up, and close out.
+
+**Status at compaction checkpoint 4 (2026-09-28).**
+- **Fix 2 is merged.** Following owner decision 34, the retriever child carries only the ref fields its readers read,
+  plus `document`, under one shared field list with a two-way drift test.
+  - It passed two review rounds, both clean, and is merged into `eval-quality-gaps` at `3d95d06c`. The post-merge unit
+    and db lanes are green.
+  - The 52-ref fixture's child is now 20,196 B, down from 161,674 B.
+  - The ref count is bounded first by the capture's 100-ref sequence bound, then by the row's 256 KiB ceiling. The
+    64 KiB child cap no longer binds.
+  - One prose Future Improvement remains, left for the close-out: the runbook implies refs alone fill the row ceiling,
+    and the contract says `document` is at most 200 characters, which holds only on the SDK path.
+- **Task 6 run 2 is in flight.**
+  1. A $0 re-projection of TF M01, expected to read `evidence_complete` true with 52 refs.
+  2. The paid M01 turn, run on the same terms: at most 8 judge calls, a stop at $0.90, and a cap of $1.00.
+- **Then:**
+  1. Merge into `langgraph-merge`.
+  2. Push. If unreviewed erasure P2 merges sit on top of the eval merge, push by SHA.
+  3. Clean up and close out.
