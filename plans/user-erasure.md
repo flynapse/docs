@@ -370,10 +370,15 @@ Recorded at the P1 phase review (2026-09-27); each was deferred by a ledger ruli
     A retry then records `prior_cognito_enabled = false`, so a later cancel will not re-enable.
   - *Complete fix:* a reconcile pass (part of the due sweep) that lists disabled pool accounts whose users row has no open
     request and status is not `erasure_pending`, and re-enables them with an ops event. It is carried into Task 11's brief.
-- **The boto3 Cognito client may be built from two threads on first use (T2-R2), and the estate has three copies of
-  the client factory (P1 review SIMP M-4).**
+- **The boto3 Cognito client may be built from two threads on first use (T2-R2), the estate has three copies of the
+  client factory, and `cognito_accounts.py` repeats one admin-write wrapper four times (P1 review SIMP M-4).** The
+  wrapper fold was not made: core's `test_cognito_calls_are_spanned` requires each Cognito call inside its own
+  `with cognito_span(...)` with a literal operation name, so a generic `_admin_write(operation, …)` fails it and a
+  compliant fold is larger, not smaller.
   - *Complete fix:* one shared, lock-guarded, bounded (5 s) factory in core, used by `cognito_accounts.py`,
-    `cognito_identities.py` and `tenant_claim_writer.py`.
+    `cognito_identities.py` and `tenant_claim_writer.py`. Open the Cognito span from botocore's own call events
+    (`before-call` / `after-call`) inside that factory, so every wrapper — including a single folded admin-write
+    helper — is spanned by construction and the per-call span test can check the factory instead.
 - **The stand-down reason and notifications for a frozen owner (T3-C1, T3-M4).**
   - *What is missing:* the specific token `owner_erasure_pending` rides only on the exception. The run row records the
     generic `entitlements_unresolved`, and each stood-down automation still writes a bell row for the frozen owner.
@@ -415,7 +420,7 @@ Task 1/2/5 db proofs.
 #### Notes: Task 1 — ledger, registry, vocabulary: CODE-COMPLETE (core `ue-core` `17699d9..9ff3daf`, review APPROVED)
 - Rulings that refine the task text: `mode` ∈ {windowed, immediate} + `rtbf` (CHECK rtbf ⇒ immediate; immediate
   without rtbf is the `/goodbye` case); `failed` is resumable (failed → erasing), terminal = {completed, cancelled},
-  `failed` stays open in the one-open-request index; `REQUIRED_SEAMS = (copilot_mro, shift_optimizer, core_local)`;
+  `failed` stays open in the one-open-request index; `REQUIRED_SEAMS = (copilot_mro, shift_optimizer)` (ruling T1-Q3 reversed at the P1 review: core's own relations are core's step, not a seam);
   steps/receipt jsonb with identifier-pattern keys and int values only; ids and `requested_by` are opaque tokens
   `[A-Za-z0-9_:-]{1,128}`; `prior_status` is an identifier token; `external_id` nullable; the window is enforced in
   the guarded UPDATE (immediate requests never held); `finished_at` only on completed/cancelled.
