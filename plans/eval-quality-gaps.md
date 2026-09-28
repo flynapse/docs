@@ -177,6 +177,20 @@ and list each one in the report.
 **Mutation targets:** drop the quote from the key; force the marker true; count the bounded list; drop the scalars from
 `minimal`; default the root attributes.
 
+**Post-review change (owner decision 34, 2026-09-28; found by the Task 6 proof run):**
+- **What the proof run found.** The retriever child projects each ref whole. On a real turn about 70% of a ref's bytes
+  are `viewer_reference`, the chat viewer's click-to-open payload, which no judge reads.
+  - TF M01 has 52 distinct refs: 132,222 B, against quotes of about 14 KB.
+  - The 64 KiB child therefore overflows at about 26–28 refs, and the marker reads false on an ordinary cited answer.
+- **The change.** The retriever child projects each ref as its judge-relevant fields only. The fields kept are those
+  the evaluators and the adapter actually read, derived from those consumers rather than assumed: the source identity
+  and the quoted text.
+- **What stays the same.**
+  - The row keeps the whole refs.
+  - The marker's rule is unchanged: a slim copy that still overflows reads false.
+  - Dedup identity is unchanged.
+- [ ] Slim projection built, reviewed and merged on `eval-quality-gaps`; then the Task 6 paid turn is re-run.
+
 ### Task 2: The harness gates groundedness on complete evidence and scores citations from the copy
 **Owns (production):** `copilot_mro/app/services/agent_evaluation/{contracts,phoenix_adapter,runner,citation_coverage}.py`,
 `results_store.py` (docstring only), `scripts/observability/run_phoenix_evals.py`, and
@@ -387,8 +401,9 @@ golden-set section.
   as unfaithful. Deferred because it changes the measure's design, `tools.io` is capture-bounded, and Weaviate
   re-fetches drift. Complete fix: capture synthesis inputs as a bounded evidence set with its own marker, under a new
   measure version.
-- **More than ~85 quotes → abstain.** Past that, the child exceeds 64 KiB and reads as incomplete. That is honest, and
-  rare today. Complete fix: split the refs across several retriever spans, each with its own marker, rather than raising
+- **Too many quotes → abstain.** Past the 64 KiB child cap, the copy reads as incomplete. The "~85" estimate was wrong:
+  with whole refs the measured cap was about 26–28 refs (Task 6 proof run, 2026-09-28), which is why decision 34 slims
+  the projection. After slimming, the cap is set by the quote bytes alone. That is honest, and rare. Complete fix: split the refs across several retriever spans, each with its own marker, rather than raising
   the cap. The interface ("every retriever copy span"), R-D1 ("every retriever span says true") and the adapter's
   `_extract_evidence` already read N retriever spans, so the split is a projection change only
   (`telemetry._retriever_span_specs`) (ruling E1-M5).
