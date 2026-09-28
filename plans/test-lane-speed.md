@@ -75,11 +75,11 @@ integration lane, not the unit lane.
      setup, which under load used 43–75 ms of a 75/100 ms window. The fix holds the clock until the test's own
      blocking point, and the fixed waits become derived guards. 30/30 green under a simulated starved host; two
      mutants KILLED; unit 7780 passed.
-   - [ ] Review (in flight), then merge into `langgraph-merge`. It rides with the P2 push.
-   - Follow-ups the implementer reported, for the review to rule on:
-     - `test_lang_sad_activation.py` has the same race and can pass without proving anything.
-     - The admission test's `cancellation` param proves only "closed before admission".
-     - There could be one shared held-clock helper in `_fixtures.py`.
+   - [x] Reviewed (Opus): Spec ✅, quality approved, 0 blocking. It reproduced both signatures on `cee26494` and ran
+     17 mutants; all but 4 minor gaps were killed. Review: `.superpowers/sdd/lang-agent-deadline-flake/review.md`.
+   - [x] Merged `--no-ff` into copilot-mro `langgraph-merge` as `81a4b93a` (local). It rides with the P2 push.
+   - [x] Post-merge `tests/unit -n 4` at `81a4b93a`: 7961 passed, 10 skipped, 0 failed (9 min 23 s). Worktree and branch removed.
+   - The review's Minor findings and the implementer's follow-ups are FI-4 to FI-7 below.
 
 ## Future Improvements
 
@@ -113,3 +113,32 @@ integration lane, not the unit lane.
 - **The idea.** Mark the whole-repo scans and give implementers a lane that skips them for iteration. Full lanes,
   reviews and post-merge runs still include them.
 - **The catch.** A marker that deselects guards is easy to misuse. It only pays off if FI-1 leaves the scans still slow.
+
+### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28)
+
+None of these can turn a run red, and none changes production behaviour. Evidence and mutants are in
+`.superpowers/sdd/lang-agent-deadline-flake/review.md`.
+
+- **A late deadline passes (M1).** The close-down bound went from about 0.4 s to `window + 5 s`, so a deadline watcher
+  up to about 5 s late passes; a 2 s-late mutant survived the file and the lane. Any wall-clock bound here depends on
+  host speed, and the earlier held-clock test has the same bound. *Fix:* reword the `_CLOSE_WAIT` comment to say it
+  bounds only a control that never fires.
+- **The held-reads guard counts modules, not call sites (M2).** It proves each patched module read the held clock at
+  least once. Leaving one `deadline_expired` read on the wall clock survives a plain run and only brings the flake
+  back. *Fix:* count held reads per call site (keyed by the caller's code object) and assert the expected sites.
+- **The admission case can pass before reaching admission (M3), and its `cancellation` param never does (follow-up
+  2).** The clock releases at the authorization recheck, about 10 loop callbacks before the admission wait. On a host
+  slowed by 10 ms or more per step, the graph call is closed by the check before admission instead, so a deaf
+  admission wait survives. At this box's real load it does reach admission. The `cancellation` param reaches it at no
+  stretch at all, so it proves only "closed before admission". Both are pre-existing; the fix narrowed M3. *Fix:*
+  release the clock only once the graph call is waiting in admission, and assert that it was; set the cancellation only
+  after that signal. The signal reads two private dispatcher attributes, which is the coupling paid for determinism.
+- **Nothing proves a deadline does not fire early (M4).** A watcher that fires immediately survives the whole
+  lang_agent lane. *Fix:* one backend-lifecycle case in which a turn with a generous deadline completes normally.
+- **The SAD activation deadline test can pass without proving anything (follow-up 1).**
+  `test_lang_sad_activation.py::test_a_hung_activation_query_cannot_outrun_the_turn_deadline` has no `hung.entered`
+  assertion, and its 1 s deadline is armed before setup. *Fix:* add the assertion together with the held clock
+  (`on_enter=clock.blocked`); the assertion alone would bring back this same flake as a rare red.
+- **Two held-clock helpers (follow-up 3).** *Fix:* move `_ClockHeldUntilBlocked` into `_fixtures.py` and switch
+  `_ClockHeldUntilInFlight` to it, keeping the resume-from-held behaviour. A pure refactor.
+- **Bundling.** Follow-ups 1 and 3 and the M1 comment go in one commit; M3 and follow-up 2 share one remedy.
