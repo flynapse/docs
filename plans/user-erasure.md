@@ -497,3 +497,14 @@ scrub's session-binding dependency; the scope-guard approval; the third-role cen
 the api-side executing CLI, Cognito delete as the last erasing step, enqueue after commit, the tenant erasure list,
 the completion delete on one cursor) are written into Tasks 11–13 above. The D12 off-database replay record needs an
 owner ruling. Merges wait for the owner.
+
+**Status at P1 close (2026-09-28):** the P1 fix wave is COMPLETE, and every lane's scoped re-review is clean (0 OPEN).
+- core `ue-core` `0d3811d`: seams guard; `REQUIRED_SEAMS` = copilot-mro and shift-optimizer; cancel compensation;
+  ledger doubles by function; one vocabulary (DDL byte-identical). The Cognito wrapper fold is deferred (see Future
+  Improvements).
+- copilot-mro `ue-m1` `834c1653`: the scrub binds its own session; one spelling of `deleted-user`.
+- copilot-mro `ue-m2` `6625d70c`: scope-guard approval; third-role census; the sweep keeps the ledger; shared RLS test
+  helpers.
+- api `ue-api` `0d0c626`: unchanged since its task review.
+Merge order is core → copilot-mro (ue-m1, ue-m2) → api. Merges and the push wait for the owner's review.
+
