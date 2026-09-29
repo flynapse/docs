@@ -1,7 +1,11 @@
 # Database users: consolidation (owner decisions 22–26)
 
-**Status (2026-09-29):** the owner has answered all five decisions, all yes. Queued to start after the user-erasure P2
-push. Nothing has been built yet. Tenant delete (B14) waits on this batch.
+**Status (2026-09-29, paused for the owner's WSL restart):** the owner has answered all five decisions, all yes.
+- **Steps 1–2:** built, reviewed (one Important finding), and paused mid fix round 1.
+- **Step 3 (Terraform):** approved and unpushed (`iac-roles` `db-roles-tf` @ `a47c0fb`). It waits on the owner's iac
+  `obs-merge` → `main`.
+- Nothing is merged. Tenant delete (B14) waits on this batch.
+- The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
 
 **Research:** `~/.claude/scratch/db-roles/R1-db-roles.md` (census, duplication, target set, what each change touches,
 risks, rollout order). This plan records the decisions and the order; the research carries the file-level detail.

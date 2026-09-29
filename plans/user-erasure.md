@@ -1161,3 +1161,43 @@ In flight, all branched after the push:
   breaks three copilot-mro tests that the batch rewrites, so the two merge together.
 - P3 prep is done: 26 plan conflicts with proposed rulings, and a Task 19 spec with 6 owner questions (workspace
   `p3-prep.md`). They are written into Tasks 11–14 and 19 after the owner answers.
+
+**Status at compaction checkpoint 7 (2026-09-29, paused for the owner's WSL restart).**
+- **Core follow-up round `ue-p2c2`: APPROVED** (review, one fix round, re-review OPEN 0), held unmerged.
+  - Tips: core-erase `c9035f3`, utils-erase `d2b3f35` (utils 0.1.40), shift-optimizer-erase `15f811d`.
+  - Contents:
+    - owner question 6: pending invitations the person sent are deleted, expired ones included;
+    - one `bound_transaction` per repo over a public utils `apply_transaction_context`;
+    - `ErasureSubject` validates itself;
+    - `<table>__<column>` keys with every split half suffixed, and `de-attribute`;
+    - READ COMMITTED residue with `fetchone`;
+    - the end-to-end lock-wait ceiling test kept;
+    - the freeze binds its own tenant, pinned;
+    - a utils `>=0.1.40` floor on core and shift-optimizer.
+  - Carried to Task 11: a freeze queued behind another in the same tenant is cancelled at the 15 s ceiling, and Task
+    11 answers that cleanly (m-6).
+- **copilot-mro simplification batch `ue-p2simp` @ `f06ddd18`: built, review to restart.**
+  - Size: production net −346 lines, tests net −1,184.
+  - FI-S1: one pass, no drain or re-erase; a non-zero residue raises and never purges.
+  - FI-S2, and every copilot-mro simplicity Minor except S-M9's remaining fakes.
+  - The route-table fix: the erasure router has joined the sweep, which found nothing on the erasure endpoints.
+  - Merge plan once its review passes:
+    1. `--no-ff` merges, in order: utils → core → shift-optimizer → copilot-mro.
+    2. A metadata-only `poetry.lock` refresh in api and copilot-mro.
+    3. The post-merge gate on the full suites (definition pending with the owner; `test-lane-speed.md`).
+    4. The push.
+    5. P2 close: remove the P2 worktrees; delete `ue-t6` … `ue-t10`, `ue-p2fix`, `ue-p2c2` and `ue-p2simp` with `-d`.
+- **Owner questions from P3 prep (open):**
+  - **C-4:** `/goodbye` takes the job path (lock, reply, erase 30 minutes later). Recommended yes.
+  - **C-5:** cancel restores nothing, because a frozen owner's automation runs are recorded skipped and nothing is
+    disabled. Recommended yes.
+  - **Task 19 Q1:** all 57 operator-keyed tables, derived from the registries. Recommended.
+  - **Task 19 Q2:** clean-up inside the request, paged. Recommended.
+  - **Task 19 Q3:** the orphan script runs on `copilot_mro_test` and `copilot_mro`, dry run by default, and executes
+    only with the dry run's `--expect-rows`. Recommended.
+  - **Task 19 Q4:** find the orphans as the owner, delete them through the registered clean-up. Recommended.
+  - **Task 19 Q5:** the operator's DocHub raw backups are deleted too. Recommended.
+  - **Task 19 Q6:** one audit event per orphan pair. Recommended.
+- **Found in pushed code:** four copilot-mro api tests error only under xdist
+  (`tests/api/tenancy/test_operator_grain_isolation.py`; they pass serially). This is pre-existing. The open-items
+  register entry is pending the owner's yes.

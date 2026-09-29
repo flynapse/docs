@@ -53,7 +53,8 @@ integration lane, not the unit lane.
    - The change applies only after `wsl --shutdown`. That stops every agent and the Docker stack, and it can bring
      back the Postgres stale-bind-mount trap.
    - [x] `.wslconfig` now reads `processors=20` (Claude edited it on the owner's request, 2026-09-28).
-   - [ ] Owner runs `wsl --shutdown` at a quiet point, then checks `nproc` reads 20.
+   - [ ] Owner runs `wsl --shutdown` at a quiet point, then checks `nproc` reads 20. (Owner restarting 2026-09-29
+     ~04:40; all agents were paused first. Confirm `nproc` on resume.)
 2. **Keep 6 slots, and measure the waits.** Six slots at `-n 4` is 24 workers, which is about right on 20 CPUs.
    - [x] `pytest-slot.sh` (in utils, `utils/dev/.claude/`) now prints how long each run waited. Each finished run also
      appends a line to `~/.claude/scratch/slots/runs.log` with its slot, wait, run time, exit status, free memory, load
@@ -68,6 +69,25 @@ integration lane, not the unit lane.
    - Mutants are aimed at the test file meant to kill them.
    - [x] Written into the user-erasure P2 lane context, and sent to the running Task 6 implementer.
    - [ ] Carry the rule into every later brief (standing).
+   - **Superseded 2026-09-29** by the owner's workspace CLAUDE.md edit (utils `a0f1ee4`, `57c913a`, pushed): "Full
+     suites: one per change, plus the merge".
+     - Implementers run the FULL suite once, at hand-back, on their tip.
+     - Reviewers and re-reviews run only the test folders the diff touches.
+     - The full suite at the merge commit is the gate.
+     - A surviving mutant's "full lane" is the folders that cover the mutated module.
+     - [x] Audit of the running agents against the new rule (runs.log). Reviewers complied, apart from one whole-unit
+       run already in flight at the change and two ~20 s iac full lanes. Implementers ran what their briefs named.
+     - **Gap found:** the briefs and the controller's post-merge gates named SUBSETS as the "full suite":
+       - copilot-mro: `tests/unit`, three `tests/db` folders and `tests/api/document_hub`;
+       - core: `tests/unit tests/api` and `tests/db/user_erasure`.
+
+       About 17 copilot-mro top-level test folders (`registries`, `agent_sdk`, `memory`, `ingestion`, `seeds`,
+       `smoke` …), most of `tests/api` and `tests/db`, and core's `tests/authz` ran in no gate. That is how the
+       copilot-mro route-table red (the erasure router missing from `CORE_ROUTER_MODULES`) was pushed twice.
+     - [ ] Owner decision pending: define one real full-suite command set per repo (everything except e2e and live
+       tests; db folders serial; known reds listed: copilot-mro `tests/db` FI-12, the 4 xdist-only errors in
+       `tests/api/tenancy/test_operator_grain_isolation.py`, core's workspace-layout reds), measure it once, then name
+       it in every brief and post-merge gate. Recommended: yes.
 4. **Speed up the slowest scan tests.** This is a Future Improvement, for a later small batch.
 5. **Fix the lang_agent `[deadline]` load flake** (owner, 2026-09-28: "fix lang_agent only for now"). Branch
    `la-deadline-fix`; ledger `.superpowers/sdd/lang-agent-deadline-flake/`.
