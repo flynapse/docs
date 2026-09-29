@@ -1,10 +1,13 @@
 # Database users: consolidation (owner decisions 22–26)
 
-**Status (2026-09-29, paused for the owner's WSL restart):** the owner has answered all five decisions, all yes.
-- **Steps 1–2:** built, reviewed (one Important finding), and paused mid fix round 1.
+**Status (2026-09-29, evening):** the owner has answered all five decisions, all yes.
+- **Steps 1–2: MERGED and PUSHED.** Pushed as utils `b3edfbd` (0.1.41), core `bcdccb3`, shift-optimizer `3e07609`,
+  copilot-mro `3f46076d` and api `b29d7be`. The owner's `.env` steps and the utils 0.1.41 publish are listed under
+  step 2's notes.
 - **Step 3 (Terraform):** approved and unpushed (`iac-roles` `db-roles-tf` @ `a47c0fb`). It waits on the owner's iac
   `obs-merge` → `main`.
-- Nothing is merged. Tenant delete (B14) waits on this batch.
+- **Steps 4–7** are next. Each starts with an owner DDL step; step 4's is `REVOKE pg_read_all_data FROM
+  flynapse_readonly`. Tenant delete (B14) is step 7.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
 
 **Research:** `~/.claude/scratch/db-roles/R1-db-roles.md` (census, duplication, target set, what each change touches,
@@ -33,10 +36,10 @@ risks, rollout order). This plan records the decisions and the order; the resear
 
 ## Order (from the research's rollout, with the rulings applied)
 
-- [ ] 1. Code only, no database change: the shared user-name module, env-var canonicalisation with fallbacks, owner
+- [x] 1. Code only, no database change: the shared user-name module, env-var canonicalisation with fallbacks, owner
   scripts through `owner_credentials()`, an attribute check on the grant pool (it must never bypass the tenant rules),
   doc fixes (25).
-- [ ] 2. Measure: the privilege check reports extra read grants on `flynapse_readonly` (report-only first), run on the
+- [x] 2. Measure: the privilege check reports extra read grants on `flynapse_readonly` (report-only first), run on the
   test database and the dev database.
 - [ ] 3. Terraform for App Runner: the grant login and the app password from Secrets Manager (26). Written by Claude,
   applied by the owner; sequenced after iac `obs-merge` reaches `main`.
@@ -62,9 +65,41 @@ DDL on shared databases, so every DDL step is the owner's to run.
 
 - **Steps 1–2** (2026-09-29): built on branch `db-roles-s1` in `utils-roles`, `copilot-mro-roles`, `core-roles`,
   `shift-optimizer-roles` and `api-roles`.
-  - The review found one Important gap: role creation could hand the app role the owner's password in transition
-    shells. It is in fix round 1.
-  - Merge order: utils first, then the rest. The user-erasure `ue-p2c2` utils branch merges before this one.
+  - **Review history:**
+    - The review found one Important gap: role creation could hand the app role the owner's password in transition
+      shells.
+    - Fix round 1 made the provisioner refuse a restricted role whose password equals the owner's, and refuse
+      disagreeing old and new names. The Minor findings were closed as well.
+    - Three more rounds closed what each re-review found:
+      - the owner check blind to `POSTGRES_OWNER_PASSWORD`, and the transition shell with only `POSTGRES_PASSWORD`
+        exported;
+      - "the password follows the user" pinned for all 16 owner scripts;
+      - refusal remedies that lead with the owner's case;
+      - a restricted `--user` refused up front;
+      - the env templates and the runbook matched to the behaviour.
+    - From round 2 on, each fix round ran on a fresh agent (the 500k-token cap).
+  - **Merged `--no-ff` into the moved mainlines**, with no conflicts:
+    - utils `00d0823`;
+    - core `020fd08`;
+    - shift-optimizer `bd410d9`;
+    - copilot-mro `60bcd0b8`;
+    - api `8b74c53`.
+  - **Version commits:**
+    - utils bumped to 0.1.41 (`b3edfbd`);
+    - the core and shift-optimizer codeartifact floors raised to `>=0.1.41` (`bcdccb3`, `3e07609`);
+    - the api and copilot-mro lock version lines updated (`b29d7be`, `3f46076d`).
+  - **Post-merge full suites** (`~/.claude/scratch/db-roles/postmerge/gate.sh`): the same failure set as the
+    user-erasure merge gate, all pre-existing or environmental:
+    - the sibling-worktree census tests;
+    - copilot-mro's `tests/config` ×3 and pilot ftd ×1;
+    - whole-tree pollution;
+    - the solver performance test under load. It passed at load 3.5.
+    - The `test_registered_packages_restore` merge-order pair is now green.
+  - **Owner steps now:**
+    - Publish utils 0.1.41 before any core or shift-optimizer wheel.
+    - Delete `GRANT_POSTGRES_PASSWORD` from `copilot-mro/.env` and `api/.env`.
+    - Add `POSTGRES_READONLY_PASSWORD` to `copilot-mro/deployment/.env`.
+    - Export `POSTGRES_OWNER_PASSWORD` for the owner scripts.
 - **Step 3** (2026-09-29): built on branch `db-roles-tf` in `iac-roles` from `obs-merge`, reviewed through two fix
   rounds and approved (OPEN 0). It is not pushed and waits on the owner's `obs-merge` → `main`.
   - The owner steps are in the SDD workspace (`s3-tf-report.md`):
