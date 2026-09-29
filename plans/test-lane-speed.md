@@ -123,14 +123,23 @@ integration lane, not the unit lane.
    from cached bytecode.
    - Batch: SDD, fresh Opus implementer and fresh Opus reviewer; branch `mutant-warm-cache` in `utils-mutant`; ledger
      `.superpowers/sdd/mutant-warm-cache/`.
-   - [ ] Build: a persistent cache prefix under `~/.claude/scratch/`, never the tree's own `__pycache__`. It is reused
+   - [x] Build: a persistent cache prefix under `~/.claude/scratch/`, never the tree's own `__pycache__`. It is reused
      only while the tree's content is unchanged, and old prefixes are pruned. The mutated file's cache entries are
      removed before every run and on every restore path. A cold opt-out reproduces today's behaviour. The first
      automated tests for `mutant.sh`, including the same-size, same-second stale case.
-   - [ ] Measure one real copilot-mro mutant: old script, then the new script cold, then warm, with the same verdict
+   - [x] Measure one real copilot-mro mutant: old script, then the new script cold, then warm, with the same verdict
      each time.
-   - [ ] Review, merge into utils `langgraph-merge` only while no `mutant.sh` is running (bash reads a script as it
+   - [x] Review, merge into utils `langgraph-merge` only while no `mutant.sh` is running (bash reads a script as it
      runs), and update CLAUDE.md's bytecode line.
+   - **Done 2026-09-29.** Merged as utils `04dc293` and pushed.
+     - Review history: one review (F1, Important: a second signal could cut the restore short and fake a verdict in
+       both directions), then two fix rounds and a re-review.
+     - Measured on one copilot-mro mutant: old script 178 s, new script cold 137 s, warm 110–133 s, with the same
+       verdict every time. The gain is about 20–35%.
+     - The utils suite at the merge: 2060 passed, plus the 6 sibling-worktree census reds.
+     - Code's CLAUDE.md now carries the new bytecode wording, uncommitted, alongside the 500k-cap edit.
+     - Learning: a git merge writes a changed file as a NEW inode, so a `mutant.sh` already running keeps reading the
+       old script. The "no run in progress" rule is belt and braces.
    - [ ] Code2's utils checkout (`multi-tenancy`) gets the same commit only when its session has no mutant running,
      and with the owner's go-ahead.
 
