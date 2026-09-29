@@ -1136,3 +1136,23 @@ pushed yet.
      merged;
   4. P2 close: remove `copilot-mro-erase-b` and `shift-optimizer-erase`, delete `ue-t6` … `ue-t10` with `-d`;
   5. the DB-roles batch (owner decisions 22–26, all yes: `docs/plans/db-roles-consolidation.md`), then P3.
+
+**P2 PUSHED (2026-09-29).** Both fix batches were reviewed, merged and gated post-merge, then pushed:
+- **core `master` `3f05e5f..1fedf7e`:** fix merge `1fedf7e` (fix round 1 added the sibling-own-address pin and a
+  one-row `=` address lookup).
+  - Post-merge: unit+api 3887 passed, 1 environmental red; db 93 passed.
+- **shift-optimizer `main` `f86c6c5..ba3c070`.**
+- **copilot-mro `langgraph-merge` `925c716d..fccd7b6f`:** fix merge `fccd7b6f` after 2 fix rounds. Round 1 restored
+  the drain query's index (1.9 s → 2 ms at 200k runs) and made the compare-and-set and latest-orphans tests prove
+  behaviour. Round 2 tightened both.
+  - Post-merge: unit 8004 passed, db 105, api 273.
+- **utils `langgraph-merge` `57c913a`,** pushed with the owner's CLAUDE.md commits.
+
+Carried from the fix reviews: Task 11 gets "latest orphans per source, not only the last pass" (re-review 2 R2-1).
+
+In flight, all branched after the push:
+- the core follow-up round `ue-p2c2` (core, shift-optimizer, utils; in review);
+- the copilot-mro simplification batch `ue-p2simp`, built on `ue-p2c2`. `ErasureSubject` now validates itself, which
+  breaks three copilot-mro tests that the batch rewrites, so the two merge together.
+- P3 prep is done: 26 plan conflicts with proposed rulings, and a Task 19 spec with 6 owner questions (workspace
+  `p3-prep.md`). They are written into Tasks 11–14 and 19 after the owner answers.
