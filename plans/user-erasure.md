@@ -802,6 +802,11 @@ Recorded at the P2 phase review (2026-09-28); each was deferred by a ledger ruli
 
 ## Lessons
 
+- The post-merge gate must be the whole suite of each repo the batch can affect, not the folders the batch touched.
+  P1 added a core router, and copilot-mro's route-table test (its list of core routers) went red. The copilot-mro
+  post-merge api lane ran only `tests/api/document_hub`, so the red was pushed twice (P1 and P2) and the router sweep
+  never covered the erasure endpoints. The DB-roles review found it. Rule: at a merge, run each affected repo's full
+  lanes, including its `tests/api`.
 - A bounded wait on a marker that nothing clears is an unbounded erasure: in the scheduler-off deployment a stale
   `claimed` row never closes, so a drain must count only work that can still write (P2 correctness I-1).
 

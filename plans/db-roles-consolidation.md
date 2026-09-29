@@ -38,6 +38,11 @@ risks, rollout order). This plan records the decisions and the order; the resear
   applied by the owner; sequenced after iac `obs-merge` reaches `main`.
 - [ ] 4. The inspection user (23): hand DDL on the dev cluster by the owner, then repoint the MCP config and the
   data-checking tests, then revoke the extra grants from `flynapse_readonly` and turn the check into a finding.
+  - Measured in step 2 (test database): `flynapse_readonly` can read 97 relations beyond its 19-relation list, which
+    is effectively the whole `public` schema, including AI turn content, the erasure ledger, `tenants` and
+    `user_operators`. They come from its membership in `pg_read_all_data`, not from table grants. So the remedy is
+    `REVOKE pg_read_all_data FROM flynapse_readonly`, not per-table revokes. Role membership is cluster-wide, so the
+    protected databases have the same surface.
 - [ ] 5. Side services (22): the `phoenix` and `telegram_bot_app` users and databases; the superuser leaves both
   connection strings.
 - [ ] 6. The read-only query pool (24): the new user, its grants, the second pool in copilot-mro, and a check that no
@@ -49,9 +54,45 @@ risks, rollout order). This plan records the decisions and the order; the resear
 provisioning verify before and after. Table ownership stays with `postgres`. The auto-mode classifier refuses Claude's
 DDL on shared databases, so every DDL step is the owner's to run.
 
+## Implementation notes
+
+- **Steps 1–2** (2026-09-29): built on branch `db-roles-s1` in `utils-roles`, `copilot-mro-roles`, `core-roles`,
+  `shift-optimizer-roles` and `api-roles`.
+  - The review found one Important gap: role creation could hand the app role the owner's password in transition
+    shells. It is in fix round 1.
+  - Merge order: utils first, then the rest. The user-erasure `ue-p2c2` utils branch merges before this one.
+- **Step 3** (2026-09-29): built on branch `db-roles-tf` in `iac-roles` from `obs-merge`, reviewed through two fix
+  rounds and approved (OPEN 0). It is not pushed and waits on the owner's `obs-merge` → `main`.
+  - The owner steps are in the SDD workspace (`s3-tf-report.md`):
+    - create the secret `api/postgres/passwords` before any plan;
+    - drop `-var postgres_password`;
+    - rotate both passwords after the apply;
+    - `start-deployment` after any rotation;
+    - confirm the Postgres host, port, database and sslmode reach App Runner (neither `dev.tfvars` nor CI sets them).
+  - The current app password sits in every earlier state version, and it may be the literal `postgres` if CI ever
+    applied. Rotation closes that.
+  - The grant USER is plain config, because a role name is not a secret. Decision 26's wording above covers the
+    passwords.
+
 ## Future Improvements
 
-None yet.
+- **The passwords guard is a text matcher (step 3).**
+  - *What is missing:* two ways around it survive:
+    - a CI `-var=`/`TF_VAR_` override of `postgres_grant_user`;
+    - role chaining, where a new role trusts the App Runner instance role and holds broad secrets access.
+  - *Why deferred:* a text check over HCL can always be dodged. Two hardening rounds closed the likely paths.
+  - *Complete fix:* an IAM policy check on the rendered plan in CI, for example IAM Access Analyzer. Narrower
+    alternatives:
+    - fail on any trust policy naming the instance role;
+    - scan workflow `-var=` arguments.
+- **`AZURE_OPENAI_API_KEY` reaches App Runner as plain env (step 3).**
+  - *What is missing:* it is not stored as a secret.
+  - *Complete fix:* move it to Secrets Manager through `runtime_environment_secrets`, like the database passwords.
+- **The SAD-local fixture's full provisioning path is unexercised (step 1).**
+  - *What is missing:* `provision_rls` makes `postgres` own its security-definer functions, and the fixture never
+    creates that role.
+  - *Complete fix:* create the owner role in the fixture, or have the fixture run the provisioner as its own
+    superuser.
 
 ## Lessons
 
