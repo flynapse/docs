@@ -82,11 +82,12 @@ the receipt states the backup bound.**
 - **R-GUARDS:** each repo's line + drift guard covers its own registry (copilot-mro incl. Weaviate properties);
   telegram-bot's `_ACCOUNT_SWEEP` guard stands. Cross-repo pins only in Task 17.
 - **R-ORDER (copilot-mro):** chat and attachment ids gathered first → user-grain rows (definer keyed by user AND chat
-  ids) → per chat: reap row-derived objects, scrub in its own txn, post-commit reaps → DocHub → drain → residue until
-  zero with the same ids → purge chats + blocks → user prefixes (R-LINKS-LAST, P2).
+  ids) → per chat: reap row-derived objects, scrub in its own txn, post-commit reaps → DocHub → residue with the same
+  ids → purge chats + blocks → user prefixes (R-LINKS-LAST, P2). One pass: a non-zero residue raises an incomplete and
+  never purges (FI-S1; Task 11 owns the drain and the retry).
 - **R-VERIFY:** each seam registers `erase` + `residue` (read-only counts of the ids in every non-keep placement,
-  re-derived from the stores); completion needs all-zero residue (bounded re-erase, else the step fails and retries),
-  which closes the race for in-flight RUNS (the copilot-mro seam drains them first).
+  re-derived from the stores); completion needs all-zero residue (else the step fails and Task 11 retries it), which
+  closes the race for in-flight RUNS (Task 11 drains them first).
   - It does not close it for an interactive stream open at the freeze: no durable marker exists, and a chat-keyed copy
     the stream lands after the seam's last residue read is invisible once the chat ids are purged (Task 8 review,
     Concern 1).
@@ -275,8 +276,8 @@ new `core/scripts/erase_user.py` (request, cancel, list only — R-DOOR amended)
     - Count only runs that can still write (the reapers' own predicates: `running` inside its runtime ceiling,
       `claimed` inside its start grace). A stale row never holds the drain, because in the scheduler-off deployment
       nothing reaps it (P2 correctness I-1, fixed in the copilot-mro seam at P2 close).
-    - The copilot-mro seam drains the same set for 60 s (`user_erasure.IN_FLIGHT_SQL`); this drain covers the window
-      after it.
+    - This is the only drain: the copilot-mro seam's own 60 s drain (`user_erasure.IN_FLIGHT_SQL`) was removed by the
+      P2 simplification batch (FI-S1).
     - Both families count: the automation arms and the one-shot arms (one-shots attributed to either id). The one-shot
       arms follow core's recovery, not only its reaper: a one-shot `running` past its ceiling but inside the unserved
       grace window (`AUTOMATION_ONE_SHOT_UNSERVED_GRACE_SECONDS`, default 86 400 s) holds the drain, because the
@@ -350,9 +351,9 @@ Owned: new `api/flynapse_api/user_erasure_wiring.py` + its call in `routers/user
     inside the all-or-nothing block, so a missing package registers nothing and every request door answers 503.
   - Every `user_erasure` enqueue — the due sweep's included — carries `user_id=None` (the copilot-mro drain counts runs
     attributed to the person, so an attributed erasure run waits on itself) and no person id in `params`.
-  - Pass the deployment's `AUTOMATION_ONE_SHOT_UNSERVED_GRACE_SECONDS` into copilot-mro's
-    `ChatStore(one_shot_grace_seconds=…)` (default 86 400, matching the recovery's default), or into Task 11's drain
-    once the drain moves there. A longer deployment window that is not passed lets the drain release early.
+  - Pass the deployment's `AUTOMATION_ONE_SHOT_UNSERVED_GRACE_SECONDS` into Task 11's drain (default 86 400, matching
+    the recovery's default). copilot-mro's `ChatStore(one_shot_grace_seconds=…)` went with the seam's drain (FI-S1). A
+    longer deployment window that is not passed lets the drain release early.
   - Never log or store a seam exception's message or traceback, only its `failure_fields`.
   - Proof: each registered seam's `erase` returns a `SeamErasure`.
 - [ ] The executing CLI lives here (R-DOOR amended, P1 review COMP I-2 — it needs the seam wiring; core imports no
@@ -471,6 +472,17 @@ copilot-mro clean-up for its tenant+operator relations; a new owner-run script f
 
 ## Future Improvements
 
+- **One DocHub index fake for the unit and db erasure tests (p2simp review m-3).**
+  - *What is duplicated:* two fakes of the same four `DocumentHubIndexService` methods, about 75 lines each:
+    - the unit `_Index` in `tests/unit/document_hub/test_document_hub_user_erasure.py`;
+    - the db `_Index` in `tests/db/document_hub/test_document_hub_user_erasure_db.py`.
+
+    They differ only in dict key names and binding capture.
+  - *Why deferred:* the simplification batch's S-M9 kept them apart as "different slices", which holds for
+    `_Collection` and the Task 8 `_Chunks`, but not for these two. Folding them was left out of the fix round to keep
+    it small.
+  - *Complete fix:* one `tests/fixtures/document_hub/index_stub.py` both files import, so a change to the service's
+    erasure surface is mirrored once.
 - Self-serve erasure (D5 option c); telegram pilots already self-serve.
 - Automate the channel-tenant residue sweep after teardown (today owner-run `delete_unentitled_partition.py`).
 - The channel door erases synchronously; move it to the job if personal tenants grow.
@@ -1201,3 +1213,45 @@ In flight, all branched after the push:
 - **Found in pushed code:** four copilot-mro api tests error only under xdist
   (`tests/api/tenancy/test_operator_grain_isolation.py`; they pass serially). This is pre-existing. The open-items
   register entry is pending the owner's yes.
+
+**P2 CLOSED: follow-up round and simplification batch PUSHED (2026-09-29).**
+- **The simplification batch's review:**
+  - The review found one Important issue: dropping a byte-identity pin had also dropped the only pin on Task 6's own
+    person signal set.
+  - Fix round 1 pinned it by behaviour: the person's feedback on a colleague's chat. It also added the key-check and
+    index read-back pins.
+  - The re-review found one pre-existing Minor: the two signal residue arms were unpinned for "any chat". Fix round 2
+    pinned both at their exact count.
+  - The fix rounds went to fresh implementers under the 500k-token cap.
+- **Merged `--no-ff` and pushed:**
+
+  | Repo | Branch | Range | Merge commit |
+  |---|---|---|---|
+  | utils | `langgraph-merge` | `57c913a..508a3ea` | `ue-p2c2` (0.1.40) |
+  | core | `master` | `1fedf7e..efb8e8f` | `ue-p2c2` |
+  | shift-optimizer | `main` | `ba3c070..9d53254` | `ue-p2c2` |
+  | copilot-mro | `langgraph-merge` | `fccd7b6f..4518c642` | `ue-p2simp`, plus the lock refresh |
+  | api | `langgraph-merge` | `8949109..fd8e35f` | the lock refresh only |
+
+  - api's lock changed by hand, the utils version line only. A full `poetry lock` also dropped an unrelated
+    `prometheus-client` entry; that is existing drift, left out.
+- **Post-merge gate: the first real full suites.** Every test folder ran except e2e and the live-service markers. db
+  lanes ran serially, and each copilot-mro `tests/db` subfolder ran on its own. The merge added no red.
+  - utils: 2036 passed, plus 6 sibling-worktree census reds (environmental).
+  - core: 4003 passed, plus 1 census red; db and authz 997 passed.
+  - shift-optimizer: 1089 non-db passed, db 157 passed. The solver performance test failed at load around 30; the
+    solver is untouched by the merge.
+  - copilot-mro: 14891 non-db passed, and every db subfolder passed. There were 14 failures and 4 errors, all
+    pre-existing:
+    - `tests/config/settings/test_config.py` (3) and `tests/parsers/pilot/test_parser_metadata_sidecars.py` (1) fail
+      at the pushed base too. They sit in folders that no earlier gate ran.
+    - `test_debug_dumps.py` (10), `test_lang_sad_activation.py` (1) and the two `test_chat_turn_facts_*` collection
+      errors pass when run alone. They are cross-test pollution in a whole-tree run. The collection errors come from
+      a `_workspace` module-name collision between copilot-mro's and core's `scripts/`.
+    - The route-table red is gone.
+- **P2 close:** the five P2 worktrees are removed, and `ue-t6` … `ue-t10`, `ue-p2fix`, `ue-p2c2` and `ue-p2simp` are
+  deleted with `-d`.
+- `core_copies.py:9` (a 125-character docstring line) is left for the next core change.
+- **Release note for the owner:** publish utils 0.1.40 before any core or shift-optimizer wheel. Their `>=0.1.40`
+  floor sits on the commented codeartifact line.
+- **Next:** P3 waits on the owner's answers to C-4, C-5 and Task 19 Q1–Q6, above.

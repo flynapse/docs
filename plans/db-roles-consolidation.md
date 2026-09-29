@@ -92,6 +92,17 @@ DDL on shared databases, so every DDL step is the owner's to run.
 - **`AZURE_OPENAI_API_KEY` reaches App Runner as plain env (step 3).**
   - *What is missing:* it is not stored as a secret.
   - *Complete fix:* move it to Secrets Manager through `runtime_environment_secrets`, like the database passwords.
+- **An `.env` that itself pairs the app user with the owner's password is not caught on a trust-auth cluster (steps
+  1–2, fix round 2).**
+  - *What is missing:* the provisioner refuses whenever a restricted role's password equals a password it can see as
+    the owner's: the one it logs in with, or `POSTGRES_OWNER_PASSWORD`. Take a checkout whose `.env` names
+    `flynapse_app` with the owner's real secret, run on a trust-auth cluster with no owner variable set. The owner
+    resolves to the built-in default, trust accepts it, and the role is created with the secret the process never
+    saw as the owner's.
+  - *Why deferred:* closing it means refusing role creation whenever the owner resolved to the built-in default.
+    That changes dev-box and preflight behaviour. No cluster in the trees uses trust auth, and RDS never does.
+  - *Complete fix:* require `POSTGRES_OWNER_PASSWORD` (or an explicit `--password`) whenever the provisioner CREATES a
+    role, and keep the default only for `--verify-only`.
 - **The SAD-local fixture's full provisioning path is unexercised (step 1).**
   - *What is missing:* `provision_rls` makes `postgres` own its security-definer functions, and the fixture never
     creates that role.
@@ -100,4 +111,10 @@ DDL on shared databases, so every DDL step is the owner's to run.
 
 ## Lessons
 
-None yet.
+- **Fix rounds get fresh agents (owner, 2026-09-29).** Fix round 1 resumed the steps 1–2 implementer, whose context
+  was already very high. The owner ruled that every later fix round, and the scoped re-review after it, runs on a NEW
+  agent. Brief it from the review file, the fix brief and the ledger, never by resuming the earlier implementer or
+  reviewer. The owner then made it a workspace rule: no agent past 500k tokens of context gets more work. The round-1
+  implementer (about 720k) was stopped on its last step, with all its work committed. That stop killed its hand-back
+  lanes, which then had to be re-run, so the owner refined the rule: an agent that crosses the cap mid-task
+  finishes that task, and only then retires. A fresh reviewer took the re-review.

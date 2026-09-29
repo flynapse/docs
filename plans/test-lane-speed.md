@@ -53,8 +53,8 @@ integration lane, not the unit lane.
    - The change applies only after `wsl --shutdown`. That stops every agent and the Docker stack, and it can bring
      back the Postgres stale-bind-mount trap.
    - [x] `.wslconfig` now reads `processors=20` (Claude edited it on the owner's request, 2026-09-28).
-   - [ ] Owner runs `wsl --shutdown` at a quiet point, then checks `nproc` reads 20. (Owner restarting 2026-09-29
-     ~04:40; all agents were paused first. Confirm `nproc` on resume.)
+   - [x] Owner ran `wsl --shutdown` (2026-09-29 ~04:50, all agents paused first); `nproc` reads 20 on resume. Postgres
+     came back with its databases intact (no stale-bind-mount trap this time).
 2. **Keep 6 slots, and measure the waits.** Six slots at `-n 4` is 24 workers, which is about right on 20 CPUs.
    - [x] `pytest-slot.sh` (in utils, `utils/dev/.claude/`) now prints how long each run waited. Each finished run also
      appends a line to `~/.claude/scratch/slots/runs.log` with its slot, wait, run time, exit status, free memory, load
@@ -84,6 +84,20 @@ integration lane, not the unit lane.
        About 17 copilot-mro top-level test folders (`registries`, `agent_sdk`, `memory`, `ingestion`, `seeds`,
        `smoke` …), most of `tests/api` and `tests/db`, and core's `tests/authz` ran in no gate. That is how the
        copilot-mro route-table red (the erasure router missing from `CORE_ROUTER_MODULES`) was pushed twice.
+     - [x] First real full suites run (2026-09-29, user-erasure P2 follow-up merge). The recipe is
+       `~/.claude/scratch/user-erasure/p2c2-postmerge/gate.sh`:
+       - every test folder except e2e and the live-service markers;
+       - db serial;
+       - copilot-mro `tests/db` one subfolder per run;
+       - three streams, at most 8 workers.
+
+       It surfaced copilot-mro reds that no subset gate had ever run, all pre-existing:
+       - `tests/config/settings/test_config.py` ×3;
+       - `tests/parsers/pilot/test_parser_metadata_sidecars.py` ×1;
+       - whole-tree-only pollution: `test_debug_dumps.py` ×10, `test_lang_sad_activation.py` ×1, and the
+         `test_chat_turn_facts_*` collection errors from a `_workspace` name collision.
+
+       The details are in the user-erasure plan's "P2 CLOSED" block.
      - [ ] Owner decision pending: define one real full-suite command set per repo (everything except e2e and live
        tests; db folders serial; known reds listed: copilot-mro `tests/db` FI-12, the 4 xdist-only errors in
        `tests/api/tenancy/test_operator_grain_isolation.py`, core's workspace-layout reds), measure it once, then name
@@ -100,6 +114,25 @@ integration lane, not the unit lane.
    - [x] Merged `--no-ff` into copilot-mro `langgraph-merge` as `81a4b93a` (local). It rides with the P2 push.
    - [x] Post-merge `tests/unit -n 4` at `81a4b93a`: 7961 passed, 10 skipped, 0 failed (9 min 23 s). Worktree and branch removed.
    - The review's Minor findings and the implementer's follow-ups are FI-4 to FI-7 below.
+
+6. **Keep the bytecode cache warm in `mutant.sh`** (owner, 2026-09-29: "ok. just this for now"). Today every
+   invocation runs the command twice, the unmutated baseline and then the mutant, each with a brand-new empty cache
+   prefix. So every run recompiles the whole import graph (the tree, its siblings, the venv's packages and the
+   standard library), and a batch of ten mutants does it twenty times. The stale-bytecode trap the cold start guards
+   against concerns the MUTATED file. So: keep one persistent cache per tree state, and never let the mutated file run
+   from cached bytecode.
+   - Batch: SDD, fresh Opus implementer and fresh Opus reviewer; branch `mutant-warm-cache` in `utils-mutant`; ledger
+     `.superpowers/sdd/mutant-warm-cache/`.
+   - [ ] Build: a persistent cache prefix under `~/.claude/scratch/`, never the tree's own `__pycache__`. It is reused
+     only while the tree's content is unchanged, and old prefixes are pruned. The mutated file's cache entries are
+     removed before every run and on every restore path. A cold opt-out reproduces today's behaviour. The first
+     automated tests for `mutant.sh`, including the same-size, same-second stale case.
+   - [ ] Measure one real copilot-mro mutant: old script, then the new script cold, then warm, with the same verdict
+     each time.
+   - [ ] Review, merge into utils `langgraph-merge` only while no `mutant.sh` is running (bash reads a script as it
+     runs), and update CLAUDE.md's bytecode line.
+   - [ ] Code2's utils checkout (`multi-tenancy`) gets the same commit only when its session has no mutant running,
+     and with the owner's go-ahead.
 
 ## Future Improvements
 
