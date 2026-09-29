@@ -100,7 +100,7 @@ the receipt states the backup bound.**
 |---|---|---|---|
 | P1 foundations | 1–5 | C `core-erase`→master (1→2) · A `api-erase`→langgraph-merge (3, after 1) · M1 `copilot-mro-erase` (4) · M2 `copilot-mro-erase-b` (5) | ledger, registry, freeze/cancel, refactor, definer — nothing erases yet |
 | P2 seams | 6–10 | M1 (6, then 8) · M2 (7) · C (9) · S `shift-optimizer-erase`→main (10) | every store's erase + residue + line + drift guard |
-| P3 orchestration | 11–14 | C (11→13) · A (12, after 8–11) · D `dashboard-erase` (14) | the flow end to end, Cognito delete, receipt, D11, UI |
+| P3 orchestration | 11–14, 19 | C (11→13, 19 core) · A (12, after 8–11) · D `dashboard-erase` (14) · M1 (19 copilot-mro) | the flow end to end, Cognito delete, receipt, D11, UI; operator delete sweeps its own rows |
 | P4 telemetry/iac | 15–16 | M1 (15) · I `iac-erase`→obs-merge (16) | Phoenix user sweep, S3 lifecycle, Cognito IAM |
 | P5 proof | 17–18 | A (17) · controller + owner (18) | census, cross-repo pins, live E2E |
 
@@ -316,6 +316,15 @@ new `core/scripts/erase_user.py` (request, cancel, list only — R-DOOR amended)
   residue blocks the users delete; db — the event survives, the ledger has no name/email column. Mutants: users
   delete before the residue check; the event written outside the txn.
 
+- [ ] Owner rulings at the P2 pause (2026-09-29):
+  - **One drain, one re-erase loop, here (FI-S1, adopted).** Task 11 alone waits for the person's in-flight runs and
+    alone retries a seam. copilot-mro's seam runs one pass: it raises an incomplete, and never purges, while its own
+    residue is not zero. The drain counts only runs that can still write (the reapers' predicates); the P2 fix's rule
+    and its pin against the real reapers move here from copilot-mro in the P2 simplification batch.
+  - **Immediate requests wait out open turns (owner question 5).** An immediate erasure runs 30 minutes after the
+    freeze commits, not at once; the account is locked meanwhile. For that wait to be a real bound, copilot-mro
+    assigns every interactive turn a hard deadline under it (`TurnContext.deadline` is never assigned today) and
+    bounds the detached chat-file upload task under it too (lane M1).
 ### Task 12: api — wiring, the job kind, the due sweep (P3, lane A, after Tasks 8–11 merge)
 Owned: new `api/flynapse_api/user_erasure_wiring.py` + its call in `routers/users.py` beside the partition wiring; new
 `automations/user_erasure_job.py`; `automations/tasks.py`; the kind registration site; api tests.
@@ -399,6 +408,17 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
   only; never the golden/internal project. Read the memory index after the erasure (Task 6 clears `user_id` by PATCH
   with a null; the fakes cannot prove the server unsets it), and check that a re-keyed DocHub chunk kept its vector
   (T7 FI-3).
+
+### Task 19: core + copilot-mro — deleting an operator deletes its own rows (P3, lanes C and M1; owner question 4)
+Owned: core's operator delete path and a new operator-clean-up registry beside the erasure seam registry; a
+copilot-mro clean-up for its tenant+operator relations; a new owner-run script for orphans that already exist; tests.
+- [ ] Root fix, ruled by the owner on 2026-09-29. When an operator is deleted, its rows go with it: core's
+  notifications and subscriptions; copilot-mro's private Document Hub rows, memory items and events, and their index
+  chunks. Each repo registers its clean-up, all-or-nothing, the same way the erasure seams register.
+- [ ] Orphans that already exist are invisible to every app-role binding, so a one-off owner-run script (as the
+  cluster owner) finds and deletes them, with a dry-run count first.
+- [ ] Until this lands, the erasure receipt names the gap (owner question 4). Proofs: delete an operator that holds
+  one row per placement → every placement reads zero; the script's dry run counts a planted orphan.
 
 ## Review & merge protocol
 
@@ -737,12 +757,15 @@ Recorded at the P2 phase review (2026-09-28); each was deferred by a ledger ruli
   - *Complete fix:* keep Task 8's static keys file as the one identifier test; fold the spy's missing assertion in and
     delete the four Task 8 tests; thin Task 7's unit store to a recorder and keep only what the db lane cannot reach.
 - **Proposals, pending the owner's confirmation.**
-  - **FI-S1, one drain and one re-erase loop, owned by Task 11.** Task 8 drains the person's runs itself, with SQL
+  - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
+    simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
     over core's tables, and runs its own bounded re-erase inside Task 11's. Task 11 drains once, after the freeze and
     before the first seam, in core beside `automation_store`; Task 8 becomes a single pass (gather → erase → residue;
     a non-zero residue raises with `partial` and does not purge, so Task 11's retry re-gathers). That removes the
     drain, the pass loop and cross-pass merging, and leaves the one-shot's ceiling arithmetic with one term.
-  - **FI-S2, shared pieces for chat delete's finding-matching rule.** The rule is spelled five times (chat delete
+  - **FI-S2, shared pieces for chat delete's finding-matching rule. ADOPTED by the owner 2026-09-29 ("do now and
+    simplify"); built in the P2 simplification batch, together with every simplicity-review Minor above and the
+    redundant-test inventory.** The rule is spelled five times (chat delete
     twice, Task 6 twice, Task 8 once), each pinned. Chat delete exports its finding-texts statement and the two
     matching predicates, Task 6 composes them behind its own CTE, and Task 8's gather imports them; the byte-identity
     pins go, and the residue-arm pins that widen a chat id to a set stay.
@@ -936,6 +959,18 @@ unproven by the fakes.
    erased person sent. That is one predicate in the delete step (a pending invitation whose `invited_by` is either
    id), the pin, and one fixture assertion.
 
+*Owner answers (2026-09-29).*
+1. Private comments: keep as built.
+2. Optimizer job name and notes: keep as built.
+3. Text naming the person without an id: a limit stated in the receipt.
+4. Orphan-operator rows: the root fix — Task 19 (deleting an operator deletes its rows, plus a one-off owner-run
+   clean-up of existing orphans); the receipt names the gap until it lands.
+5. A stream open at the freeze: the cheap version, in Task 11 — immediate erasures run 30 minutes after the freeze,
+   interactive turns get a hard deadline under that, and the detached chat-file upload a bound under it.
+6. Invitations the person sent: revoke the pending, unaccepted ones (built in the core P2 follow-up round).
+- Proposals: FI-S1 adopted (Task 11 owns the only drain and re-erase loop); FI-S2 adopted, with every simplicity
+  Minor and the redundant tests, as a P2 simplification batch built now.
+
 **Status at compaction checkpoint 5 (2026-09-28, late).**
 
 *Phase 2: all done except Task 8. Everything is merged LOCALLY and nothing from P2 is pushed.*
@@ -1055,3 +1090,19 @@ is pushed.
   Fix-batch SHAs to be added at merge.
 - Next: the two P2 fix batches' reviews and merges → the owner pause (six questions, plus proposals FI-S1 and FI-S2)
   → push → P3. The P2 Future Improvements are written into the section above.
+
+**Status at compaction checkpoint 6 (2026-09-29).** The owner answered the P2 pause (answers above). Nothing from P2 is
+pushed yet.
+- Fix batches built, in review: core `core-erase` `ue-p2fix` `ae33072..07c9dbe` (statement ceiling; the person's email
+  stays in SQL); copilot-mro `copilot-mro-erase` `ue-p2fix` `65aadf0a..af579223` (drain counts only runs that can
+  still write; no key or id text in exceptions; compare-and-set re-key; latest-orphans pinned).
+- copilot-mro `langgraph-merge` is now `289ac1d6` (the owner-approved `open-items.md` commit on top of `65aadf0a`).
+- Next, in order:
+  1. each fix batch's review → fix loop → merge `--no-ff` → post-merge lanes;
+  2. the P2 push (core `master`, shift-optimizer `main` via `git push main main`, copilot-mro `langgraph-merge`,
+     with utils `47b125f`) — the owner pause is answered, so the push follows the two merges;
+  3. a core follow-up round (owner question 6 plus the core and shift-optimizer consistency Minors), and the
+     copilot-mro simplification batch (FI-S1, FI-S2, every simplicity Minor, the redundant tests), each reviewed and
+     merged;
+  4. P2 close: remove `copilot-mro-erase-b` and `shift-optimizer-erase`, delete `ue-t6` … `ue-t10` with `-d`;
+  5. the DB-roles batch (owner decisions 22–26, all yes: `docs/plans/db-roles-consolidation.md`), then P3.
