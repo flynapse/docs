@@ -81,11 +81,18 @@ the receipt states the backup bound.**
   `ad_compliance.complied_by` → keep (customer record); `improvement_findings.reviewer` → `deleted-user`.
 - **R-GUARDS:** each repo's line + drift guard covers its own registry (copilot-mro incl. Weaviate properties);
   telegram-bot's `_ACCOUNT_SWEEP` guard stands. Cross-repo pins only in Task 17.
-- **R-ORDER (copilot-mro):** chat ids → user-grain rows (definer keyed by user AND chat ids) → per chat: reap
-  row-derived objects, one txn scrub + purge, post-commit reaps → DocHub → user prefixes.
+- **R-ORDER (copilot-mro):** chat and attachment ids gathered first → user-grain rows (definer keyed by user AND chat
+  ids) → per chat: reap row-derived objects, scrub in its own txn, post-commit reaps → DocHub → drain → residue until
+  zero with the same ids → purge chats + blocks → user prefixes (R-LINKS-LAST, P2).
 - **R-VERIFY:** each seam registers `erase` + `residue` (read-only counts of the ids in every non-keep placement,
   re-derived from the stores); completion needs all-zero residue (bounded re-erase, else the step fails and retries),
-  which also closes the in-flight-turn race for immediate requests.
+  which closes the race for in-flight RUNS (the copilot-mro seam drains them first).
+  - It does not close it for an interactive stream open at the freeze: no durable marker exists, and a chat-keyed copy
+    the stream lands after the seam's last residue read is invisible once the chat ids are purged (Task 8 review,
+    Concern 1).
+  - A chat-file upload's durable S3 object is written by a detached background task that retries up to 4 times, so it
+    too can land after the sweep, and a turn deadline alone does not bound it (P2 correctness, Q5 evidence).
+  - Owner question 5 (P2 pause); Task 11 builds the answer.
 
 ## Phases
 
@@ -170,58 +177,82 @@ Owned: the DDL constant beside `postgres_table_definitions_modules/llm_turn_cont
   predicate; grant EXECUTE to the app role.
 
 ### Task 6: copilot-mro — user-grain rows, the erased-user line and its drift guard (P2, lane M1)
-Owned: new `copilot_mro/app/db/chat_history/erased_user_copies.py`; `tests/unit/chat_history/`, `tests/db/user_erasure/`.
-- [ ] `ERASED_USER_COPIES` places every user-keyed registry column and Weaviate property delete / scrub /
-  de-attribute / keep with a reason (research §1a + R-PLACEMENTS), plus a residue query per placement.
-- [ ] One txn under the tenant's full roster: delete `user_preference` and `scope='user'` memory; tenant-scope notes and
-  facts keep payload, ids → `deleted-user`/NULL (D1); events by `actor_user_id` scrubbed; findings' evidence texts of
-  the user's signals removed BEFORE the signals scrub; signals, facts and feedback by user id (not only per chat);
-  data-discovery ids and findings `reviewer` → `deleted-user`; then `ERASE_USER_LLM_RECORDS_SQL` on the grant pool
+Owned: new `copilot_mro/app/db/chat_history/erased_user_copies.py`; `copilot_mro/app/services/memory/memory_index.py`
+(the index naming read and the stored-vector re-upsert, pre-review ruling on concern 1); `tests/unit/chat_history/`,
+`tests/unit/memory/`, `tests/db/user_erasure/`; the scope-guard approval.
+- [x] `ERASED_USER_COPIES` places every user-keyed registry column and Weaviate property delete / scrub /
+  de-attribute / keep with a reason (research §1a + R-PLACEMENTS), plus a residue query per placement. Document Hub
+  and chat columns are placed `delegated` to Tasks 7 and 8, which count them (R-DELEGATE); every key is
+  `<table>__<column>` (R-LEDGER-KEYS).
+- [x] One txn under the tenant's full roster: delete `user_preference`, `scope='user'` memory and every compaction
+  digest of the person's chats, by chat (T6 review I-1); tenant-scope notes and facts keep payload, ids →
+  `deleted-user`/NULL (D1); events by `actor_user_id` scrubbed; findings' evidence texts of the user's signals removed
+  BEFORE the signals scrub; signals, facts and feedback by user id (not only per chat); data-discovery ids and findings
+  `reviewer` → `deleted-user`; a colleague's share addressed TO the person loses `share_data.email` (T6 review I-4);
+  every transaction held to the pool's own statement ceiling; then `ERASE_USER_LLM_RECORDS_SQL` on the grant pool
   inside `db_tenancy(<erased tenant>, …)` (an unbound or other-tenant session is refused with 22023; a NULL argument
   returns no row, which is a refusal and never zero). The residue is read bound to the tenant's FULL roster (P1
   review CORR M-4).
-  Post-commit: MemoryItemMT docs removed / re-upserted (orphans counted).
-- [ ] Drift guard (unit, registry-derived): an unplaced column matching user_id, `*_user_id`, `*_by`, `actor*`,
+  Post-commit: the memory index is brought into line from its own naming read — documents removed, or re-upserted
+  with the stored vector (orphans counted). An exception after a commit carries `partial` (R-PARTIAL-COUNTS).
+- [x] Drift guard (unit, registry-derived): an unplaced column matching user_id, `*_user_id`, `*_by`, `actor*`,
   `author*`, `reviewer*`, `owner_user_id`, `*email`, `mentions`, `recipient*` (or such a Weaviate property) fails; a
   placement naming a vanished column fails.
-- [ ] Proofs: db — sentinel user + sibling + a second tenant under the SAME user id; knowledge text kept verbatim with
+- [x] Proofs: db — sentinel user + sibling + a second tenant under the SAME user id; knowledge text kept verbatim with
   no id; rerun 0 rows. Mutants: drop the roster rebind; signals before findings; keep `user_preference`.
 
 ### Task 7: copilot-mro — Document Hub at user grain (P2, lane M2)
-Owned: new `copilot_mro/app/services/document_hub/user_erasure.py`; `tests/{unit,db}/document_hub/`.
-- [ ] Private + chat-scoped docs deleted through DocHub's own delete/purge with BOTH prefixes (raw backup included,
-  the `tenant_object_prefixes` semantics) and their index docs and chunks. Shared docs (R-DOCHUB-REKEY): copy to the
-  `deleted-user` owner path, rewrite the row's owner and any stored key, update the Weaviate owner, delete the old
-  objects; the doc still opens, searches, and can be deleted by a tenant admin.
-- [ ] Parse sidecars via the user's aliases; a content record goes only when no other alias references it. Residue:
+Owned: new `copilot_mro/app/services/document_hub/user_erasure.py`; `tests/{unit,db}/document_hub/`;
+`document_hub/{cleanup,indexing,keys}.py` and `file_readers/_parse_sidecar.py` (factored primitives and optional
+per-page `on_page` callbacks; ledger rulings at Task 7 and T7 I-6).
+- [x] Private + chat-scoped docs deleted through DocHub's own doors, then hard-deleted, with BOTH prefixes (raw backup
+  included, the `tenant_object_prefixes` semantics) and their index docs and chunks. Shared docs (R-DOCHUB-REKEY): copy
+  to the `deleted-user` owner path, rewrite the row's owner and any stored key, update the Weaviate owner, delete the
+  old objects; the doc still opens, searches, and can be deleted by a tenant admin. A document whose attempt may still
+  be live (DocHub's `abandonment_cutoff`, about 30 minutes) is held: a private one is purged with its row kept as an
+  orphan until past the cutoff (T7 I-3); a shared one is left alone, then settled with
+  `mark_processing_failed(PROCESSING_ABANDONED)` for the attempt it judged, and re-keyed (T7 I-4, N-1).
+- [x] Parse sidecars via the user's aliases; a content record goes only when no other alias references it. Residue:
   rows owned by either id, objects under `document-hub/{raw,artifacts}/{t}/{id}/`, index docs by owner.
-- [ ] Proofs: fake S3 + Weaviate unit lane, db rows; a crash after the copy and after the rewrite each converges on
+- [x] Proofs: fake S3 + Weaviate unit lane, db rows; a crash after the copy and after the rewrite each converges on
   rerun. Mutants: re-key without copy (shared doc unreadable); backup kept on a private delete.
 
 ### Task 8: copilot-mro — chats, chat objects and the seam composer (P2, lane M1, after Tasks 6–7)
 Owned: new `copilot_mro/app/services/user_erasure.py` (`erase_user`, `user_residue`); `tests/{unit,db}/user_erasure/`.
-- [ ] R-ORDER: chat ids (both ids, every department, any deleted state) → Task 6 → per chat: reap
-  `dataviews/{t}/{chat}/`, its attachment objects + sidecar aliases and spills → one txn `scrub_chat_copies` + hard
-  purge of `chats`/`chat_blocks` → `reap_chat_copies` → Task 7 → sweep `chat-files|chat-images|chat-audio/{t}/{id}/`.
-  The report carries counts and orphan counts only.
-- [ ] Proofs: db — a chat deleted BEFORE the erasure is scrubbed and purged; sibling and second tenant untouched; a
-  crash after chat k's purge then rerun ends at zero residue; unit — order pinned by a spy. Mutants: purge before
-  scrub; skip already-deleted chats; keep a department filter.
+`tests/unit/user_erasure/` includes the seam's key and scrub-pin files.
+- [x] R-ORDER as amended by R-LINKS-LAST: gather the chat ids (both ids, every department, any deleted state) and the
+  chat-file attachment ids (the turns' `s3_key`s under the person's own prefixes ∪ the `chat-files/{t}/{id}/` listing,
+  both ids) → Task 6 → per chat: reap `dataviews/{t}/{chat}/`, its attachment objects + sidecar aliases and
+  `agent-state/{t}/{chat}/`, then `scrub_chat_copies` in its own txn, then `reap_chat_copies` → Task 7 → drain the
+  person's in-flight runs (60 s, fails the step) → residue with the SAME gathered ids, re-erased up to twice until zero
+  → hard purge of the verified, soft-deleted `chats` and their `chat_blocks` in one txn → sweep
+  `chat-files|chat-images|chat-audio/{t}/{id}/` under both ids → the whole residue once more. The report carries counts
+  and orphan counts only; any exception carries `partial`.
+- [x] Proofs: db — a chat deleted BEFORE the erasure is scrubbed and purged; sibling and second tenant untouched; a
+  crash after chat k's scrub, after the purge, and at a drain timeout each converge on the rerun (partial + rerun = one
+  clean pass); unit — order pinned by a spy. Mutants: purge before scrub; skip already-deleted chats; keep a department
+  filter.
 
 ### Task 9: core — core-local rows, core line and drift guard (P2, lane C)
-Owned: new `core/core/resources/user_erasure/core_copies.py`; `core/tests/{unit,db}/user_erasure/`.
-- [ ] One tenant-bound txn: the user's automations deleted, their runs and attributed one-shots → `deleted-user`;
-  `product_events` user id → `deleted-user`, session NULL; comments, mentions, notifications, subscriptions, thumbs,
-  invitations per D10/R-PLACEMENTS; RBAC provenance and `authorization_events` untouched (D9); the `users` row is NOT
-  deleted here (Task 11). Residue query; drift guard over core's registry as in Task 6.
-- [ ] Proofs: db with sibling + second tenant; the thumbs trigger leaves counts right; rerun 0 rows. Mutants:
+Owned: new `core/core/resources/user_erasure/core_copies.py`; `core/tests/{unit,db}/user_erasure/`;
+`core/resources/analytics/panels/quality.py` (imports the moved `DELETED_USER_ID`).
+- [x] One tenant-bound txn: the user's automations deleted; attributed one-shots → `deleted-user`, and the person's id
+  in any run's `entitlements_used` → `deleted-user` (definition-backed runs carry no `user_id`); `product_events` user
+  id → `deleted-user`, session NULL; comments, mentions, notifications, subscriptions, thumbs, invitations per
+  D10/R-PLACEMENTS (addressed to the person: deleted, redeemed ones included — T9 concern 2; the ones they sent: kept,
+  `invited_by` → `deleted-user`, pending ones still redeemable — owner question 6); RBAC provenance and
+  `authorization_events` untouched (D9); the `users` row is NOT deleted here (Task 11). Residue query; drift guard over
+  core's registry as in Task 6.
+- [x] Proofs: db with sibling + second tenant; the thumbs trigger leaves counts right; rerun 0 rows. Mutants:
   delete comments instead of anonymising; leave mentions.
 
 ### Task 10: shift-optimizer — attribution seam (P2, lane S)
 Owned: new `shift_optimizer/app/services/user_erasure.py`; unit + db tests in their domain folders.
-- [ ] `optimizer_jobs.created_by`, `optimizer_runs.launched_by` → `deleted-user` for the tenant and both ids; residue
+- [x] `optimizer_jobs.created_by`, `optimizer_runs.launched_by` → `deleted-user` for the tenant and both ids; residue
   query; line + drift guard. Proofs: db (`shift_optimizer_test`) with sibling + second tenant; mutant: drop the tenant
-  predicate (record whether RLS or the test catches it).
+  predicate (record whether RLS or the test catches it). `erase` / `residue` take a structural subject (no core
+  import) and return `Dict[str, int]` keyed `optimizer_jobs__created_by` / `optimizer_runs__launched_by`; one
+  transaction; the pool's statement timeout set explicitly. Task 12 adapts `erase` to `SeamErasure`.
 
 ### Task 11: core — the orchestrator, completion and receipt (P3, lane C)
 Owned: new `user_erasure/service.py`; `user_erasure/freeze.py` (immediate enqueue AFTER the freeze commits,
@@ -237,6 +268,41 @@ new `core/scripts/erase_user.py` (request, cancel, list only — R-DOOR amended)
   `authorization_events` row (delete / `user`, subject = surrogate, change = request id + counts, the request's via) +
   ledger completed. Immediate requests enqueue the one-shot after the freeze commits (a lost enqueue is caught by the
   due sweep: `erase_after = requested_at`).
+- [ ] P2 carry-ins (ledger rulings; each is owed here):
+  - **Drain before core's step:** after the freeze, wait — bounded, the step FAILS on timeout — until no
+    `claimed`/`running` run of the person's automations and no one-shot attributed to either id remains
+    (`record_run_result` writes `entitlements_used`, naming the owner, at close).
+    - Count only runs that can still write (the reapers' own predicates: `running` inside its runtime ceiling,
+      `claimed` inside its start grace). A stale row never holds the drain, because in the scheduler-off deployment
+      nothing reaps it (P2 correctness I-1, fixed in the copilot-mro seam at P2 close).
+    - The copilot-mro seam drains the same set for 60 s (`user_erasure.IN_FLIGHT_SQL`); this drain covers the window
+      after it.
+  - **Record core's step on its own transaction:** a process death after a seam's commit but before the ledger records
+    the step would under-report; core's step writes its ledger step in the same transaction as its work (P2
+    correctness M-4).
+  - **Statement ceilings:** Task 11's completion transaction and `freeze._transaction` set the pool's
+    `statement_timeout` (P2 simplicity S-I1 carry).
+  - **Counts and orphans:** a step's counts are summed across attempts, adding each failed attempt's `exc.partial` (a
+    core `SeamErasure`); orphans are the LATEST attempt's, never a sum (in dev without `PHOENIX_ENDPOINT` every chat's
+    session is one).
+  - **What residue proves:** copilot-mro's `user_residue` after its own purge gathers no chat ids, so its chat-keyed
+    placements read zero by construction; their proof is the seam's own final read inside `erase_user`. Build owner
+    question 5's answer for the interactive-stream race. Three placements are statement-proven, not residue-proven,
+    and the receipt says so: `improvement_signals__detail`, `memory_item_events__metadata`,
+    `improvement_findings__evidence` (and the findings chat arm after one pass).
+  - **Retries:** the bounded re-erase window outlasts DocHub's fixed 30-minute hold from an attempt's start, and allows
+    `ceil(N / 10 000)` passes of Task 6's index naming read. Size the one-shot's runtime ceiling against the person's
+    chat count (every pass re-scrubs and re-reaps every chat, up to 5 s per Phoenix request), or skip the reap for a
+    chat whose scrub counted 0 and whose last reap left no orphan.
+  - **Refused vs incomplete:** a seam's refusal is permanent — `failed`, not re-enqueued, an owner path in the
+    runbook — and an incomplete is retried. The seams share no taxonomy: refusals are `ValueError` in copilot-mro's
+    composer, shift-optimizer and core, but Task 6's `ErasedUserCopiesRefused` is a `RuntimeError`. Classify by an
+    explicit marker that every seam sets on its refusals, not by exception type (P2 correctness M-5 = completeness
+    M-3). A malformed legacy chat id (`REFUSED_CHAT_ID`) is one such refusal.
+  - **The job:** no person id in the `user_erasure` one-shot's `params`; `user_id=None` on every enqueue.
+  - **Receipt, "what may remain":** downloaded exports and optimizer workbooks; inline or zombie DocHub executors past
+    the declared bound; an `updated_at` PATCH extending a queued shared attempt's hold; the attempt-start window;
+    orphan-operator notifications (owner question 4); text naming the person with no id (owner question 3).
 - [ ] Repeat requests: an immediate/RTBF request over an open windowed one escalates it or refuses with its own 409,
   never silently returns the weaker row (CORR M-3). The due sweep tolerates a missing tenant and a missing
   `users` row (CORR N-4). Reconcile Cognito accounts left disabled with no open request (CORR N-2, widens T2-FC3).
@@ -256,6 +322,15 @@ Owned: new `api/flynapse_api/user_erasure_wiring.py` + its call in `routers/user
 - [ ] Register the copilot-mro and shift-optimizer seams all-or-nothing (RuntimeError at assembly, as
   `partition_wiring`); `user_erasure` one-shot kind → `run_erasure` under the row's binding; a daily global builtin
   enqueues due rows (window passed, no run in flight).
+- [ ] P2 carry-ins:
+  - shift-optimizer's `erase` returns `Dict[str, int]` (it imports no core). Register it through an adapter whose
+    `erase` answers a `SeamErasure` holding those counts and zero orphans; its `residue` is registered as is.
+    copilot-mro's pair is `copilot_mro.app.services.user_erasure.erase_user` / `user_residue`, as is.
+  - The api imports `shift_optimizer` optionally (`routers/optimizer.py` swallows `ImportError`): the wiring imports it
+    inside the all-or-nothing block, so a missing package registers nothing and every request door answers 503.
+  - Every `user_erasure` enqueue — the due sweep's included — carries `user_id=None` (the copilot-mro drain counts runs
+    attributed to the person, so an attributed erasure run waits on itself) and no person id in `params`.
+  - Proof: each registered seam's `erase` returns a `SeamErasure`.
 - [ ] The executing CLI lives here (R-DOOR amended, P1 review COMP I-2 — it needs the seam wiring; core imports no
   service): an owner-run `python -m flynapse_api.user_erasure_cli` — run one, `--run-due` (covers scheduler-off),
   (no `--replay-completed`: owner decision 31).
@@ -285,6 +360,11 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
   `pre_scheme_span_ids` pattern) after the per-chat session deletes; bounded, best-effort, counted; residue =
   `get_spans(user.id)`; the internal/golden project refused. Proofs:
   fake-client unit lane (live check in Task 18).
+  The purge deletes the soft-deleted `chats` rows that `scrub_deleted_chat_sessions.py` draws its ids from, so a
+  per-chat session the reap orphaned can no longer be replayed. The sweep runs inside `CopilotUserErasure.erase`
+  BEFORE the purge, with the gathered chat ids: it retries each chat's session delete, then sweeps `user.id` spans.
+  Verify the content-copy sessions' spans carry `user.id`; if not, the sweep needs the chat ids. Its residue joins the
+  seam's composed residue under a disjoint key. The receipt's Phoenix 30 d bound is the backstop.
 
 ### Task 16: iac — S3 noncurrent-version expiry and the Cognito erasure policy (P4, lane I)
 Owned: `iac/s3.tf`, `iac/apprunner_iam.tf`; iac unit tests.
@@ -306,14 +386,19 @@ Owned: new `api/tests/integration/user_erasure/` (census + fixtures).
   text/varchar/jsonb column; the ids only in declared keep places; K exactly in its kept rows, with no id; sibling and
   second-tenant rows byte-identical (full-row comparison); rerun changes 0 rows; the fakes saw every expected delete.
 - [ ] Cross-repo pins (checkouts pinned): the three `deleted-user` literals equal; each receipt bound ≥ its configured
-  retention (iac, Loki/Tempo configs, Phoenix). Proofs: remove one placement's statement per repo → census red.
+  retention (iac, Loki/Tempo configs, Phoenix); shift-optimizer's two unit-file copies of the ledger-key literal equal
+  core's `IDENTIFIER_PATTERN`; rule the estate-wide drift shape list (`assignee`, `approver`, `requester`, `owner`,
+  `user_name`, `creator`, and person-bearing jsonb such as `automation_runs.params`) and apply it in all three repos.
+  Proofs: remove one placement's statement per repo → census red.
 
 ### Task 18: live end-to-end on the dev stack (P5, controller-run on the owner's go)
 Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects zero tests; layout exemption with reason).
 - [ ] A throwaway dev-pool user in a dev tenant: real turns with uploads + a DocHub upload → immediate erasure →
   no current S3 objects under the user prefixes (noncurrent versions reported until the lifecycle applies), Weaviate
   filter counts 0, Phoenix `get_spans(user.id)` empty, Cognito admin-get → not found, receipt present. Dev tenants
-  only; never the golden/internal project.
+  only; never the golden/internal project. Read the memory index after the erasure (Task 6 clears `user_id` by PATCH
+  with a null; the fakes cannot prove the server unsets it), and check that a re-keyed DocHub chunk kept its vector
+  (T7 FI-3).
 
 ## Review & merge protocol
 
@@ -332,7 +417,10 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
    copilot-mro's provisioning and `test_grant_role_privileges.py` read core's registry; the api imports core's
    `user_erasure`).
 3. AWS (deferred until implementation is done): iac apply (Cognito policy + S3 lifecycle) BEFORE the routes are used
-   on AWS — without the IAM grant every request fails closed at the Cognito disable.
+   on AWS — without the IAM grant every request fails closed at the Cognito disable. The api process also needs the
+   grant-pool credentials (`POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam
+   runs the LLM-records definer on the grant pool, so without them every erasure freezes the person and then fails at
+   that step on every retry. iac declares neither today.
 4. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` or a
    daily `--run-due`. Rollback: cancel open requests via the CLI, then redeploy the previous image.
 
@@ -426,7 +514,243 @@ Recorded at the P1 phase review (2026-09-27); each was deferred by a ledger ruli
   newest first-parent merge, so on the mainline its post-merge limb measures only work after the latest feature merge.
   This belongs to the observability program's guard and is routed to its ledger.
 
+Recorded at the P2 phase review (2026-09-28); each was deferred by a ledger ruling or the P2 triage:
+- **A re-key retried after a part-way delete splits its counts differently (Task 7 M-5).**
+  - *What is missing:* the retry no longer finds the row, which is now `deleted-user`'s, so the unowned sweep deletes
+    the remaining old objects under `document_hub_unowned_objects_deleted`. A clean pass counts them under
+    `document_hub_objects_deleted`. The totals are exact and the residue is zero.
+  - *Why deferred:* only the split between two keys differs; the sum is exact.
+  - *Complete fix:* the receipt contract states that the two keys count the same placement (deletes under the
+    person's prefixes), or Task 11 sums them into one receipt line.
+- **An attempt claimed long ago can begin between the listing and the read, and the erase then settles it (Task 7
+  M-7).**
+  - *What is missing:* the verdict sees the same attempt and falls back to `updated_at`, which `mark_attempt_started`
+    never bumps, so the attempt is judged abandoned and settled.
+  - *Why deferred:* the executor's post-parse re-read then sees `needs_attention` and writes nothing, and DocHub's own
+    reconciliation has the same single-row race. Task 11's receipt names the window.
+  - *Complete fix:* the time predicate rides inside the settle's `WHERE` (an erasure-owned statement or a
+    `mark_processing_failed` variant), so the judgement and the write are one statement.
+- **No residue read for the owner id in the re-keyed copies' S3 object metadata (Task 7 M-3, FI-6).**
+  - *What is missing:* a check that no re-keyed copy under `document-hub/raw/{t}/deleted-user/` still carries the
+    person's id in its object metadata.
+  - *Why deferred:* no store links a `deleted-user` object to the person after the re-key; a residue would HEAD every
+    such object on every call and still could not attribute a hit. The copy uses `MetadataDirective=REPLACE`, and a
+    unit pin (m07) kills the regression.
+  - *Complete fix:* a residue read over the re-keyed copies' metadata, scoped to the keys the step re-keyed.
+- **Two raises after Task 6's `partial` guard (Task 6 N-3).**
+  - *What is missing:* a malformed definer row (`int(answer[name])`) or a naming-read document with no `memory_id`
+    would raise a `KeyError` without `partial`.
+  - *Why deferred:* both are unreachable with today's fixed shapes.
+  - *Complete fix:* read both inside the guard, so every raise after a commit carries `partial`.
+- **Schema conformance and the tenancy migrator ignore column DEFAULTs.**
+  - *What is missing:* `data_discovery_jobs`' counters drifted to NOT NULL with no default on the test and dev
+    databases while the registry says DEFAULT 0. Neither the migrator nor `test_schema_conformance.py` compares
+    defaults, so the drift surfaced only as a fixture failure.
+  - *Why deferred:* the owner fixed the drift by hand on both databases, and it is not erasure code.
+  - *Complete fix:* conformance and `--verify-only` compare each column's default with the registry, and the migrator
+    emits the `SET DEFAULT` for a mismatch.
+- **Core's sibling-variant and variant-hazard infra tests depend on workspace state.**
+  - *What is missing:* `test_cross_repo_reads_name_their_checkout.py` has two reds on the primary checkout: the
+    sibling-variant case (the suffix is empty there, so every candidate is its own twin), and the variant-hazard case
+    (it asserts that an api variant checkout exists, false once `api-erase` was removed).
+  - *Why deferred:* pre-existing, and owned by the phase-7 infra guard.
+  - *Complete fix:* both tests build their own fixture workspace instead of reading the real one. Routed to the
+    phase-7 guard owner.
+- **Task 6's Minors (m-1 … m-3, m-5 … m-12).** Each is non-blocking: every transaction is bounded and the erasure
+  is correct without them. N-1 and N-2 were pinned in fix round 2.
+  - m-1: the unit tenant-scope guard is a substring check that a subquery satisfies. Fix: assert the predicate in the
+    statement's outermost `WHERE`.
+  - m-2: the drift guard's reach. Fix: widen the pattern (Task 17 rules the estate-wide list); read DocHub's
+    properties from `indexing.collection_properties()`; read every key the memory upsert writes; state in the line's
+    docstring that person-bearing jsonb keys are out of any name-based guard's reach.
+  - m-3: the index re-upsert can still embed (changed search text, a failed read, no stored vector) and, being
+    insert-first, can re-create a document deleted after the naming read. Fix: a property-only PATCH helper in
+    `memory_index` that never inserts and never embeds, the shape of Task 7's in-place chunk re-own.
+  - m-5: the scope-guard comment names the old order (the definer now runs before the index). Fix: reword it.
+  - m-6: the five data-discovery pairs are listed twice. Fix: one tuple of name, relation, column and verb.
+  - m-7: `Placement.residue` is a string or a callable, dispatched by type. Fix: two named fields.
+  - m-8: three residues cannot read non-zero once the id is scrubbed (`improvement_signals__detail`,
+    `memory_item_events__metadata`, `improvement_findings__evidence`). This is inherent; Task 11's receipt says they
+    are statement-proven.
+  - m-9: the delegated placements name their owner in two forms (prose, a module path) and list only part of chat
+    delete's line. Fix: one form, and either all of chat delete's line or only the user-keyed columns.
+  - m-10: the naming read sends one OR clause per chat id. Fix: one `contains_any` clause.
+  - m-11: the naming read caps at 10,000 documents. Convergence holds over passes (Task 11 allows `ceil(N / 10 000)`).
+    Fix: page the naming read, so one pass sees every document.
+  - m-12: `tests/db/improvement` errors 13 times when collected with the `tests/db/chat_history` files that install a
+    bare `copilot_mro.app.db` stub (Task 6 adds a sixth copy). Pre-existing. Fix: a shared db-lane loader that
+    registers the stub only for its own import and restores it, as the unit lane's `repo_modules_restored` does.
+- **A reviewer email edited before the freeze escapes the match (Task 6).**
+  - *What is missing:* `improvement_findings.reviewer` stores an email, matched through the `users` row's current
+    address. Findings reviewed under an earlier address keep it.
+  - *Why deferred:* no address history exists to match against.
+  - *Complete fix:* record the reviewer by user id, so the erasure never depends on a mutable address.
+- **Task 7's other Future Improvements (FI-1 … FI-5, FI-7; FI-6 is above) and N-2, N-3.**
+  - FI-1: the sidecar reference scan lists the tenant's whole sidecar subtree and GETs every small object once per
+    call that reaches content. Task 8's per-chat call multiplies it (P2 correctness, T8 m-6 evidence). Fix: a
+    reference lookup that does not scan (content ids keyed by checksum from the attachment refs), if tenants grow.
+  - FI-2: DocHub notifications addressed to `deleted-user` are inert rows. Fix: skip them.
+  - FI-3: a PATCH of `owner_user_id` keeping the stored vector is unproven on the server. Carried to Task 18.
+  - FI-4: the per-chunk PATCH in `_drain_reassign` is one call per chunk. Fix: batch it if a document ever holds tens
+    of thousands of chunks.
+  - FI-5: a re-key refused after its copy, then deleted by an admin before any rerun, leaves `deleted-user` copies
+    nothing reaps (storage only, no personal id). Fix: the admin delete also reaps `deleted-user` objects no row
+    references.
+  - FI-7: `parse-sidecars/` has no lifecycle rule; listed above as current-version expiry.
+  - N-2: inline or zombie DocHub executors can outlive the declared bound (inline processing has no ceiling; a
+    thread-blocking zombie cannot be cancelled). Task 11's receipt names it. Fix: inline processing runs under the
+    same ceiling, so the cutoff is a real bound.
+  - N-3: a claimed-but-never-begun attempt is measured from `updated_at`, which a colleague's title or sharing PATCH
+    bumps, extending a shared document's hold by up to 30 minutes each time. Task 11's receipt names it. Fix: measure
+    it from a claim stamp that a PATCH does not touch.
+- **The db statement-capture recorder wraps only part of the pool (Task 8 n-4).**
+  - *What is missing:* it wraps `connection`, `fetch_all`, `fetch_one` and `execute` on the app pool, not
+    `execute_returning_*`, `execute_many` or the grant pool, and its docstring claims more.
+  - *Why deferred:* no unrecorded path carries the person's words today, and a fourth fix round cost more than it
+    bought.
+  - *Complete fix:* the recorder wraps the pool class (every method, both pools), or its docstring narrows to what it
+    records.
+- **Task 9's Minors (M-2 … M-7; M-1 is owner question 6).**
+  - M-2, orphan operators (owner question 4): `DELETE /operators/{id}` leaves that operator's tenant+operator rows
+    invisible to every binding: core's notifications and subscriptions, and copilot-mro's private Document Hub rows,
+    memory items and events, and their index chunks (P2 correctness). The erase misses them and the residue reads 0.
+    Deferred because it needs DDL. Fix: `delete_operator` sweeps its own rows (the root fix), or a postgres-owned
+    definer erases by tenant and user across operators; the owner-run `delete_unentitled_partition.py` closes the rows
+    meanwhile.
+  - M-3: the text-level payload de-attribution renames an object KEY equal to an id (duplicate keys then collapse), and
+    rewrites a string that ends in an escaped quote followed by the id. Contrived for today's writers. Fix: state both
+    edges in the docstring, or a recursive rewrite in a definer once one exists.
+  - M-4: the drift guard matches column names only (a decoy `comments.assignee` survives; `automation_runs.params`,
+    `notification_subscriptions.filters_json` and `tenants.primary_contact` are outside it). Task 17's census is the
+    backstop. Fix: place every jsonb column of a relation that already holds a placed column, as KEEP with its reason,
+    starting with `automation_runs.params`.
+  - M-5: `DELETED_USER_ID` lives in the `core_copies` step module, so `quality.py` imports an erase module. Fix: move
+    it into the package vocabulary (`ledger`, re-exported by `__init__`).
+  - M-6: `core_copies` imports the private `ledger._require_opaque`, and `OPERATOR_ROSTER_SQL` is core's third
+    spelling of the roster read (justified: it runs on the erase's own cursor). Fix: a public name.
+  - M-7: the db proofs seed by direct SQL, not the real writers. Task 17's real-writer census covers it; no action.
+- **Task 10's leftovers.**
+  - m-1: the drift shapes miss `owner`, `user_name`, `creator`, `assignee`, `approver`, `requester`. Routed to Task 17.
+  - A negative `POSTGRES_STATEMENT_TIMEOUT_MS` fails the seam loudly on every erase, while the pool silently runs with
+    no ceiling. Fix: mirror the pool's greater-than-zero guard, or refuse the setting at startup.
+  - The pre-existing wall-clock perf test `test_full_week_solve_completes_within_budget` fails under heavy machine
+    load. Fix: a budget relative to a calibration run, or run it only in a perf lane.
+- **One refusal type for every seam (P2 completeness M-3 = correctness M-5).**
+  - *What is missing:* a core `SeamRefused` in `lifecycle.py` that every seam's refusal subclasses, carrying `partial`
+    like the incompletes.
+  - *Why deferred:* Task 11 classifies by an explicit marker today; the only reachable permanent refusal is a
+    malformed legacy chat id (T8 m-7).
+  - *Complete fix:* the shared type in core; each seam's refusal subclasses it (shift-optimizer structurally, by a
+    marker attribute, since it imports no core); Task 11 marks a `SeamRefused` step `failed` for the owner path and
+    retries everything else.
+- **Nothing checks a seam's answer type before use (P2 completeness FI-B).**
+  - *What is missing:* `register_seams` accepts any callable, and an `erase` answer's type is first touched when Task
+    11 reads its counts.
+  - *Why deferred:* Task 12's proof catches the one mis-registration P2 can produce; an annotation check would prove
+    shape only.
+  - *Complete fix:* Task 11 treats an `erase` answer that is not a `SeamErasure` as a fixed-text failure of the step,
+    before recording it, so a mis-assembled deployment fails its first erasure with a clear reason.
+- **The window between the final residue read and the completion commit (P2 correctness FI-2).**
+  - *What is missing:* a colleague's mention or notification naming the person can land after Task 11's last residue
+    read and before the `users` DELETE commits. Core's mention validator checks only format.
+  - *Why deferred:* it is Task 11's design, and the window is small.
+  - *Complete fix:* Task 11 re-runs `core_copies_residue`'s predicates on the completion cursor and refuses the commit
+    unless they are zero. Core's relations share the ledger's database.
+- **`agent_state` rows outlive the hard purge (P2 correctness FI-3).**
+  - *What is missing:* the per-chat scrub empties `payload`, `label` and the pointer but keeps `namespace`, `key` and
+    `status`. After the purge these rows are keyed by a chat id that no longer exists, live forever where `expires_at`
+    is NULL, and `key` is caller-supplied (DataView names, run ids).
+  - *Why deferred:* this is chat delete's line, and nothing names the person once the chat is gone.
+  - *Complete fix:* the purge also deletes the verified chats' `agent_state` rows, in the same transaction.
+- **P1's `freeze._transaction` has no statement ceiling (P2 correctness FI-4).**
+  - *What is missing:* the same raw-connection shape as core's step had, on the request, cancel and completion paths.
+  - *Why deferred:* it is P1 code, and its statements are single-row and keyed by primary key.
+  - *Complete fix:* the same `SET LOCAL` from the pool setting. Carried into Task 11 ("Statement ceilings").
+- **Task 8 re-spells Task 6's SQL fragments (P2 simplicity S-M1).**
+  - *What is missing:* the person, chats and blocks predicates, the count wrapper and the finding-copies predicate are
+    byte-identical copies of Task 6's, and a fix to one would silently miss the other.
+  - *Why deferred:* cheap, but it touches two approved modules.
+  - *Complete fix:* Task 6 makes the five fragments public and Task 8 imports them.
+- **The bound, ceilinged transaction block is written five times in copilot-mro (P2 simplicity S-M2).**
+  - *What is missing:* each copy repeats rollback, cursor, optional read-only, the ceiling and the tenancy bind; utils
+    already owns the ceiling and bind as the private `_apply_transaction_context`. Core's step was the copy that
+    missed the ceiling.
+  - *Why deferred:* it touches utils (the estate shared-helper rule needs the owner's confirmation).
+  - *Complete fix:* a public utils `apply_transaction_context` and one `bound_transaction` context manager per repo;
+    the per-seam ceiling tests collapse to one test of the helper.
+- **`partial` is carried three ways, one with a dead branch (P2 simplicity S-M3).**
+  - *What is missing:* Task 6 raises a typed carrier, Task 7 sets the attribute and swallows `AttributeError`, and
+    Task 8 wraps on a False return. No exception this code can meet refuses the attribute, so Task 8's wrapper branch,
+    `INCOMPLETE_STEP` and Task 7's `except` are unreachable; the "after committing" log line also fires for a refusal.
+  - *Why deferred:* Task 11 formalises `partial`.
+  - *Complete fix:* one core helper or `ErasureIncomplete(partial=)` base that all three use; drop the dead branch,
+    `INCOMPLETE_STEP` and its contrived test; log the refusal separately.
+- **The subject validators disagree on stripping (P2 simplicity S-M4).**
+  - *What is missing:* five subject-to-ids validators; in copilot-mro Task 7 strips whitespace while Tasks 6 and 8
+    match the raw value, so a subject built from anything but a ledger row could erase different rows per sub-seam.
+  - *Why deferred:* unreachable today: the ledger bounds ids at request time.
+  - *Complete fix:* `ErasureSubject` validates itself (the opaque rule, the marker refused); shift-optimizer keeps its
+    own copy under its Protocol. The per-sub-seam refusal tests collapse to one.
+- **Task 8's per-chat attachment and sidecar reap is redundant (P2 simplicity S-M6).**
+  - *What is missing:* under R-LINKS-LAST the final sweep deletes every attachment object and Task 7 reaps every
+    attachment's sidecars, so the per-chat pass does the same work early under a second set of count names (MR7b: with
+    both removed, residue zero and siblings untouched all held).
+  - *Why deferred:* the plan's Task 8 text prescribed the per-chat reap; removing it needs a confirmed plan change.
+  - *Complete fix:* the per-chat reap covers only the chat-keyed prefixes (DataViews, agent state); the gather keeps
+    only the file attachment ids.
+- **Five hand-rolled fake S3 buckets (P2 simplicity S-M9).**
+  - *What is missing:* five fake buckets (about 300 lines), three DocHub index fakes, two near-identical two-tenant db
+    worlds, and repeated small doubles; the shared `tests/fixtures/s3/stub.py` lacks listing, delete and copy.
+  - *Why deferred:* a shared-helper proposal, not a defect.
+  - *Complete fix:* extend the shared stub with paged listing, `delete_objects` with a fault hook, `copy_object` and
+    head metadata, and add a `tests/db/user_erasure/conftest.py` for the two-tenant world (about 350 fewer lines).
+- **The placement lines' key forms and verbs differ (P2 simplicity S-M10).**
+  - *What is missing:* core keys its line `relation.column` and calls id-to-marker `scrub`; copilot-mro and
+    shift-optimizer use `<table>__<column>` and `de-attribute`. Core keys its residue by step, the others by placement.
+  - *Why deferred:* each lane chose independently, and core's line keys are never emitted.
+  - *Complete fix:* before Task 11's receipt and Task 17's pins, core keys its line `<table>__<column>` and adopts
+    `de-attribute`; one kind vocabulary per repo, pinned cross-repo by Task 17.
+- **A missing count row reads 0 in three seams and raises in the fourth (P2 simplicity S-M11).**
+  - *What is missing:* Tasks 6, 8 and 9 read no row as 0; Task 10 raises. Both branches are unreachable, since a
+    count always answers one row. Task 10 alone reads its residue in REPEATABLE READ.
+  - *Why deferred:* no behaviour differs today.
+  - *Complete fix:* take the first column of the one row everywhere (it raises naturally), drop Task 10's special
+    case and its test, and pick one isolation level for every residue.
+- **Test-only surface in production code (P2 simplicity S-M12).**
+  - *What is missing:* the composer's `deleted_user_id=` option (every caller passes the constant), a second
+    declaration of the residue keys read only by tests, a repeated collision check, and a tuple whose second slot is
+    unused.
+  - *Why deferred:* harmless, and it touches an approved module.
+  - *Complete fix:* import the constant, derive the placements from the residue declaration if a test needs them, and
+    check the keys once.
+- **Provenance comments, private cross-module imports and a source-format pin (P2 simplicity S-M13).**
+  - *What is missing:* production docstrings cite plan task numbers and review ids, several shared fragments are
+    reached through private names, and one Task 6 test pins an import's source text.
+  - *Why deferred:* no behaviour is affected.
+  - *Complete fix:* name the module and state the reason instead of the history; make the shared fragments public; pin
+    the index helpers by identity.
+- **About 1,000 redundant test lines (P2 simplicity §1 table, S-M5, S-M7, S-M8).**
+  - *What is missing:* nothing; the tests over-prove. The ledger-identifier property is asserted eight times in
+    copilot-mro; Task 8's order spy subsumes two unit tests and two more mostly prove the fakes; Task 7's unit and db
+    lanes prove about eight scenarios twice over a fat unit fake. The review's §1 table names each one.
+  - *Why deferred:* redundant, not wrong.
+  - *Complete fix:* keep Task 8's static keys file as the one identifier test; fold the spy's missing assertion in and
+    delete the four Task 8 tests; thin Task 7's unit store to a recorder and keep only what the db lane cannot reach.
+- **Proposals, pending the owner's confirmation.**
+  - **FI-S1, one drain and one re-erase loop, owned by Task 11.** Task 8 drains the person's runs itself, with SQL
+    over core's tables, and runs its own bounded re-erase inside Task 11's. Task 11 drains once, after the freeze and
+    before the first seam, in core beside `automation_store`; Task 8 becomes a single pass (gather → erase → residue;
+    a non-zero residue raises with `partial` and does not purge, so Task 11's retry re-gathers). That removes the
+    drain, the pass loop and cross-pass merging, and leaves the one-shot's ceiling arithmetic with one term.
+  - **FI-S2, shared pieces for chat delete's finding-matching rule.** The rule is spelled five times (chat delete
+    twice, Task 6 twice, Task 8 once), each pinned. Chat delete exports its finding-texts statement and the two
+    matching predicates, Task 6 composes them behind its own CTE, and Task 8's gather imports them; the byte-identity
+    pins go, and the residue-arm pins that widen a chat id to a set stay.
+
 ## Lessons
+
+- A bounded wait on a marker that nothing clears is an unbounded erasure: in the scheduler-off deployment a stale
+  `claimed` row never closes, so a drain must count only work that can still write (P2 correctness I-1).
 
 ## Implementation notes
 
@@ -535,7 +859,8 @@ then Phase 2 (Tasks 6–10).
 - **Closed and merged locally, unpushed:**
   - Task 9, core `master` `ae33072`.
   - Task 10, shift-optimizer `main` `ba3c070`.
-  - Post-merge lanes are green for both.
+  - Post-merge lanes are green for both, apart from core's two known environment reds in
+    `test_cross_repo_reads_name_their_checkout.py`.
 - **In review:**
   - Task 6 (`ue-t6` `12a43886`), in task review.
   - Task 7 (`ue-t7` `db0f2bb4`), where fix round 1 is in scoped re-review.
@@ -574,11 +899,42 @@ then Phase 2 (Tasks 6–10).
 *Carried into Task 18.* Read the memory index after a live erasure, because clearing a Weaviate property with a null is
 unproven by the fakes.
 
-*Owner questions for the P2 phase review.*
-- Should private comments be deleted rather than anonymised?
-- Should optimizer job notes be kept as they are?
-- Should free text or contact JSON that names the person, but carries no id, stay unplaced as a receipt limit?
-- Orphan-operator notifications need DDL to close. Do they go in the receipt and Future Improvements?
+*Owner questions for the P2 phase review (six; wording from the P2 plan-completeness review).*
+1. **Private comments.** A private comment is readable only by its author and by tenant admins
+   (`core/resources/comments/services/comment_service.py:807-813`). The erasure keeps its text and sets the author to
+   `deleted-user`, "Deleted user", no email, so afterwards only admins can read it. Private Document Hub documents, the
+   nearest case, are deleted (D7). Keep as built, or delete private comments too (one predicate in the
+   `comment_authors` step, plus a pin)?
+2. **Optimizer job name and notes.** `optimizer_jobs.name` and `notes` are what the person typed when creating the job.
+   They stay with the job; only `created_by` / `launched_by` become `deleted-user`. No other optimizer field names the
+   person (the configs come from settings documents, and `error` is solver or fixed text). Keep as built?
+3. **Text that names the person without an id.** The erasure finds a person only by their ids, so these stay and are
+   not counted: `tenants.primary_contact` / `secondary_contact` (jsonb, set by tenant admins) when the person is the
+   contact; a colleague's comment "@Ada"; another member's automation prompt; memory notes and facts (kept verbatim
+   under D1); optimizer job notes; `ad_fleet_applicability.review_note` (D9). Accept as a limit stated in the receipt?
+   (A contact scrub would match the `users` row's email inside SQL, as Task 6 does for reviewers.)
+4. **Orphan-operator rows.** When an operator is deleted (`DELETE /operators/{id}`), its notification and subscription
+   rows stay behind, invisible to every app-role binding. So do copilot-mro's tenant+operator relations: private
+   Document Hub rows, memory items and events, and their index chunks. The erasure cannot delete or count them, so the
+   residue reads 0 over them. Closing it needs DDL: a postgres-owned definer that erases by (tenant, user) across
+   operators, or `delete_operator` sweeping its own rows (the root fix). Name it in the receipt now, and put the fix in
+   Future Improvements?
+5. **A chat stream open at the freeze.** The freeze refuses new requests only. A stream already open runs on with no
+   deadline (`TurnContext.deadline` is never assigned; about 19 minutes worst case per governed call). Chat-keyed
+   copies it writes after the seam's last check (agent state, DataViews, parse sidecars, owner-less digests, user-less
+   turn content) cannot be found afterwards, because the purge removed the chat ids. Only immediate requests are
+   exposed — RTBF requests and every `/goodbye` (Task 13 runs the channel user's erasure immediately); the 7-day
+   window outlasts any stream. A chat-file upload's durable S3 object is also written by a detached background task
+   (up to 4 retries) under the person's own prefix, so it too can land after the sweep, and a turn deadline alone
+   does not bound it. Recommended: a hard interactive-turn deadline plus a bound on that upload task, and immediate
+   requests erase after freeze + the larger bound ("immediately" becomes "after the bound"). Alternatives: gate the
+   chat-keyed writers on chat liveness (rows only, not S3 objects), or a durable open-turn row (DDL).
+6. **Invitations the person sent.** A pending invitation the erased person sent stays redeemable until it expires
+   (7 days by default; a resend renews it), with the inviter shown as `deleted-user`. D10 says "pending invitations
+   deleted"; R-PLACEMENTS says the inviter becomes `deleted-user`, which is what was built. Should an invitation an
+   erased admin minted survive the erasure? Recommended (controller): revoke the pending, unaccepted invitations the
+   erased person sent. That is one predicate in the delete step (a pending invitation whose `invited_by` is either
+   id), the pin, and one fixture assertion.
 
 **Status at compaction checkpoint 5 (2026-09-28, late).**
 
@@ -624,5 +980,78 @@ unproven by the fakes.
   - the attempt-start window (Task 7 M-7).
 
 *Next.* Task 8's report, then its task review and fix loop, then its merge and post-merge lanes. Then the P2 phase
-review (three Opus lenses), triage, and the OWNER PAUSE with the four questions above. Then push core, shift-optimizer
+review (three Opus lenses), triage, and the OWNER PAUSE with the six questions above. Then push core, shift-optimizer
 and copilot-mro P2, and remove the P2 worktrees and branches. Then P3.
+
+#### Notes: Task 6 — user-grain rows: DONE (copilot-mro `ue-t6` `9402ab66..01aa8145`, merged `7eff5fac`; review APPROVED after 2 fix rounds)
+- `erase_user_copies(subject, *, chat_ids) -> SeamErasure` and `user_copies_residue(subject, *, chat_ids)`. 46
+  placements (42 Postgres, 4 Weaviate). One txn under the full roster, then the definer on the grant pool, then the
+  memory index brought into line from its own naming read.
+- Rulings: R-DELEGATE; R-LEDGER-KEYS; R-PARTIAL-COUNTS; compaction digests of the person's chats deleted by chat (I-1);
+  a colleague's share addressed to the person loses `share_data.email` (I-4); the ceiling comes from
+  `POSTGRES_STATEMENT_TIMEOUT_MS`.
+- Learning: an owner-keyed DELETE misses rows whose owner is optional; key the erase on what chat delete keys on.
+
+#### Notes: Task 7 — Document Hub: DONE (`ue-t7` `9402ab66..14618f67`, merged `21ff2d66`; APPROVED after 3 fix rounds)
+- `erase_document_hub_user` / `document_hub_user_residue` (`*, attachment_ids=()`), `reap_parse_sidecars`,
+  `count_parse_sidecars`. Rows hard-deleted; shared documents re-keyed copy → re-own chunks → rewrite row → delete old;
+  the user-prefix sweep runs only once no row is owned.
+- Rulings: liveness is DocHub's `abandonment_cutoff`, bound to the attempt judged (N-1); a live private doc is purged
+  and its row held as an orphan; a stuck shared doc is settled with `mark_processing_failed`; page-grain partial
+  counts via optional `on_page` callbacks on the existing helpers (I-6).
+- Learning: a hold with no bound is not a hold; bind it to DocHub's own cutoff.
+
+#### Notes: Task 8 — the seam composer: DONE (`ue-t8` `21ff2d66..493d06fe`, merged `65aadf0a`; APPROVED after 3 fix rounds)
+- `erase_user(subject) -> SeamErasure` and `user_residue(subject) -> Dict[str, int]`: Task 12 registers them as the
+  `copilot_mro` seam. R-LINKS-LAST: gather → Task 6 → per chat → Task 7 → drain (60 s) → residue loop (2 re-erases)
+  → purge → sweep → residue.
+- Fixes: the purge guards pinned (I-1); the chat-grain residue arms restated from chat delete's statements and pinned
+  per statement (m-3, n-1); the findings arm reads `(finding id, md5(entry))` computed in SQL, so the person's words
+  never leave Postgres (n-3).
+- Learning: a residue re-derived from links sees nothing once the links are gone; read it before the purge, with the
+  same gathered ids.
+
+#### Notes: Task 9 — core's own rows: DONE (core `ue-t9` `3f05e5f..4acddc3`, merged `ae33072`; APPROVED after 1 test-only fix round)
+- `core_copies.erase_core_copies(subject) -> SeamErasure` and `core_copies_residue(subject) -> {step: n}`, over 13
+  steps. They are bound to the tenant's full roster, match both ids, and run in one transaction. The residue runs READ
+  ONLY and is rolled back. Nothing is registered.
+- The line places 40 columns: 7 delete, 12 scrub, 14 keep, 7 delegated. The drift guard is registry-derived, with
+  core's `external_id` added to the pattern.
+- Rulings:
+  - redeemed invitations are deleted (redemption requires the invited address);
+  - "their runs" are de-attributed through `entitlements_used.user_id`;
+  - payload de-attribution is generic, matching any JSON string equal to an id;
+  - `DELETED_USER_ID` moved into `user_erasure`, and `quality.py` imports it.
+- Owed to the owner: private comments are kept (D10 literal); tenant contact jsonb and free text are not id-keyed.
+- Owed to Task 11: drain the person's in-flight automation runs before this step; run the residue before the `users`
+  delete; keep ids out of the job's params.
+- Sent pending invitations stay redeemable: owner question 6.
+
+#### Notes: Task 10 — shift-optimizer: DONE (`ue-t10` `f86c6c5..02e3fdd`, merged `ba3c070`; APPROVED after 2 fix rounds)
+- `erase(subject) -> Dict[str, int]` and `residue(subject) -> Dict[str, int]`, structural subject, keys
+  `optimizer_jobs__created_by` / `optimizer_runs__launched_by`; one transaction; a REPEATABLE READ READ ONLY residue
+  snapshot; `SET LOCAL statement_timeout` from the pool setting.
+- Rulings: dotted keys refused by core's ledger → R-LEDGER-KEYS (I-1); one transaction (I-2); free-text name/notes/error
+  kept (owner question 2); downloaded workbooks are out of reach (receipt).
+
+**Status at the P2 phase review (2026-09-28, night).** P2 Tasks 6–10 are COMPLETE and merged locally; nothing from P2
+is pushed.
+- core `master` `ae33072` (T9); pushed tip `3f05e5f`.
+- shift-optimizer `main` `ba3c070` (T10); pushed tip `f86c6c5` (the remote is named `main`: push with
+  `git push main main`).
+- copilot-mro `langgraph-merge` `65aadf0a`: T6 `7eff5fac`, T7 `21ff2d66`, the lang_agent flake fix `81a4b93a`
+  (test-only, rides with the push), T8 `65aadf0a`; pushed tip `925c716d`.
+- Post-merge lanes at those tips: copilot-mro unit 7995 passed / 10 skipped, db 103 passed, api 273 passed; core db
+  exit 0, unit+api exit 1 (only the two known environment reds); shift-optimizer non-db 1091 passed, db 157 passed /
+  1 skipped.
+- Worktrees still present: `copilot-mro-erase` (now `ue-p2fix`, the P2 fix batch), `copilot-mro-erase-b` (`ue-t7`),
+  `core-erase` (now `ue-p2fix`), `shift-optimizer-erase` (`ue-t10`); branches `ue-t6` … `ue-t10` and the two
+  `ue-p2fix` to delete with `-d` at P2 close.
+- P2 phase review (three Opus lenses, 2026-09-28): correctness 0C/1I/7M, plan-completeness 0C/2I/6M, simplicity
+  0C/1I/13M. Being fixed before the push (two batches in flight): correctness I-1 (the drain waits only for runs that can still write), M-3 (no key
+  or prefix text in exceptions), M-6 (the re-key's metadata write is compare-and-set), M-7 (latest-orphans pinned) in
+  copilot-mro; simplicity S-I1 / correctness M-1 (statement ceiling) and correctness M-2 (the email stays in SQL) in
+  core. Carried into P3's task text: completeness I-2 (Task 12 adapter), M-1, M-3, M-4; correctness M-4, M-5.
+  Fix-batch SHAs to be added at merge.
+- Next: the two P2 fix batches' reviews and merges → the owner pause (six questions, plus proposals FI-S1 and FI-S2)
+  → push → P3. The P2 Future Improvements are written into the section above.
