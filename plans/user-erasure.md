@@ -277,6 +277,17 @@ new `core/scripts/erase_user.py` (request, cancel, list only — R-DOOR amended)
       nothing reaps it (P2 correctness I-1, fixed in the copilot-mro seam at P2 close).
     - The copilot-mro seam drains the same set for 60 s (`user_erasure.IN_FLIGHT_SQL`); this drain covers the window
       after it.
+    - Both families count: the automation arms and the one-shot arms (one-shots attributed to either id). The one-shot
+      arms follow core's recovery, not only its reaper: a one-shot `running` past its ceiling but inside the unserved
+      grace window (`AUTOMATION_ONE_SHOT_UNSERVED_GRACE_SECONDS`, default 86 400 s) holds the drain, because the
+      recovery re-queues it and it can still write. The drain must read the deployment's own grace value: a
+      deployment whose window is LONGER than the drain assumes lets the drain release while a re-queueable run can
+      still write (a shorter one only waits longer).
+    - The query keeps a top-level status clause over every status any arm accepts, so the active-runs partial index
+      serves it (P2 fix F-1: 1,912 ms against 2 ms at 200k runs in one tenant). Its pin against core's reapers and
+      recovery moves here with the drain.
+  - **Never keep a seam's exception text:** the orchestrator prints and stores only the seam exception's
+    `failure_fields`, never its message or traceback (the P2 fix gave `PrefixNotDeleted` fixed text; others need not).
   - **Record core's step on its own transaction:** a process death after a seam's commit but before the ledger records
     the step would under-report; core's step writes its ledger step in the same transaction as its work (P2
     correctness M-4).
@@ -339,6 +350,10 @@ Owned: new `api/flynapse_api/user_erasure_wiring.py` + its call in `routers/user
     inside the all-or-nothing block, so a missing package registers nothing and every request door answers 503.
   - Every `user_erasure` enqueue — the due sweep's included — carries `user_id=None` (the copilot-mro drain counts runs
     attributed to the person, so an attributed erasure run waits on itself) and no person id in `params`.
+  - Pass the deployment's `AUTOMATION_ONE_SHOT_UNSERVED_GRACE_SECONDS` into copilot-mro's
+    `ChatStore(one_shot_grace_seconds=…)` (default 86 400, matching the recovery's default), or into Task 11's drain
+    once the drain moves there. A longer deployment window that is not passed lets the drain release early.
+  - Never log or store a seam exception's message or traceback, only its `failure_fields`.
   - Proof: each registered seam's `erase` returns a `SeamErasure`.
 - [ ] The executing CLI lives here (R-DOOR amended, P1 review COMP I-2 — it needs the seam wiring; core imports no
   service): an owner-run `python -m flynapse_api.user_erasure_cli` — run one, `--run-due` (covers scheduler-off),
@@ -756,6 +771,21 @@ Recorded at the P2 phase review (2026-09-28); each was deferred by a ledger ruli
   - *Why deferred:* redundant, not wrong.
   - *Complete fix:* keep Task 8's static keys file as the one identifier test; fold the spy's missing assertion in and
     delete the four Task 8 tests; thin Task 7's unit store to a recorder and keep only what the db lane cannot reach.
+- **An abandoned DocHub copy's write-back has no `updated_at` check (P2 fix concern 4).**
+  - *What is missing:* `_settle_abandoned` writes back through `mark_processing_failed` without the compare-and-set the
+    re-key now uses. If a document goes private or is deleted between a lost re-key race and the rerun, its copies
+    under `deleted-user/{doc}/` are left behind.
+  - *Why deferred:* it needs a lost race plus a visibility change inside the same window, and the residue does not
+    read that prefix.
+  - *Complete fix:* give the write-back the same `updated_at` compare-and-set, and on a lost race delete the copies
+    under `deleted-user/{doc}/` before returning.
+- **The core address lookup's tenant key is proven by its text only (P2 core fix review m-2).**
+  - *What is missing:* no behaviour test fails if `PERSON_EMAIL_SQL` loses its tenant key. Row security on `users`
+    applies even to the table owner and `flynapse_app` cannot bypass it, so production is safe; the test world also
+    gives tenant B's person A's address, so it could not tell the mutant apart even under a bypassing role.
+  - *Why deferred:* the database already enforces it for every role the service uses.
+  - *Complete fix:* seed a person whose address is not shared across tenants and run the probe as a role that bypasses
+    row security (a test-only role on `copilot_mro_test`).
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
