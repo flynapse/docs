@@ -1477,6 +1477,23 @@ Recorded at the P3 plan review (2026-09-29):
       margin.
     - `finalize_turn` bounds both classifier awaits by `execution.turn.deadline`, falling back to
       `history_relevant=True` and no query type.
+- **A `/goodbye` request can be stranded once its tenant is gone (Task 13 lane C review, ruling 3).**
+  - *What is missing:* step 6 deletes the channel tenant on the grant pool and commits; the completion is a later,
+    separate transaction on the app pool. Every driver finds work by walking live tenants (`all_tenant_ids()`: Task 12's
+    due sweep, `--run-due`, the scheduler's one-shot scan and recovery). So a request whose completion fails, whose
+    step-6 ledger write fails, or whose process dies between the two commits stays `erasing` with no receipt and no
+    completion event. A retry Task 12's job queues is inserted (no FK to `tenants`) but never served. No personal data
+    survives; the erasure's evidence is what is lost. Only the owner's `run --tenant T --request R` reaches it, and it
+    converges.
+  - *Why deferred:* completing in the delete's transaction needs a privilege widening (the grant role owns `tenants`
+    writes and has nothing on `user_erasures`), an owner design question; the discoverable-requests fix touches
+    `provision_rls.py`'s definers, which DB-roles step 6 is rolling out now (never concurrently, R-LLM-DEFINER). Task 13's
+    fix round logs one fixed ERROR line naming the finisher command for each such failure.
+  - *Complete fix:* core adds one read, the `(tenant_id, request_id)` pairs of open requests whose tenant is gone,
+    through a grant-role-only definer declared in copilot-mro's `provision_rls.definer_functions()` (the LLM-records
+    definer's pattern); Task 12's due sweep and `--run-due` walk those pairs, running them inline under the scheduler
+    (a queued run for a gone tenant is never served). About 40–60 production lines across core, copilot-mro and api;
+    after DB-roles step 6 merges. The api CLI runbook names the ERROR line and the finisher.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
