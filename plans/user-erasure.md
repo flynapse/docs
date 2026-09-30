@@ -1863,3 +1863,15 @@ In flight, all branched after the push:
   Minors, the pre-flight tables and the recommended order) is in the task text, under the controller's rulings. A
   "P3 plan review X" tag names its finding; where each one landed is in `p3-plan-fix-report.md` (both in the SDD
   directory). The dispatch and merge order is under Phases.
+
+**Status at compaction checkpoint 9 (2026-09-30): P3 in progress.**
+- **Task 19, core half: MERGED and PUSHED** (core `master` `33293ed`; the reds batch's `badd671` sits on top). The row
+  seams run under the deleted operator's own `(t, (o,))` binding; core's step is on the delete's cursor and self-bound
+  for the script; residue non-zero only under `held_documents` still removes the partitions. One review, two fix
+  rounds, a re-review. Until Task 19's api registration, `DELETE /operators/{id}` answers 503 on dev (accepted, MI-9).
+- **Task 11: built, reviewed by two lenses, one fix round done; scoped re-review in flight** (branch `ue-t11` in
+  `core-erase`, tip `9dc0466`). The Cognito rule was corrected: keep the account only when its claim names an existing
+  tenant other than this one. `loki_days` became `logs_days`. Its hand-offs to Tasks 11b and 12 are in their task text.
+- **Task 19, copilot-mro half (lane M1): building** (branch `ue-t19-mro` in `copilot-mro-erase`). After it merges, the
+  owner runs the orphan script on dev `copilot_mro` (dry run, then `--execute --expect-rows N`) before Task 12 merges.
+- Next: merge Task 11 → wave 3 (Task 12 in lane A, Task 14 + Task 19's dashboard copy in lane D, Task 11b in lane M1).

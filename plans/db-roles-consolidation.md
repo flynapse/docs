@@ -35,9 +35,12 @@
     membership and default-privilege checks for the first time there.
 - **Step 5 in progress (2026-09-30):** built, reviewed (one review, two fix rounds, a re-review), and the owner sheet
   proven end to end on throwaway clusters (`.superpowers/sdd/db-roles-consolidation/s5-owner-sheet.md`). The owner
-  ran sheet steps 1–3 (users, Phoenix's own database with its data moved, its password); the controller verified
-  every check. copilot-mro `db-roles-s5` merged (`a90db4cd`), not yet pushed; the telegram-bot half merges at sheet
-  step 7.
+  ran sheet steps 1–4 (users, Phoenix's own database with its data moved, its password, Phoenix relaunched); the
+  controller verified every check: identical fingerprint (65 tables, 1,874 rows), nothing foreign-owned, Phoenix
+  healthy and connected as `phoenix` to `phoenix`, no collector auth errors. copilot-mro `db-roles-s5` merged
+  (`a90db4cd`); it is pushed after its whole-tree lane. Next for the owner: sheet steps 5–6 (the bot), then step 7 (the
+  controller merges telegram-bot `db-roles-s5`, with the README's `public`-owner wording fixed first), and step 8 a
+  few days later.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
