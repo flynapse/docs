@@ -63,11 +63,15 @@ risks, rollout order). This plan records the decisions and the order; the resear
     read-only transaction behind an SQL gate. A dedicated `flynapse_query` pool makes "cannot write" a database
     privilege: select-only on the tool's table list, still bound by the tenant access rules (no bypass, unlike the
     analytics user), no EXECUTE grant and no definer function it can run, and no membership edges to any other user.
-    Defence in depth, not a hole today. Today the user can still, in a read-write transaction it opens itself (never
-    through `db_query`, whose gate admits one statement inside a read-only transaction): create a persistent large
-    object through PUBLIC's EXECUTE on the `lo_*` functions (measured in step 6 fix round 1; `DROP OWNED` clears it),
-    call `pg_notify` (nothing listens), use PUBLIC's TEMPORARY, and call PUBLIC's ordinary extension functions (none can
-    write, cross tenants or reach a definer; step 6 review A). Step 7's default-privilege revokes take PUBLIC's EXECUTE
+    Defence in depth, not a hole today. Through `db_query` (one gate-admitted statement inside a read-only
+    transaction) it can write nothing: the gate also refuses `pg_logical_emit_message`, a WAL write the read-only
+    transaction does not stop (step 6 re-review A). Past the gate, in a read-write transaction it opens itself, the user
+    can still: create a persistent large object through PUBLIC's EXECUTE on the `lo_*` functions (`DROP OWNED` clears
+    it), call `pg_notify` (nothing listens), use PUBLIC's TEMPORARY, call PUBLIC's ordinary extension functions (none
+    can write, cross tenants or reach a definer; step 6 review A), and `ALTER ROLE` itself. A role-level setting it
+    writes is a `--verify-only` finding (verify requires exactly the provisioned settings, cluster-wide, and none per
+    database); a password it changes is not seen by verify, but fails closed, since the pool's next connection is
+    refused. Step 7's default-privilege revokes take PUBLIC's EXECUTE
     on the `lo_*` and extension functions and PUBLIC's TEMPORARY, each with a verify finding; until then the pool
     resets every connection on release, so no session state crosses callers.
 25. **One environment-variable name per password, one shared list of user names in code.** The old names stay as a
@@ -194,10 +198,19 @@ DDL on shared databases, so every DDL step is the owner's to run.
   - Step 8's bound on the final `CASCADE` does not name a publication that includes a `phoenix` table (the live
     `postgres` database has none). *Complete fix:* add `pg_publication_rel` to the outside-dependents check.
   - The otel README's own Phoenix procedure still sets the password with an interactive `\password`, unlike the sheet.
-- **Core's tests still call `_ensure_pool` "not synchronised" (step 6 fix round 1).**
-  - *What is missing:* four comments in core's tests describe utils' pool open as unlocked; step 6's M2 locked it.
-  - *Why deferred:* core is outside step 6's batch, and the comments change no behaviour.
-  - *Complete fix:* reword the four comments with core's next change that touches those tests.
+- **Core still carries step 6's old sentences (step 6 fix round 1, re-review B N-1).**
+  - *What is missing:* four comments in core's tests describe utils' pool open as unlocked (step 6's M2 locked it),
+    and three sentences say `db_query` runs model-written SQL as the app user (`tenant_service.py:15`,
+    `tests/db/rbac/test_tenant_teardown_db.py:31` and `:351`).
+  - *Why deferred:* core is outside step 6's batch, and none of them changes behaviour.
+  - *Complete fix:* reword the seven with core's next change that touches those files.
+- **A table dropped from `db_query`'s allowlist keeps the query user's SELECT (step 6 re-review B N-2).**
+  - *What is missing:* provisioning grants the allowlist but never revokes a grant outside it, so `--verify-only`
+    and every later provisioning run fail with `query extra privileges` until the owner runs the `REVOKE` by hand (the
+    runbook names it).
+  - *Why deferred:* it fails closed and names the table; no table is being dropped from the list.
+  - *Complete fix:* `grant_query_role` revokes every privilege the user holds outside the allowlist, pinned by a live
+    test that drops a table from the list.
 - **The SAD-local fixture's full provisioning path is unexercised (step 1).**
   - *What is missing:* `provision_rls` makes `postgres` own its security-definer functions, and the fixture never
     creates that role.
