@@ -23,7 +23,23 @@
     - docs.
   - The order the plan asked for (repoint, then revoke) ran the other way. So any test that read beyond the 19
     through readonly is red until this batch merges.
-- **Steps 5–7** each start with an owner DDL step. Tenant delete (B14) is step 7.
+- **Step 4 CLOSED and PUSHED (2026-09-30):** utils `5e9ae2e` (0.1.42), copilot-mro `1bfe2e70`, api `e449c7d`.
+  - Built: `INSPECT_ROLE` and `inspect_credentials()`; the cross-tenant fixtures and the corpus door on
+    `flynapse_inspect` (failing, not skipping, without its password); `flynapse_readonly`'s extra reads, ANY role
+    membership (inheritance on or off, predefined roles included) and any default privilege naming it are findings
+    that fail `--verify-only` and roll a provisioning run back; a guard that no service module, env template or
+    tracked deployment file names the inspection user; the runbook's three owner commands.
+  - Review history: one review (the membership gap), two fix rounds on fresh agents, a re-review. The post-merge gate
+    found one red no worktree could see (below, Lessons); fix round 2 closed it before the push.
+  - Owner: publish utils 0.1.42 after 0.1.40 and 0.1.41. The next verify on the protected databases runs the new
+    membership and default-privilege checks for the first time there.
+- **Step 5 in progress (2026-09-30):** built, reviewed (one review, two fix rounds, a re-review), and the owner sheet
+  proven end to end on throwaway clusters (`.superpowers/sdd/db-roles-consolidation/s5-owner-sheet.md`). The owner
+  ran sheet steps 1–3 (users, Phoenix's own database with its data moved, its password); the controller verified
+  every check. copilot-mro `db-roles-s5` merged (`a90db4cd`), not yet pushed; the telegram-bot half merges at sheet
+  step 7.
+- **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
+  n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
 
 **Research:** `~/.claude/scratch/db-roles/R1-db-roles.md` (census, duplication, target set, what each change touches,
@@ -154,6 +170,17 @@ DDL on shared databases, so every DDL step is the owner's to run.
     That changes dev-box and preflight behaviour. No cluster in the trees uses trust auth, and RDS never does.
   - *Complete fix:* require `POSTGRES_OWNER_PASSWORD` (or an explicit `--password`) whenever the provisioner CREATES a
     role, and keep the default only for `--verify-only`.
+- **The inspection-user guard does not scan iac (step 4).**
+  - *What is missing:* the guard reads copilot-mro, core and api service code, env templates and copilot-mro's tracked
+    `deployment/` files, but not `iac/*.tf`, where an App Runner environment could still name the inspection password.
+  - *Complete fix:* the same token scan over the iac repo's tracked `.tf` and `.tfvars` files.
+- **Step 5's guards and sheet leave three gaps.**
+  - The Phoenix guard reads only the overlay file, so a `phoenix` service added to the base compose file would merge in
+    unseen. *Complete fix:* check the rendered `dev + phoenix` configuration, keeping the raw `env_file`/`extends`
+    refusal.
+  - Step 8's bound on the final `CASCADE` does not name a publication that includes a `phoenix` table (the live
+    `postgres` database has none). *Complete fix:* add `pg_publication_rel` to the outside-dependents check.
+  - The otel README's own Phoenix procedure still sets the password with an interactive `\password`, unlike the sheet.
 - **The SAD-local fixture's full provisioning path is unexercised (step 1).**
   - *What is missing:* `provision_rls` makes `postgres` own its security-definer functions, and the fixture never
     creates that role.
@@ -161,6 +188,12 @@ DDL on shared databases, so every DDL step is the owner's to run.
     superuser.
 
 ## Lessons
+
+- **A guard that walks a directory must be run on the primary checkout before a push (step 4, 2026-09-30).** The
+  inspection-user guard walked copilot-mro's `deployment/` with `rglob`. Every lane ran in worktrees, which have no
+  runtime data, so the implementer, two reviewers and a re-reviewer all saw it green; the post-merge gate on the
+  primary hit a root-owned Redis dump and failed. Rule: a scan enumerates git-tracked files (`git ls-files`), never the
+  filesystem, and a merge's gate runs on the primary before the push.
 
 - **Fix rounds get fresh agents (owner, 2026-09-29).** Fix round 1 resumed the steps 1–2 implementer, whose context
   was already very high. The owner ruled that every later fix round, and the scoped re-review after it, runs on a NEW

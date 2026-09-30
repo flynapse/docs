@@ -106,6 +106,16 @@ integration lane, not the unit lane.
    - [ ] FI-2 first (owner, 2026-09-29: "go"): shrink the lang_agent activation matrix. SDD, fresh Opus implementer
      and reviewer; branch `activation-matrix` in `copilot-mro-matrix`; ledger `.superpowers/sdd/lang-activation-matrix/`.
      Measured before and after on the same box state. FI-1 waits for FI-2's measurement.
+   - **FI-2 DONE (2026-09-29/30), merged and pushed with copilot-mro `1bfe2e70`.** Test-side only: every one of the
+     150 cells still builds the full real runtime; the metaschema check of each distinct tool schema, the turn's
+     catalog and the model factory are done once per matrix. The test went from 63–75 s (201 s under load) to 6–7 s
+     quiet and 19 s at load 15. 20/20 mutants killed by both the old and the new test. Known gap: a defect seen only
+     when the universe catalog is built a second time (the review's M21) is caught by the `tests/unit/lang_agent` lane,
+     not this test.
+   - [ ] **Production follow-up (owner, 2026-09-30: "go ahead"):** remember each tool schema that passed the metaschema
+     check, per process (about 0.6–0.7 s of CPU saved per rich lang turn). Passes only, keyed on a sha256 of the
+     canonical JSON, bounded; the test fixture goes. Ledger `.superpowers/sdd/schema-check-memo/`, branch
+     `schema-check-memo`. The table-registry cache was judged not worth its risk (about 40 ms per turn).
 5. **Fix the lang_agent `[deadline]` load flake** (owner, 2026-09-28: "fix lang_agent only for now"). Branch
    `la-deadline-fix`; ledger `.superpowers/sdd/lang-agent-deadline-flake/`.
    - [x] Fixed (`71be517b`, `9ab0d1a7`; test only). The cause is TIMING, not isolation: the deadline was set before

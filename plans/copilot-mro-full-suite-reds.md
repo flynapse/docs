@@ -1,5 +1,9 @@
 # copilot-mro full-suite reds — diagnosis and fix plan
 
+**CLOSED and PUSHED (2026-09-30):** core `badd671`, copilot-mro `973200cb` (register update `9b433aea`). The
+post-merge whole-tree non-db lane on the primary: 15,142 passed, 0 failed, 0 errors. The db lane outside `tests/db`
+now collects and surfaced FI-14 (two SQL-example live checks on aged seed dates).
+
 Register: copilot-mro `docs/plans/open-items.md` §8 **FI-13**. Raw evidence, probes and logs:
 `~/.claude/scratch/full-suite-reds/` (`diagnosis.md` is the incremental record; `probe/` holds the
 diagnostic pytest plugins used to find the polluters).
@@ -314,25 +318,264 @@ error.
 Read `## Lessons` first. One commit per red, each by named pathspec. Never amend, rebase, push or
 merge. Commit early.
 
-- [ ] **A:** delete the three stale settings tests. Run `tests/config/settings/` and confirm the
+- [x] **A:** delete the three stale settings tests. Run `tests/config/settings/` and confirm the
       repo search for the retired names is empty.
-- [ ] **B:** rewrite the FTD gate test against `assert_tables_present`: the no-DDL half, the
+- [x] **B:** rewrite the FTD gate test against `assert_tables_present`: the no-DDL half, the
       absent-table no-INSERT case, and the rename. Run `tests/parsers/pilot/` and `tests/unit/ingest/`.
       Run the three mutants through `mutant.sh`.
-- [ ] **C:** put `evicted_modules` around the `_debug_dump` and `_debug_hooks` loads in both
+- [x] **C:** put `evicted_modules` around the `_debug_dump` and `_debug_hooks` loads in both
       polluters. Run the minimal repro (both variants), `tests/agent_sdk/core/` and
       `tests/unit/lang_agent/`, then the fast whole-tree repro. Run the per-polluter mutant.
-- [ ] **D:** rename core's helper to `_core_workspace.py` (controller ruling) in the core
+- [x] **D:** rename core's helper to `_core_workspace.py` (controller ruling) in the core
       worktree `core-reds`. Run the minimal repro, then the
       touched folders on the renamed side. If core is renamed, run core's full suite at hand-back.
-- [ ] **E1:** reorder the `resolve` fixture. Run the single-test selection and the file, serially.
-- [ ] **E2:** make the cache-key test issue its own two requests. Run the single-test selection and
+- [x] **E1:** reorder the `resolve` fixture. Run the single-test selection and the file, serially.
+- [x] **E2:** make the cache-key test issue its own two requests. Run the single-test selection and
       the file, serially.
-- [ ] **Hand-back:** run the FULL copilot-mro non-db lane once, at `-n 4`, on the tip. Expect A–D
+- [x] **Hand-back:** run the FULL copilot-mro non-db lane once, at `-n 4`, on the tip. Expect A–D
       absent from the failures; record the counts here. E is proven by the serial selections above,
       because db lanes stay serial.
 - [ ] Update FI-13 in the register with the commits, and move it to closed once every item lands.
+      (Commits recorded in `7784abfc`; it moves to closed when both branches merge.)
 - [ ] Adversarial review of the diff by a fresh subagent, then triage.
+      (Review done 2026-09-29: `review.md` in the SDD directory, 0 Critical, 1 Important, 2 Minor;
+      its findings and the owner's FTD "stop" ruling are carried by fix round 2.)
+- [x] **Fix round 2:** review I-1 (B's provisioned case pins the exact statement list, the absent
+      case pins that nothing reached Postgres), M-1 (the idle `copilot_mro.app.db` placeholder
+      dropped), M-2 (`pytest.raises` of the dedicated type, not `suppress`), and the owner's FTD
+      "stop" ruling (a dedicated type, the insert's let-through, one check before the per-document
+      loop). Mutants: the let-through removed, widened, and matching a bare `RuntimeError`; the
+      gate converting everything; the pre-loop check removed; B1–B3 and the review's R1.
+- [x] **Fix round 3 (last):** re-review m-1 (the absent run test pins "nothing parsed"), m-2 (the
+      fake `utils.postgres` records `execute_many`, `fetch_one`, `fetch_all`), and the controller's
+      rulings on the re-review's two notes: the command checks provisioning before its S3
+      download, and logs a fixed remedy sentence and exits 1 when it catches the stop.
+
+### Implementation notes (2026-09-29, implementer)
+
+Trees: copilot-mro `/home/aditya/Code/copilot-mro-reds` on `full-suite-reds`; core
+`/home/aditya/Code/core-reds` (plain `git worktree add`, branch `full-suite-reds` from `bcdccb3`).
+Mutant inputs, kill logs and the hand-back script: `~/.claude/scratch/full-suite-reds/fix/`.
+
+- **A** — copilot-mro `c8dbd60a`. `tests/config/settings/`: 11 passed. A case-insensitive
+  `git grep` for the three names outside `docs/` (which also covers the env aliases) is empty.
+- **B** — copilot-mro `4dd06234`. **Deviation:** the helper (`_stub_ftd_app_db`) also fakes
+  `copilot_mro.app.db.row_tenancy`. The cause above holds for the whole-tree run (its log shows
+  "definitions unavailable" and then "Inserted FTD"). Alone, or with just its file, the old test
+  never reached the gate at all: the placeholder `copilot_mro.app.db` hid the real package, nothing
+  earlier had loaded `row_tenancy`, so the insert's own import failed ("Postgres service
+  unavailable") and it returned. Without that fake the rewrite was red in isolation. The absent-table
+  case wraps the call in `contextlib.suppress(RuntimeError)`, so it holds under either ruling on the
+  swallow. Old test alone: 1 failed; the two new tests: 2 passed. Folders covering `ftd_parser.py`
+  (`tests/parsers/`, `tests/unit/ingest/`, `tests/smoke/ingest/`, `tests/unit/observability/`):
+  1507 passed, 32 skipped. Mutants all KILLED (table below).
+- **C** — copilot-mro `4fd40c4c`. Minimal repro: 10 failed, 48 passed → 58 passed; the capture-sink
+  variant: 10 failed, 34 passed → 44 passed. Harvest + both polluters + both victims: 64 passed;
+  polluters first, no harvest: 57 passed. `tests/agent_sdk/core/` + `tests/unit/lang_agent/`
+  (`-n 4`): 2540 passed, 1 skipped. `probe/splitcount.py` no longer lists `_debug_dump` (the two
+  latent splits under Future Improvements remain).
+- **D** — core `a7f1d90`. Five importers, their comments (now saying why the name is unique), the
+  helper's docstring, its internal root-loader spec name (`_core_workspace_root_impl`; nothing
+  referenced the old one), 17 references in core's guard, and the G.61 plan's four mentions. Those
+  are annotated "(now `_core_workspace.py`)" rather than rewritten, because they record commits made
+  under the old name. Historical mentions in other repos (api `g53-checkout-pin-by-git-family.md:226`,
+  workspace `observability-telemetry-merge-and-completion.md:3880`) are left as history.
+  **copilot-mro-reds reads core-reds on its own:** the D tests call `sibling_variant(__file__,
+  "core", …)`, which resolves the `-reds` variant. A probe (`probe/whichcore.py`) shows
+  `backfill_for_value_gates`, `backfill_for_writer_parity` and `_core_workspace` loaded from
+  `core-reds/scripts/`. Minimal repro: 6 passed, 2 errors → 79 passed. Fast whole-tree repro (C and
+  D together): 10 failed, 21 passed, 2 errors → 31 passed. Core targeted
+  (`tests/unit/{analytics,infra,observability,db,automations}`, `-n 4`): 2074 passed, 1 failed. The
+  failure is `test_the_variant_hazard_is_real_in_this_workspace_right_now`, which depends on the
+  workspace: it wants twin checkouts of api, core and copilot-mro, and no api twin exists today. It
+  fails on the unchanged primary `core` too, together with
+  `test_sibling_variant_falls_back_to_the_bare_name_when_there_is_no_twin`, the failure the
+  post-merge gate recorded.
+- **E1** — copilot-mro `a5389fdb`. Single-test selection: 1 error (`No module named 'auth'`) → 1
+  passed. The file serially: 8 passed. Without the gate test: 7 passed.
+- **E2** — copilot-mro `63e13f9f`. Alone: failed (`cache.sets == []`) → 1 passed. The file serially:
+  26 passed. `tests/api/tenancy/` serially: 325 passed. The optional mutant ran in core-reds, with
+  core-reds put on `PYTHONPATH` and the loaded file checked by the probe: a filters key without the
+  tenant is KILLED by the diagnosis test alone.
+- Register: copilot-mro `7784abfc`. FI-13 records the commits and stays open until both branches
+  merge.
+
+| Mutant | Aimed at | Result |
+|---|---|---|
+| B1: the gate checks `ftd_document` | `test_parser_metadata_sidecars.py` | KILLED rc=1 (both FTD tests) |
+| B2: the gate goes back to `initialize_postgres_tables(table_names=["ftd_documents"])` | same | KILLED rc=1 (both FTD tests) |
+| B3: `except RuntimeError: raise` removed from the gate | same | KILLED rc=1 (the absent-table test alone) |
+| C: `debug_hooks` load unscoped | its minimal repro | KILLED rc=1 (10 failed) |
+| C: `tool_io_capture_sink` load unscoped | its minimal repro | KILLED rc=1 (10 failed) |
+| E2 (optional): core filters cache key drops the tenant | the diagnosis test | KILLED rc=1 |
+
+**Hand-back lanes:** run once on the tips (copilot-mro-reds `7784abfc`, core-reds `a7f1d90`). Script and logs:
+`~/.claude/scratch/full-suite-reds/fix/handback/`.
+- copilot-mro whole-tree non-db lane (`-n 4`): **15,067 passed, 61 skipped, 320 deselected, 0
+  failed, 0 errors** (exit 0). The gate recorded 14 failed, 4 errors, 15,009 passed and 34 skipped.
+  - Collection matches the gate exactly apart from this batch: 15,128 selected here against 15,057
+    plus the 2 D files there. The difference is +73 D tests, −3 A tests and +1 B test.
+  - The 27 extra skips come from the worktree, not the fixes. `test_data/` is gitignored and
+    exists only in the primary checkout, so its fixture-gated tests skip here: crew, ISDP, task-card,
+    WDM FM, the AIXL/Akasa corpora and the NDT samples. So does the Phase-1c cross-repo guard,
+    which looks for a `utils-reds`.
+  - A skip census over the 152 non-db files that can skip lists every reason:
+    `handback/skipcensus.log`. The merge gate on the primary runs those tests.
+- core non-db (`tests/unit tests/api tests/test_comments_endpoints.py`, `-n 4`, `ENV_FILE` set):
+  **4,044 passed, 1 failed.** The failure is `test_the_variant_hazard_is_real_in_this_workspace_right_now`,
+  a workspace-state guard. It needs twin checkouts of api, core and copilot-mro, and today there is
+  no api twin. It fails on the unchanged primary `core` too. The collected count, 4,045, is the same
+  in core and core-reds.
+- core db + authz (`tests/authz tests/db`, `-n 0`, `copilot_mro_test`): **997 passed, 1 skipped, 2
+  xfailed** (exit 0), which is the gate's count. `tests/db/analytics` loads three of the renamed
+  scripts.
+
+**Learnings**
+- A stale stub can hide a second order dependency. B's old test failed at its first assertion in
+  every selection, but for a different reason in each, depending on what had run before it. A claim
+  like "the rest still runs" needs checking in isolation, not only from the whole-tree log.
+- A `-<variant>` worktree of a sibling is picked up by the other tree's `sibling_variant` without
+  any path change. That covers by-path loads of the sibling's scripts. `import core` still comes
+  from the venv `.pth` (the primary) unless `PYTHONPATH` names the worktree.
+- Core's variant-hazard guard and its no-twin test depend on the workspace: their result changes
+  with the checkouts beside core at run time. Creating `core-reds` changed it.
+- A worktree has no gitignored `test_data/`, so its full lane skips about 27 tests that the
+  primary's gate runs. Compare skip counts across trees with that in mind, and check skip reasons
+  (`-rs`) before reading a skip delta as a regression.
+
+### Fix round 2 (2026-09-29, fresh implementer): review I-1, M-1, M-2 and the owner's FTD "stop" ruling
+
+Post-review changes, recorded here as the phase's source of truth. Brief:
+`Code/.superpowers/sdd/copilot-mro-full-suite-reds/fix2-brief.md`; report `fix2-report.md` beside it.
+Mutant inputs, runners and per-mutant pytest output: `~/.claude/scratch/full-suite-reds/fix2/`.
+
+Commits on copilot-mro `full-suite-reds` (tip before: `7784abfc`):
+- `7365ca95` production + B's tests. `ftd_parser.py` gains `FtdTablesNotProvisioned(RuntimeError)`.
+  The gate converts the check's `RuntimeError` into it (`raise … from exc`; its own message names
+  `ftd_documents` and `provision_rls.py` and does not echo the cause's text, which the M-TRACEBACK
+  guard forbids). `_insert_ftd_to_postgres` lets exactly that type through, beside the catalog
+  write's `TenancyError` precedent. `process_ftd_pdfs` calls the gate once, first, when
+  `insert_postgres` is set (controller ruling on the review's item 7), so the run stops before any
+  catalog or FTD row. The module and gate docstrings say so.
+- `265f7ea1` the post-merge scope guard (`tests/unit/observability/test_phase1c_nonagent_scope_guard.py`)
+  approves `ftd_parser.py` under the owner's ruling. **Not in the brief; found by the covering
+  lane:** the guard admits a post-merge production path only by approval, and it failed on the
+  first run (1 failed, 1511 passed, 32 skipped). With the approval it passes.
+- `039da2d2` register: FI-13's "still open, owner" sentence now records the ruling as built. FI-13
+  stays `[ ]` until both branches merge.
+
+B's tests (`tests/parsers/pilot/test_parser_metadata_sidecars.py`), 2 → 7:
+- provisioned: the statement list is exactly the one `INSERT INTO ftd_documents` (I-1), plus
+  `ddl == []`;
+- absent (renamed `…stops_the_run_when_its_table_is_absent`): `pytest.raises(FtdTablesNotProvisioned)`
+  (M-2; `contextlib` gone), message names the table and the remedy, `__cause__` is the check's
+  refusal, `checked`, `ddl == []`, `fake_postgres.calls == []`;
+- two degrade cases: the check meets a `ConnectionError` (the insert still goes ahead), and the
+  insert itself raises a bare `RuntimeError` (logged, not raised). The second is the one that
+  holds the let-through to exactly the dedicated type;
+- run level: absent → `process_ftd_pdfs` raises with no catalog write and no Postgres statement;
+  a provisioned control proves the harness reaches the per-document loop and that the check runs
+  once; a dry run (`insert_postgres=False`) never checks.
+- M-1: the idle `copilot_mro.app.db` placeholder is dropped. The docstring now says why
+  `row_tenancy` is faked: so the insert never imports the real package. Each test passes alone,
+  after the real `copilot_mro.app.db` has loaded (41 passed with the ingest gate suite first), and
+  in whole-tree collection order.
+
+| Mutant (`ftd_parser.py`, aimed at the B file, `-k` utils, core, flynapse-otel) | Result | Killed by |
+|---|---|---|
+| S: the let-through removed (the stop swallowed again) | KILLED rc=1 | the absent-table insert test alone |
+| EL: the let-through widened to `except Exception: raise` | KILLED rc=1 | the failed-insert degrade test |
+| ER: the let-through matches a bare `RuntimeError` | KILLED rc=1 | the failed-insert degrade test |
+| EG: the gate converts every error, an unreachable service included | KILLED rc=1 | the unreachable-check degrade test |
+| L: the pre-loop check removed (the only check is the insert's, after the catalog write) | KILLED rc=1 | the run-level absent test |
+| D: the dry run checks too | KILLED rc=1 | the dry-run test |
+| B1: the gate checks `ftd_document` | KILLED rc=1 | 6 tests |
+| B2: the gate goes back to `initialize_postgres_tables` | KILLED rc=1 | 6 tests |
+| B3: the gate's absent-table stop removed (the refusal degrades in the gate) | KILLED rc=1 | both absent tests |
+| R1 (review): raw `CREATE TABLE` through `utils.postgres` before the check | KILLED rc=1 | 6 tests, both I-1 tests among them |
+
+Hand-back lanes on the tip `039da2d2` (logs: `~/.claude/scratch/full-suite-reds/fix2/handback/`):
+- the folders covering `ftd_parser.py` (`tests/parsers tests/unit/ingest tests/smoke/ingest
+  tests/unit/observability`, `-n 4`): **1512 passed, 32 skipped, 0 failed** (the earlier 1507 plus
+  the five new tests);
+- the whole tree's collection order, `-n 0 -k "ftd_insert_to_postgres or ftd_run_ or ftd_dry_run"`:
+  7 passed;
+- on `7365ca95`, the other suites that sweep production files (`tests/unit/infra`, the conflict-target,
+  background-tenancy and S3-listing sweeps): 192 passed, 1 skipped.
+
+**Learnings**
+- A scope guard over the working tree is a covering test of every production file. The covering
+  lane for a production change here has to include `tests/unit/observability`, and an approval
+  there travels with the change, citing the ruling that earned it.
+- The M-TRACEBACK guard forbids a caught exception's text in a raised message. A converted error
+  carries the cause by chaining (`from exc`) and states its own table and remedy.
+- A degrade test has to put the non-provisioning error where the widened handler would see it.
+  An unreachable check is caught inside the gate, so a widened let-through in the insert survives
+  that case; only a failure of the insert itself kills it.
+
+
+
+### Fix round 3 (2026-09-29, fresh implementer): re-review m-1, m-2 and notes 1–2
+
+Brief: `Code/.superpowers/sdd/copilot-mro-full-suite-reds/fix3-brief.md` (re-review `rereview.md`
+beside it). Mutant inputs, runners and logs: `~/.claude/scratch/full-suite-reds/fix3/mutants/`;
+hand-back lane log: `~/.claude/scratch/full-suite-reds/fix3/handback/`.
+
+Commit on copilot-mro `full-suite-reds` (tip before: `039da2d2`): `29fdf7e6`.
+- **Note 1 (ruled: do it).** `_main` calls `_ensure_ftd_postgres_tables()` before
+  `download_ftd_from_s3` when `--no-insert-postgres` is absent, so an unprovisioned database
+  costs no download. `process_ftd_pdfs` keeps its own check for callers that skip `_main`; after a
+  pass in `_main` it is a no-op (`_FTD_POSTGRES_TABLES_READY`). The docstring and the comment say so.
+- **Note 2 (ruled: do it).** `_main` wraps the check, the download and the run in one `try` and
+  catches `FtdTablesNotProvisioned` from either check. It logs one fixed sentence naming
+  `ftd_documents` and `provision_rls.py`, never the error's text, and returns 1 (the span then
+  records `operation.outcome=error`). The record also carries `failure_fields` of the refusal
+  (the chained cause), so the operator's log keeps the refusal's TYPE (a missing table's
+  `RuntimeError` vs a setup refusal): once the command catches the stop, the routed excepthook no
+  longer prints the chain's types. **Deviation:** the first spelling,
+  `failure_fields(exc.__cause__ or exc)`, was flagged by the M-TRACEBACK guard and the register
+  reconciliation (a `BoolOp` argument is not a sanctioned `failure_fields` argument); a name bound
+  in the handler (`refusal = exc.__cause__ if exc.__cause__ is not None else exc`) passes both.
+- **m-1.** `_stub_one_document_ftd_run` records each parsed PDF and returns it. The absent run test
+  asserts `parsed == []`; the provisioned control asserts the one PDF was parsed (vacuity guard).
+- **m-2.** `FakePostgres` records `execute_many`, `fetch_one` and `fetch_all` as well as `execute`,
+  mirroring the sibling provisioning-gate suite; the docstring says why.
+- **Four command-level tests** (through `_main`, with the download and the operator resolver
+  stubbed and every loguru record kept): absent → exit 1, no download, nothing parsed or written,
+  the ERROR records are exactly the pinned sentence, `error_type == "RuntimeError"`, and the
+  refusal's text reaches no record; the pre-download check degrades and the run's own check stops
+  → the same sentence and exit 1; provisioned → exit 0, one download, one catalog write, one FTD
+  insert, one check; `--no-insert-postgres` → exit 0, no check, the download happens.
+
+| Mutant (`ftd_parser.py`, `-k` utils, core, flynapse-otel) | B file | Aimed at one test | Killed by |
+|---|---|---|---|
+| P: the check moved from before the loop to just before the first catalog write (m-1) | KILLED rc=1 | KILLED rc=1 | the run-level absent test (`parsed == []`) |
+| R2: a best-effort `ALTER … ADD COLUMN` through `execute_many`, error swallowed (m-2) | KILLED rc=1 | KILLED rc=1 | the provisioned insert test (exact statement list) |
+| L: the pre-loop check removed (re-run) | KILLED rc=1 | KILLED rc=1 | the run-level absent test |
+| N: the command's pre-download check removed (note 1) | KILLED rc=1 | KILLED rc=1 | the command absent test (`downloads == []`) |
+| DD: the command checks before its download on a dry run too | KILLED rc=1 | KILLED rc=1 | the command dry-run test |
+| C1: the command's catch removed | KILLED rc=1 | KILLED rc=1 | the command absent test |
+| C2: the command logs the error's text in place of the fixed sentence | KILLED rc=1 | KILLED rc=1 | the command absent test (pinned sentence) |
+| C3: the stop exits 0 | KILLED rc=1 | KILLED rc=1 | the command absent test |
+| C4: the refusal's type dropped (the stop's own type logged) | KILLED rc=1 | KILLED rc=1 | the command absent test (`error_type`) |
+| C5: the catch covers only the pre-download check; the run's own stop escapes | KILLED rc=1 | KILLED rc=1 | the command in-run stop test |
+
+Tally: 10/10 killed, both as a batch against the B file and each aimed at its one test; every
+baseline green; the tree clean after each batch.
+
+Hand-back lanes on `29fdf7e6`:
+- the B file: 38 passed (34 plus the four command tests);
+- the two M-TRACEBACK guards (`test_no_module_logs_an_exceptions_text`,
+  `test_the_scan_reads_every_root_and_every_finding_is_registered`): 2 passed;
+- the folders covering `ftd_parser.py` (`tests/parsers tests/unit/ingest tests/smoke/ingest
+  tests/unit/observability`, `-n 4`): **1516 passed, 32 skipped, 0 failed** (the earlier 1512 plus the
+  four command tests).
+
+**Learnings**
+- The M-TRACEBACK guard sanctions `failure_fields(<name>)`, not an arbitrary expression. To log a
+  chained cause's type, bind the cause to a name in the handler and pass the name.
+- A command that catches a run-level stop takes over what the excepthook used to show. Carry the
+  cause's type into the record, or the operator loses which refusal it was.
 
 ## Owner decisions
 
@@ -340,12 +583,17 @@ merge. Commit early.
    `_core_workspace.py` (it is the bare-name importer, so this closes the class for core). Done in a
    core worktree `core-reds`, branch `full-suite-reds`, from core `master` `bcdccb3`. The owner may
    override before the merge.
-2. **B's side finding** (below): should FTD ingest stop on an unprovisioned database, as the gate's
-   docstring and `3adba3ef`'s message say, or keep logging per document?
+2. **B's side finding:** should FTD ingest stop on an unprovisioned database, as the gate's
+   docstring and `3adba3ef`'s message say, or keep logging per document? **Owner ruled STOP
+   (2026-09-29).** Controller ruling on where: check once, before the per-document loop, so nothing
+   is written before the stop. Built in fix round 2 (below).
 
 ## Future Improvements
 
-- **FTD gate swallow.** `_ensure_ftd_postgres_tables` re-raises the provisioning `RuntimeError` and
+- [x] **FTD gate swallow — DONE in fix round 2 (copilot-mro `7365ca95`), owner ruled "stop".** The
+  gate now raises `FtdTablesNotProvisioned`, the insert lets exactly that type through, and
+  `process_ftd_pdfs` checks once before its per-document loop. The finding as recorded:
+  `_ensure_ftd_postgres_tables` re-raises the provisioning `RuntimeError` and
   documents that it "propagates, because no retry of the ingest fixes an unprovisioned database".
   - Its only caller, `_insert_ftd_to_postgres` (`ftd_parser.py:1499-1537`), wraps it in a blanket
     `except Exception` that logs.
@@ -357,6 +605,19 @@ merge. Commit early.
     the insert lets that type through, as the catalog write does. The B test then gains a
     `raises` assertion.
   - If the ruling is "degrade", only the docstring changes.
+- **The crew ingest swallows its gate's stop the same way (found in fix round 2, not in scope).**
+  `_ensure_crew_tables` re-raises the provisioning `RuntimeError` and documents that it propagates,
+  but its caller (`crew_manual_parser.py`, the `try` around `_ensure_crew_tables() and
+  insert_postgres`) lets only `TenancyError` through and logs everything else. So an unprovisioned
+  `crew_manual_sections` gives one logged error per manual, exactly the FTD defect before this round.
+  The owner's ruling named FTD only, so crew was left alone. The complete fix is the FTD one: a
+  dedicated type raised by the gate, let through by the caller, a check before any catalog write
+  (the crew catalog write also comes first), and the sibling suite
+  `tests/unit/ingest/test_ingest_table_provisioning_gate.py` gaining the run-level stop and the
+  degrade boundary. The shared `assert_tables_present` could raise a dedicated
+  `RuntimeError` subclass itself, so each gate matches a type instead of converting; that was not
+  done here because B's test replaces `postgres_table_definitions` wholesale and the controller
+  ruled the type into `ftd_parser.py`.
 - **Two more split modules, latent.** `probe/splitcount.py` at the end of whole-tree collection
   lists three real-name modules whose `sys.modules` entry differs from their parent attribute:
   - `copilot_mro.app.services._debug_dump` (C);
@@ -376,6 +637,21 @@ merge. Commit early.
   scripts put on the path) shares its basename with one in a sibling repo's `scripts/` that the
   suite loads. That would stop the third occurrence. It was deferred because it needs a decision on
   which sibling directories count.
+- **core's variant-hazard tripwire has tripped (found at hand-back, not caused by this batch).**
+  `core/tests/unit/infra/test_cross_repo_reads_name_their_checkout.py::test_the_variant_hazard_is_real_in_this_workspace_right_now`
+  asserts that api, core and copilot-mro each have a twin checkout, and today no api twin exists.
+  - Its docstring says the failure is the prompt for a deliberate decision on whether that file's
+    §2 still earns its place.
+  - `…falls_back_to_the_bare_name_when_there_is_no_twin` is the same kind of workspace-state test,
+    and it is the red the post-merge gate recorded on the primary.
+  - Neither is a code defect. Both need an owner or core-lane decision: re-baseline the witness set
+    or retire the guard.
+- **The FTD command's S3 download is never cleaned up (pre-existing, seen in the re-review).**
+  `download_ftd_from_s3` always returns `should_cleanup=False`, so every run from an S3 root leaves
+  an `ftd_s3_download_*` directory behind, and its path is never logged. Fix round 3 stopped an
+  unprovisioned database from costing a download, but a failed or finished run still leaks one.
+  The complete fix: return `should_cleanup=True` for a temp download and clean it in `_main`'s
+  `finally`, not only at the end of `process_ftd_pdfs` (a stop or a crash skips that).
 - **Whole-tree lane in the standing gates.** None of A–E was ever run whole-tree before 2026-09-29.
   With the reds gone, the gate's stream A becomes a meaningful merge gate. Its counts should be
   recorded per merge, as the workspace test-run rules already require.
