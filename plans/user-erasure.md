@@ -1420,6 +1420,22 @@ Recorded at the P3 plan review (2026-09-29):
     lock. A stale queued run that races the refusal can resume the request once.
   - *Why deferred:* every step is idempotent and the unchanged data refuses again, so the cost is one wasted run.
   - *Complete fix:* core's `run_erasure(..., resume_failed=False)`, checked under the lock; the job passes it.
+- **The orphan script records no audit event for a pair whose Document Hub document fails (Task 19 re-review N-1).**
+  - *What is missing:* the seam raises `OperatorTeardownIncomplete` after the whole pass, so core's step and every
+    other relation's deletions have already committed, but the script writes no `authorization_events` row for that
+    pair; the deletions show only as one summed count in the teardown's warning line.
+  - *Why deferred:* the pair stays findable through the kept Document Hub row, and the next run finishes it and writes
+    the event.
+  - *Complete fix:* the exception carries the pass's per-relation counts, and the script writes the event with
+    `rows_left` from them before re-raising.
+- **The census-tables test reds other lanes when a branch pre-migrates a table (Task 19 re-review N-2).**
+  - *What is missing:* the db test compares `copilot_mro_test`'s catalog with the registries both ways. Its
+    "census minus erased" half turns red in every lane once any branch migrates a new operator-keyed table into the
+    shared test database ahead of its merge.
+  - *Why deferred:* no branch in flight adds an operator-keyed table; the red names the table.
+  - *Complete fix:* keep "erased minus census" in the db test with a remedy message; move the extra-table check into
+    the script at run time (the dry run names any such table, `--execute` refuses with exit 2), pinned by a unit test
+    on made-up table sets.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
