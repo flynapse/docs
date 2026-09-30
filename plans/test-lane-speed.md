@@ -178,6 +178,55 @@ integration lane, not the unit lane.
   - Every scan guard consumes that index.
   - Each guard keeps its own planted-decoy test, proving it still sees a fresh violation.
   - Measure before and after with `--durations=30` on a quiet box.
+- **BUILT 2026-09-30** (owner's go the same day). Branch `scan-index` in `copilot-mro-scanidx`, from `a90db4cd`, tip
+  `6b0e6771` (17 commits, test-only, not merged). Brief, census and report: `.superpowers/sdd/test-lane-speed/`
+  (`fi1-brief.md`, `fi1-report.md`); scratch evidence `~/.claude/scratch/copilot-mro/scan-index/`.
+  - **Census.** 73 test files walk a tree; 52 read or parse a source tree (the in-scope set), 21 do not (a prompt
+    looked up by name, the test's own tmp dir, a few YAML files, a git diff). `test_test_layout_rules` walks but reads
+    nothing and stays as it was.
+  - **Built.** `tests/_source_index.py`: `SOURCES`, one per process. Each file is read once and parsed once, keyed by
+    resolved path and checked against mtime and size on every lookup. A file that does not parse raises every time.
+    A module's `ast.walk` is taken once and replayed. `python_files` keeps a guard's rglob file set; `listed_files`
+    is the git listing. A sweep-sized parse (>= 1 MB of new source) first collects the waiting garbage, then parses
+    and walks with the collector paused, then calls `gc.freeze()`.
+  - **Guards.** 51 of the 52 now read through the index; each gained a planted module caught through its own sweep.
+    Three sweeps changed their file set, and only on the primary checkout: the exception-text log sweep, the
+    resolver-name pin and the Document Hub removed-constant pin now take what git lists. They had also read the
+    primary's ignored `scratchpad/`, `.superpowers/` and `.dev_runs/` scripts, and one read its `.venv`. The
+    ambient-env scan now excludes the Weaviate test volume, whose raft `users.json` it read on the primary.
+  - **Unchanged by design.** The exception-text register scan cannot take trees: the estate detector parses source
+    text itself. It only runs with the collector paused (84 s -> 67 s, the same 33 findings). The depth guard's walker
+    check now asks its cheap half first; proven identical over 1,683 modules.
+  - **Measured.** Three before/after pairs of the whole-tree non-db lane, each back to back:
+    - Pair 1, index without the freeze: 39:49 -> 40:14, no gain. Full collections walked the retained trees.
+    - Pair 2, freeze after the collect: 42:03 -> 32:15.
+    - Pair 3, final code, run in reverse order (after first, load 14 -> 12; before second, load 12 -> 10):
+      32:52 -> 25:04 (-24%). CPU 6,286 -> 5,144 s. Peak worker RSS 2.2 -> 2.6 GB.
+    - The 52 guard files' tests (those of 1 s or more), summed: 1,689 -> 716 s. The lane's slowest test is now the
+      register scan (183 -> 141 s). The depth guard went 115 -> 40 s and the logger rules 124 -> 9 s.
+    - Equality: per guard module, the files read and every test local, before vs after, fixed hash seed. The
+      differences left are explained, and on the same tree the old and new sweeps return identical results. After
+      the lane, every tree the index still held was unchanged. 15 mutants on the final code, all killed.
+  - [ ] Review, then merge by the controller. The full suite at the merge commit is the gate.
+  - **Future Improvements (FI-1).**
+    - *The register scan is the lane's floor at 141 s.* The estate detector (flynapse-otel) takes source text. The
+      complete fix is an `analyse` that accepts parsed trees, plus the detector's own walk memo. It is a flynapse-otel
+      change, outside this tree.
+    - *The depth guard is still 40 s.* Its `_walker_functions` and `_tainted_names` re-walk function subtrees
+      (O(n·depth)). The complete fix is a single bottom-up pass, proven identical like the walker reorder.
+    - *Three more guards need a git checkout.* The log sweep, the resolver pin and the Document Hub pin now fail
+      loudly in a `git archive` extract such as `parallel-commits.sh` makes, as the legacy-metrics, alertmanager and
+      inspect-user guards already did.
+    - *The freeze is process-wide.* An object alive at the moment of the freeze and later caught in a reference cycle
+      is kept until the worker exits. No test uses `gc.get_objects` or `gc.get_referrers`. The one `gc.collect()` test
+      collects its own new objects. A selective freeze does not exist in CPython.
+  - **Learnings.**
+    - Sharing the parse alone did not speed the lane. The trees a worker keeps made every full collection walk
+      millions of nodes: pytest runs five of them at session cleanup, and one test's own `gc.collect()` took 96 s on
+      the swapping box. Measure the lane, not only the guards.
+    - `git stash` is repository-wide across worktrees. A `stash pop` on a clean tree popped another session's stash
+      (`fe0155a1`, "pre-MT-merge ... mro_documents_aixl"). It was restored with `git stash store` and the tree change
+      reversed. Never use stash in a shared repository; use a commit or a copy.
 
 ### FI-2: Shrink the lang_agent activation matrix
 
