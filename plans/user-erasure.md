@@ -1394,6 +1394,17 @@ Recorded at the P3 plan review (2026-09-29):
   - *Why deferred:* the window is one in-flight request long, and the orphan script's census finds such rows.
   - *Complete fix:* re-read the residue once the eviction has applied (or apply the eviction before the post-pass), and
     carry a non-zero result as `cleanup_warning`.
+- **The Cognito keep rule trusts the claim, not membership (Task 11 re-review O-2).**
+  - *What is missing:* the account is kept when its `custom:company` claim names another existing tenant, whether or
+    not the person was ever placed in that tenant. And a deployment that pins `TENANT_ID` places every account in its
+    own tenant whatever the claim says (`api/flynapse_api/middleware/auth.py`), so in such a deployment a claim naming
+    another tenant in the same database does not mean the account serves it: the erased person's account survives.
+  - *Why deferred:* it is the owner's C-12 rule as ruled. A pinned deployment has its own database with one tenant, so
+    the claim names no other existing tenant and the account is deleted; the gap needs a pinned deployment sharing a
+    database with other tenants. A membership check needs a read bound to the other tenant, which the pair-bound
+    erasure does not hold.
+  - *Complete fix:* when the deployment pins its tenant, never keep; otherwise keep only when the person has a `users`
+    row in the named tenant, read through a binding to that tenant.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
