@@ -1203,14 +1203,17 @@ In flight, all branched after the push:
   - **C-4:** `/goodbye` takes the job path (lock, reply, erase 30 minutes later). Recommended yes. **Owner: yes
     (2026-09-29).**
   - **C-5:** cancel restores nothing, because a frozen owner's automation runs are recorded skipped and nothing is
-    disabled. Recommended yes.
+    disabled. Recommended yes. **Owner: yes (2026-09-29): simpler, nothing to record or restore.**
   - **Task 19 Q1:** all 57 operator-keyed tables, derived from the registries. Recommended. **Owner: yes.**
   - **Task 19 Q2:** clean-up inside the request, paged. Recommended. **Owner: yes.**
   - **Task 19 Q3:** the orphan script runs on `copilot_mro_test` and `copilot_mro`, dry run by default, and executes
-    only with the dry run's `--expect-rows`. Recommended.
-  - **Task 19 Q4:** find the orphans as the owner, delete them through the registered clean-up. Recommended.
-  - **Task 19 Q5:** the operator's DocHub raw backups are deleted too. Recommended.
-  - **Task 19 Q6:** one audit event per orphan pair. Recommended.
+    only with the dry run's `--expect-rows`. Recommended. **Owner: yes.**
+  - **Task 19 Q4:** find the orphans as the owner, delete them through the registered clean-up. Recommended. **Owner:
+    yes.**
+  - **Task 19 Q5:** the operator's DocHub raw backups are deleted too. Recommended. **Owner: yes.**
+  - **Task 19 Q6:** one audit event per orphan pair. Recommended. **Owner: yes.**
+  - **All eight answered (2026-09-29).** Next: a plan-update agent writes `p3-prep.md`'s rulings and these answers
+    into Tasks 11–14 and 19; then P3.
 - **Found in pushed code:** four copilot-mro api tests error only under xdist
   (`tests/api/tenancy/test_operator_grain_isolation.py`; they pass serially). This is pre-existing. The open-items
   register entry is pending the owner's yes.

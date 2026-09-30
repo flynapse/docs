@@ -6,8 +6,24 @@
   step 2's notes.
 - **Step 3 (Terraform):** approved and unpushed (`iac-roles` `db-roles-tf` @ `a47c0fb`). It waits on the owner's iac
   `obs-merge` → `main`.
-- **Steps 4–7** are next. Each starts with an owner DDL step; step 4's is `REVOKE pg_read_all_data FROM
-  flynapse_readonly`. Tenant delete (B14) is step 7.
+- **Step 3 branch PUSHED** (owner: yes, 2026-09-29) as `origin/db-roles-tf` `a47c0fb`. A branch push triggers no CI.
+  Merging into `main` still waits on the owner's iac `obs-merge` → `main`.
+- **Step 4: the owner's database side is DONE (2026-09-29 evening).**
+  - The owner created `flynapse_inspect` (`LOGIN BYPASSRLS`, `pg_read_all_data`, `default_transaction_read_only=on`).
+    Its password is `POSTGRES_INSPECT_PASSWORD` in `copilot-mro/.env`.
+  - `.mcp.json` now logs in as `flynapse_inspect`.
+  - The owner ran `REVOKE pg_read_all_data FROM flynapse_readonly`. On `copilot_mro_test`, readonly now reads exactly
+    its 19 allowlisted relations (verified).
+  - The code side is in flight: `db-roles-s4` in `utils-inspect` and `copilot-mro-inspect`, brief `s4-brief.md`. It
+    covers:
+    - `INSPECT_ROLE` in `utils.db_roles`;
+    - repointing the cross-tenant tests and fixtures from readonly to inspect;
+    - the extra-SELECT report becoming a failing finding;
+    - a guard that no service module names the inspection user;
+    - docs.
+  - The order the plan asked for (repoint, then revoke) ran the other way. So any test that read beyond the 19
+    through readonly is red until this batch merges.
+- **Steps 5–7** each start with an owner DDL step. Tenant delete (B14) is step 7.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
 
 **Research:** `~/.claude/scratch/db-roles/R1-db-roles.md` (census, duplication, target set, what each change touches,
