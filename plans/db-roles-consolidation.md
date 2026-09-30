@@ -42,7 +42,7 @@
   as that user. Merged and pushed: copilot-mro `a90db4cd` (whole-tree non-db 15,146 passed), telegram-bot `95dc9f7`
   (with the README's `public`-owner check; suite 2,475 passed). Left: sheet step 8, the owner's, after a few healthy
   days.
-- **Step 6 building (2026-09-30):** code and owner sheet, `s6-brief.md`; the merge waits for the owner's sheet.
+- **Step 6 in fix round 1 (2026-09-30):** built (utils, copilot-mro, api templates) and reviewed by area (code; sheet and rollout). The fix round resets pooled connections (a reviewer carried a temp table across callers past the gate), hashes passwords client-side, and hardens the sheet (a pre-check that sees query-user drift, a verify after the merge, pinned tips). The merge waits for the owner's sheet; no AWS deploy until App Runner gets `POSTGRES_QUERY_PASSWORD`.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
@@ -59,11 +59,13 @@ risks, rollout order). This plan records the decisions and the order; the resear
     `flynapse_inspect`: read-only, cross-tenant, dev clusters only, never in a service environment. `flynapse_readonly`
     then serves analytics only, with exactly its documented table list, and the privilege check fails on any extra
     read grant.
-24. **AI-written SQL runs as a read-only user.** Today `db_query` runs as the main app user inside a read-only
-    transaction behind an SQL gate. A dedicated `flynapse_query` pool makes "cannot write" a database privilege:
-    select-only on the tool's table list, still bound by the tenant access rules (no bypass, unlike the analytics
-    user), no execute on non-catalog functions, and no membership edges to any other user. Defence in depth, not a
-    hole today.
+24. **AI-written SQL runs as a read-only user.** Before step 6, `db_query` ran as the main app user inside a
+    read-only transaction behind an SQL gate. A dedicated `flynapse_query` pool makes "cannot write" a database
+    privilege: select-only on the tool's table list, still bound by the tenant access rules (no bypass, unlike the
+    analytics user), no EXECUTE grant and no definer function it can run, and no membership edges to any other user.
+    Defence in depth, not a hole today. PUBLIC's built-in EXECUTE on ordinary extension functions (none can write,
+    cross tenants or reach a definer; step 6 review A) and PUBLIC's TEMPORARY are step 7's default-privilege revokes;
+    until then the pool resets every connection on release, so no session state crosses callers.
 25. **One environment-variable name per password, one shared list of user names in code.** The old names stay as a
     deprecated fallback for one release. Owner scripts read the owner through the shared `owner_credentials()`.
 26. **The deployed API gets the grant login.** App Runner passes only the main app login, so on AWS the paths that
