@@ -112,10 +112,17 @@ integration lane, not the unit lane.
      quiet and 19 s at load 15. 20/20 mutants killed by both the old and the new test. Known gap: a defect seen only
      when the universe catalog is built a second time (the review's M21) is caught by the `tests/unit/lang_agent` lane,
      not this test.
-   - [ ] **Production follow-up (owner, 2026-09-30: "go ahead"):** remember each tool schema that passed the metaschema
-     check, per process (about 0.6–0.7 s of CPU saved per rich lang turn). Passes only, keyed on a sha256 of the
-     canonical JSON, bounded; the test fixture goes. Ledger `.superpowers/sdd/schema-check-memo/`, branch
-     `schema-check-memo`. The table-registry cache was judged not worth its risk (about 40 ms per turn).
+   - [x] **Production follow-up (owner, 2026-09-30: "go ahead"):** remember each tool schema that passed the metaschema
+     check, per process. Passes only, keyed on the validator class plus a sha256 of the canonical JSON, bounded at
+     1,024; non-JSON content is never keyed; the test fixture is gone. Ledger `.superpowers/sdd/schema-check-memo/`.
+     The table-registry cache was judged not worth its risk (about 40 ms per turn).
+     - **DONE 2026-09-30, merged and pushed with copilot-mro `211298ad`.** One rich MRO turn's assembly CPU went
+       from 2.1–2.4 s to 0.19–0.24 s under load (about 10x less); real metaschema checks per turn 153 → 0; the
+       matrix test stays at about 20 s. Review (Opus): Spec and Quality PASS, two Minors fixed before the merge
+       (a real draft-07 `$schema` test, the no-lock comment). 11 of 12 mutants killed at build, the survivor killed
+       by the fix. Whole-tree non-db at the merge: 15,155 passed, 0 failed.
+     - Implementation note: the cached value is a small pass record, not a raising helper: a helper keyed on the
+       digest alone cannot see the schema it has to check.
 5. **Fix the lang_agent `[deadline]` load flake** (owner, 2026-09-28: "fix lang_agent only for now"). Branch
    `la-deadline-fix`; ledger `.superpowers/sdd/lang-agent-deadline-flake/`.
    - [x] Fixed (`71be517b`, `9ab0d1a7`; test only). The cause is TIMING, not isolation: the deadline was set before
