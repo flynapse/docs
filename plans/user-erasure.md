@@ -1445,6 +1445,13 @@ Recorded at the P3 plan review (2026-09-29):
   - *Why deferred:* not Task 14's code; the value is unchanged, so the dashboard's analytics behave the same.
   - *Complete fix:* the test's reader follows `quality.py`'s import to the defining module and reads the literal
     there (or Task 17's pins name the new home); one change in the dashboard test, no core change.
+- **The dashboard copies core's closed erasure states without a contract pin (Task 14 fix round 1).**
+  - *What is missing:* the erase dialog treats a request as open unless its state is `completed` or `cancelled`, a
+    list copied from core by hand; the receipt keys, the window and the 503 sentences are pinned by the generated
+    contract, the states are not.
+  - *Why deferred:* an unknown state counts as open, so a new core state makes the dialog state the request rather
+    than promise a window: the safe side.
+  - *Complete fix:* the contract generator also emits core's closed states, and the dialog reads them from it.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
