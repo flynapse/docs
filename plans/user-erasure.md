@@ -1494,6 +1494,12 @@ Recorded at the P3 plan review (2026-09-29):
     definer's pattern); Task 12's due sweep and `--run-due` walk those pairs, running them inline under the scheduler
     (a queued run for a gone tenant is never served). About 40–60 production lines across core, copilot-mro and api;
     after DB-roles step 6 merges. The api CLI runbook names the ERROR line and the finisher.
+- **Channel provisioning's own log lines still name the pilot (Task 13 lane C fix round, concern 3).**
+  - *What is missing:* the provisioning POST's success line, its namespace refusal, its 500 and `_unmint_tenant`'s
+    fields carry the channel user id or the tenant name (`telegram-<id>`, the pilot's Telegram id). Task 13 removed
+    them from the door's 500 and from the tenant-delete event and log; these predate it.
+  - *Why deferred:* outside Task 13's Owned lines; the ids are opaque outside Telegram.
+  - *Complete fix:* those lines carry the tenant id only; the exception-text and privacy guards pin it.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
