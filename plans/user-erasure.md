@@ -1452,6 +1452,25 @@ Recorded at the P3 plan review (2026-09-29):
   - *Why deferred:* an unknown state counts as open, so a new core state makes the dialog state the request rather
     than promise a window: the safe side.
   - *Complete fix:* the contract generator also emits core's closed states, and the dialog reads them from it.
+- **Task 11b's bounds start late, and some writers outlast the margin (Task 11b review I-2, M-4, concerns 2 and 4).**
+  - *What is missing:*
+    - The upload budget and the turn deadline start once the request body has arrived, but the freeze check runs at
+      request start. A slow client can hold a large upload open for many minutes first (a 250 MB PDF on a
+      ~1.2 Mbit/s uplink takes about 28 minutes) and then get a fresh 7.5-minute budget.
+    - An SDK turn stopped at its deadline is recorded as `TimeoutError`; LangGraph records `deadline_exceeded`.
+    - `interactive` defaults to `False`, so a new door a person drives is unbounded unless it passes `True`.
+    - An S3 upload thread already sending when the budget ends runs to botocore's own timeouts. Memory curation and
+      Document Hub's deferred processing after a turn were not measured against the 5-minute margin.
+  - *Why deferred:* anchoring at admission crosses into api; the other items fail safe or are unmeasured rather than
+    known to exceed.
+  - *Complete fix:*
+    - The api gateway stamps `request.state.admitted_at` at request start; the turn deadline and the upload budget are
+      measured from it.
+    - One mapping in `ClaudeQueryAdapter` records `deadline_exceeded`.
+    - The api automation executor passes `interactive=False` explicitly (`executor.py`, beside the `execute` call);
+      then copilot-mro makes `interactive` a required keyword on the builder and both `execute` surfaces.
+    - Bound the S3 client's connect and read timeouts; measure memory curation and deferred processing against the
+      margin.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
