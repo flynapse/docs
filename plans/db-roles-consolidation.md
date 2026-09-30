@@ -63,9 +63,13 @@ risks, rollout order). This plan records the decisions and the order; the resear
     read-only transaction behind an SQL gate. A dedicated `flynapse_query` pool makes "cannot write" a database
     privilege: select-only on the tool's table list, still bound by the tenant access rules (no bypass, unlike the
     analytics user), no EXECUTE grant and no definer function it can run, and no membership edges to any other user.
-    Defence in depth, not a hole today. PUBLIC's built-in EXECUTE on ordinary extension functions (none can write,
-    cross tenants or reach a definer; step 6 review A) and PUBLIC's TEMPORARY are step 7's default-privilege revokes;
-    until then the pool resets every connection on release, so no session state crosses callers.
+    Defence in depth, not a hole today. Today the user can still, in a read-write transaction it opens itself (never
+    through `db_query`, whose gate admits one statement inside a read-only transaction): create a persistent large
+    object through PUBLIC's EXECUTE on the `lo_*` functions (measured in step 6 fix round 1; `DROP OWNED` clears it),
+    call `pg_notify` (nothing listens), use PUBLIC's TEMPORARY, and call PUBLIC's ordinary extension functions (none can
+    write, cross tenants or reach a definer; step 6 review A). Step 7's default-privilege revokes take PUBLIC's EXECUTE
+    on the `lo_*` and extension functions and PUBLIC's TEMPORARY, each with a verify finding; until then the pool
+    resets every connection on release, so no session state crosses callers.
 25. **One environment-variable name per password, one shared list of user names in code.** The old names stay as a
     deprecated fallback for one release. Owner scripts read the owner through the shared `owner_credentials()`.
 26. **The deployed API gets the grant login.** App Runner passes only the main app login, so on AWS the paths that
@@ -94,7 +98,9 @@ risks, rollout order). This plan records the decisions and the order; the resear
 - [ ] 6. The read-only query pool (24): the new user, its grants, the second pool in copilot-mro, and a check that no
   definer function is executable by it.
 - [ ] 7. B14 tenant delete, then, on top of this: the definer function with execute revoked from PUBLIC and granted to
-  `flynapse_grant` only, then `tenants` delete rights revoked from the grant user.
+  `flynapse_grant` only, then `tenants` delete rights revoked from the grant user. Also the default-privilege revokes
+  from decision 24: PUBLIC's EXECUTE on the `lo_*` and extension functions (granted back to the app user where it
+  needs them; `wdm_graph` uses `similarity()`) and PUBLIC's TEMPORARY, each with a verify finding.
 
 **Rules for every step:** grants and revokes run on `copilot_mro_test` first, then the protected databases, with the
 provisioning verify before and after. Table ownership stays with `postgres`. The auto-mode classifier refuses Claude's
@@ -188,6 +194,10 @@ DDL on shared databases, so every DDL step is the owner's to run.
   - Step 8's bound on the final `CASCADE` does not name a publication that includes a `phoenix` table (the live
     `postgres` database has none). *Complete fix:* add `pg_publication_rel` to the outside-dependents check.
   - The otel README's own Phoenix procedure still sets the password with an interactive `\password`, unlike the sheet.
+- **Core's tests still call `_ensure_pool` "not synchronised" (step 6 fix round 1).**
+  - *What is missing:* four comments in core's tests describe utils' pool open as unlocked; step 6's M2 locked it.
+  - *Why deferred:* core is outside step 6's batch, and the comments change no behaviour.
+  - *Complete fix:* reword the four comments with core's next change that touches those tests.
 - **The SAD-local fixture's full provisioning path is unexercised (step 1).**
   - *What is missing:* `provision_rls` makes `postgres` own its security-definer functions, and the fixture never
     creates that role.
