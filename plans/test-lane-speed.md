@@ -201,25 +201,79 @@ integration lane, not the unit lane.
     - Pair 1, index without the freeze: 39:49 -> 40:14, no gain. Full collections walked the retained trees.
     - Pair 2, freeze after the collect: 42:03 -> 32:15.
     - Pair 3, final code, run in reverse order (after first, load 14 -> 12; before second, load 12 -> 10):
-      32:52 -> 25:04 (-24%). CPU 6,286 -> 5,144 s. Peak worker RSS 2.2 -> 2.6 GB.
+      32:52 -> 25:04. CPU 6,286 -> 5,144 s.
+    - What the pairs show (review A, 2026-09-30): the direction and the mechanism, not a point figure. The same base
+      code ran 32:52, 39:49 and 42:03 on pytest's clock, a spread as large as the effect. Pair 3 was not
+      like-for-like (the slot log shows 3.5 other runs beside the before run against 2.8 beside the after run, and
+      twice the major faults before), so its -24% overstates; pair 2 was the fairer pair (-23% clock, -17% CPU, on
+      intermediate code). Reviewer's estimate: **-15 to -25%**. Peak single process +0.4 to +0.85 GB against the three
+      base runs (1.94 / 1.77 / 2.21 -> 2.62 GB); the lane's total memory was not measured.
     - The 52 guard files' tests (those of 1 s or more), summed: 1,689 -> 716 s. The lane's slowest test is now the
       register scan (183 -> 141 s). The depth guard went 115 -> 40 s and the logger rules 124 -> 9 s.
     - Equality: per guard module, the files read and every test local, before vs after, fixed hash seed. The
       differences left are explained, and on the same tree the old and new sweeps return identical results. After
       the lane, every tree the index still held was unchanged. 15 mutants on the final code, all killed.
-  - [ ] Review, then merge by the controller. The full suite at the merge commit is the gate.
+  - [x] Review, split by area (A the index, B the guards; both APPROVE WITH FIXES, `fi1-review-{A,B}.md`).
+  - [x] **Fix round 1 (2026-09-30)**, tip `48fa74b8` (two commits on `6b0e6771`; `fi1-fix1-report.md`):
+    - `listed_files` is never an empty sweep. A checkout that is its own git toplevel is listed by git; a copy
+      without `.git` (a `git archive` extract, a copy another repository ignores) is walked, `__pycache__` aside;
+      empty raises naming the root. The legacy-metrics and alertmanager sweeps use it instead of their own copies of
+      the listing; the Document Hub pin gained a floor (> 800 files, the package reached). All five listing guards
+      now pass in an extract; only the register-history tests still need git history.
+    - The index holds Python source only and refuses any other path; `read_text` / `read_bytes` read everything else
+      directly and keep nothing (the two byte sweeps, the ambient-env scan with the developer's `.env`, the AD query
+      contract, the database-names and inspect-user scans). The two byte-sweep files at `-n 0`: peak RSS 1,180 ->
+      1,039 MB; index retained 176 -> 32 MB, non-source 144 -> 0 MB.
+    - Tests: the stamp's size half is pinned; `gc.freeze()`'s introspection blind spot is written at
+      `SETTLE_AFTER_BYTES` and tripwired (no suite module may call `gc.get_objects` / `gc.get_referrers`); the
+      one-instance test now checks every loaded module's index. Every second sweep that lacked a plant has one, each
+      failing when the index serves empty bytes; the judge-residency plant goes through the sweep's own enumeration;
+      the db-lane plant has a marked sibling.
+    - 12 mutants KILLED (incl. review A's MA1, the empty listing, a non-`.py` file through the index, a b5-style root
+      drop, the path-only key and the swallowed parse error), two of them re-run aimed at the one test meant to kill
+      them. Hand-back whole-tree non-db lane at `48fa74b8`: 15,203 passed, 61 skipped, 0 failed (+15 new tests); no
+      timing claimed.
+  - [ ] Merge by the controller. The full suite at the merge commit is the gate.
   - **Future Improvements (FI-1).**
     - *The register scan is the lane's floor at 141 s.* The estate detector (flynapse-otel) takes source text. The
       complete fix is an `analyse` that accepts parsed trees, plus the detector's own walk memo. It is a flynapse-otel
       change, outside this tree.
     - *The depth guard is still 40 s.* Its `_walker_functions` and `_tainted_names` re-walk function subtrees
       (O(n·depth)). The complete fix is a single bottom-up pass, proven identical like the walker reorder.
-    - *Three more guards need a git checkout.* The log sweep, the resolver pin and the Document Hub pin now fail
-      loudly in a `git archive` extract such as `parallel-commits.sh` makes, as the legacy-metrics, alertmanager and
-      inspect-user guards already did.
+    - *An extract is walked, a copy is taken as given.* Since fix round 1 a copy without `.git` is walked, so it
+      passes in a `git archive` extract. The trade-off: a `cp -r` / rsync copy of the PRIMARY (no `.git`, but its
+      `.venv`, `scratchpad/` and runtime dumps) would be read whole, and so would a cache a run in the copy writes
+      (`.pytest_cache` unless `-p no:cacheprovider`, as `parallel-commits.sh` passes). The complete fix, if such copies
+      ever matter: honour the copy's own `.gitignore` for untracked files while keeping every file an extract was given
+      (git cannot do both without a repository). The inspect-user guard keeps its own tracked-only listing of
+      `deployment/` and still needs a checkout.
     - *The freeze is process-wide.* An object alive at the moment of the freeze and later caught in a reference cycle
-      is kept until the worker exits. No test uses `gc.get_objects` or `gc.get_referrers`. The one `gc.collect()` test
-      collects its own new objects. A selective freeze does not exist in CPython.
+      is kept until the worker exits, and its finalizer never runs. `gc.get_objects` / `gc.get_referrers` are blind to
+      it; a tripwire now fails if a suite module calls either. A selective freeze does not exist in CPython.
+    - *A decoded copy per `errors` mode* (review A M-2). `text()` keeps one string per mode even when the strict
+      decode succeeds, so a clean file read as `strict`, `replace` and `ignore` holds three equal strings. The fix:
+      for a non-strict mode, try the strict text first and store it under the requested key (the result is identical
+      by definition), as `_tree` already does.
+    - *Two production invalid-escape warnings no longer surface in the lane* (review A M-3; 128 -> 35 warnings).
+      The index parses with `DeprecationWarning` / `SyntaxWarning` silenced, and with warm bytecode the guards' parses
+      were the only place the lane showed `agent_evaluation/contracts.py:199` (a backslash before a backtick) and
+      `parsers/wdm_pipeline/wdm_parser/validate.py:1` (`'\d'`). The fix is in production code, separately: correct those
+      two escapes (raw strings); optionally a lint that compiles production modules with warnings as errors.
+    - *Multi-root plants sit in one root* (review B M-6, pre-existing). Dropping a root that holds no finding from a
+      multi-root sweep (the seat guard's `demo`, and the loguru, weaviate, secret-in-SQL, content-spill, tool-results
+      and detail-keywords sweeps) survives each guard's own file: `python_files` refuses a missing root, but a root
+      dropped from the tuple goes unnoticed. The fix: parametrize each plant over its roots, one planted module per
+      root, each expected in the report (the DDL shadow plant now sits in the second root, and the b5-style drop of it
+      was killed).
+    - *The legacy-metrics guard's own text cache* (review B, pre-existing). `_production_files`' `lru_cache` keeps the
+      `replace`-decoded text of every production file, the 70 MB archive and the CSV dumps included, about 355 MB on
+      the worker that runs it (the two-file peak is still ~1 GB after fix round 1). The fix: skip binary files (a NUL
+      byte in the first block) and cap the decoded size, or keep only the per-name hit sets rather than the texts.
+    - *A quiet re-measure* (review A's recipe). No other slot holder, 1-minute load under 2 and swap near idle;
+      each tree warmed once; ABBA ABBA with at least four runs per arm, `PYTHONHASHSEED=0`, the same test set; per run
+      the pytest clock, user+sys CPU, and a 5 s sampler of PSI and every xdist worker's RSS (which also gives the lane
+      total). Cheaper and less noisy: the same protocol on the 52 census files alone at `-n 0`. Until then, admit
+      whole-tree copilot-mro lanes with `pytest-slot.sh -m 8`.
   - **Learnings.**
     - Sharing the parse alone did not speed the lane. The trees a worker keeps made every full collection walk
       millions of nodes: pytest runs five of them at session cleanup, and one test's own `gc.collect()` took 96 s on
@@ -227,6 +281,11 @@ integration lane, not the unit lane.
     - `git stash` is repository-wide across worktrees. A `stash pop` on a clean tree popped another session's stash
       (`fe0155a1`, "pre-MT-merge ... mro_documents_aixl"). It was restored with `git stash store` and the tree change
       reversed. Never use stash in a shared repository; use a commit or a copy.
+    - (Fix round 1) A floor added after a sweep's finding assertion can make its plant pass for the wrong reason:
+      pytest's rewritten `assert len(scanned) > 800` prints `scanned`, which names the planted file, so a plant
+      matching only the file name passed with the index serving empty bytes. Match the finding's own message, and
+      prove each plant with the empty-bytes sabotage run. pytest also truncates a long list in its own summary line;
+      a plant that matches more than the first finding needs the guard's assertion to carry its list as the message.
 
 ### FI-2: Shrink the lang_agent activation matrix
 
