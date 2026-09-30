@@ -1200,11 +1200,12 @@ In flight, all branched after the push:
     4. The push.
     5. P2 close: remove the P2 worktrees; delete `ue-t6` … `ue-t10`, `ue-p2fix`, `ue-p2c2` and `ue-p2simp` with `-d`.
 - **Owner questions from P3 prep (open):**
-  - **C-4:** `/goodbye` takes the job path (lock, reply, erase 30 minutes later). Recommended yes.
+  - **C-4:** `/goodbye` takes the job path (lock, reply, erase 30 minutes later). Recommended yes. **Owner: yes
+    (2026-09-29).**
   - **C-5:** cancel restores nothing, because a frozen owner's automation runs are recorded skipped and nothing is
     disabled. Recommended yes.
-  - **Task 19 Q1:** all 57 operator-keyed tables, derived from the registries. Recommended.
-  - **Task 19 Q2:** clean-up inside the request, paged. Recommended.
+  - **Task 19 Q1:** all 57 operator-keyed tables, derived from the registries. Recommended. **Owner: yes.**
+  - **Task 19 Q2:** clean-up inside the request, paged. Recommended. **Owner: yes.**
   - **Task 19 Q3:** the orphan script runs on `copilot_mro_test` and `copilot_mro`, dry run by default, and executes
     only with the dry run's `--expect-rows`. Recommended.
   - **Task 19 Q4:** find the orphans as the owner, delete them through the registered clean-up. Recommended.
