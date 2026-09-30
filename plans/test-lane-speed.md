@@ -217,3 +217,18 @@ None of these can turn a run red, and none changes production behaviour. Evidenc
 - **Two held-clock helpers (follow-up 3).** *Fix:* move `_ClockHeldUntilBlocked` into `_fixtures.py` and switch
   `_ClockHeldUntilInFlight` to it, keeping the resume-from-held behaviour. A pure refactor.
 - **Bundling.** Follow-ups 1 and 3 and the M1 comment go in one commit; M3 and follow-up 2 share one remedy.
+
+### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30)
+
+- **What happens.** With `SIBLING_CHECKOUTS` set, `tests/_root.py` announces the declaration as a
+  `SiblingDeclarationWarning`. `scripts/_workspace.py` loads `tests/_root.py` by path under the module name
+  `_scripts_workspace_root_impl`, so the warning's class lives in a module the xdist controller cannot import. The
+  controller fails to unserialize the worker's warning, every node goes down, and the lane ends `INTERNALERROR`
+  (exit 3) in minutes. The `-W ignore::UserWarning:_scripts_workspace_root_impl` filter does not catch it: it matches
+  the issuing location, and the warning is raised with `stacklevel=2`.
+- **Why deferred.** A declaration is needed only while a stale sibling worktree would be picked by name; removing the
+  stale worktree, or running that lane serially, avoids it. Recorded as a trap in the controller's memory.
+- **The complete solution.** Make the class importable wherever a warning can be unserialized: `scripts/_workspace.py`
+  registers the loaded module in `sys.modules` under the tests' own module name, or the warning class moves to a
+  module both sides import by name. Add a test that runs a tiny `-n 2` session with a declaration set and expects a
+  clean exit.

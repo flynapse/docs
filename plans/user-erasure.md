@@ -1405,6 +1405,13 @@ Recorded at the P3 plan review (2026-09-29):
     erasure does not hold.
   - *Complete fix:* when the deployment pins its tenant, never keep; otherwise keep only when the person has a `users`
     row in the named tenant, read through a binding to that tenant.
+- **The orphan census asks Weaviate once per deleted pair (Task 19 copilot-mro review B, M-4).**
+  - *What is missing:* every census asks the memory index about each gone pair separately, and `--execute` runs the
+    census twice. `copilot_mro_test` holds 1,154 such pairs.
+  - *Why deferred:* it is an owner-run script; dev and production hold few deleted operators, and the cost is time,
+    not correctness.
+  - *Complete fix:* one index query per tenant for all its gone pairs, and `--execute` reuses the dry census it just
+    verified against `--expect-rows`.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
