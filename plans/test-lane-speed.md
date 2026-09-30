@@ -103,6 +103,9 @@ integration lane, not the unit lane.
        `tests/api/tenancy/test_operator_grain_isolation.py`, core's workspace-layout reds), measure it once, then name
        it in every brief and post-merge gate. Recommended: yes.
 4. **Speed up the slowest scan tests.** This is a Future Improvement, for a later small batch.
+   - [ ] FI-2 first (owner, 2026-09-29: "go"): shrink the lang_agent activation matrix. SDD, fresh Opus implementer
+     and reviewer; branch `activation-matrix` in `copilot-mro-matrix`; ledger `.superpowers/sdd/lang-activation-matrix/`.
+     Measured before and after on the same box state. FI-1 waits for FI-2's measurement.
 5. **Fix the lang_agent `[deadline]` load flake** (owner, 2026-09-28: "fix lang_agent only for now"). Branch
    `la-deadline-fix`; ledger `.superpowers/sdd/lang-agent-deadline-flake/`.
    - [x] Fixed (`71be517b`, `9ab0d1a7`; test only). The cause is TIMING, not isolation: the deadline was set before
