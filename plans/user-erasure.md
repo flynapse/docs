@@ -1917,3 +1917,17 @@ In flight, all branched after the push:
 - **Task 19, copilot-mro half (lane M1): building** (branch `ue-t19-mro` in `copilot-mro-erase`). After it merges, the
   owner runs the orphan script on dev `copilot_mro` (dry run, then `--execute --expect-rows N`) before Task 12 merges.
 - Next: merge Task 11 → wave 3 (Task 12 in lane A, Task 14 + Task 19's dashboard copy in lane D, Task 11b in lane M1).
+
+**Status at compaction checkpoint 10 (2026-09-30, late): P3 wave 3 in progress.**
+- **Task 11: MERGED and PUSHED** (core `master` `2ec64b5`). A re-review, then a second small fix round (a test of the
+  real per-request lock, the freeze's narrowed flag, the lookup-failure direction, a pinned clock). The full
+  post-merge gate showed nothing caused by Task 11.
+- **Task 19, copilot-mro half: reviewed by area, one fix round, re-reviewed; MERGED locally** (copilot-mro
+  `5f98c9d3`), full gate running, pushed when green. A Document Hub failure fails the pre-pass again (502, operator
+  kept); the orphan script shows every pair (a partitions-only pair included), tells held from failed, refuses an
+  unknown `--tenant`, and records a failed partition removal. Then the owner runs the orphan script on dev.
+- **Task 12: reviewed, one fix round; ready.** It merges after the owner's dev orphan run and the owner's read-only
+  stand-down check (dev's scheduler runs `embedded`, so the plan's "unset everywhere" premise was false). Whether it
+  waits for Task 11b's refusal marker is ruled at its merge.
+- **Task 11b (lane M1) and Task 14 with Task 19's dashboard copy (lane D): building.**
+- Next: wave 4 — Task 13 (core + telegram-bot), Task 19's api registration.
