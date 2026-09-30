@@ -1026,7 +1026,8 @@ delete them. So one clean-up path serves the route and the orphan script (P3 pre
    runs the LLM-records definer on the grant pool, so without them every erasure freezes the person and then fails at
    that step on every retry. iac declares neither today.
 5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` or a
-   daily `--run-due`. Rollback: cancel open requests via the CLI, then redeploy the previous image.
+   daily `--run-due`. Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the
+   previous image stands down (disables) the automations of anyone still frozen (Task 12 review M-4).
 
 ## Owner / legal items
 
@@ -1412,6 +1413,11 @@ Recorded at the P3 plan review (2026-09-29):
     not correctness.
   - *Complete fix:* one index query per tenant for all its gone pairs, and `--execute` reuses the dry census it just
     verified against `--expect-rows`.
+- **A queued run can resume a refused request once (Task 12 review M-3).**
+  - *What is missing:* the api job skips a `failed` request before calling `run_erasure`, outside the per-request
+    lock. A stale queued run that races the refusal can resume the request once.
+  - *Why deferred:* every step is idempotent and the unchanged data refuses again, so the cost is one wasted run.
+  - *Complete fix:* core's `run_erasure(..., resume_failed=False)`, checked under the lock; the job passes it.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
