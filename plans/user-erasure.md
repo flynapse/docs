@@ -1436,6 +1436,15 @@ Recorded at the P3 plan review (2026-09-29):
   - *Complete fix:* keep "erased minus census" in the db test with a remedy message; move the extra-table check into
     the script at run time (the dry run names any such table, `--execute` refuses with exit 2), pinned by a unit test
     on made-up table sets.
+- **The dashboard's analytics quality-contract test is red since Task 9 (found in Task 14's build, confirmed by its
+  review).**
+  - *What is missing:* Task 9 moved `DELETED_USER_ID` into core's `user_erasure/core_copies.py`, and `quality.py` now
+    imports it. The dashboard's `tests/unit/analytics/analytics-core-quality-contract.test.ts` reads that constant as a
+    module-level literal in `quality.py`, finds none, and fails on the dashboard base `0918191` against core `2ec64b5`
+    as it does on Task 14's branch.
+  - *Why deferred:* not Task 14's code; the value is unchanged, so the dashboard's analytics behave the same.
+  - *Complete fix:* the test's reader follows `quality.py`'s import to the defining module and reads the literal
+    there (or Task 17's pins name the new home); one change in the dashboard test, no core change.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
