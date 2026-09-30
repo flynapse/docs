@@ -31,16 +31,18 @@
     tracked deployment file names the inspection user; the runbook's three owner commands.
   - Review history: one review (the membership gap), two fix rounds on fresh agents, a re-review. The post-merge gate
     found one red no worktree could see (below, Lessons); fix round 2 closed it before the push.
-  - Owner: publish utils 0.1.42 after 0.1.40 and 0.1.41. The next verify on the protected databases runs the new
-    membership and default-privilege checks for the first time there.
-- **Step 5 in progress (2026-09-30):** built, reviewed (one review, two fix rounds, a re-review), and the owner sheet
-  proven end to end on throwaway clusters (`.superpowers/sdd/db-roles-consolidation/s5-owner-sheet.md`). The owner
-  ran sheet steps 1–4 (users, Phoenix's own database with its data moved, its password, Phoenix relaunched); the
-  controller verified every check: identical fingerprint (65 tables, 1,874 rows), nothing foreign-owned, Phoenix
-  healthy and connected as `phoenix` to `phoenix`, no collector auth errors. copilot-mro `db-roles-s5` merged
-  (`a90db4cd`); it is pushed after its whole-tree lane. Next for the owner: sheet steps 5–6 (the bot), then step 7 (the
-  controller merges telegram-bot `db-roles-s5`, with the README's `public`-owner wording fixed first), and step 8 a
-  few days later.
+  - Publishing waits until all code changes are final (owner, 2026-09-30: all is dev). The next verify on the
+    protected databases runs the new membership and default-privilege checks for the first time there.
+- **Step 5 done except the owner's later cleanup (2026-09-30):** built, reviewed (one review, two fix rounds, a
+  re-review), and the owner sheet proven end to end on throwaway clusters
+  (`.superpowers/sdd/db-roles-consolidation/s5-owner-sheet.md`). The owner ran sheet steps 1–6; the controller
+  verified every check and started the bot. Phoenix: identical fingerprint (65 tables, 1,874 rows), nothing
+  foreign-owned, healthy and connected as `phoenix` to `phoenix`, no collector auth errors. The bot: connected as
+  `telegram_bot_app` only, nothing in its database owned by anyone else (`public` included), its suite 2,473 passed
+  as that user. Merged and pushed: copilot-mro `a90db4cd` (whole-tree non-db 15,146 passed), telegram-bot `95dc9f7`
+  (with the README's `public`-owner check; suite 2,475 passed). Left: sheet step 8, the owner's, after a few healthy
+  days.
+- **Step 6 building (2026-09-30):** code and owner sheet, `s6-brief.md`; the merge waits for the owner's sheet.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
@@ -85,7 +87,7 @@ risks, rollout order). This plan records the decisions and the order; the resear
     `user_operators`. They come from its membership in `pg_read_all_data`, not from table grants. So the remedy is
     `REVOKE pg_read_all_data FROM flynapse_readonly`, not per-table revokes. Role membership is cluster-wide, so the
     protected databases have the same surface.
-- [ ] 5. Side services (22): the `phoenix` and `telegram_bot_app` users and databases; the superuser leaves both
+- [x] 5. Side services (22): the `phoenix` and `telegram_bot_app` users and databases; the superuser leaves both
   connection strings.
 - [ ] 6. The read-only query pool (24): the new user, its grants, the second pool in copilot-mro, and a check that no
   definer function is executable by it.
