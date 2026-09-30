@@ -1461,6 +1461,10 @@ Recorded at the P3 plan review (2026-09-29):
     - `interactive` defaults to `False`, so a new door a person drives is unbounded unless it passes `True`.
     - An S3 upload thread already sending when the budget ends runs to botocore's own timeouts. Memory curation and
       Document Hub's deferred processing after a turn were not measured against the 5-minute margin.
+    - `finalize_turn`'s topic-classifier and query-type awaits (`agent_shared/lifecycle.py`, both engines) are not
+      under the deadline; Task 11b's fix bounds and shields them only inside the SDK's `run_query` (fix round 1).
+    - A judge or fuse call given up at the deadline leaves its Bedrock thread running; its usage lands after the
+      cost snapshot, so that turn's `llm_usage` row under-counts.
   - *Why deferred:* anchoring at admission crosses into api; the other items fail safe or are unmeasured rather than
     known to exceed.
   - *Complete fix:*
@@ -1471,6 +1475,8 @@ Recorded at the P3 plan review (2026-09-29):
       then copilot-mro makes `interactive` a required keyword on the builder and both `execute` surfaces.
     - Bound the S3 client's connect and read timeouts; measure memory curation and deferred processing against the
       margin.
+    - `finalize_turn` bounds both classifier awaits by `execution.turn.deadline`, falling back to
+      `history_relevant=True` and no query type.
 - **Proposals, pending the owner's confirmation.**
   - **FI-S1, one drain and one re-erase loop, owned by Task 11. ADOPTED by the owner 2026-09-29; built in the P2
     simplification batch and Task 11.** Task 8 drains the person's runs itself, with SQL
