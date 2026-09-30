@@ -1027,7 +1027,9 @@ delete them. So one clean-up path serves the route and the orphan script (P3 pre
    that step on every retry. iac declares neither today.
 5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` or a
    daily `--run-due`. Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the
-   previous image stands down (disables) the automations of anyone still frozen (Task 12 review M-4).
+   previous image stands down (disables) the automations of anyone still frozen, and a later cancel does not re-enable
+   them (Task 12 review M-4). A request that can no longer be cancelled (immediate, or past its `erase_after`) keeps
+   its person frozen: finish it with `--run-due` first, or re-enable those automations afterwards.
 
 ## Owner / legal items
 
