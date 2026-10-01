@@ -70,9 +70,14 @@
     - the sheet never stops for an RDS probe;
     - on RDS, step 3 cannot succeed: the master user is not a superuser, and the `lo_*` and extension functions are
       owned by `rdsadmin`. Because the step is all-or-nothing, B14's `tenants` revoke would never land there either.
-  - **Next:** the owner rules on the app user's TEMPORARY (every database, or `copilot_mro_test` only) and on RDS
-    handling. Then one fix round, a scoped re-review, and the sheet to the owner. Before step 7 merges, merge the
-    moved mainlines into its branches.
+  - **The owner's rulings (2026-10-01):**
+    - the app user keeps TEMPORARY on `copilot_mro_test` only; every other database loses it for every role.
+    - RDS: split it and report the rest. B14's `tenants` revoke runs on its own and always lands. PUBLIC's reach
+      revokes only what PUBLIC holds and the role can revoke. On a cluster where the provisioning role is not a
+      superuser, the functions owned by `rdsadmin` are named, accepted findings, and the sheet stops for an RDS probe
+      before step 3 runs there.
+  - **Next:** a fix round with those rulings and both reviews' findings is running. Then a scoped re-review and the
+    sheet to the owner. Before step 7 merges, merge the moved mainlines into its branches.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
