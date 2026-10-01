@@ -861,7 +861,7 @@ additions; new `contracts/user-erasure-receipt.json` and its generator in `scrip
 ### Task 15: copilot-mro — Phoenix user sweep (P4, lane M1)
 Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
 `scripts/observability/scrub_erased_user_spans.py`; one call in `copilot_mro/app/services/user_erasure.py`; tests.
-- [ ] In the tenant's project, spans with `user.id` in the ids → their traces' spans deleted (the
+- [x] In the tenant's project, spans with `user.id` in the ids → their traces' spans deleted (the
   `pre_scheme_span_ids` pattern) after the per-chat session deletes; bounded, best-effort, counted; residue =
   `get_spans(user.id)`; the internal/golden project refused. Proofs:
   fake-client unit lane (live check in Task 18).
@@ -870,7 +870,7 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
   BEFORE the purge, with the gathered chat ids: it retries each chat's session delete, then sweeps `user.id` spans.
   Verify the content-copy sessions' spans carry `user.id`; if not, the sweep needs the chat ids. Its residue joins the
   seam's composed residue under a disjoint key. The receipt's Phoenix 30 d bound is the backstop.
-- [ ] **Carry-ins from P3 (phase review E, 2026-09-30).**
+- [x] **Carry-ins from P3 (phase review E, 2026-09-30).**
   - A Phoenix leftover blocks completion (owner, 2026-10-01, O5: yes). As written: the copilot-mro seam raises an
     incomplete and never purges while any residue reads non-zero, and core retries six times, then daily. So a Phoenix
     outage, or a span ingested after the sweep, holds the erasure `erasing`, the person frozen and the Cognito account
@@ -880,6 +880,33 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
   - Starts after Task 20's F1 merges: both edit copilot-mro's user-erasure seam.
   - `USER_ERASURE_MAX_RUNTIME_SECONDS` (7200) was sized against one attempt at up to 5 s a Phoenix request. Re-check it
     against the per-chat retries and the span sweep this task adds.
+
+#### Notes: Task 15 — the Phoenix user sweep: DONE (copilot-mro `ue-t15` `4894d0a1..1e4c2c79`, merged `a0d71393` with test-lane FI-4 after it; one review)
+- Built by two agents: the first built and proved it (`ee7cabbe..b910f501`) and retired past the context cap at the
+  WSL crash; a continuation merged F1's fix round 1, fixed one test and one comment, and ran the hand-back.
+- What landed:
+  - the primitives in `phoenix_session_scrub.py`: `user_sweep_target` holds every id to `scrub_target`'s guard
+    (internal tenant, foreign project, blank or golden-set id refused);
+  - the seam retries each gathered chat's session delete, then sweeps the person's `user.id` spans (at most 200 an
+    attempt, `PHOENIX_SPAN_LIMIT`), before the purge;
+  - the residue `get_spans(user.id)` under its own key, failing closed (`INCOMPLETE_PHOENIX`) on any read failure;
+  - orphans per source, as core keeps them, so a retry's 0 no longer overwrites an attempt's orphans;
+  - the owner's replay `scripts/observability/scrub_erased_user_spans.py` (dry run by default, `--apply`);
+  - the runtime cap of 7200 s is unchanged, with the arithmetic in the report.
+- Content-copy spans carry `user.id` since 2026-09-17; the 09-14..09-17 copies carry `enduser.id` only and age out
+  under Phoenix's 30-day retention (FI below).
+- Task review (2026-10-01): APPROVE, 0 Critical, 0 Important, 5 Minor.
+  - The fake matches `arize-phoenix-client` 3.5.0 in every signature, return shape, the `user.id` filter, the
+    pagination and the 404 handling.
+  - A read-only probe of the local Phoenix (20.8.0, auth on) answered 401 without a key; the real client then fails
+    the residue closed.
+  - The trial merge onto `5c2bf7f4` was clean, and the lanes passed on it with `PHOENIX_ENDPOINT` unset and dead
+    alike.
+  - M-1 (an HTTP error other than 404 is unproven as fail-closed) and M-2 (the session retry for a chat no reap ran
+    for) are one test each: carried into the P4 phase review's fix round. M-3 is the deploy text below (step 6).
+    M-4 and M-5 are Future Improvements.
+- Owner question O10 (open, asked in the morning): what a host that names no Phoenix does (below, Owner / legal
+  items).
 
 ### Task 16: iac — S3 noncurrent-version expiry and the Cognito erasure policy (P4, lane I)
 Owned: `iac/s3.tf`, `iac/apprunner_iam.tf`; iac unit tests.
@@ -1365,6 +1392,11 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    previous image stands down (disables) the automations of anyone still frozen, and a later cancel does not re-enable
    them (Task 12 review M-4). A request that can no longer be cancelled (immediate, or past its `erase_after`) keeps
    its person frozen: finish it with `--run-due` first, or re-enable those automations afterwards.
+6. Phoenix (Task 15, review M-3): the api host needs BOTH `PHOENIX_ENDPOINT` and `PHOENIX_API_KEY`, and the key must be
+   allowed to delete spans and sessions (the collector README's system API key). The local Phoenix has auth on: with
+   the endpoint alone, every erasure fails closed (`INCOMPLETE_PHOENIX`) and stays `erasing`, the person frozen and
+   the account kept, 6 tries then daily; a key that cannot delete holds every request at its first span delete.
+   Neither dev `.env` names either key today, so dev erasures skip Phoenix with a warning (owner question O10).
 
 ## Owner / legal items
 
@@ -1376,6 +1408,13 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
 - [ ] Scheduler: the delayed half runs only where the scheduler is embedded/worker; otherwise a daily `--run-due`.
   Immediate requests and `/goodbye` then also wait for the owner's next `--run-due`, not 30 minutes (C-3, C-4).
 - [ ] D2 side question: should ordinary chat delete also hard-purge after N days (today it retains forever)?
+- [ ] **O10 (Task 15 review, 2026-10-01): a host that names no Phoenix.** Today the seam skips Phoenix, warns once
+  and completes, recording one orphan per chat: O5's letter holds (no residue reads non-zero) but not its intent where
+  a Phoenix exists unnamed, as on dev. Options: (a) keep it; (b) unset fails closed (needs (c), or a deployment with
+  no Phoenix never completes an erasure); (c) unset fails closed and an explicit "no Phoenix here" setting skips and
+  records the skip (reviewer's recommendation); (d) record the skip only (a `phoenix_not_named` count). Safe to
+  leave as (a) meanwhile: it behaves as before Task 15 where no Phoenix is named. Whatever is picked lands in the one
+  `phoenix is None` branch of `user_erasure.py`.
 
 ## Future Improvements
 
@@ -2092,6 +2131,35 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   of about 16). *Deferred:* a copy of the pins would be worse (two copies of the token redaction), and the cost is one
   owner command's start. *Complete fix:* `configure_logging` and `LOG_FORMAT` move into a light module that `app` and
   the owner commands both import.
+- **Task 15: copies exported 2026-09-14..09-17 carry `enduser.id`, not `user.id` (report concern 2, review FI-A).**
+  Neither the reap, the retry nor the sweep reaches them, and no residue sees them. *Deferred:* they age out under
+  Phoenix's 30-day retention by about 2026-10-17, the bound the receipt states, and closing the window would cost
+  every attempt from now on (1–2 requests per chat, or 4 pages per sweep). *Complete fix, if wanted sooner:* a replay
+  flag that also reads `enduser.id`.
+- **Task 15: span deletes leave a session's row and its session-level annotations (report concern 3, review FI-B).**
+  Sessions are deleted only through the gathered chat ids; a session keyed otherwise (before 2026-09-23 the content
+  pipeline sessioned by browser) keeps its row and annotations until retention, and the replay sweeps spans only.
+  *Complete fix:* delete the sessions the swept spans name (`session.id`, by GlobalID, guarded to the tenant's
+  project) before the span sweep, in the seam and the replay.
+- **Task 15: a large backlog drains 200 spans an attempt (report concern 5, review FI-D).** A person whose sessions
+  did not take most of their spans needs ⌈N/200⌉ attempts and stays frozen meanwhile. *Complete fix, if a backlog ever
+  matters:* drain by sessions (above) or by trace (`DELETE /v1/traces/{id}`, not in client 3.5.0); never raise the
+  span limit.
+- **Task 15: the span sweep trusts the server's attribute filter (review FI-F, defence in depth).** A server or proxy
+  that ignored the `user.id` filter would answer the whole tenant project, and up to 200 other people's spans an
+  attempt would be deleted. The version guard (≥ 14.9.0) and the pinned 20.8.0 server prevent it today. *Complete
+  fix:* before expanding traces, keep only spans whose returned attributes carry one of the ids; the returned shape is
+  confirmed in Task 18's live run.
+- **Task 15: the replay reads twice and does not say when it was capped (review FI-G).** *Complete fix:* read once,
+  delete from that read, and report `capped: [request ids]` when a person's spans reach `--span-limit`.
+- **Task 15: the retry-then-sweep policy lives in the composer (review M-4, FI-H).** `user_erasure.py` grew +209/−23
+  where the plan owned one call. *Complete fix:* `_sweep_phoenix`'s two rules move into `phoenix_session_scrub.py` as
+  one function with two callbacks; the tally and the residue part stay in the seam.
+- **Task 15: a limited sweep can strand an untagged span (review FI-I).** Truncating at 200 by sorted GlobalID across
+  traces can delete a trace's tagged spans and leave its untagged child, which no residue counts (the review's probe:
+  150 traces, limit 150 → 2 traces keep only their child). Unreachable with today's data (every content-copy span is
+  tagged since 09-17). *Complete fix:* delete each trace's untagged spans before its tagged ones, or truncate at trace
+  boundaries.
 
 ## Lessons
 
