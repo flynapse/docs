@@ -315,7 +315,7 @@ integration lane, not the unit lane.
   reviews and post-merge runs still include them.
 - **The catch.** A marker that deselects guards is easy to misuse. It only pays off if FI-1 leaves the scans still slow.
 
-### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28; owner go 2026-10-01; built and reviewed 2026-10-01)
+### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28; owner go 2026-10-01; built and reviewed 2026-10-01; fix round accepted, `fi4` `4325eeb9`; merges with user erasure Task 15)
 
 - **Built and reviewed (2026-10-01).** Branch `fi4` `ba5074f2`: test-only, five files under `tests/unit/lang_agent/`,
   with every item below. The task review approved it with 0 Critical and 0 Important findings, and three Minors:
@@ -323,8 +323,28 @@ integration lane, not the unit lane.
   - in two rows the clock's release never takes effect, so they end through a path production cannot take;
   - the SAD row's time bound includes setup.
 
-  A small fix round for the three is running. FI-4 then merges with user erasure Task 15's copilot-mro merge and
-  shares its gate.
+  The fix round fixed all three (`fi4` `ba5074f2..4325eeb9`, test-only, accepted on the controller's read of the
+  diff, 2026-10-01):
+  - M4's model call stays in flight a quarter second (a 240th of its 60 s deadline), and the reviewer's EARLY mutant
+    is killed;
+  - the two rows resume at the wall clock (`ClockHeldUntilBlocked(resume_at_wall_clock=True)`), take the break path
+    10 of 10, and assert `clock.released`;
+  - the SAD row times from the query's entry (`entered_at`).
+
+  Lane `tests/unit/lang_agent` 1162 passed; 10 of 10 repeats green; 15 mutants killed. FI-4 merges with user erasure
+  Task 15's copilot-mro merge and shares its gate.
+- **Left as Future Improvements (review O1 and the fix round's concerns):**
+  - *The stream loop's deadline break has no direct guard (review O1).* The review's K2 (the loop ignores the
+    deadline) is now caught only indirectly, through `assert clock.released`. The fix round's W mutant survives the
+    lane: it makes the wall-clock resume inert, and both in-flight rows silently fall back to the outcome-node path.
+    *Complete fix:* in the two in-flight rows, assert the break's own property: once the turn is told to stop, no
+    graph node runs and no store I/O happens (`backend.py` ~898). The fallback's outcome carries no `route_trace`;
+    the outcome node's does.
+  - *The cancellation twin of the SAD row still times from before `execute`.* A 4.5 s setup stall turns it red while
+    the deadline row stays green. *Complete fix:* the one-line change the deadline row got, timing from
+    `hung.entered_at`.
+  - *M4's reach is bounded by design.* It fails a watcher early by more than 240×; one early by less passes, as its
+    docstring says.
 
 None of these can turn a run red, and none changes production behaviour. Evidence and mutants are in
 `.superpowers/sdd/lang-agent-deadline-flake/review.md`.
