@@ -1250,6 +1250,14 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
   - Proofs: the CLI accepts a channel tenant and calls the teardown entry with the platform `via`; refuses a
     non-channel tenant and writes nothing; the bot command purges exactly what `/goodbye` purges and a second run is
     a no-op; a mutant per refusal is killed.
+  - Owner rulings on the built lane (2026-10-01):
+    - A legal pilot erasure is recorded as legal. Core's `request_channel_teardown` takes `rtbf` (default false; the
+      request is immediate already, so the ledger's `rtbf ⇒ immediate` holds), and the CLI accepts `--rtbf` with
+      `--channel-teardown`. The ledger, the receipt and the audit event then say legal.
+    - The bot's purge command cancels a still-running renewal itself, as `/goodbye` does (one Telegram call with the
+      bot token, then the cancel mark), and only then deletes. If Telegram refuses, it deletes nothing and says so;
+      the README says what to do then.
+    - Both go into F2's fix round. The core half builds on F3's core branch (F3 renames `freeze._request`).
 - [ ] **F3 (O3): a platform legal (RTBF) upgrade of an open request writes its own audit event (core).**
   - Today the upgrade (`freeze.py`, the stronger request over an open windowed one) keeps `requested_by` and `via`, so
     the one permanent audit event at completion names the tenant admin and `api` for a legal erasure (review A M-2).
