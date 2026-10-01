@@ -363,7 +363,7 @@ None of these can turn a run red, and none changes production behaviour. Evidenc
 - **Complete fix.** That test restores `sys.modules` (a fixture that saves and puts back the entry), or loads its copy
   under a private name; a guard test fails on any test that leaves a replaced `sys.modules` entry behind.
 
-### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01; built and reviewed; merged locally 2026-10-01 with the user-erasure batch, core `c6f6e2e` + copilot-mro `5c2bf7f4`, gate running)
+### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01; built and reviewed; merged 2026-10-01 with the user-erasure batch, core `c6f6e2e` + copilot-mro `5c2bf7f4`, gate green but for the known census reds, pushed)
 
 - **Built (2026-10-01):** copilot-mro `fi8` `58f05103..2a80403d` and core `fi8` `7c8c9a9..05e90a4` (core's
   `scripts/_core_workspace.py` is the same loader and crashed copilot-mro's lanes too). Both helpers load

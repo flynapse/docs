@@ -1248,7 +1248,7 @@ delete them. So one clean-up path serves the route and the orphan script (P3 pre
 ### Task 20: the owner's P3 rulings — four follow-ups (P3b, 2026-10-01; lanes M1, A+C, T, D; in parallel with P4)
 The owner ruled the P3 pause's questions on 2026-10-01 (the status block lists every ruling). Four rulings need code.
 Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full post-merge gate, a push.
-- [ ] **F1 (O1): the erasure reaches the person's rows under the tenant's deleted operators (copilot-mro).**
+- [x] **F1 (O1): the erasure reaches the person's rows under the tenant's deleted operators (copilot-mro).**
   - copilot-mro's user erasure binds the tenant's live roster (`operator_ids_for_tenant`, in `user_erasure.py` and
     `document_hub/user_erasure.py`), so row security hides every row under an operator that no longer exists, from
     both the erase and the residue (review B I-1, probe P-B1). Task 19 leaves such rows on purpose.
@@ -1266,7 +1266,14 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     probe), and the boot refusal does not stop a running process or the owner CLI. The index side therefore also
     reaches each deleted operator whose pair partition is still present (Task 19's own reader), in the erase and the
     residue. Built in F1's fix round, then a fresh scoped re-review.
-- [ ] **F2 (O2): the owner can erase a Telegram pilot who cannot send `/goodbye` (api, telegram-bot; core only if the
+  - Built (2026-10-01): copilot-mro `ue-f1` `58f05103..c1e060f1` (one review, two fix rounds, one scoped re-review:
+    merge-ready, OPEN 0), merged `c5fee4fe`, pushed with the batch (estate gate green but for the known census reds).
+    `row_tenancy.DELETED_OPERATORS_SQL` is the one definition; the orphan script imports it. Each deleted operator's
+    kept pair partition is judged on its own (`present_operator_partitions`, narrowed to the index's collection); a
+    failed presence read fails the pass with an all-zero `partial`. Bindings are compared as sets (`db_tenancy`
+    sorts). Two accepted FIs (Future Improvements): an operator deleted with no audit row, and a renamed Document Hub
+    class.
+- [x] **F2 (O2): the owner can erase a Telegram pilot who cannot send `/goodbye` (api, telegram-bot; core only if the
   entry needs it).**
   - api: `user_erasure_cli request --channel-teardown --tenant <id> --user <id>`. The tenant must pass core's
     `is_channel_tenant`; the command calls core's teardown entry `freeze.request_channel_teardown` with the platform
@@ -1290,7 +1297,12 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
       bot token, then the cancel mark), and only then deletes. If Telegram refuses, it deletes nothing and says so;
       the README says what to do then.
     - Both go into F2's fix round. The core half builds on F3's core branch (F3 renames `freeze._request`).
-- [ ] **F3 (O3): a platform legal (RTBF) upgrade of an open request writes its own audit event (core).**
+  - Built (2026-10-01): api `ue-f2-api` `f229ce1..970e476`, merged `4ec77c5`, pushed with the batch; telegram-bot
+    `ue-f2-bot` `7233180..4ceea73` (two fix rounds, one scoped re-review), merged `a3a253d`, gate 2547 passed, pushed,
+    and the live bot restarted on it. The bot's purge reuses `/goodbye`'s own renewal switch (`switch_renewal_off`).
+    Three FIs (Future Improvements): the new-subscription window, `/goodbye`'s five loose log pins, and the command's
+    whole-bot import.
+- [x] **F3 (O3): a platform legal (RTBF) upgrade of an open request writes its own audit event (core).**
   - Today the upgrade (`freeze.py`, the stronger request over an open windowed one) keeps `requested_by` and `via`, so
     the one permanent audit event at completion names the tenant admin and `api` for a legal erasure (review A M-2).
   - The upgrade writes its own audit event at the moment it happens: the platform as actor, the platform door as
@@ -1303,6 +1315,9 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     (`GET /users/{id}/operators/history`, gated own / owner / `users_view`) no longer shows the erasure's own events
     (the completion event and the upgrade event) to callers without `users_modify`, as every other erasure read
     requires. Built in F3's fix round, with the review's two small fixes and F2's core `rtbf` keyword.
+  - Built (2026-10-01): core `ue-f3` `7c8c9a9..ff55703` (one review, three fix rounds, one scoped re-review), merged
+    `abc9fd9`, pushed with the batch. `ledger.is_erasure_event` (kind `user` and a `request_id` in the change) is the
+    one test the history route uses; the completion change is `{request_id, counts, rtbf, via}`.
 - [x] **F4 (O4): no Erase on your own row (dashboard).**
   - The team page hides Erase on the signed-in admin's own row; another admin or the platform owner erases them.
   - Proofs: a unit test asserting booleans: the own row has no Erase, another row with `users_modify` does.
@@ -2046,6 +2061,37 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   names `python -m telegram_bot.purge_account` and `tg_users`' columns; the bot README names the CLI's
   `request --channel-teardown` line. *Complete fix:* Task 17 pins both (the bot module exists; the CLI's parser
   accepts the README's line).
+- **An operator deleted with no audit row is not reached (F1 concern 2).** A deleted operator is one an
+  `authorization_events` operator delete names (the census's definition). An operator removed by hand, or before the
+  route wrote its event, leaves rows no app-pool read can name, so the erasure neither erases nor counts them.
+  *Deferred:* finding them needs the owner (BYPASSRLS) census, which then records the pair's audit row and makes it a
+  deleted operator for every later erasure; dev's census read 0 rows (2026-09-30). *Complete fix:* none unless such
+  deletes recur; then the census runs before the erasure's residue.
+- **A Document Hub class renamed outside the lifecycle registry (F1 re-review FI-A).**
+  `present_operator_partitions(…, collection_name=X)` answers `[]` for any `X` outside `mt_collection_names()`. With
+  `WEAVIATE_DOCUMENT_HUB_CLASS_NAME` set to another name, the erasure binds no deleted operator for the index (the
+  pre-F1 gap, silently), and Task 19's hooks never create or remove that collection's pair partitions. *Deferred:* no
+  deployment sets the variable (none of iac, deployment, `.github`, the Dockerfiles, `.env.sample`, api or lambdas
+  names it), and the strict boot check refuses a cluster without the literal collection. *Complete fix:* either the
+  narrowed reader raises on a collection that is neither a registry member nor tenant-keyed, or the registry reads the
+  Document Hub name from settings, so every reader follows a rename together.
+- **The new-subscription window (F2 bot re-review FI-1).** A pilot's NEW subscription bought between the purge
+  command's read and its renewal switch (possible only in the grace after a failed renewal) keeps renewing with no
+  row. `/goodbye` has the same window, wider between its mark and its purge. *Deferred:* it needs a failed renewal and
+  a re-purchase within seconds, and Money operations §4's orphan query catches its next charge (probe P4f). *Complete
+  fix:* the one shared `switch_renewal_off` re-reads the handle after the switch and switches any new one before the
+  sweep, so both doors close it together.
+- **`/goodbye`'s five other log lines are pinned loosely (F2 bot fix round 2, concern 3).** Each is asserted only as
+  "a record at that level mentions the id": the teardown-failure ERROR (`test_account_deletion.py:553`), the partition
+  WARNING (`:618`), the refused-202 ERROR (`:721`), the read-failure WARNING (`:918`), the purge-failure ERROR (`:976`,
+  level only). *Deferred:* outside F2's brief, which pinned the refusal line and the shared switch's line; these are
+  read, not mutation-tested. *Complete fix:* pin each by level, template, args and `error_type`, as
+  `test_purge_account.py` pins the switch's.
+- **The bot's purge command imports the whole bot (F2 bot fix round 1, concern 2).** It imports `telegram_bot.app` to
+  reuse `configure_logging` and its token pins: about 1 s more to start (`--help` 2.8–3.1 s → 4.0–4.1 s under a load
+  of about 16). *Deferred:* a copy of the pins would be worse (two copies of the token redaction), and the cost is one
+  owner command's start. *Complete fix:* `configure_logging` and `LOG_FORMAT` move into a light module that `app` and
+  the owner commands both import.
 
 ## Lessons
 
