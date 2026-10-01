@@ -42,7 +42,7 @@
   as that user. Merged and pushed: copilot-mro `a90db4cd` (whole-tree non-db 15,146 passed), telegram-bot `95dc9f7`
   (with the README's `public`-owner check; suite 2,475 passed). Left: sheet step 8, the owner's, after a few healthy
   days.
-- **Step 6 in fix round 1 (2026-09-30):** built (utils, copilot-mro, api templates) and reviewed by area (code; sheet and rollout). The fix round resets pooled connections (a reviewer carried a temp table across callers past the gate), hashes passwords client-side, and hardens the sheet (a pre-check that sees query-user drift, a verify after the merge, pinned tips). The merge waits for the owner's sheet; no AWS deploy until App Runner gets `POSTGRES_QUERY_PASSWORD`.
+- **Step 6 rolling out (2026-09-30, night):** built, reviewed by area, two fix rounds (pooled connections reset on release; client-side password hashing; verify requires the query user's settings exactly; the gate refuses `pg_logical_emit_message`), both re-reviews clean. The owner ran the sheet's steps 1–3 (the query user exists, granted and verified on `copilot_mro_test` and `copilot_mro`). Next: the controller merges utils (0.1.43) → copilot-mro → api and refreshes the lock lines, the owner's 4b verify from the merged code, the post-merge gate, the API restart and 4c. No AWS deploy until App Runner gets `POSTGRES_QUERY_PASSWORD`.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
