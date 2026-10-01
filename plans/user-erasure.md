@@ -1257,6 +1257,12 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
   - Task 19's receipt rule (no orphan-operator key, C-18) holds again once this lands.
   - Proofs: P-B1 inverted in `tests/db/operator_teardown/` (the person's document under a deleted operator is seen
     by the residue before, and gone after); the mutant that binds the live roster only is killed.
+  - Controller ruling on the task review (2026-10-01): "a deleted operator's partitions are already removed" is false
+    when Task 19 keeps them (a failed post-pass, rows left that are not held, a failed partition removal). The
+    erasure then completed and issued its receipt while the kept partition held the person's chunks (the review's
+    probe), and the boot refusal does not stop a running process or the owner CLI. The index side therefore also
+    reaches each deleted operator whose pair partition is still present (Task 19's own reader), in the erase and the
+    residue. Built in F1's fix round, then a fresh scoped re-review.
 - [ ] **F2 (O2): the owner can erase a Telegram pilot who cannot send `/goodbye` (api, telegram-bot; core only if the
   entry needs it).**
   - api: `user_erasure_cli request --channel-teardown --tenant <id> --user <id>`. The tenant must pass core's
