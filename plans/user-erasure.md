@@ -2547,3 +2547,14 @@ and accepted, and wait in the merge queue. The reviews are `p3-review-A.md` … 
 - P4 runs in parallel with Task 20. Task 15 starts after F1 merges.
 - The 15-minute turn deadline is half of core's `IMMEDIATE_ERASURE_DELAY` (30 minutes, a constant in `ledger.py`). It
   is not an environment setting: one constant moves every bound together. The owner skipped the turn-length query.
+
+**Status at compaction checkpoint 12 (2026-10-01): P3 complete; Task 20 and P4's Task 16 in progress.**
+- P3 is merged and pushed with every phase-review fix, and the owner ruled every question of the P3 pause (the block
+  above). The live Telegram bot runs `7233180`.
+- In progress, six fresh Opus implementers, one worktree each: Task 20 F1 (copilot-mro), F2 (api and telegram-bot), F3
+  (core), F4 (dashboard); Task 16 (iac, not applied); the test-lane-speed plan's FI-8 (copilot-mro). The ledger's
+  checkpoint 12 holds the agent ids, worktrees, bases, briefs and the merge procedure.
+- Next: a task review per lane, then merges batched so that one estate gate runs at a time; Task 15 after F1 merges;
+  then the P4 phase review and the owner's pause before P5 (Tasks 17, 18).
+- The owner owes: database users step 6's 4c (rebuild the api container, two checks), and the AWS secret
+  `api/postgres/passwords` before iac `main`'s plan check can pass.

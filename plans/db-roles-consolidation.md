@@ -8,6 +8,9 @@
   `obs-merge` → `main`.
 - **Step 3 branch PUSHED** (owner: yes, 2026-09-29) as `origin/db-roles-tf` `a47c0fb`. A branch push triggers no CI.
   Merging into `main` still waits on the owner's iac `obs-merge` → `main`.
+- **Step 3 MERGED into iac `main` (owner: merge now, 2026-10-01)** as `ff1cb5c`, pushed; iac tests 325 passed,
+  `terraform fmt -check` clean. Not applied (owner: no apply for now). `main`'s plan check fails until the owner
+  creates the AWS secret `api/postgres/passwords`.
 - **Step 4: the owner's database side is DONE (2026-09-29 evening).**
   - The owner created `flynapse_inspect` (`LOGIN BYPASSRLS`, `pg_read_all_data`, `default_transaction_read_only=on`).
     Its password is `POSTGRES_INSPECT_PASSWORD` in `copilot-mro/.env`.
@@ -42,7 +45,12 @@
   as that user. Merged and pushed: copilot-mro `a90db4cd` (whole-tree non-db 15,146 passed), telegram-bot `95dc9f7`
   (with the README's `public`-owner check; suite 2,475 passed). Left: sheet step 8, the owner's, after a few healthy
   days.
-- **Step 6 rolling out (2026-09-30, night):** built, reviewed by area, two fix rounds (pooled connections reset on release; client-side password hashing; verify requires the query user's settings exactly; the gate refuses `pg_logical_emit_message`), both re-reviews clean. The owner ran the sheet's steps 1–3 (the query user exists, granted and verified on `copilot_mro_test` and `copilot_mro`). Next: the controller merges utils (0.1.43) → copilot-mro → api and refreshes the lock lines, the owner's 4b verify from the merged code, the post-merge gate, the API restart and 4c. No AWS deploy until App Runner gets `POSTGRES_QUERY_PASSWORD`.
+- **Step 6 merged and pushed (2026-10-01); the owner's 4c is left:** built, reviewed by area, two fix rounds (pooled
+  connections reset on release; client-side password hashing; verify requires the query user's settings exactly; the
+  gate refuses `pg_logical_emit_message`), both re-reviews clean. The owner ran sheet steps 1–3 and the 4b verify
+  from the merged code (both databases `rc=0`, query extra privileges 0). Merged, gated and pushed: utils `6b3e6a9`
+  (0.1.43), copilot-mro `58f05103`, api `8be2b6c`. Left: the owner's 4c (rebuild the api container, then the
+  sheet's two checks). No AWS deploy until App Runner gets `POSTGRES_QUERY_PASSWORD`.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.
@@ -90,7 +98,7 @@ risks, rollout order). This plan records the decisions and the order; the resear
   test database and the dev database.
 - [ ] 3. Terraform for App Runner: the grant login and the app password from Secrets Manager (26). Written by Claude,
   applied by the owner; sequenced after iac `obs-merge` reaches `main`. Built and reviewed on iac `db-roles-tf` (`a47c0fb`). **Owner (2026-09-30):
-  no apply for now.**
+  no apply for now.** Merged into iac `main` as `ff1cb5c` (2026-10-01); the apply waits on the owner.
 - [ ] 4. The inspection user (23): hand DDL on the dev cluster by the owner, then repoint the MCP config and the
   data-checking tests, then revoke the extra grants from `flynapse_readonly` and turn the check into a finding.
   - Measured in step 2 (test database): `flynapse_readonly` can read 97 relations beyond its 19-relation list, which
