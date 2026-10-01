@@ -2638,3 +2638,23 @@ and accepted, and wait in the merge queue. The reviews are `p3-review-A.md` … 
   then the P4 phase review and the owner's pause before P5 (Tasks 17, 18).
 - The owner owes: database users step 6's 4c (rebuild the api container, two checks), and the AWS secret
   `api/postgres/passwords` before iac `main`'s plan check can pass.
+
+**Status at compaction checkpoint 13 (2026-10-01): Task 16 and F4 done; F1, F2, F3 in fix rounds; Task 15 building.**
+- Done, merged and pushed: Task 16 (iac `main` `34e2345`, NOT applied; deploy notes in its section) and Task 20 F4
+  (dashboard `agent_sdk` `f398f62`).
+- F3 (core): reviewed (0/0/5 Minor); fix round 1 built the review's two fixes, the owner's history ruling (review
+  M-5) and F2's core `rtbf` keyword; fix round 2 adds `rtbf` to the completion's audit event (controller ruling).
+  Next: one fresh scoped re-review of both rounds.
+- F1 (copilot-mro): reviewed (0/0/2 Minor, concern 1 graded real); fix round 1 reaches a deleted operator's
+  still-present partitions (controller ruling). Next: a fresh scoped re-review.
+- F2: the api half is accepted after its fix round (it merges after F3: it calls core's new keyword); the bot half's
+  fix round (the owner's renewal ruling) is in a scoped re-review, because `/goodbye`'s renewal leg was refactored.
+  Its next round adds README §13 step 3's `--rtbf` line and a docstring.
+- Task 15 is building on F1's committed tip; it merges F1's fix round into its branch at hand-back.
+- Merge order: core (F3, then test-lane FI-8's core half), copilot-mro (F1, FI-8's half), api (F2), one estate gate,
+  push; the bot (F2) with its own gate and a restart of the live bot; then Task 15; then the P4 phase review and the
+  owner's pause before P5.
+- Owner rulings this stretch (2026-10-01): a legal pilot erasure is recorded as legal; the bot's purge command
+  cancels a running renewal itself; a person's history hides the erasure's events from readers without
+  `users_modify`.
+- The owner owes: database users step 6's 4c, and the AWS secret `api/postgres/passwords`.

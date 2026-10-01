@@ -51,6 +51,12 @@
   from the merged code (both databases `rc=0`, query extra privileges 0). Merged, gated and pushed: utils `6b3e6a9`
   (0.1.43), copilot-mro `58f05103`, api `8be2b6c`. Left: the owner's 4c (rebuild the api container, then the
   sheet's two checks). No AWS deploy until App Runner gets `POSTGRES_QUERY_PASSWORD`.
+- **Step 7 building (2026-10-01), started before the owner's 4c** (4c checks step 6 in the live container; step 7's
+  build does not depend on it, and a step-6 fix from 4c would merge into step 7's branch): B14's `delete_tenant`
+  definer with every tenant-delete caller routed through it, the grant user's `tenants` DELETE/TRUNCATE revoked,
+  decision 24's PUBLIC revokes (`lo_*`, extension functions with the app user's grant-backs, TEMPORARY), a verify
+  finding for each, and the owner's sheet; proven on a throwaway built from code. Branches `db-roles-s7` in
+  copilot-mro and core.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.

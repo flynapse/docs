@@ -333,7 +333,20 @@ None of these can turn a run red, and none changes production behaviour. Evidenc
   `_ClockHeldUntilInFlight` to it, keeping the resume-from-held behaviour. A pure refactor.
 - **Bundling.** Follow-ups 1 and 3 and the M1 comment go in one commit; M3 and follow-up 2 share one remedy.
 
-### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01, building)
+### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01; built and reviewed, merges with the user-erasure batch)
+
+- **Built (2026-10-01):** copilot-mro `fi8` `58f05103..2a80403d` and core `fi8` `7c8c9a9..05e90a4` (core's
+  `scripts/_core_workspace.py` is the same loader and crashed copilot-mro's lanes too). Both helpers load
+  `tests/_root.py` as `_root` (reuse a `_root` loaded from the same file, register a fresh one, leave a foreign one in
+  place). `tests/_root.py` is untouched. Red-before: a `-n 2` probe exited 3; after, the once-crashing `-n 4` lane with
+  `SIBLING_CHECKOUTS` set and no `-W` filter passes (15,416). Task review: approve, 0/0/3 Minor. They merge together:
+  the copilot-mro half with an unfixed core still exits 3. It also closes the user-erasure plan's T3-C4.
+- **After the merge:** the `-W ignore::UserWarning:_scripts_workspace_root_impl` filter matches nothing and can leave
+  the lane recipes (outside a `tests/` root it no longer rescues a run; `-W ignore::UserWarning:_root` does).
+- **FIs from the review:** utils carries a latent instance (`ForeignPrivatePatchWarning`,
+  `tests/unit/infra/test_no_private_library_globals_assigned.py:118`; cannot fire today). api's `ad_materialize`
+  worker now registers copilot-mro's `tests/_root.py` as `sys.modules["_root"]` in production (nothing imports it):
+  one docstring sentence, or drop the registration there.
 
 - **What happens.** With `SIBLING_CHECKOUTS` set, `tests/_root.py` announces the declaration as a
   `SiblingDeclarationWarning`. `scripts/_workspace.py` loads `tests/_root.py` by path under the module name
