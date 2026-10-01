@@ -1889,7 +1889,7 @@ Recorded at the P3 phase review (2026-09-30); each was triaged as a Future Impro
     erasure of a channel user.
   - *Why deferred:* unreachable while the last-active-owner refusal holds. The channel user is the personal tenant's
     sole Tenant Owner, so every non-teardown request for one is refused. It becomes live if a plain request is ever
-    allowed for a channel user. Owner question O6 is open.
+    allowed for a channel user. Owner, 2026-10-01 (O6): recorded for later.
   - *Complete fix (an owner choice):* a platform erasure of a channel user also tears the channel down, or the door
     tears down an account-less channel tenant directly (no person, so no erasure).
 - **The channel door answers a platform-opened erasure with the tenant door's 409 (Task 13 lane C review concern 4; P3
@@ -1899,7 +1899,7 @@ Recorded at the P3 phase review (2026-09-30); each was triaged as a Future Impro
     surfaces as a generic failure. The refusal itself is right: a platform request never tears the channel down, and
     the person is frozen by it anyway.
   - *Why deferred:* unreachable for the same reason as the account-less tenant; only the bot's wording is at stake.
-    Owner question O6 is open.
+    Owner, 2026-10-01 (O6): recorded for later.
   - *Complete fix:* the door answers a platform-opened request with its own fixed sentence, pinned across both repos
     like the deletion-in-progress 409, and the bot words it as a deletion the platform started.
 - **A frozen person who is still signed in gets no account-level answer from the dashboard (P3 phase review D, FI 1).**
@@ -2539,7 +2539,7 @@ and accepted, and wait in the merge queue. The reviews are `p3-review-A.md` … 
 - O3: (a), a platform legal upgrade writes its own audit event (Task 20 F3).
 - O4: hide Erase on your own row (Task 20 F4).
 - O5: yes, a Phoenix leftover blocks completion (Task 15).
-- O6: still open; the owner asked for a fuller explanation.
+- O6: record both for later (they stay unreachable while a pilot can only be erased through the teardown, which F2 keeps). The delay stays a code constant (owner, 2026-10-01).
 - O7: record all three live legs for the live testing (Task 18).
 - O8: accepted as a stated limit: a `/goodbye` pilot's receipt is the owner's, sent on request.
 - O9: keep the agent-drafted wording.
