@@ -781,7 +781,7 @@ Owned:
     handler purges, then sends the new farewell; the 409 gets its own answer. Mutants: parse the 202 as the old
     envelope; answer the 409 as the generic provisioning refusal.
 
-#### Notes: Task 13 — `/goodbye` on the job path: lane T DONE (telegram-bot `ue-t13-bot` `95dc9f7..6085886`, merged `8865fb3`, pushed); lane C ACCEPTED, NOT YET MERGED (core `ue-t13-core` `2ec64b5..52fb9da`; merge SHA added at its merge)
+#### Notes: Task 13 — `/goodbye` on the job path: lane T DONE (telegram-bot `ue-t13-bot` `95dc9f7..6085886`, merged `8865fb3`, pushed); lane C DONE (core `ue-t13-core` `2ec64b5..52fb9da`, merged `522773c`, pushed)
 - Lane T, built: the client reads the shape by status, a 202 request body or the 200 envelope, and still refuses a
   foreign envelope; a 404 stays "done". The deletion-in-progress 409 is typed (`ChannelUserDeletionInProgress`) and
   matched on the whole sentence (a prefix match would add false positives).
@@ -1168,15 +1168,15 @@ delete them. So one clean-up path serves the route and the orphan script (P3 pre
     erasure binds the tenant's live roster, so it can neither erase nor count its person's rows under a deleted
     operator, and it completes with residue 0. Owner question O1 is open.
 
-#### Notes: Task 19 — deleting an operator deletes its rows: core, copilot-mro, dashboard DONE (all pushed); api ACCEPTED, NOT YET MERGED
+#### Notes: Task 19 — deleting an operator deletes its rows: core, copilot-mro, dashboard, api DONE (all pushed)
 - Ranges and merges:
   - core `ue-t19-core` `bcdccb3..738c9f3`, merged `33293ed` (the first P3 merge); one review, 2 fix rounds, a
     re-review;
   - copilot-mro `ue-t19-mro` `973200cb..1a307d84`, merged `5f98c9d3`; reviewed by area (the seam with Document Hub,
     the orphan script), one fix round, a re-review;
   - dashboard: with Task 14 (`3f5fa51`);
-  - api `ue-t19-api` `bd06a46..458bbfe`, built on `ue-t12`; one review, one fix round accepted on the diff; merge SHA
-    added at its merge.
+  - api `ue-t19-api` `bd06a46..458bbfe`, built on `ue-t12`; one review, one fix round accepted on the diff; merged
+    `f229ce1` (gated together with Task 13 lane C), pushed.
 - Core, built: the row-seam registry, `operator_copies.py` (both entries), core's step on the delete's cursor with the
   counts in the event, the route order, the response fields (`data_removed`, `partitions_removed`,
   `partition_warning`, `cleanup_warning`) and a fixed 502 for a pre-pass failure. No DDL.
