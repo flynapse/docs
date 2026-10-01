@@ -333,7 +333,7 @@ None of these can turn a run red, and none changes production behaviour. Evidenc
   `_ClockHeldUntilInFlight` to it, keeping the resume-from-held behaviour. A pure refactor.
 - **Bundling.** Follow-ups 1 and 3 and the M1 comment go in one commit; M3 and follow-up 2 share one remedy.
 
-### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30)
+### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01, building)
 
 - **What happens.** With `SIBLING_CHECKOUTS` set, `tests/_root.py` announces the declaration as a
   `SiblingDeclarationWarning`. `scripts/_workspace.py` loads `tests/_root.py` by path under the module name

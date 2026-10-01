@@ -870,10 +870,13 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
   Verify the content-copy sessions' spans carry `user.id`; if not, the sweep needs the chat ids. Its residue joins the
   seam's composed residue under a disjoint key. The receipt's Phoenix 30 d bound is the backstop.
 - [ ] **Carry-ins from P3 (phase review E, 2026-09-30).**
-  - Whether a Phoenix leftover may block completion is open (owner question O5). As written it does: the copilot-mro
-    seam raises an incomplete and never purges while any residue reads non-zero, and core retries six times, then
-    daily. So a Phoenix outage, or a span ingested after the sweep, would hold every erasure `erasing`, the person
-    frozen and the Cognito account undeleted (step 4 comes after the seams).
+  - A Phoenix leftover blocks completion (owner, 2026-10-01, O5: yes). As written: the copilot-mro seam raises an
+    incomplete and never purges while any residue reads non-zero, and core retries six times, then daily. So a Phoenix
+    outage, or a span ingested after the sweep, holds the erasure `erasing`, the person frozen and the Cognito account
+    undeleted (step 4 comes after the seams) until the sweep reads zero.
+  - Orphans per source (Future Improvement "Core keeps orphans per source, but copilot-mro reports one integer"):
+    this task builds its complete fix, since it edits the seam (controller ruling, 2026-10-01).
+  - Starts after Task 20's F1 merges: both edit copilot-mro's user-erasure seam.
   - `USER_ERASURE_MAX_RUNTIME_SECONDS` (7200) was sized against one attempt at up to 5 s a Phoenix request. Re-check it
     against the per-chat retries and the span sweep this task adds.
 
@@ -931,8 +934,12 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
   (T7 FI-3).
 - [ ] **Carry-ins from P3 (phase review E, 2026-09-30).** An immediate erasure runs 30 minutes after the freeze: on dev,
   where the scheduler runs `embedded`, the freeze's own one-shot serves it; elsewhere, the CLI's `run` once
-  `erase_after` has passed. Whether this task gains a dashboard leg, a channel-door leg and an operator-delete leg is
-  open (owner question O7).
+  `erase_after` has passed.
+- [ ] **Three more live legs (owner, 2026-10-01, O7: record all three for the live testing).**
+  - The dashboard door: an admin requests, cancels, requests again and completes an erasure, then reads the receipt on
+    the page.
+  - The channel door: a test pilot sends `/goodbye`; the bot, core and storage are checked end to end.
+  - The operator delete: delete an operator; its rows, Document Hub objects and partitions are gone.
 
 ### Task 19: core + copilot-mro — deleting an operator deletes its own rows (P3; lanes C-b, M1, A, D; owner question 4)
 Ruled by the owner on 2026-09-29: owner question 4 (the root fix), then Task 19 Q1–Q6, all yes.
@@ -1218,6 +1225,41 @@ delete them. So one clean-up path serves the route and the orphan script (P3 pre
     core batch);
   - the operators list is not re-read after a refused delete (B M-3, fixed in the dashboard batch);
   - B M-2 and FI-B1 … FI-B3 are Future Improvements.
+
+### Task 20: the owner's P3 rulings — four follow-ups (P3b, 2026-10-01; lanes M1, A+C, T, D; in parallel with P4)
+The owner ruled the P3 pause's questions on 2026-10-01 (the status block lists every ruling). Four rulings need code.
+Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full post-merge gate, a push.
+- [ ] **F1 (O1): the erasure reaches the person's rows under the tenant's deleted operators (copilot-mro).**
+  - copilot-mro's user erasure binds the tenant's live roster (`operator_ids_for_tenant`, in `user_erasure.py` and
+    `document_hub/user_erasure.py`), so row security hides every row under an operator that no longer exists, from
+    both the erase and the residue (review B I-1, probe P-B1). Task 19 leaves such rows on purpose.
+  - The Postgres binding of the erase AND the residue adds the tenant's deleted operators, read with the orphan
+    script's own predicate (`_DELETED_OPERATORS_SQL`, one definition, imported, never copied). Weaviate reads keep
+    the live roster: a deleted operator's partitions are already removed.
+  - Task 19's receipt rule (no orphan-operator key, C-18) holds again once this lands.
+  - Proofs: P-B1 inverted in `tests/db/operator_teardown/` (the person's document under a deleted operator is seen
+    by the residue before, and gone after); the mutant that binds the live roster only is killed.
+- [ ] **F2 (O2): the owner can erase a Telegram pilot who cannot send `/goodbye` (api, telegram-bot; core only if the
+  entry needs it).**
+  - api: `user_erasure_cli request --channel-teardown --tenant <id> --user <id>`. The tenant must pass core's
+    `is_channel_tenant`; the command calls core's teardown entry `freeze.request_channel_teardown` with the platform
+    door as `via`. Immediate and uncancellable, like `/goodbye`. Never a plain request: a plain one would make lane
+    C's concerns 3 and 4 real.
+  - telegram-bot: an owner command that runs `/goodbye`'s own purge of the pilot's `tg_*` rows for one Telegram id,
+    idempotent, documented in the README beside `/goodbye`. The api CLI's help names it, so the owner runs both.
+  - Proofs: the CLI accepts a channel tenant and calls the teardown entry with the platform `via`; refuses a
+    non-channel tenant and writes nothing; the bot command purges exactly what `/goodbye` purges and a second run is
+    a no-op; a mutant per refusal is killed.
+- [ ] **F3 (O3): a platform legal (RTBF) upgrade of an open request writes its own audit event (core).**
+  - Today the upgrade (`freeze.py`, the stronger request over an open windowed one) keeps `requested_by` and `via`, so
+    the one permanent audit event at completion names the tenant admin and `api` for a legal erasure (review A M-2).
+  - The upgrade writes its own audit event at the moment it happens: the platform as actor, the platform door as
+    `via`, `rtbf`, the request id; ids only. The admin's original request stays as recorded.
+  - Proofs: review A's probe PR1 inverted (the upgrade's event exists, names the platform, carries no personal
+    data); the mutant that drops the event is killed.
+- [ ] **F4 (O4): no Erase on your own row (dashboard).**
+  - The team page hides Erase on the signed-in admin's own row; another admin or the platform owner erases them.
+  - Proofs: a unit test asserting booleans: the own row has no Erase, another row with `users_modify` does.
 
 ## Review & merge protocol
 
@@ -2489,3 +2531,19 @@ and accepted, and wait in the merge queue. The reviews are `p3-review-A.md` … 
 
 - **Next:** merge Task 19's api registration, then Task 13's core side (each gated, then pushed); land the three fix
   batches; then the owner's review pause with O1–O9; then P4 (Tasks 15, 16).
+
+**Owner rulings on the P3 pause (2026-10-01).** P3 is merged and pushed with every review fix (core `7c8c9a9`, api
+`f229ce1`, copilot-mro `58f05103`, dashboard `6e11bef`, telegram-bot `7233180`).
+- O1: (a), the erasure reaches the person's rows under the tenant's deleted operators (Task 20 F1).
+- O2: (a), an owner-CLI channel-teardown request, plus a bot owner command for the pilot's own rows (Task 20 F2).
+- O3: (a), a platform legal upgrade writes its own audit event (Task 20 F3).
+- O4: hide Erase on your own row (Task 20 F4).
+- O5: yes, a Phoenix leftover blocks completion (Task 15).
+- O6: still open; the owner asked for a fuller explanation.
+- O7: record all three live legs for the live testing (Task 18).
+- O8: accepted as a stated limit: a `/goodbye` pilot's receipt is the owner's, sent on request.
+- O9: keep the agent-drafted wording.
+- The bot keeps logging pilots by Telegram id; log retention bounds it (no change).
+- P4 runs in parallel with Task 20. Task 15 starts after F1 merges.
+- The 15-minute turn deadline is half of core's `IMMEDIATE_ERASURE_DELAY` (30 minutes, a constant in `ledger.py`). It
+  is not an environment setting: one constant moves every bound together. The owner skipped the turn-length query.
