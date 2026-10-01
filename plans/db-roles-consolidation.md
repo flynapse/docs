@@ -89,7 +89,8 @@ risks, rollout order). This plan records the decisions and the order; the resear
 - [x] 2. Measure: the privilege check reports extra read grants on `flynapse_readonly` (report-only first), run on the
   test database and the dev database.
 - [ ] 3. Terraform for App Runner: the grant login and the app password from Secrets Manager (26). Written by Claude,
-  applied by the owner; sequenced after iac `obs-merge` reaches `main`.
+  applied by the owner; sequenced after iac `obs-merge` reaches `main`. Built and reviewed on iac `db-roles-tf` (`a47c0fb`). **Owner (2026-09-30):
+  no apply for now.**
 - [ ] 4. The inspection user (23): hand DDL on the dev cluster by the owner, then repoint the MCP config and the
   data-checking tests, then revoke the extra grants from `flynapse_readonly` and turn the check into a finding.
   - Measured in step 2 (test database): `flynapse_readonly` can read 97 relations beyond its 19-relation list, which
