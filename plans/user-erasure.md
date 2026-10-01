@@ -345,8 +345,8 @@ Owned (widened at the P3 pre-flight, C-8; core has no CLI, C-1):
      - `DELETE FROM users` (cascade; `UserService.delete_user` opens its own connection, so it becomes this cursor's
        helper — COMP M-3). After a teardown it may find 0 rows: `users` cascades with the tenant, and the roster
        reads empty (P3 plan review MI-11);
-     - the `authorization_events` row (delete / `user`, subject = surrogate, change = request id + counts, the
-       request's via);
+     - the `authorization_events` row (delete / `user`, subject = surrogate, change = request id + counts + `rtbf`
+       (Task 20 F3 fix round 2, read from the row this transaction locks) + the request's via);
      - ledger completed.
 - [x] P2 carry-ins (ledger rulings; each is owed here):
   - **The drain, after the freeze and before the first seam (FI-S1, C-6):** wait — bounded; a timeout fails the step,
