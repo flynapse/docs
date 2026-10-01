@@ -287,7 +287,7 @@ integration lane, not the unit lane.
       prove each plant with the empty-bytes sabotage run. pytest also truncates a long list in its own summary line;
       a plant that matches more than the first finding needs the guard's assertion to carry its list as the message.
 
-### FI-2: Shrink the lang_agent activation matrix
+### FI-2: Shrink the lang_agent activation matrix (owner go 2026-10-01, building)
 
 - **What is slow.** `test_sql_spine_activation_mirrors_the_claude_registration_predicates` builds a full runtime for
   every cell of the policy × department × grant matrix, taking 201 s under load.
@@ -304,7 +304,7 @@ integration lane, not the unit lane.
   reviews and post-merge runs still include them.
 - **The catch.** A marker that deselects guards is easy to misuse. It only pays off if FI-1 leaves the scans still slow.
 
-### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28)
+### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28; owner go 2026-10-01, building)
 
 None of these can turn a run red, and none changes production behaviour. Evidence and mutants are in
 `.superpowers/sdd/lang-agent-deadline-flake/review.md`.
