@@ -881,7 +881,7 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
   - `USER_ERASURE_MAX_RUNTIME_SECONDS` (7200) was sized against one attempt at up to 5 s a Phoenix request. Re-check it
     against the per-chat retries and the span sweep this task adds.
 
-#### Notes: Task 15 — the Phoenix user sweep: DONE (copilot-mro `ue-t15` `4894d0a1..1e4c2c79`, merged `a0d71393` with test-lane FI-4 after it; one review)
+#### Notes: Task 15 — the Phoenix user sweep: DONE (copilot-mro `ue-t15` `4894d0a1..1e4c2c79`, merged `a0d71393` with test-lane FI-4 after it, gate green but for the census reds, pushed `96ab4f6d`; one review)
 - Built by two agents: the first built and proved it (`ee7cabbe..b910f501`) and retired past the context cap at the
   WSL crash; a continuation merged F1's fix round 1, fixed one test and one comment, and ran the hand-back.
 - What landed:

@@ -315,7 +315,7 @@ integration lane, not the unit lane.
   reviews and post-merge runs still include them.
 - **The catch.** A marker that deselects guards is easy to misuse. It only pays off if FI-1 leaves the scans still slow.
 
-### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28; owner go 2026-10-01; built and reviewed 2026-10-01; fix round accepted, `fi4` `4325eeb9`; merges with user erasure Task 15)
+### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28; owner go 2026-10-01; built and reviewed 2026-10-01; fix round accepted, `fi4` `4325eeb9`; merged `96ab4f6d` after user erasure Task 15, gate green, pushed)
 
 - **Built and reviewed (2026-10-01).** Branch `fi4` `ba5074f2`: test-only, five files under `tests/unit/lang_agent/`,
   with every item below. The task review approved it with 0 Critical and 0 Important findings, and three Minors:
