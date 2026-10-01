@@ -1283,6 +1283,12 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     `via`, `rtbf`, the request id; ids only. The admin's original request stays as recorded.
   - Proofs: review A's probe PR1 inverted (the upgrade's event exists, names the platform, carries no personal
     data); the mutant that drops the event is killed.
+  - Controller ruling (2026-10-01): every platform upgrade writes the event, not only a legal one (a non-legal
+    `--immediate` over a windowed request has the same gap); its `change` carries `rtbf` true or false.
+  - Owner ruling on the task review (2026-10-01, review M-5): a person's history route
+    (`GET /users/{id}/operators/history`, gated own / owner / `users_view`) no longer shows the erasure's own events
+    (the completion event and the upgrade event) to callers without `users_modify`, as every other erasure read
+    requires. Built in F3's fix round, with the review's two small fixes and F2's core `rtbf` keyword.
 - [x] **F4 (O4): no Erase on your own row (dashboard).**
   - The team page hides Erase on the signed-in admin's own row; another admin or the platform owner erases them.
   - Proofs: a unit test asserting booleans: the own row has no Erase, another row with `users_modify` does.
