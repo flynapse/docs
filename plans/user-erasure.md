@@ -912,7 +912,7 @@ Owned: new `api/tests/integration/user_erasure/` (census + fixtures).
   | The dashboard's receipt contract | core `core/resources/user_erasure/ledger.py` (`RECEIPT_KEYS`) and `erasure_endpoints.py` (the window, the three 503 sentences) | dashboard `contracts/user-erasure-receipt.json` | the dashboard's own contract guard, run with `USER_ERASURE_CONTRACT_REQUIRE_BACKEND=1`, so a missing core checkout fails instead of skipping |
   | The operator-delete response | core `core/resources/identity/operator_endpoints.py` (the 200 body) | dashboard `lib/api/settings-api.ts` (`OperatorDeleteResult`) | the field names, and which may be null (`partition_warning`, `cleanup_warning`) |
   | The stranded-request line and the command it names | core `core/resources/user_erasure/service.py` (`STRANDED_AFTER_TEARDOWN`) | api `flynapse_api/user_erasure_cli.py` (its help's log lines) | the help quotes the line's fixed text, read from core's constant; the command the line names parses under the CLI's own arguments |
-  | The finishers core's logs name | core `channel_provisioning/services/channel_provisioning_service.py` (`_PARTITIONS_LEFT`), `tenants/tenant_endpoints.py` and `identity/operator_endpoints.py` (their warnings) | copilot-mro `scripts/delete_unentitled_partition.py`, `scripts/delete_orphaned_operator_rows.py` | every script path named exists, and every flag named (`--purged-tenant`) is one its parser accepts |
+  | The finishers core's logs name | core `channel_provisioning/services/channel_provisioning_service.py` (`_STORAGE_LEFT`), `tenants/tenant_endpoints.py` and `identity/operator_endpoints.py` (their warnings) | copilot-mro `scripts/delete_unentitled_partition.py`, `scripts/delete_orphaned_operator_rows.py`, and the removals `_STORAGE_LEFT` names (`operator_partitions.remove_operator_partitions`, `tenant_teardown.remove_tenant_storage`) | every script path named exists, every flag named (`--purged-tenant`) is one its parser accepts, and every function named is importable with the arguments the line gives it |
   | The run reason `owner_erasure_pending` | api `flynapse_api/automations/identity.py` (`OWNER_ERASURE_PENDING`) and `executor.py` (the reasons a run records) | dashboard `components/features/automations/runOutcomeCopy.ts` (`RUN_REASON_COPY`) | every reason the executor can record has a row in the copy |
   | Task 11b's bounds and core's delay | core `core/resources/user_erasure/ledger.py` (`IMMEDIATE_ERASURE_DELAY`) | copilot-mro `copilot_mro/app/services/erasure_delay_bounds.py` and its pin, `tests/unit/user_erasure/test_erasure_delay_bounds.py` | the delay the bounds were judged against (30 minutes) equals core's, so any change to it goes red for a re-judgement (today's pin holds for every delay); absolute floors hold: the turn deadline at least a stated minimum, and the margin at least the sum of the stream block save's wait, the statement ceiling, the freeze's commit gap (about 75 s), the S3 client's timeouts and a clock-skew allowance. The bounds module's docstring says what the pin judges |
 
@@ -1895,6 +1895,33 @@ Recorded at the P3 phase review (2026-09-30); each was triaged as a Future Impro
   - *Complete fix:* a module-scoped autouse check in each of the three registry-restoring files, comparing every
     registry global by identity at module start and end. A failure in a fixture's teardown reports as an error, which
     survives xdist; a session-end conftest sentinel would not, because its exit status is lost under `-n`.
+
+Recorded at the P3 review fixes' core batch (2026-09-30, `ue-p3fix-core`, concerns 1–4):
+- **Step 6's personal-tenant re-check is the tenant type, not the door's full check (core fix concern 1).**
+  - *What is missing:* step 6 refuses a tenant whose `tenant_type` is not `individual` (`NOT_A_CHANNEL_TENANT`), but
+    the door's `find_channel_tenant` also derives the tenant from the channel ids. A platform-created `individual`
+    tenant that is not a channel tenant would still pass.
+  - *Why deferred:* only the channel door writes a `CHANNEL_TEARDOWN` request, after its own full check; step 6 does
+    not carry the channel ids, so the type is the strongest predicate it can read today.
+  - *Complete fix:* the teardown request records the channel identity it was opened for (ids only), and step 6
+    re-runs the door's own predicate against it.
+- **A refused step 6 leaves an erased person in a `failed` request (core fix concern 2).**
+  - *What is missing:* the re-check runs at step 6, after steps 1–5 have erased the person (Cognito included). A
+    refused request is `failed` with the tenant standing; finishing it needs the owner to correct `requested_by`
+    first, and no runbook line says so.
+  - *Why deferred:* reachable only through a `CHANNEL_TEARDOWN` request written some other way than the door.
+  - *Complete fix:* run the re-check before step 1 as well (refuse before anything is erased), and give the owner CLI
+    the correction as a named, audited action.
+- **`DELETE /tenants`'s partition-failure line has the channel teardown's old gap (core fix concern 3).**
+  - *What is missing:* `tenant_endpoints.py` ~523 names the bare script, not the store sweep (credentials, Document
+    Hub objects, partitions), and carries no operator ids.
+  - *Why deferred:* it predates P3 and sits outside the review's finding.
+  - *Complete fix:* share `_STORAGE_LEFT`'s wording and its operator-id fields with that route; its Task 17 pin row
+    then covers both.
+- **A dashboard test carries the old held-rows sentence as sample text (core fix concern 4).**
+  - *What is missing:* `operator-write-mutations.test.tsx` ~847 still quotes "with its partitions"; it pins nothing.
+  - *Why deferred:* cosmetic.
+  - *Complete fix:* update the sample to core's current `_CLEANUP_HELD_WARNING` with the next dashboard change there.
 
 ## Lessons
 
