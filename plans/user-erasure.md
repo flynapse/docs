@@ -2660,3 +2660,14 @@ and accepted, and wait in the merge queue. The reviews are `p3-review-A.md` … 
   cancels a running renewal itself; a person's history hides the erasure's events from readers without
   `users_modify`.
 - The owner owes: database users step 6's 4c, and the AWS secret `api/postgres/passwords`.
+
+**Status at compaction checkpoint 14 (2026-10-01): every Task 20 lane through its fix rounds; final re-reviews running.**
+- F3: fix round 2 done (the completion's audit event carries `rtbf`, read from the row the completion locks). One
+  scoped re-review of both rounds is running.
+- F1: fix round 1 done (the kept-partition gap is closed: the review's probe now fails, the inverted test passes). A
+  scoped re-review is running.
+- F2 bot: the re-review cleared the merge (`/goodbye` unchanged on every path); a last small round (README step 3's
+  `--rtbf`, two docstrings, a test of Money operations §4's backstop query, one log-line pin) is running. Then the bot
+  merges, its gate runs, and the live bot restarts. F2 api: accepted, merges after F3.
+- Still building: Task 15, database users step 7, test-lane-speed FI-2 and FI-4. FI-8 waits for the batch.
+- The merge order and the owner's items are unchanged from checkpoint 13.
