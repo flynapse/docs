@@ -57,6 +57,22 @@
   decision 24's PUBLIC revokes (`lo_*`, extension functions with the app user's grant-backs, TEMPORARY), a verify
   finding for each, and the owner's sheet; proven on a throwaway built from code. Branches `db-roles-s7` in
   copilot-mro and core.
+- **Step 7 built and reviewed (2026-10-01).**
+  - **The build** (copilot-mro `c56a9230`, core `bed5952`): the sheet proven forward, rolled back and forward again,
+    with both order hazards shown; 15 of 15 mutants killed; lanes green. The first implementer retired past the context
+    cap at the WSL crash, and a fresh agent finished it.
+  - **Review A (the code), 0 Critical, 2 Important:**
+    - `--verify-only` misses a membership that is not inherited (`INHERIT FALSE`), through which the app user could
+      take on the grant role and delete a tenant;
+    - the tenant-lifecycle E2E asserts the grant role still deletes, so it fails after step 3.
+  - **Review B (the sheet), 0 Critical, 3 Important:**
+    - step 2's first check cannot run on this box as written;
+    - the sheet never stops for an RDS probe;
+    - on RDS, step 3 cannot succeed: the master user is not a superuser, and the `lo_*` and extension functions are
+      owned by `rdsadmin`. Because the step is all-or-nothing, B14's `tenants` revoke would never land there either.
+  - **Next:** the owner rules on the app user's TEMPORARY (every database, or `copilot_mro_test` only) and on RDS
+    handling. Then one fix round, a scoped re-review, and the sheet to the owner. Before step 7 merges, merge the
+    moved mainlines into its branches.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.

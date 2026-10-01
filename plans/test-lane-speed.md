@@ -287,7 +287,18 @@ integration lane, not the unit lane.
       prove each plant with the empty-bytes sabotage run. pytest also truncates a long list in its own summary line;
       a plant that matches more than the first finding needs the guard's assertion to carry its list as the message.
 
-### FI-2: Shrink the lang_agent activation matrix (owner go 2026-10-01, building)
+### FI-2: Shrink the lang_agent activation matrix (owner go 2026-10-01; CLOSED 2026-10-01, owner: dropped, premise stale)
+
+- **Closed, not merged (owner, 2026-10-01).**
+  - The 201 s below predates round 1: round 1 and the production schema-check memo had already cut the test to 14–22 s
+    alone.
+  - The build (a proven 96-cell cover of the 150-cell matrix, branch `fi2` `fe7a2d20`, report
+    `.superpowers/sdd/test-lane-speed/fi2-report.md`) saved only 3–5 s. It also gave up three-way coverage: one designed
+    mutant survived.
+  - The lane's floor is a 141 s test elsewhere, so the lane would not have got faster. The full 150-cell matrix stays,
+    and the branch is deleted.
+  - The fix that would keep every cell and be cheaper is in production (cache the table registry and the skill
+    packages once per process). It reopens round 1's ruling against that cache, and stays the owner's call.
 
 - **What is slow.** `test_sql_spine_activation_mirrors_the_claude_registration_predicates` builds a full runtime for
   every cell of the policy × department × grant matrix, taking 201 s under load.
@@ -304,7 +315,16 @@ integration lane, not the unit lane.
   reviews and post-merge runs still include them.
 - **The catch.** A marker that deselects guards is easy to misuse. It only pays off if FI-1 leaves the scans still slow.
 
-### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28; owner go 2026-10-01, building)
+### FI-4: The lang_agent deadline tests' remaining gaps (flake-fix review, 2026-09-28; owner go 2026-10-01; built and reviewed 2026-10-01)
+
+- **Built and reviewed (2026-10-01).** Branch `fi4` `ba5074f2`: test-only, five files under `tests/unit/lang_agent/`,
+  with every item below. The task review approved it with 0 Critical and 0 Important findings, and three Minors:
+  - M4 proves only "does not fire at once";
+  - in two rows the clock's release never takes effect, so they end through a path production cannot take;
+  - the SAD row's time bound includes setup.
+
+  A small fix round for the three is running. FI-4 then merges with user erasure Task 15's copilot-mro merge and
+  shares its gate.
 
 None of these can turn a run red, and none changes production behaviour. Evidence and mutants are in
 `.superpowers/sdd/lang-agent-deadline-flake/review.md`.
@@ -343,7 +363,7 @@ None of these can turn a run red, and none changes production behaviour. Evidenc
 - **Complete fix.** That test restores `sys.modules` (a fixture that saves and puts back the entry), or loads its copy
   under a private name; a guard test fails on any test that leaves a replaced `sys.modules` entry behind.
 
-### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01; built and reviewed, merges with the user-erasure batch)
+### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01; built and reviewed; merged locally 2026-10-01 with the user-erasure batch, core `c6f6e2e` + copilot-mro `5c2bf7f4`, gate running)
 
 - **Built (2026-10-01):** copilot-mro `fi8` `58f05103..2a80403d` and core `fi8` `7c8c9a9..05e90a4` (core's
   `scripts/_core_workspace.py` is the same loader and crashed copilot-mro's lanes too). Both helpers load
@@ -370,3 +390,11 @@ None of these can turn a run red, and none changes production behaviour. Evidenc
   registers the loaded module in `sys.modules` under the tests' own module name, or the warning class moves to a
   module both sides import by name. Add a test that runs a tiny `-n 2` session with a declaration set and expects a
   clean exit.
+
+## Lessons
+
+- **Re-measure an FI's premise on the current mainline before building it (FI-2, 2026-10-01).** FI-2 was briefed on a
+  201 s measurement taken before round 1. At the build's base the test already took 14–22 s, so the build bought 3–5 s
+  at the cost of coverage, and the owner dropped it. Rule: an FI justified by a measured cost gets that cost measured
+  again on the current mainline (one run, through `pytest-slot.sh`) before the brief goes out. If it no longer clears
+  the bar, take it back to the owner instead of building.

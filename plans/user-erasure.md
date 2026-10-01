@@ -2671,3 +2671,28 @@ and accepted, and wait in the merge queue. The reviews are `p3-review-A.md` … 
   merges, its gate runs, and the live bot restarts. F2 api: accepted, merges after F3.
 - Still building: Task 15, database users step 7, test-lane-speed FI-2 and FI-4. FI-8 waits for the batch.
 - The merge order and the owner's items are unchanged from checkpoint 13.
+
+**Status at compaction checkpoint 15 (2026-10-01): the WSL crash recovered; F2's bot half live; the Task 20 batch merged
+locally, its gate running; Task 15 built.**
+- **The crash, about 07:06.** Postgres came back on a fresh cluster and Weaviate on an empty schema, the known restart
+  traps. On the owner's word both containers were restarted, and the real data is back. The live bot was restarted.
+  A test world left by a killed run was swept from `copilot_mro_test`, on the owner's word. The owner set a cap of 4
+  agents at a time.
+- **F2's bot half:** fix round 2 (README step 3's `--rtbf`, two docstrings, the §4 backstop query tested, `/goodbye`'s
+  refusal warning pinned) was accepted. Merged as telegram-bot `a3a253d`, gate 2547 passed, pushed, and the live bot
+  restarted on it.
+- **F3:** the re-review approved it. Fix round 3 pinned the "kind is `user`" half of `is_erasure_event` with one row.
+- **F1:** the re-review found it merge-ready; the kept partition is now reached. Fix round 2 pinned two properties the
+  code already had: each deleted operator's partition is judged on its own, and a failed presence read fails the
+  pass.
+- **The batch, merged locally:**
+  - core `c6f6e2e` (F3, then test-lane FI-8);
+  - copilot-mro `5c2bf7f4` (F1, then FI-8);
+  - api `4ec77c5` (F2's api half).
+
+  The estate gate is running. On green: push, remove the worktrees, and tick F1, F2 and F3 here with their FIs.
+- **Task 15:** built, with F1 merged in (`ue-t15` `1e4c2c79`). Its first implementer retired past the context cap at
+  the crash, and a fresh agent finished the hand-back. Next: the task review, after the gate. One owner item comes from
+  it: on a host that names no Phoenix (`PHOENIX_ENDPOINT` unset, as on dev today), the erasure sweeps no Phoenix,
+  warns once, and completes with one orphan recorded per chat. Task 18's live check needs Phoenix named on the api host.
+- **Then:** the P4 phase review (Tasks 15, 16 and 20), the owner's pause, and P5.
