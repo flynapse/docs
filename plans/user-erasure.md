@@ -1995,3 +1995,26 @@ In flight, all branched after the push:
   waits for Task 11b's refusal marker is ruled at its merge.
 - **Task 11b (lane M1) and Task 14 with Task 19's dashboard copy (lane D): building.**
 - Next: wave 4 — Task 13 (core + telegram-bot), Task 19's api registration.
+
+**Status at compaction checkpoint 11 (2026-09-30, night): P3 fully built; the merge queue is running.**
+- **Pushed:** Task 19's core half, Task 11, Task 19's copilot-mro half (copilot-mro `5f98c9d3`), Task 11b (`d3301c3a`;
+  interactive turns and uploads bounded under the 30-minute delay; the SDK's post-loop fuse, judge and settle under the
+  deadline too; copilot-mro refusals carry core's marker). Task 11b merged BEFORE Task 12 (the plan only requires it
+  to land no later).
+- **The owner's dev steps are done:** the orphan-operator census on `copilot_mro` found 0 rows (59 tables, no
+  `--execute` needed), and the Task 12 stand-down check returned 0 rows.
+- **Merged locally, gates running:** Task 12 (api `9a15ecb`, full estate gate) and Task 14 with Task 19's dashboard copy
+  (dashboard `3f5fa51`; typecheck and lint pass, unit suite running). Each is pushed when its gate shows only the known
+  reds.
+- **Ready, in merge order:** Task 19's api registration (`api-erase-b`, `ue-t19-api` `458bbfe`, built on `ue-t12`; it
+  also passes `interactive=False` from the automation executor and names Task 13's stranded-request log line in the
+  CLI help) → Task 13's bot side (`telegram-bot-erase`, `ue-t13-bot` `6085886`; every pilot-facing sentence true on
+  both cores) → Task 13's core side (`core-erase`, `ue-t13-core` `52fb9da`; the door answers 202 and step 6 tears the
+  channel tenant down; a stranded request logs one fixed ERROR naming its finisher).
+- **Rulings since checkpoint 10:** Task 14's eight Minors fixed; Task 11b's SDK tail bounded; Task 13's interface
+  pinned between the lanes (the 202 body `{request_id, state, erase_after}` and the deletion-in-progress 409 sentence);
+  the tenant-delete event of a personal tenant carries no name (Global constraints). New Future Improvements: the
+  stranded `/goodbye` request's root fix (after DB-roles step 6), Task 11b's late-anchored bounds, the dashboard's
+  closed states, channel provisioning's log lines, the analytics quality-contract test.
+- **Next:** finish the queue (each merge gated, then pushed), then the P3 phase-level review (three Opus lenses:
+  correctness, plan-completeness, simplicity) → triage → the owner's review pause → P4 (Tasks 15, 16).
