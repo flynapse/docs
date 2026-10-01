@@ -22,7 +22,8 @@ GO; contributed tenant knowledge (corrections, example queries, findings) STAYS 
 each chat's copies (chat delete's scrub, factored for already-deleted chats), then HARD-purge chat + block rows.
 **D3** ledgers/analytics keep rows, user id → `deleted-user`. **D4** `llm_turn_content` targeted delete now via a
 `postgres`-owned definer function. **D5** trigger = a tenant user holding `users_modify` or a platform operator; freeze
-at once, erase after 7 days (immediately for a legal RTBF request); audit = one `authorization_events` row + a small
+at once, erase after 7 days (immediately for a legal RTBF request); audit = one `authorization_events` row at completion (plus one per escalation of an open
+request, Task 20 F3; both seen in a person's history only by `users_modify`) + a small
 `user_erasures` ledger with NO name/email. **D6** Cognito disabled at freeze, deleted at completion. **D8** Phoenix
 actively deleted (per-chat sessions + a `user.id` span sweep per tenant project); Loki/Tempo/CloudWatch by retention
 (bound in the receipt); `iac/s3.tf` gains a 30-day NoncurrentVersionExpiration rule (applied at the first iac apply —
@@ -1277,7 +1278,12 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
   - Owner rulings on the built lane (2026-10-01):
     - A legal pilot erasure is recorded as legal. Core's `request_channel_teardown` takes `rtbf` (default false; the
       request is immediate already, so the ledger's `rtbf ⇒ immediate` holds), and the CLI accepts `--rtbf` with
-      `--channel-teardown`. The ledger, the receipt and the audit event then say legal.
+      `--channel-teardown`. The ledger row says legal; every view of the receipt (core's erasure reads, the
+      CLI) shows the row's `rtbf` beside it; the completion's audit event carries `rtbf` for every erasure
+      (F3 fix round 2, controller ruling: before it, a request opened legal left no event that said so).
+    - When the owner's legal teardown strengthens a pilot's open `/goodbye`, F3's escalation event names the
+      teardown token as actor (`channel-teardown`) and the platform by `via = script`: the token must stay the
+      request's requester, because step 6 recognises a teardown by it (controller ruling: accepted).
     - The bot's purge command cancels a still-running renewal itself, as `/goodbye` does (one Telegram call with the
       bot token, then the cancel mark), and only then deletes. If Telegram refuses, it deletes nothing and says so;
       the README says what to do then.
@@ -1346,7 +1352,7 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
 ## Owner / legal items
 
 - [ ] **D9 legal opinion:** airworthiness `reviewed_by`/`review_note`, `authorization_events` actor/subject (incl. the
-  erasure's own event), RBAC provenance columns, the ledger's opaque ids, and free-text knowledge kept under D1.
+  erasure's own events: its completion's and an escalation's, each carrying `rtbf`), RBAC provenance columns, the ledger's opaque ids, and free-text knowledge kept under D1.
 - [x] **D12 backup bound:** no backup/snapshot config exists in iac or deployment; the receipt states the bound. No
   replay is built (owner decision 31, 2026-09-28: a restore is disaster recovery only); see Future Improvements.
 - [ ] SDK/CLI transcripts under `~/.claude/projects` on the API host: confirm retention or disable persistence.
