@@ -333,6 +333,16 @@ None of these can turn a run red, and none changes production behaviour. Evidenc
   `_ClockHeldUntilInFlight` to it, keeping the resume-from-held behaviour. A pure refactor.
 - **Bundling.** Follow-ups 1 and 3 and the M1 comment go in one commit; M3 and follow-up 2 share one remedy.
 
+### FI-9: Two live copies of `doc_catalog` in one xdist worker bypass `tests/unit/ingest`'s patches (found 2026-10-01)
+
+- **What happens.** A non-db `-n 4` run on the user-erasure F1 fix tip had 3 failures in `tests/unit/ingest`: one
+  worker held two live copies of `copilot_mro.app.services.doc_catalog`, so the tests' patches landed on the copy the
+  code under test did not use. They pass alone and in their folder serially; a later run was green.
+- **Likely cause.** `tests/registries/tenancy/test_document_catalog_indexes.py:70` registers a by-path copy of the
+  module in `sys.modules` and never restores the original.
+- **Complete fix.** That test restores `sys.modules` (a fixture that saves and puts back the entry), or loads its copy
+  under a private name; a guard test fails on any test that leaves a replaced `sys.modules` entry behind.
+
 ### FI-8: A sibling declaration crashes copilot-mro's `-n` lanes (found 2026-09-30; owner go 2026-10-01; built and reviewed, merges with the user-erasure batch)
 
 - **Built (2026-10-01):** copilot-mro `fi8` `58f05103..2a80403d` and core `fi8` `7c8c9a9..05e90a4` (core's

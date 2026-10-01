@@ -1253,8 +1253,10 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     `document_hub/user_erasure.py`), so row security hides every row under an operator that no longer exists, from
     both the erase and the residue (review B I-1, probe P-B1). Task 19 leaves such rows on purpose.
   - The Postgres binding of the erase AND the residue adds the tenant's deleted operators, read with the orphan
-    script's own predicate (`_DELETED_OPERATORS_SQL`, one definition, imported, never copied). Weaviate reads keep
-    the live roster: a deleted operator's partitions are already removed.
+    script's own predicate (`_DELETED_OPERATORS_SQL`, one definition, imported, never copied). Every Weaviate call
+    binds the live roster plus each deleted operator whose pair partition that collection still holds (Task 19
+    keeps a deleted operator's partitions when its clean-up fails, until the finisher runs; controller ruling on
+    the task review); the memory index is keyed by tenant alone and keeps the live roster.
   - Task 19's receipt rule (no orphan-operator key, C-18) holds again once this lands.
   - Proofs: P-B1 inverted in `tests/db/operator_teardown/` (the person's document under a deleted operator is seen
     by the residue before, and gone after); the mutant that binds the live roster only is killed.
