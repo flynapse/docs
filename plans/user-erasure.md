@@ -882,11 +882,29 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
 
 ### Task 16: iac — S3 noncurrent-version expiry and the Cognito erasure policy (P4, lane I)
 Owned: `iac/s3.tf`, `iac/apprunner_iam.tf`; iac unit tests.
-- [ ] Bucket lifecycle: whole-bucket NoncurrentVersionExpiration 30 days, expired-delete-marker cleanup, abort
+- [x] Bucket lifecycle: whole-bucket NoncurrentVersionExpiration 30 days, expired-delete-marker cleanup, abort
   incomplete multipart, depending on the versioning resource. A stand-alone `apprunner_cognito_user_erasure` policy:
   AdminDisableUser, AdminEnableUser, AdminUserGlobalSignOut, AdminDeleteUser, AdminGetUser, configured pool only.
-- [ ] Proofs: HCL block tests (`test_hcl_blocks.py` pattern) pin 30 days and the exact actions; `terraform fmt -check`
+- [x] Proofs: HCL block tests (`test_hcl_blocks.py` pattern) pin 30 days and the exact actions; `terraform fmt -check`
   / `validate` if available. NOT applied.
+- **Built (2026-10-01):** iac `ue-t16` `ff1cb5c..70de725`, merged into iac `main` `34e2345` and pushed. NOT applied.
+  - `s3.tf`: the copilot bucket's only lifecycle configuration (none existed anywhere): one enabled rule over the
+    whole bucket (`filter {}`), noncurrent versions expire after 30 days, expired delete markers are removed,
+    incomplete multipart uploads abort after 7 days (the plan gives no number), `depends_on` the bucket's versioning
+    resource. No repo deletes S3 objects by version id, so every erasure delete leaves a noncurrent version for it.
+  - `apprunner_iam.tf`: the stand-alone policy on the App Runner instance role, one Allow statement with exactly the
+    five actions core's `cognito_accounts.py` calls, on `aws_cognito_user_pool.clients["default"].arn`.
+  - Proofs: 9 HCL tests red before, the iac suite 335 passed; 25 mutants killed, plus the review's four survivors
+    (a `count`/`for_each` on either resource, a `Condition` key, an inline-policy name shared on the role) killed by
+    fix round 1. `terraform fmt -check` passes. `validate` against the pinned 6.x provider cannot run offline (not
+    cached); a scratch copy validated against the cached 5.100.0 provider, and CI's plan workflow is the real gate.
+  - Deploy notes for the owner's apply (Deploy/rollout step 4): the rule covers the whole bucket, so any deleted or
+    overwritten object, not only an erased person's, is unrecoverable after 30 days (no backups, D12); the first apply
+    expires every existing noncurrent version older than 30 days at once. S3 rounds the 30 days to the next midnight
+    UTC, deletes asynchronously and removes the delete marker (which carries the key) in a later pass: the receipt's
+    "30 days" goes to the owner's wording pass (O9). A later `parse-sidecars/` expiry must be a second rule inside this
+    configuration, never a second resource (one configuration per bucket; a test fails on a second).
+  - Task 17: iac's 30 days against core's `s3_noncurrent_days` is a cross-repo pin.
 
 ### Task 17: planted-sentinel census + cross-repo pins (P5, lane A)
 Owned: new `api/tests/integration/user_erasure/` (census + fixtures).
@@ -1265,9 +1283,16 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     `via`, `rtbf`, the request id; ids only. The admin's original request stays as recorded.
   - Proofs: review A's probe PR1 inverted (the upgrade's event exists, names the platform, carries no personal
     data); the mutant that drops the event is killed.
-- [ ] **F4 (O4): no Erase on your own row (dashboard).**
+- [x] **F4 (O4): no Erase on your own row (dashboard).**
   - The team page hides Erase on the signed-in admin's own row; another admin or the platform owner erases them.
   - Proofs: a unit test asserting booleans: the own row has no Erase, another row with `users_modify` does.
+  - Built (2026-10-01): dashboard `ue-f4` `6e11bef..63d2cdc`, merged into `agent_sdk` `f398f62` and pushed.
+    `offersErase` in `useUserErasures.ts`: a row offers Erase when the caller holds `users_modify`, their id is known,
+    and the row is not their own (`useAuth().user.id`, the Cognito `sub`, against the row's `users.user_id`, which
+    core sets to the `sub`). The desktop row and the mobile card both ask it; the requests panel and the confirmation
+    are unchanged. Until the caller's id has loaded, no row offers Erase (a request could not be sent then).
+    Proofs: the predicate's four cases; the mounted page with the caller on the roster; red-before "Erase on:
+    Alice,Bob,Carol"; 9 mutants killed. Task review: 0/0/0. Core still accepts a self-erasure, as ruled.
 
 ## Review & merge protocol
 
@@ -1294,7 +1319,9 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    13 serves: an older bot reads the 202 as a failure, keeps its rows and tells a frozen pilot that nothing was
    deleted.
 4. AWS (deferred until implementation is done): iac apply (Cognito policy + S3 lifecycle) BEFORE the routes are used
-   on AWS — without the IAM grant every request fails closed at the Cognito disable. The api process also needs the
+   on AWS — without the IAM grant every request fails closed at the Cognito disable. Read Task 16's deploy notes
+   first: the lifecycle rule covers the whole bucket, and the first apply expires every existing noncurrent version
+   older than 30 days at once. The api process also needs the
    grant-pool credentials (`POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam
    runs the LLM-records definer on the grant pool, so without them every erasure freezes the person and then fails at
    that step on every retry. iac declares neither today.
@@ -1972,6 +1999,33 @@ Recorded at the P3 review fixes' core batch (2026-09-30, `ue-p3fix-core`, concer
   - *What is missing:* `operator-write-mutations.test.tsx` ~847 still quotes "with its partitions"; it pins nothing.
   - *Why deferred:* cosmetic.
   - *Complete fix:* update the sample to core's current `_CLEANUP_HELD_WARNING` with the next dashboard change there.
+
+Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
+- **The dashboard's "this row is you" rests on core's `user_id` = `sub` rule, unpinned (F4 review FI-1).**
+  - *What is missing:* `offersErase` compares the row's `users.user_id` with the caller's Cognito `sub`. Core's
+    `create_user` makes them equal today, but core's docstrings expect surrogate ids distinct from the `sub` later;
+    then the admin's own row would offer Erase again, with no signal.
+  - *Why deferred:* the premise holds for every row core writes, and the dashboard has no surrogate id to compare.
+  - *Complete fix:* `/auth/permissions` returns the caller's internal user id, and the page compares rows against it.
+- **The team page's hooks run without `react-hooks/exhaustive-deps` (F4 review FI-2).** Dropping `offersErase` from the
+  `columns` memo's dependencies passes every test (another dependency rebuilds the memo today). *Complete fix:* a
+  per-file lint override enabling the rule for `page.tsx` and `useUserErasures.ts`.
+- **An exclusive-policies resource on the instance role would delete the erasure grant unseen (T16 fix round 1).**
+  An `aws_iam_role_policies_exclusive` added later without the erasure policy's name removes it at every apply, and
+  every test passes. *Complete fix:* a pin that any such resource on the role names every inline policy on it.
+- **The provenance contract cannot follow a function passed by reference (F3 review M-3, older than F3).** The tenant
+  door's `answer_erasure_request` calls the freeze through `asyncio.to_thread`, so a defaulted `via` there goes
+  unrefused. *Complete fix:* the contract also resolves callables passed as arguments to the known dispatchers.
+- **The provenance contract matches its audited writers by bare name (F3 review M-4, older than F3).** A function of
+  the same name elsewhere in core (`request_erasure`, `revoke`) passes unchecked. *Complete fix:* key the list by
+  module and name.
+- **The owner's bot scripts require every bot setting, though the purge reads only the database URL (F2 bot review
+  M-1).** A host holding `BOT_DB_URL` alone is refused. *Complete fix:* a narrower settings read for owner scripts
+  (they share the convention with `mint_invites` and `seed_salary`).
+- **The two F2 runbooks name each other's commands and columns as plain text (F2 report Concern 5).** The api help
+  names `python -m telegram_bot.purge_account` and `tg_users`' columns; the bot README names the CLI's
+  `request --channel-teardown` line. *Complete fix:* Task 17 pins both (the bot module exists; the CLI's parser
+  accepts the README's line).
 
 ## Lessons
 
