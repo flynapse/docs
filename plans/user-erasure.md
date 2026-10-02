@@ -3067,3 +3067,40 @@ Task 17's pins in review.**
 
   Its Minors go to the fix round or the plan text.
 
+
+**Status at compaction checkpoint 17 (2026-10-01, night): the P4 fix round's parts R and M merged; Task 17 lane P
+merged; lane D in review; part D, the Task 18 script and the census next.**
+- **Pushed:** core `72a24ff` (P4 fix part R), api `37e3f67` (part R), dashboard `64cc6e1` (part R), telegram-bot
+  `c48fbdf` (part R, README), utils `ce99f3b` and lambdas `ee2ac6b` (env samples). Each behind a full post-merge gate,
+  green but for the known reds.
+- **Merged locally, waiting to push (in this order):**
+  - copilot-mro `af45ced8`: the env samples, lane P's row 5h constants, part M (re-review: ready to merge, 0 Critical,
+    0 Important, 4 Minor), and the samples' Phoenix comments. Its full gate is running.
+  - api `adddeef`: lane P's pins (20) and the api sample's Phoenix comment.
+  - dashboard `f3cc2bd`: the receipt guard as a gate in `test:unit`.
+
+  api and dashboard passed their gates; they wait for copilot-mro, whose constants the pins read.
+- **Built and merged:**
+  - **Part R:** the teardown's tenant event takes the request's door; the legal mark over an open `/goodbye` records
+    `platform-cli` as its actor; the stranded request's refusal names its finisher; the badge and `list` tests.
+  - **Part M:** the Phoenix keys come through copilot-mro's settings; O10 (c) holds an erasure on a host that names no
+    Phoenix, and `PHOENIX_ENDPOINT=none` skips and records it; the evaluation gate reads a purged chat as deleted in a
+    tenant run; Task 15's minors.
+  - **Lane P:** the pins, including the POC retention, every CloudWatch group, Cognito calls against the iac policy,
+    and row 5h (15 s to spare today).
+- **Running:**
+  - **Part D:** the door check (a host that cannot finish an erasure refuses at the door); test sessions pinned to
+    `none`; core's Cognito client back to 2 attempts; the eval script's `none`; the replay's runbook home; utils' cache
+    keys out of the logs.
+  - **Lane D's task review:** 64 placements, no owner question.
+  - **The Task 18 script**, built and proved on fakes only.
+- **Next:**
+  - lane D's merge, plus a pin holding the three shape lists equal;
+  - Task 17's census (lane C);
+  - Task 18's review, then its live run on the owner's go;
+  - SDK transcripts off on the API host.
+- **Owner:**
+  - step 6's 4c: restart the shell-run api on the merged code, then step 6's two checks;
+  - the Task 18 go, once the census lands;
+  - the AWS items, at deploy: the platform CLI's host, Phoenix or `none` in App Runner's env, X-Ray's `aws/spans`
+    retention, the SMTP password out of the image and rotated.
