@@ -1394,7 +1394,15 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    older than 30 days at once. The api process also needs the
    grant-pool credentials (`POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam
    runs the LLM-records definer on the grant pool, so without them every erasure freezes the person and then fails at
-   that step on every retry. iac declares neither today.
+   that step on every retry. iac `main` now declares both (P4 review C).
+   **Two AWS deploy blockers, decided at deploy time (owner, 2026-10-01; P4 review C I-4 and I-1):**
+   - Where the platform CLI runs. App Runner has no shell, the database and Weaviate are private to the VPC, and Task
+     16 grants the Cognito actions to App Runner's role only. Until decided, legal (RTBF) requests, F2's owner erasure
+     of a pilot, platform cancels and resumes cannot be made on AWS. Options: a one-off ECS task from the api image in
+     the VPC, an SSM-managed admin box, or a platform-owner HTTP route.
+   - Phoenix under O10 (c). App Runner's env (Terraform-managed) names no Phoenix and no "no Phoenix here" setting, so
+     once O10 is built every AWS erasure would freeze its person. Either iac declares "no Phoenix here" there, or AWS
+     gets a Phoenix with endpoint and key. The POC replica box runs a Phoenix but gives its api neither key.
 5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` (the
    owner's choice on 2026-10-01: the scheduler runs on AWS, so erasures and `/goodbye` finish on their own). Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the
    previous image stands down (disables) the automations of anyone still frozen, and a later cancel does not re-enable
@@ -2851,4 +2859,12 @@ Task 17's pins in review.**
 - **Task 18:** the script is built next, with five legs. The live run waits for the owner's go, after the fix round.
 - **Also running:** the sample env files refreshed estate-wide (owner request); database users step 7's fix round
   (its own ledger).
+- **P4 review C (after the checkpoint):** 0 Critical, 4 Important, 11 Minor.
+  - I-1, O10 on AWS, and I-4, no platform CLI on AWS: both are deploy blockers the owner decides at deploy time
+    (Deploy/rollout 4).
+  - I-2 is review A's I-1, and one fix covers both.
+  - I-3: Task 18 needs one prerequisite list, a non-zero reading before every "gone" check, and the dashboard leg
+    finished through the CLI's `--immediate`.
+
+  Its Minors go to the fix round or the plan text.
 
