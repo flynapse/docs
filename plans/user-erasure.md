@@ -3104,3 +3104,9 @@ merged; lane D in review; part D, the Task 18 script and the census next.**
   - the Task 18 go, once the census lands;
   - the AWS items, at deploy: the platform CLI's host, Phoenix or `none` in App Runner's env, X-Ray's `aws/spans`
     retention, the SMTP password out of the image and rotated.
+
+**Status at compaction checkpoint 18 (2026-10-01, late night): every mainline pushed.** copilot-mro `af45ced8` (the env
+samples, lane P's row 5h, P4 fix part M), api `adddeef` (lane P's pins), dashboard `f3cc2bd` (the receipt gate), core
+`72a24ff`, telegram-bot `c48fbdf`, utils `ce99f3b`, lambdas `ee2ac6b`; each behind a full post-merge gate. Running:
+P4 fix part D, lane D's task review, the Task 18 script. Next: lane D's merge with its pin row, then the census;
+part D's merge; Task 18's review, then its live run on the owner's go.

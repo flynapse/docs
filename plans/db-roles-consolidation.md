@@ -95,8 +95,11 @@
       from all six holder censuses, each naming it on an accepted line (`e50a3613`; controller ruling below); the
       RDS-shaped runs (a master not named `postgres`, PostgreSQL 16 and 15: verify 0 findings, 183 and 180 accepted
       lines); the sheet's RDS section filled;
-    - part 4c, running: the sheet's proof at the merged tips, the build's six live mutants, the hand-back lanes, the
-      consolidated report. Then a scoped re-review, then the sheet goes to the owner, with step 6's 4c first.
+    - part 4c: the sheet's proof at the merged tips (nothing moved), the build's six live mutants killed, the lanes
+      green (step 7's live tests on a step-7 throwaway, since the shared test database has not had step 3 yet), one
+      test fix (`c2be47d8`), and the consolidated report;
+    - running: the scoped re-review, in two lenses (the code; the sheet and the rollout). Then the sheet goes to the
+      owner, with step 6's 4c first.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
