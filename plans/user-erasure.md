@@ -1497,7 +1497,11 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    the account kept, 6 tries then daily; a key that cannot delete holds every request at its first span delete.
    Owner, 2026-10-01 (O10): a host that names no Phoenix fails closed unless it declares "no Phoenix here"
    (`PHOENIX_ENDPOINT=none`), so name both keys (or the declaration) before a host's first erasure. The owner added
-   both keys to dev's `api/.env` on 2026-10-01.
+   both keys to dev's `api/.env` on 2026-10-01. Since the P4 fix round the keys come through copilot-mro's settings
+   (the process environment, else `ENV_FILE`, else the working directory's `.env`): the api run from `api/` and the
+   owner CLI run there both read `api/.env`. Declare `none` only in the environment of the processes that erase (the
+   api, the CLI, a worker), never the collector's: the collector's Phoenix fragment and the evaluation script read
+   `PHOENIX_ENDPOINT` as a URL (part M re-review M-4).
    **The replay** (`copilot-mro/scripts/observability/scrub_erased_user_spans.py`, P4 review C M-7) sweeps a completed
    erasure's Phoenix spans by `user.id`. Run it for a span exported after an erasure completed, and once on dev for the
    erasures completed before the P4 fix round, which ran with Phoenix unread (the CLI never loaded `api/.env`; review A
@@ -2321,6 +2325,21 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   passing `rtbf=True` without it would record the token as the escalation's actor again. Today only the owner CLI
   states `rtbf`, and api tests pin the keyword on every teardown call. *Complete fix:* make it a required keyword
   once the db-roles step 7 branch has merged.
+- **The S3 writes the erasure-delay margin covers are bounded by one attempt only (Task 17 lane P fix round, concern
+  4).** utils' `S3Service` client sets no retry policy, so botocore's legacy mode applies: up to 5 attempts at 60 s
+  connect plus 60 s read each, about 600 s, twice the 300 s margin. Row 5h's pin counts one attempt; the bounds
+  module's docstring says retries are not covered. *Complete fix:* give the S3 client the margin's writes use an
+  explicit timeout and retry policy whose whole budget fits the margin, and pin the whole budget instead of one
+  attempt. Row 5h also assumes the statement ceiling is the code default; a deployment that sets
+  `POSTGRES_STATEMENT_TIMEOUT_MS` re-opens the judgement.
+- **A tenant whose Phoenix project the guard refuses holds its erasure forever (P4 fix part M concern 5, re-review
+  M-3).** Today unreachable: core mints uuid4 tenant ids, and no person is erased from `__SYSTEM__`. *Complete fix:*
+  raise `UserErasureRefused` there instead of the incomplete, so the request goes `failed` for the owner to see, as
+  core's taxonomy treats a condition no retry can fix.
+- **The compaction reap's WARNING logs `memory_id` (P4 fix part M concern 3).** An opaque digest id, not a person or
+  chat id, once per failed document per attempt. *Complete fix:* drop it, as the reap's chat id was dropped.
+- **The bot purge command's `--help` and docstring name `request --channel-teardown` unpinned (P4 review B M-4, its
+  third bullet).** *Complete fix:* the cross-repo pin file parses the bot's help text for the api command it names.
 - **Task 17 lane P review (2026-10-01), five leftovers.**
   - *M-3:* the finishers pin skips a string that names two or more scripts (none does today). *Complete fix:* check
     every named script exists, and attribute each flag to the nearest preceding script mention.
