@@ -992,17 +992,39 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
   `erase_after` has passed.
 - [ ] **Three more live legs (owner, 2026-10-01, O7: record all three for the live testing).**
   - The dashboard door: an admin requests, cancels, requests again and completes an erasure, then reads the receipt on
-    the page.
+    the page. The tenant door opens only a windowed (7-day) request (`erasure_endpoints.py`), so "completes" is the
+    platform CLI's `request --immediate` over it (F3's escalation event, proven live too), then the 30 minutes (P4
+    review C I-3).
   - The channel door: a test pilot sends `/goodbye`; the bot, core and storage are checked end to end.
   - The operator delete: delete an operator; its rows, Document Hub objects and partitions are gone.
 - [ ] **A fifth live leg: the owner path (owner, 2026-10-01, P4 review B OQ-B1).** A throwaway test pilot erased the way
   the owner erases a pilot who cannot send `/goodbye`: `user_erasure_cli request --channel-teardown --tenant <t>
   --user <u> --rtbf` on the api, then `python -m telegram_bot.purge_account` on the bot. The ledger and every view say
   legal, the bot's `tg_*` rows are gone, and storage is clean.
-- [ ] **Prerequisites (2026-10-01).** The api host names Phoenix (both keys in dev's `api/.env`: done and verified,
-  values never read). The P4 phase review's fix round lands first: review A found that the owner CLI and a worker do not
-  see a Phoenix named only in `api/.env` (I-1), and that the evaluation gate reads a purged chat as live (I-2); no
-  erasure receipt is to be relied on before both are fixed.
+- [ ] **Prerequisites (owner; one list, P4 review C I-3).** The script's `prereqs` step checks each it can and names
+  the first missing one.
+  - The P4 phase review's fix round has landed: before it, the owner CLI and a worker do not see a Phoenix named only
+    in `api/.env` (review A I-1), and the evaluation gate reads a purged chat as live (I-2).
+  - Phoenix: both keys, the key allowed to delete spans and sessions, visible to every process that runs an erasure
+    (dev's `api/.env` has both: added and verified 2026-10-01, values never read); the dev collector's Phoenix fragment
+    on, or no content span reaches Phoenix.
+  - The api's grant-pool credentials (`POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD`).
+  - Where the erasure runs: the api's embedded scheduler, or the CLI with the keys visible to it.
+  - The api runs the merged code: the dev container rebuilt (the owner's db-roles 4c), or the api run from the
+    checkouts.
+  - Dev `copilot_mro` migrated and provisioned (Deploy/rollout 1), and Weaviate's schema present (the restart trap).
+  - Cognito: a throwaway dev-pool user per leg, and credentials allowed `AdminGetUser`. S3: credentials to list the
+    user prefixes.
+  - The dashboard leg: an admin who is not the person (F4), the dashboard, and the platform CLI for the escalation.
+  - The channel leg: a test Telegram account the owner controls, through the live bot, never a real pilot.
+  - The operator leg: a throwaway operator with rows, Document Hub objects and pair partitions.
+  - Dev tenants only; never the internal or golden project.
+- [ ] **Every "gone" check reads non-zero first (P4 review C I-3, review A's P5 notes).** Before each erasure, the leg
+  reads a non-zero count in every store it later checks: spans by `user.id`, one Phoenix session per chat, S3 objects
+  under the user prefixes, Weaviate filter counts, the rows. A store that reads zero before fails the leg as vacuous.
+  After the erasure, besides `get_spans(user.id)` empty: `sessions.get(<chat id>)` answers 404 for every chat (an
+  empty span read passes even when every session delete was refused), every `chat_<digest>` orphan source in the
+  ledger reads 0, and the returned span shape carries `user.id` in its attributes (Task 15 FI-F's confirmation).
 
 ### Task 19: core + copilot-mro — deleting an operator deletes its own rows (P3; lanes C-b, M1, A, D; owner question 4)
 Ruled by the owner on 2026-09-29: owner question 4 (the root fix), then Task 19 Q1–Q6, all yes.
