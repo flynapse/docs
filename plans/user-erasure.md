@@ -3202,22 +3202,32 @@ part D's merge; Task 18's review, then its live run on the owner's go.
   - the P4 fix round's part D: utils `ce25e60`, core `a6f3a8c`, copilot-mro `95412291`, api `5caa9fb`. The door check
     is built.
 - **The owner ruled step 7's RDS question** (db-roles plan): accept `rds_superuser` on one narrowly pinned line.
-- **Since then (2026-10-02):**
-  - Lane D fix part A was merged and pushed: copilot-mro `0a3771a7`, api `728d0ec`.
-  - **One new known red:** part D's `test_the_owner_cli_refuses_a_request_on_such_a_host_and_freezes_nobody` (api,
-    both cases). It fails whenever an earlier test in the same worker booted the session telemetry fixture, which
-    leaves a JSON stdout sink, so the partition wiring's INFO line lands in the test's captured stdout. It reproduces
-    serially in two files that part A did not touch. It is fixed in D2's review round, since D2 edits that file.
-  - Task 18 fix part 1 is running.
+
+**Status at compaction checkpoint 20 (2026-10-02).**
+- **Pushed behind a full post-merge gate:** lane D fix part A, copilot-mro `0a3771a7` and api `728d0ec`.
+- **One new known red:** part D's `test_the_owner_cli_refuses_a_request_on_such_a_host_and_freezes_nobody` (api).
+  - It fails whenever an earlier test in the same worker booted the session telemetry fixture. That fixture leaves a
+    JSON stdout sink, so the partition wiring's INFO line lands in the test's captured stdout.
+  - It reproduces serially in two files that part A did not touch.
+  - It is two cases on the mainline and six on D2's branch. D2's fix round fixes it.
+- **Lane D fix part B's review: FIX FIRST, 0C/1I/3M.** All 64 moves are right.
+  - The five word-only keeps become `no-person`. The two owner-pinned ones are confirmed by D1's and D10's own
+    words.
+  - Each guard pins its line's keep set.
+  - copilot-mro's statement reader sees a CTE's write.
+  - shift-optimizer drops `keep`.
+- **Part D2 is built:** the door reads the grant pool's own user and password, the api's auth-cache eviction lines
+  name no one, and part D's Minors are closed. Its review is running.
 - **Running:**
-  - the review of lane D fix part B: the `no-person` kind, built (core 10, copilot-mro 48 and shift-optimizer 6
-    placements moved);
-  - part D2: the door reads the grant pool's own user and password, the api's auth-cache lines name no person, and
-    part D's review Minors;
-  - db-roles step 7 fix round 2, part 2a.
+  - lane D fix part B2;
+  - the D2 review;
+  - Task 18 fix part 1;
+  - db-roles step 7 fix round 2, part 2b (part 2a done).
 - **Queued:**
-  - census part 1 (C1), after lane D part B merges; its brief is drafted and the seeding rule is set;
+  - D2's fix round;
+  - census part 1 (C1), after B2 merges;
   - Task 18 fix part 2;
   - census part 2 (C2);
+  - the P5 phase review;
   - SDK transcripts off on the API host;
   - Task 18's live run, on the owner's go.

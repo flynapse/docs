@@ -113,9 +113,21 @@
       - any other path;
       - any other member of it but the owner;
       - any other role reaching the two predefined roles.
-    - fix round 2, running: part 2a builds the code (membership reach in every holder census, the `rds_superuser`
-      line, the three tests, the trigger pin). Part 2b then fixes the sheet and re-proves it at the new tips. A scoped
-      re-review follows, then the sheet goes to the owner, with step 6's 4c first.
+    - fix round 2:
+      - **Part 2a: done (2026-10-02).** copilot-mro-s7 `2c0487bc`, core-s7 `4cf6487`. It built:
+        - membership reach in every holder census;
+        - the `rds_superuser` line;
+        - the three tests;
+        - the trigger pin.
+
+        Step 7 from scratch at these tips moved no number the sheet quotes. On an RDS-shaped PostgreSQL 16, step 3
+        lands with 184 accepted lines, 10 of them `rds_superuser`'s, and the three controls are red.
+      - **Part 2b: running.** It brings the sheet to the code: the RDS section, the four text fixes, the census's
+        membership term, and a new read-only census row for user triggers in `tenants`' delete reach. It also fixes
+        the TEMPORARY notice so it no longer contradicts an accepted line. It re-proves the sheet at the new tips: the
+        local shape forward, rolled back and forward again, plus an RDS-shaped run.
+
+      A scoped re-review follows, then the sheet goes to the owner, with step 6's 4c first.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
