@@ -3265,17 +3265,28 @@ part D's merge; Task 18's review, then its live run on the owner's go.
   - Each line's keep set is pinned: core 12, copilot-mro one, shift-optimizer none.
   - copilot-mro's guard refuses a write inside a CTE, and gains core's two whole-relation checks.
   - All 16 mutants are killed.
-  - Its scoped re-review is running. One open question for it: `chat_turn_facts.session_id` is set by the
-    anonymisation but placed on no line.
+  - Its scoped re-review found two Minors, so part B3 comes first. B3 waits for the owner to allow new agents.
+    - One sentence in core's line and one in copilot-mro's still give the old `no-person` reason.
+    - copilot-mro's statement reader misreads a bracketed SET target list, so such a write to a held column passes
+      every check. B3 makes the reader refuse any assignment it cannot read, and the same in core's guard.
+    - B3 also adds a check that every column a statement assigns is placed. Today only
+      `chat_turn_facts.session_id` fails it; it becomes a `scrub` (the browser session id, never the person's id).
 - **Task 18 fix part 1 is built.** Every after-check is now armed by its own before, a redo resets the later steps,
-  no check is excused by the product's own receipt, and the script never runs the due queue. Its scoped re-review is
-  running.
-  - Part 2 adds two items: a harmless pre-flight proving the api's identity may make the erasure's Cognito admin
-    calls, and a leg that reads the agent-state store's Postgres rows.
+  no check is excused by the product's own receipt, and the script never runs the due queue.
+  - Its scoped re-review found the behaviour closed, with one Important and seven Minors. The Important: the per-read
+    tests are built from the very lists they should pin, so a read can be dropped with every test green.
+  - Part 2 is split in two, since part 1 outgrew one agent:
+    - **Part 2a** fixes the re-review's eight findings. The planted reads become a literal table. `after` reads every
+      part again, and residue in a part `before` found empty fails. The kept fact is proven unchanged as well as
+      unlinked. The account-claim check predicts exactly what the erasure decides.
+    - **Part 2b** takes the original review's remaining Minors and the run sheet's prerequisites. It adds two items:
+      a harmless pre-flight proving the api's identity may make the erasure's Cognito admin calls, and a leg that
+      reads the agent-state store's Postgres rows.
 - **Queued, once agents are allowed again:**
   - part D3;
-  - census part 1 (C1), after B2 merges;
-  - Task 18 fix part 2;
+  - lane D fix part B3, then the merge of lane D's fix round B;
+  - census part 1 (C1), after that merge;
+  - Task 18 fix parts 2a, then 2b;
   - census part 2 (C2);
   - the P5 phase review;
   - SDK transcripts off on the API host;
