@@ -98,8 +98,24 @@
     - part 4c: the sheet's proof at the merged tips (nothing moved), the build's six live mutants killed, the lanes
       green (step 7's live tests on a step-7 throwaway, since the shared test database has not had step 3 yet), one
       test fix (`c2be47d8`), and the consolidated report;
-    - running: the scoped re-review, in two lenses (the code; the sheet and the rollout). Then the sheet goes to the
-      owner, with step 6's 4c first.
+    - the scoped re-review, in two lenses, both FIX FIRST (2026-10-01, night):
+      - **Lens A, the code, 0C/1I/2M.** The `tenants`, `user_erasures`, append-only-log and TEMPORARY censuses still
+        read inherited privilege only. A role granted `pg_write_all_data WITH INHERIT FALSE` passes verify while able
+        to empty `tenants`. Three conditions also have no test, and review A M4's no-user-trigger pin was never built.
+      - **Lens B, the sheet, 0C/1I/4M.** On RDS for PostgreSQL 15 and later, AWS grants `rds_superuser`
+        `pg_read_all_data` and `pg_write_all_data`. The holder censuses count it, so step 3 commits nothing there,
+        and the sheet's RDS probe cannot see why. There are also four text fixes.
+
+      Everything else held: every number the sheet quotes, both order hazards, and the two transactions.
+    - **The owner's ruling (2026-10-02):** accept `rds_superuser` on one narrowly pinned line. It covers only its reach
+      through those two predefined roles. These stay findings:
+      - a direct grant to it;
+      - any other path;
+      - any other member of it but the owner;
+      - any other role reaching the two predefined roles.
+    - fix round 2, running: part 2a builds the code (membership reach in every holder census, the `rds_superuser`
+      line, the three tests, the trigger pin). Part 2b then fixes the sheet and re-proves it at the new tips. A scoped
+      re-review follows, then the sheet goes to the owner, with step 6's 4c first.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but

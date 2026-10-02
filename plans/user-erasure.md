@@ -962,6 +962,19 @@ Lanes (2026-10-01; P4 review C M-5):
   pinned equal by lane P; the jsonb rule (every json/jsonb column of a relation holding a placed column is itself
   placed, `automation_runs.params` first); new placements by R-PLACEMENTS and D9; a column that fits no rule is placed
   provisionally `keep` with "owner question: …" and listed for the owner.
+  Built, merged and pushed 2026-10-01 (core `3092d78`, copilot-mro `94d0b59f`, shift-optimizer `70a7a39`; gate green
+  but the census family):
+  - 18 shapes, matched as whole names;
+  - the jsonb rule, read literally (a relation holding any placement, keep included);
+  - 64 new placements (core 15, copilot-mro 43, shift-optimizer 6), with no statement changed;
+  - copilot-mro's two index checks run the real writer code.
+
+  Task review: MERGE-READY, 0C/0I/6M. Its fix round runs in two parts:
+  - **Part B** (`ue-t17d-fix-b`): the `no-person` kind (below, under C), m-1 (copilot-mro's kinds held to its
+    statements, as core's are), m-2 (one reason's text) and m-5 (the type reading proven by plants).
+  - **Part A** (`ue-t17d-fix-a`, test-only): m-3 and m-4 (the index readers read every upsert path, and what the
+    Document Hub indexer writes as well as what it declares), m-6 (the readers' restores proven), and lane P's row
+    holding the three `DRIFT_SHAPES`/`DOCUMENT_TYPES`/`DECOYS` literals equal.
 - **C, the census** (`api/tests/integration/user_erasure/`, where F2's db test already lives), after D and after the
   P4 fix round's part M: the first two checkboxes below. Besides the seeds they list:
   - a P sentinel under a deleted operator (rows, plus a chunk in a kept pair partition), with a Weaviate fake that
@@ -975,6 +988,18 @@ Lanes (2026-10-01; P4 review C M-5):
   - both wirings, and the request's `erase_after` in the past (the carry-ins below);
   - the I-2 probe: plant a surviving Phoenix copy, run the evaluation store after the erasure, and see nothing
     derived.
+  - Controller ruling (2026-10-01; lane D review concern 7): a `keep` today means "the person's id may stay here", but
+    most of lane D's jsonb keeps say the column names no person. The census must not read those as allowed places.
+    - The vocabulary gains a kind, `no-person`, in all three erased-user lines. It is a kind rather than a field, so
+      every placement must choose, and the tuple lines keep their shape. It is built in lane D's fix round, part B.
+    - `keep` then means only that the person's id or words may remain by ruling: D9 provenance, the ledger, D1
+      knowledge.
+    - `no-person` is a column a guard rule forced into the line that no writer fills with the person. The erasure
+      treats it as it treats `keep`.
+    - The census asserts the person's ids ABSENT from every `no-person` placement, and a planted id there turns it
+      red.
+
+    Cost if wrong: one kind across three lines.
 - [ ] Seed through the REAL writers into `copilot_mro_test` a personal sentinel (P) and a knowledge sentinel (K) in
   every store of Tasks 6–9 (turns incl. a chat deleted beforehand, feedback, share, preference, curated example, tenant
   fact, correction, signal, finding, eval explanation, agent state, the three LLM relations, automation + run, comment
@@ -1466,7 +1491,9 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    first: the lifecycle rule covers the whole bucket, and the first apply expires every existing noncurrent version
    older than 30 days at once. The api process also needs the grant-pool credentials (`POSTGRES_GRANT_USER` /
    `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam runs the LLM-records definer on the grant pool,
-   so without them every erasure freezes the person and then fails at that step on every retry. iac `main` declares
+   so without them the api registers no erasure seam and every erasure door answers 503, with one boot line naming
+   the missing setting (the door check, P4 fix round part D; part D2 makes it read the pool's own user and password).
+   Before the door check, such a host froze the person and then failed at that step on every retry. iac `main` declares
    both (`apprunner.tf`): the user by default, the password from the owner's hand-made secret
    `api/postgres/passwords`, which must exist with both JSON keys before any plan (P4 review C M-1). The apply is iac
    `main`'s whole apply: its other owner steps come first, in iac `README.md` (B4's log-group imports, B5) and the
@@ -1480,7 +1507,7 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
      once O10 is built every AWS erasure would freeze its person. Either iac declares "no Phoenix here"
      (`PHOENIX_ENDPOINT=none`) there, or AWS gets a Phoenix with endpoint and key. The POC replica box runs a Phoenix
      but gives its api neither key. Under the door ruling (Owner / legal items, O10), a host with neither refuses
-     every erasure request at the door (503) instead of freezing anyone.
+     every erasure request at the door (503) instead of freezing anyone (built in the P4 fix round, part D).
    - **A third, at the same time: X-Ray's `aws/spans` (P4 review C M-6).** With Transaction Search on (the owner's B5
      toggle), browser spans carrying `enduser.id` are kept in `aws/spans`, which never expires, while the receipt says
      `cloudwatch_days: 30`. Either set its retention right after the toggle (the Future Improvement "`aws/spans`
@@ -1505,7 +1532,8 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    **The replay** (`copilot-mro/scripts/observability/scrub_erased_user_spans.py`, P4 review C M-7) sweeps a completed
    erasure's Phoenix spans by `user.id`. Run it for a span exported after an erasure completed, and once on dev for the
    erasures completed before the P4 fix round, which ran with Phoenix unread (the CLI never loaded `api/.env`; review A
-   I-1). Its CLI help and docstring follow O10 when part M merges.
+   I-1). Its docstring and `--help` follow O10, and the owner CLI's help names it and when to run it (P4 fix round,
+   part D).
 
 ## Owner / legal items
 
@@ -1540,9 +1568,10 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     declaration refuses at the door, as R-DOOR does for a missing seam: `user_erasure_wiring.wire()` registers nothing
     and every door answers the existing 503 (`ERASURE_UNAVAILABLE`), so nobody is frozen by a misconfigured host; the
     seam's fail-closed stays for a Phoenix that goes away later. Why: under (c) alone such a host freezes the person
-    and disables the account before the seam fails, and an immediate or legal request cannot be cancelled. Built after
-    part M merges (the door reads the Phoenix keys the way part M's settings do), with the grant-password check of the
-    Future Improvement "A gateway without the grant-pool credentials…". Cost if wrong: one boot check, reverted.
+    and disables the account before the seam fails, and an immediate or legal request cannot be cancelled. Built in
+    the P4 fix round, part D (api `62dc14b`, merged `5caa9fb`, pushed): the door reads the Phoenix keys through
+    copilot-mro's own accessor, and checks the grant-pool credentials of the Future Improvement "A gateway without the
+    grant-pool credentials…". Cost if wrong: one boot check, reverted.
 
 ## Future Improvements
 
@@ -2052,6 +2081,20 @@ Recorded at the P3 phase review (2026-09-30); each was triaged as a Future Impro
     merge already keeps a vanished source's last count. A copilot-mro unit case runs P-1's sequence (purge, a failed
     prefix delete, a clean retry) and asserts the ledger keeps 3. Natural home: Task 15, which edits this seam.
 - **A gateway without the grant-pool credentials freezes people it can never erase (P3 phase review A, FI 1).**
+  **BUILT** in the P4 fix round, part D (api `62dc14b`, `d7d4416`; merged `5caa9fb`, pushed 2026-10-02), with the
+  controller's door ruling under O10.
+  - `user_erasure_wiring.wire()` checks the grant password, and also a Phoenix or the `none` declaration, through
+    copilot-mro's own accessor.
+  - Without them it registers nothing, logs one fixed line naming the missing settings (never a value), and raises
+    `ErasureSettingsMissing`. `routers/users.py` treats that as a sibling of the `ImportError` branch, so the boot
+    succeeds and every request door answers the existing 503.
+  - The owner CLI's `request`, `run` and `--run-due` are refused the same way, and the worker does not serve the kind.
+  - Proven at both request doors and at the CLI; mutants that drop either check are KILLED.
+  - Part D2 (running) makes the check read the grant pool's own user and password, not `grant_credentials()`. With
+    that, a conflict between the two password names no longer stops the boot, and a host holding only the deprecated
+    name is refused.
+
+  The original entry:
   - *What is missing:* "nobody is frozen where no erasure can finish" (R-DOOR) stops at seam registration. A gateway
     whose seams register but which lacks `POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD` accepts a request and
     freezes the person. The copilot-mro seam then fails at `get_grant_service()` on every try: six, then daily,
@@ -2378,6 +2421,20 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   `test_s3_noncurrent_version_expiry.py`, `test_cognito_user_erasure_policy.py` and
   `test_apprunner_postgres_passwords_by_reference.py`. *Complete fix:* one helper in `tests/_hcl_blocks.py` beside
   `process_env`.
+- **Task 17 lane D concern 1: names the shape list leaves out.** No column of the three registries or the two index
+  schemas carries one today (scanned twice). The candidates for a future ruling:
+  - `assigned_to` and `sub`;
+  - `*_user_ids` (for example `mentioned_user_ids`);
+  - plurals such as `members`, `participants`, `watchers` and `assignees`;
+  - `email_address` and `emails`, which `.*email` misses;
+  - `sender*`;
+  - `contact*`, which would also force a decision on `tenants`' two contacts (owner question 3).
+
+  *Complete fix:* rule the additions once, in all three lists together. Lane P's row holds them equal.
+- **Task 17 lane D concern 5: `chat_feedback__feedback_data`'s residue counts a sibling's effect.** Its residue is
+  proven by the statement (like P2's m-8): it counts what the row's id column says, not what the payload holds.
+  *Complete fix:* a payload-keyed residue (`feedback_data->>'user_id' = ANY(the person's ids)`), so the count proves
+  the scrub's own effect; one db case.
 
 ## Lessons
 
@@ -2590,7 +2647,9 @@ unproven by the fakes.
 *Owner answers (2026-09-29).*
 1. Private comments: keep as built.
 2. Optimizer job name and notes: keep as built.
-3. Text naming the person without an id: a limit stated in the receipt.
+3. Text naming the person without an id: a limit stated in the receipt. (Task 17 lane D review, 2026-10-01:
+   `operators.airline_details`, admin-typed free JSON from a raw textarea, is of the same class as `tenants`' contacts;
+   the receipt's limit covers it.)
 4. Orphan-operator rows: the root fix — Task 19 (deleting an operator deletes its rows, plus a one-off owner-run
    clean-up of existing orphans); the receipt names the gap until it lands.
 5. A stream open at the freeze: the cheap version, in Task 11 — immediate erasures run 30 minutes after the freeze,
