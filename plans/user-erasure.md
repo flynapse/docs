@@ -1039,7 +1039,10 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
     (dev's `api/.env` has both: added and verified 2026-10-01, values never read); the dev collector's Phoenix fragment
     on, or no content span reaches Phoenix.
   - The api's grant-pool credentials (`POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD`).
-  - Where the erasure runs: the api's embedded scheduler, or the CLI with the keys visible to it.
+  - Where the erasure runs: the api's embedded scheduler, or the CLI run from `api/` (or with
+    `ENV_FILE=api/.env`). Since the P4 fix round, copilot-mro's settings read the Phoenix keys: the process
+    environment first, then `ENV_FILE`, then `<cwd>/.env`. A CLI run elsewhere names no Phoenix, and its erasure
+    holds under O10.
   - The api runs the merged code: the dev container rebuilt (the owner's db-roles 4c), or the api run from the
     checkouts.
   - Dev `copilot_mro` migrated and provisioned (Deploy/rollout 1), and Weaviate's schema present (the restart trap).
