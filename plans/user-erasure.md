@@ -1500,7 +1500,8 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    older than 30 days at once. The api process also needs the grant-pool credentials (`POSTGRES_GRANT_USER` /
    `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam runs the LLM-records definer on the grant pool,
    so without them the api registers no erasure seam and every erasure door answers 503, with one boot line naming
-   the missing setting (the door check, P4 fix round part D; part D2 makes it read the pool's own user and password).
+   the missing setting (the door check, P4 fix round part D; since part D2 it reads the pool's own user and password,
+   so a blank value in either, or only the deprecated `GRANT_POSTGRES_PASSWORD`, is refused).
    Before the door check, such a host froze the person and then failed at that step on every retry. iac `main` declares
    both (`apprunner.tf`): the user by default, the password from the owner's hand-made secret
    `api/postgres/passwords`, which must exist with both JSON keys before any plan (P4 review C M-1). The apply is iac
@@ -1608,6 +1609,21 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     - the drain and its filter.
 
     Then read the keys of every object it inserts.
+- **The api's remaining auth-cache lines name roles, departments and tenants (P4 fix round part D2, concern 2; its
+  review's M3 ruling).**
+  - *What is missing:* the eviction lines (D2) and the cache-write WARNINGs and their DEBUG twins (part D3) name
+    nobody. These lines still carry ids in their text:
+    - the role and tenant sweeps' INFO lines (`flynapse_api/middleware/cache.py` around :328 and :353; `auth.py`
+      around :1358);
+    - the department lines (`auth.py` around :1299 and :1313; the ERROR also carries `department_id` and
+      `tenant_id`);
+    - the role-holder line (`auth.py` around :1267).
+
+    A channel user's personal tenant id identifies a person, so a tenant sweep of a personal tenant names one.
+  - *Why deferred:* none is on the erasure's path. The erasure declares user-scope evictions only, and its teardown
+    runs in core, not through this middleware. The review scoped the round to the lines on every request's path.
+  - *Complete fix:* give the whole module the eviction lines' treatment: a constant message, the sweep's type and
+    counts as fields, and one pinned list that turns red on any new line naming an id.
 - Self-serve erasure (D5 option c); telegram pilots already self-serve.
 - Automate the channel-tenant residue sweep after teardown (today owner-run `delete_unentitled_partition.py`).
 - Loki delete requests, once structured-metadata filtering is verified on 3.7.7.
@@ -2112,9 +2128,11 @@ Recorded at the P3 phase review (2026-09-30); each was triaged as a Future Impro
     succeeds and every request door answers the existing 503.
   - The owner CLI's `request`, `run` and `--run-due` are refused the same way, and the worker does not serve the kind.
   - Proven at both request doors and at the CLI; mutants that drop either check are KILLED.
-  - Part D2 (running) makes the check read the grant pool's own user and password, not `grant_credentials()`. With
-    that, a conflict between the two password names no longer stops the boot, and a host holding only the deprecated
-    name is refused.
+  - Part D2 (api `9ca88a5`, `ecc0109`; merged `65f95f0`, pushed 2026-10-02) makes the check read the pair
+    `get_grant_service()` connects with (`utils.config.settings.postgres_grant_user` / `postgres_grant_password`), not
+    `grant_credentials()`. A blank value in either is missing, and the line names `POSTGRES_GRANT_USER` or
+    `POSTGRES_GRANT_PASSWORD`. A conflict between the two password names no longer stops the boot. A host holding
+    only the deprecated name is refused, and a renamed grant role passes.
 
   The original entry:
   - *What is missing:* "nobody is frozen where no erasure can finish" (R-DOOR) stops at seam registration. A gateway
@@ -3218,13 +3236,44 @@ part D's merge; Task 18's review, then its live run on the owner's go.
   - shift-optimizer drops `keep`.
 - **Part D2 is built:** the door reads the grant pool's own user and password, the api's auth-cache eviction lines
   name no one, and part D's Minors are closed. Its review is running.
-- **Running:**
-  - lane D fix part B2;
-  - the D2 review;
-  - Task 18 fix part 1;
-  - db-roles step 7 fix round 2, part 2b (part 2a done).
-- **Queued:**
-  - D2's fix round;
+
+**Status at compaction checkpoint 21 (2026-10-02).**
+- **P4 fix round part D2: merged and pushed behind a full post-merge gate.** utils `dfd7a17`, copilot-mro
+  `b1883d85`, api `65f95f0`. The only reds were known ones: the census family, and the door-check red above, now six
+  cases.
+  - Its review was MERGE-READY, 0C/0I/4M. It found that the 503 door holds, that the door and the grant pool read the
+    same pair, and that `delete_patterns` has exactly its four api callers.
+  - **M1:** the door-check red has a second cause. copilot-mro's settings module prints "Found .env file at" to
+    stdout when first imported, so the case that imports it first goes red. The same line breaks the owner CLI's
+    "one JSON object a line" in production. The api's and core's settings modules print the same way.
+  - **M2:** the eviction pin never drives a person with nothing cached.
+  - **M3:** four cache-write WARNINGs (and their DEBUG twins) name the caller and tenant.
+  - **M4:** the request log binds the raw URL path, so the erasure's own doors (freeze, cancel, status) write the
+    person's internal id into two INFO lines each.
+    - **Owner ruling (2026-10-02): no URL id in any request line, on every route.**
+    - Request lines carry the route template, the one the server span carries as `http.route`. An unmatched path is
+      reduced to `/:redacted`, as G.111 does for spans.
+- **Part D3 (D2's fix round) is ruled, and waits for the owner to allow new agents.** It covers:
+  - the door-check red, both causes: the test discards what setup printed, then accepts only log records; the three
+    settings modules log the line at DEBUG, as utils already does;
+  - M2's empty-cache case;
+  - M3's eight lines, given the eviction lines' treatment;
+  - M4 per the ruling.
+  - The cache lines naming roles, departments and tenants go to the Future Improvements below.
+- **Lane D fix part B2 is built.** All five word-only keeps are now `no-person`, since no writer puts the person's id
+  there.
+  - Each line's keep set is pinned: core 12, copilot-mro one, shift-optimizer none.
+  - copilot-mro's guard refuses a write inside a CTE, and gains core's two whole-relation checks.
+  - All 16 mutants are killed.
+  - Its scoped re-review is running. One open question for it: `chat_turn_facts.session_id` is set by the
+    anonymisation but placed on no line.
+- **Task 18 fix part 1 is built.** Every after-check is now armed by its own before, a redo resets the later steps,
+  no check is excused by the product's own receipt, and the script never runs the due queue. Its scoped re-review is
+  running.
+  - Part 2 adds two items: a harmless pre-flight proving the api's identity may make the erasure's Cognito admin
+    calls, and a leg that reads the agent-state store's Postgres rows.
+- **Queued, once agents are allowed again:**
+  - part D3;
   - census part 1 (C1), after B2 merges;
   - Task 18 fix part 2;
   - census part 2 (C2);

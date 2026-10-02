@@ -122,12 +122,36 @@
 
         Step 7 from scratch at these tips moved no number the sheet quotes. On an RDS-shaped PostgreSQL 16, step 3
         lands with 184 accepted lines, 10 of them `rds_superuser`'s, and the three controls are red.
-      - **Part 2b: running.** It brings the sheet to the code: the RDS section, the four text fixes, the census's
-        membership term, and a new read-only census row for user triggers in `tenants`' delete reach. It also fixes
-        the TEMPORARY notice so it no longer contradicts an accepted line. It re-proves the sheet at the new tips: the
-        local shape forward, rolled back and forward again, plus an RDS-shaped run.
+      - **Part 2b: done (2026-10-02).** copilot-mro-s7 `ab0f40f7`, core-s7 unchanged at `4cf64875`. It brought the
+        sheet to the code: the RDS section, the four text fixes, the census's membership term, and a new read-only
+        census row for user triggers in `tenants`' delete reach. It also fixed the TEMPORARY notice so it no longer
+        contradicts an accepted line. It re-proved the sheet at the new tips: the local shape forward, rolled back and
+        forward again, every quoted number reproduced. On an RDS-shaped run, step 3 lands with 184 accepted lines.
+    - the scoped re-review of fix round 2, in two lenses (2026-10-02):
+      - **Lens B, the sheet: SHEET-READY, apart from two Minors.** Its own run reproduced every number.
+        - Where the master owns the database (the usual RDS shape), verify prints 192, not 193. The owner holds
+          TEMPORARY by owning the database, so no accepted line is printed for it.
+        - A column-level `UPDATE` is invisible to the holder censuses and to the sheet's probe.
+      - **Lens A, the code: FIX FIRST, 0C/1I/2M.**
+        - The `rds_superuser` line is pinned to the role's name only. A hand-made `rds_superuser`, even one that can
+          log in, is accepted on a server where the run could revoke its data roles.
+        - The writers censuses print a remedy that does nothing for a holder reaching the privilege through a
+          membership.
+        - One still-finding has only a text pin.
 
-      A scoped re-review follows, then the sheet goes to the owner, with step 6's 4c first.
+        It also found a gap older than step 7: no census sees column privileges. A column `UPDATE` on
+        `user_operators` granted to the app role passes verify, and that grant then lets the role rewrite every grant
+        in its tenant.
+    - **Fix round 3 (ruled 2026-10-02; waits for the owner to allow new agents):**
+      - the `rds_superuser` line accepts only where the run's role is no superuser, `rds_superuser` cannot log in, and
+        `rdsadmin` exists as a superuser;
+      - the right remedy text;
+      - one live case for the still-finding;
+      - column privileges in the writers censuses and the app role's check, and in the sheet's probe and census;
+      - both RDS shapes in the sheet's counts;
+      - a unit case for the trigger pin's `SET NULL` hop.
+
+      It re-proves the sheet. A scoped re-review follows, then the sheet goes to the owner, with step 6's 4c first.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
