@@ -87,10 +87,20 @@
     - part 3a: the definer-owner precondition (rc 2 before any write) and the two transactions (B14's revoke lands
       even if PUBLIC's reach rolls back), proven live on a throwaway;
     - core M6: a live test of the mint-receipt compensation through the definer;
-    - part 3b, running: TEMPORARY on `copilot_mro_test` only, membership-aware checks with the RDS creator edge, the
-      definer body compared, PostgreSQL 16's SET check;
-    - part 4, next: the sheet's text, its re-proof (forward, rollback, forward), the RDS-shaped run, and the hand-back
-      lanes.
+    - part 3b: TEMPORARY on `copilot_mro_test` only, membership-aware checks with the RDS creator edge, the definer
+      body compared, PostgreSQL 16's SET check (`cde5b722`);
+    - part 4a: the owner's stand-in in the definer census (`62974389`); readonly reported once (`4d249ef5`); the sheet
+      rewritten and re-proven forward, rollback, forward on a throwaway (`dffb96c5`);
+    - part 4b: the mainlines merged into both branches (copilot-mro `70f3dcd0`, core `be055893`); the stand-in excluded
+      from all six holder censuses, each naming it on an accepted line (`e50a3613`; controller ruling below); the
+      RDS-shaped runs (a master not named `postgres`, PostgreSQL 16 and 15: verify 0 findings, 183 and 180 accepted
+      lines); the sheet's RDS section filled;
+    - part 4c, running: the sheet's proof at the merged tips, the build's six live mutants, the hand-back lanes, the
+      consolidated report. Then a scoped re-review, then the sheet goes to the owner, with step 6's 4c first.
+  - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
+    precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
+    owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
+    not named so would otherwise fail verify with 17 findings, and step 3 would commit nothing there.
   - **The owner's rulings (2026-10-01, evening):**
     - On RDS, PostgreSQL 16 makes the master a member of each role it creates, and the link cannot be removed. Verify
       names that one edge on its own accepted line, and every other edge stays a finding.
@@ -285,3 +295,13 @@ DDL on shared databases, so every DDL step is the owner's to run.
   implementer (about 720k) was stopped on its last step, with all its work committed. That stop killed its hand-back
   lanes, which then had to be re-run, so the owner refined the rule: an agent that crosses the cap mid-task
   finishes that task, and only then retires. A fresh reviewer took the re-review.
+
+- **Name the shared database, not the database name, in a safety rule (step 7, part 4b, 2026-10-01).** Briefs said
+  "never connect to `copilot_mro`". Part 4b read that as forbidding a database of that name inside its own throwaway
+  container too, so it skipped the sheet's re-proof at the merged tips, which needs one. Rule: a brief names what is
+  protected by where it lives (the shared server's `copilot_mro`, the `postgres` container on port 5432), and says
+  outright that a throwaway built from code may hold databases of any name.
+- **A large file's agents work from a design file and symbol indexes (step 7 fix round, 2026-10-01).** Two agents ran
+  out of context reading the 4,000-line provisioning script. The round then ran as narrow parts, each with a
+  "read only this" list, slices through a regenerated symbol index (`/usr/bin/grep`, since `grep` is ugrep here), and
+  a "Status after part N" section appended to one design file, so every next agent started from durable state.
