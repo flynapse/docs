@@ -994,8 +994,10 @@ Lanes (2026-10-01; P4 review C M-5):
       every placement must choose, and the tuple lines keep their shape. It is built in lane D's fix round, part B.
     - `keep` then means only that the person's id or words may remain by ruling: D9 provenance, the ledger, D1
       knowledge.
-    - `no-person` is a column a guard rule forced into the line that no writer fills with the person. The erasure
-      treats it as it treats `keep`.
+    - `no-person` is a column a guard rule forced into the line where no writer puts the person's ID. The erasure
+      treats it as it treats `keep`. Words are not part of the kind; the census's seeding handles them. P's sentinel
+      goes where the erasure removes, and K's where text is kept (D1, D10). (Refined 2026-10-02 at part B's
+      hand-back.)
     - The census asserts the person's ids ABSENT from every `no-person` placement, and a planted id there turns it
       red.
 
@@ -2458,7 +2460,11 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   `api/.env` into the test process on import (P4 review C M-5), so a test that leaves the client to the environment
   builds a real one, and its result depends on the shell and on test order. Rule: every test that reaches a
   Phoenix-reading seam passes its fake in, or declares no Phoenix (`PHOENIX_ENDPOINT=none` under O10); Task 17's census
-  too.
+  too. Since the P4 fix round's part D, both conftests (copilot-mro and api) declare `none` for the whole session; a
+  test that needs a Phoenix names one through copilot-mro's settings object.
+- A mutant ran on a tree while that tree's full suite was collecting (lane D fix round part B, 2026-10-02): the suite
+  failed one test with the mutant's exact signature, and only a re-run alone was green. Rule: never run `mutant.sh` on
+  a tree while that tree's suite runs; mutate a scratch extract, or wait for the suite. Every brief says so.
 
 ## Implementation notes
 
@@ -3169,3 +3175,24 @@ samples, lane P's row 5h, P4 fix part M), api `adddeef` (lane P's pins), dashboa
 `72a24ff`, telegram-bot `c48fbdf`, utils `ce99f3b`, lambdas `ee2ac6b`; each behind a full post-merge gate. Running:
 P4 fix part D, lane D's task review, the Task 18 script. Next: lane D's merge with its pin row, then the census;
 part D's merge; Task 18's review, then its live run on the owner's go.
+
+**Status at compaction checkpoint 19 (2026-10-02, early).**
+- **Pushed, each behind a full post-merge gate** (the only reds were the known census family):
+  - Task 17 lane D: core `3092d78`, copilot-mro `94d0b59f`, shift-optimizer `70a7a39`;
+  - the P4 fix round's part D: utils `ce25e60`, core `a6f3a8c`, copilot-mro `95412291`, api `5caa9fb`. The door check
+    is built.
+- **The owner ruled step 7's RDS question** (db-roles plan): accept `rds_superuser` on one narrowly pinned line.
+- **Running:**
+  - lane D fix part A, which is test-only;
+  - the review of lane D fix part B: the `no-person` kind, built (core 10, copilot-mro 48 and shift-optimizer 6
+    placements moved);
+  - part D2: the door reads the grant pool's own user and password, the api's auth-cache lines name no person, and
+    part D's review Minors;
+  - db-roles step 7 fix round 2, part 2a.
+- **Queued:**
+  - Task 18 fix part 1, whose brief is ready: its review was FIX FIRST, 0C/5I/8M;
+  - census part 1 (C1), after lane D part B merges; its brief is drafted and the seeding rule is set;
+  - Task 18 fix part 2;
+  - census part 2 (C2);
+  - SDK transcripts off on the API host;
+  - Task 18's live run, on the owner's go.
