@@ -943,8 +943,38 @@ Owned: `iac/s3.tf`, `iac/apprunner_iam.tf`; iac unit tests.
     configuration, never a second resource (one configuration per bucket; a test fails on a second).
   - Task 17: iac's 30 days against core's `s3_noncurrent_days` is a cross-repo pin.
 
-### Task 17: planted-sentinel census + cross-repo pins (P5, lane A)
-Owned: new `api/tests/integration/user_erasure/` (census + fixtures).
+### Task 17: planted-sentinel census + cross-repo pins (P5; three lanes: P, D, C)
+Lanes (2026-10-01; P4 review C M-5):
+- **P, the cross-repo pins** (api `ue-t17-pins` in `api-t17`; dashboard `ue-t17-pins` in `dashboard-t17`; copilot-mro
+  `ue-t17-pins` in `copilot-mro-t17` for row 5h's constants). Owns `api/tests/unit/user_erasure/test_user_erasure_cross_repo_pins.py`
+  and the dashboard receipt guard's gate. Built: 13 pins (api `edab081`, `85ac132`; dashboard `644ceaf`); task review
+  0C/2I/7M. Its fix round adds: the POC host's Loki and Tempo retention (I-1); `cloudwatch_days` against every log
+  group's retention (I-2); core's Cognito calls against iac's erasure policy, equal both ways; row 5h; the request
+  response's fields against the dashboard's `UserErasure` (review B M-3); the CLI help's timing, the purge command's
+  argument and the bot README's tenant name (review B M-4); one missing sibling fails only its own pin (M-1); the
+  finishers bound by name (M-2). Its narrowings, ruled right by the review: run reasons are pinned by category, not
+  literally; shift-optimizer's kinds are a subset; row 7 pins nothing (no reader outside core; `via` is a change
+  key); the iac row reads the checkout like every other pin (the iac primary is on `main`). Rows beyond the table:
+  F2's runbooks (help ↔ bot, README ↔ CLI) and the analytics contract.
+- **D, the drift shape list** (core, copilot-mro, shift-optimizer; `ue-t17-drift`). Owns the three drift guards and
+  the placements they force. The list as ruled (controller, 2026-10-01): today's shapes plus `assignee`, `approver`,
+  `requester`, `owner` (whole or a `_`-delimited part), `user_name`, `username`, `creator`; one list, shared or
+  pinned equal by lane P; the jsonb rule (every json/jsonb column of a relation holding a placed column is itself
+  placed, `automation_runs.params` first); new placements by R-PLACEMENTS and D9; a column that fits no rule is placed
+  provisionally `keep` with "owner question: …" and listed for the owner.
+- **C, the census** (`api/tests/integration/user_erasure/`, where F2's db test already lives), after D and after the
+  P4 fix round's part M: the first two checkboxes below. Besides the seeds they list:
+  - a P sentinel under a deleted operator (rows, plus a chunk in a kept pair partition), with a Weaviate fake that
+    answers the presence read;
+  - Phoenix spans for P, the sibling and the second tenant under the SAME id (in its own project);
+  - one recording Phoenix fake injected at the seam's door, reusing copilot-mro's
+    `tests/unit/user_erasure/_fake_phoenix.py` (matched to client 3.5.0): the api's `main` exports `api/.env`'s keys
+    into the test process, so an un-faked census builds a real client;
+  - the S3 fake answering both `s3_client` and `get_client()`; the memory index's presence cache reset; the Document
+    Hub fake index named as one of `mt_collection_names()` (review A's P5 notes);
+  - both wirings, and the request's `erase_after` in the past (the carry-ins below);
+  - the I-2 probe: plant a surviving Phoenix copy, run the evaluation store after the erasure, and see nothing
+    derived.
 - [ ] Seed through the REAL writers into `copilot_mro_test` a personal sentinel (P) and a knowledge sentinel (K) in
   every store of Tasks 6–9 (turns incl. a chat deleted beforehand, feedback, share, preference, curated example, tenant
   fact, correction, signal, finding, eval explanation, agent state, the three LLM relations, automation + run, comment
