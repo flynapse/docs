@@ -975,6 +975,12 @@ Lanes (2026-10-01; P4 review C M-5):
   - **Part A** (`ue-t17d-fix-a`, test-only): m-3 and m-4 (the index readers read every upsert path, and what the
     Document Hub indexer writes as well as what it declares), m-6 (the readers' restores proven), and lane P's row
     holding the three `DRIFT_SHAPES`/`DOCUMENT_TYPES`/`DECOYS` literals equal.
+
+    **Merged and pushed (2026-10-02):** copilot-mro `0a3771a7`, api `728d0ec`. The memory reader runs four paths of
+    the upsert (insert, update, embed, and the reuse path that the erasure's own re-upsert takes) under a check that
+    fails if the upsert stops taking one. The Document Hub reader adds the keys `_chunk_properties` writes; today
+    those equal the declared 22. 18 mutants were killed. The full gate was green apart from the census family and one
+    order-dependent red in part D's door-check test, recorded with D2.
 - **C, the census** (`api/tests/integration/user_erasure/`, where F2's db test already lives), after D and after the
   P4 fix round's part M: the first two checkboxes below. Besides the seeds they list:
   - a P sentinel under a deleted operator (rows, plus a chunk in a kept pair partition), with a Weaviate fake that
@@ -1588,6 +1594,20 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     it small.
   - *Complete fix:* one `tests/fixtures/document_hub/index_stub.py` both files import, so a change to the service's
     erasure surface is mirrored once.
+- **The Document Hub drift reader reads `_chunk_properties`, not all of `index_artifact` (lane D fix part A,
+  concern 2).**
+  - *What is missing:* a key added to an object's properties inside `index_artifact`, after `_chunk_properties`
+    returns, would not be read. So a user-keyed property written there would pass the line guard unplaced. None is
+    today: `index_artifact` hands `_chunk_properties`' dict to `DataObject` unchanged, and the only other writer,
+    `_drain_reassign`, writes the declared `owner_user_id`.
+  - *Why deferred:* the round was scoped to `_chunk_properties`, and running `index_artifact` needs four stand-ins.
+  - *Complete fix:* run `index_artifact` against a recording collection, with stand-ins for:
+    - the partition key and `ensure_tenant`;
+    - the embedder;
+    - the `DataObject` import;
+    - the drain and its filter.
+
+    Then read the keys of every object it inserts.
 - Self-serve erasure (D5 option c); telegram pilots already self-serve.
 - Automate the channel-tenant residue sweep after teardown (today owner-run `delete_unentitled_partition.py`).
 - Loki delete requests, once structured-metadata filtering is verified on 3.7.7.
@@ -3182,15 +3202,20 @@ part D's merge; Task 18's review, then its live run on the owner's go.
   - the P4 fix round's part D: utils `ce25e60`, core `a6f3a8c`, copilot-mro `95412291`, api `5caa9fb`. The door check
     is built.
 - **The owner ruled step 7's RDS question** (db-roles plan): accept `rds_superuser` on one narrowly pinned line.
+- **Since then (2026-10-02):**
+  - Lane D fix part A was merged and pushed: copilot-mro `0a3771a7`, api `728d0ec`.
+  - **One new known red:** part D's `test_the_owner_cli_refuses_a_request_on_such_a_host_and_freezes_nobody` (api,
+    both cases). It fails whenever an earlier test in the same worker booted the session telemetry fixture, which
+    leaves a JSON stdout sink, so the partition wiring's INFO line lands in the test's captured stdout. It reproduces
+    serially in two files that part A did not touch. It is fixed in D2's review round, since D2 edits that file.
+  - Task 18 fix part 1 is running.
 - **Running:**
-  - lane D fix part A, which is test-only;
   - the review of lane D fix part B: the `no-person` kind, built (core 10, copilot-mro 48 and shift-optimizer 6
     placements moved);
   - part D2: the door reads the grant pool's own user and password, the api's auth-cache lines name no person, and
     part D's review Minors;
   - db-roles step 7 fix round 2, part 2a.
 - **Queued:**
-  - Task 18 fix part 1, whose brief is ready: its review was FIX FIRST, 0C/5I/8M;
   - census part 1 (C1), after lane D part B merges; its brief is drafted and the seeding rule is set;
   - Task 18 fix part 2;
   - census part 2 (C2);
