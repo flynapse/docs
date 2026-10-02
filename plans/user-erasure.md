@@ -2189,6 +2189,19 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   150 traces, limit 150 → 2 traces keep only their child). Unreachable with today's data (every content-copy span is
   tagged since 09-17). *Complete fix:* delete each trace's untagged spans before its tagged ones, or truncate at trace
   boundaries.
+- **Env samples (owner request 2026-10-01): the api image carries the SMTP password.** api's `deploy.yml` passes
+  `SMTP_USER` and `SMTP_PASSWORD` from GitHub secrets as build args, and the `Dockerfile` copies both into `ENV`, so
+  anyone who can pull the ECR image, or read its build cache, reads the password. *Deferred:* AWS deploy work, owner-run.
+  *Complete fix:* App Runner takes both as runtime secrets (Secrets Manager); the Dockerfile and the workflow drop
+  them; the SMTP password is rotated, because every image built so far carries it.
+- **Env samples: App Runner's api names no Claude transport.** `agent_pipeline._claude_runtime_provider` reads
+  `CLAUDE_CODE_USE_BEDROCK` from the process environment; unset, the Agent SDK goes to the Anthropic API. App Runner's
+  env (`iac/apprunner.tf`), the Dockerfile and the deploy workflow set neither it nor an Anthropic key, so wherever the
+  SDK path serves on AWS it has no working transport. *Complete fix:* App Runner's env sets
+  `CLAUDE_CODE_USE_BEDROCK=1`, and its instance role can invoke the Bedrock models.
+- **Env samples: two dead knobs.** copilot-mro `config.py` keeps `otel_endpoint` (`OTEL_ENDPOINT`), which nothing reads
+  (the OTel SDK takes the standard `OTEL_EXPORTER_OTLP_*` contract); `api/build.sh` passes a `GIT_TOKEN` build arg the
+  Dockerfile never declares. *Complete fix:* delete both.
 
 ## Lessons
 
