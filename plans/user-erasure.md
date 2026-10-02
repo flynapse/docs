@@ -1357,8 +1357,12 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
       CLI) shows the row's `rtbf` beside it; the completion's audit event carries `rtbf` for every erasure
       (F3 fix round 2, controller ruling: before it, a request opened legal left no event that said so).
     - When the owner's legal teardown strengthens a pilot's open `/goodbye`, F3's escalation event names the
-      teardown token as actor (`channel-teardown`) and the platform by `via = script`: the token must stay the
-      request's requester, because step 6 recognises a teardown by it (controller ruling: accepted).
+      platform (`platform-cli`, `via = script`), as the plain `request --rtbf` does: one act, one actor
+      (controller ruling 2026-10-01, P4 review B M-2; it supersedes the earlier "teardown token as actor" ruling for
+      the event's actor only; built in the P4 fix round, part R). The request keeps the token as its requester,
+      because step 6 recognises a teardown by it; core's `request_channel_teardown` takes the event's actor as
+      `escalated_by`. The teardown's own tenant event now names the request's door: `script` for the owner CLI,
+      `api` for `/goodbye` (B M-1).
     - The bot's purge command cancels a still-running renewal itself, as `/goodbye` does (one Telegram call with the
       bot token, then the cancel mark), and only then deletes. If Telegram refuses, it deletes nothing and says so;
       the README says what to do then.
@@ -1400,7 +1404,10 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
 1. Per task: fresh Opus implementer → fresh Opus adversarial reviewer (brief + report + diff + the phase scope) who
    RE-RUNS the named red-befores and mutants and emits a claims table; P0/P1 block, P2/P3 → Future Improvements.
 2. Controller merges each task locally `--no-ff` into its mainline, runs the full post-merge gate there, and pushes
-   once it passes (known reds excepted, named in the ledger).
+   once it passes (known reds excepted, named in the ledger). Once Task 17's pins merge, every merge of a repo they
+   read (core, copilot-mro, shift-optimizer, iac, telegram-bot, the dashboard) also runs the api pin file from the
+   api primary, and a core merge also runs the dashboard's `test:unit` (lane P review M-7): the pins fire only when
+   they run.
 3. Phase review (independent, adversarial) → triage → a fix round, merged, gated and pushed the same way. The owner
    waived the pause between phases on 2026-10-01; owner questions go to the owner as they arise.
 
@@ -1431,14 +1438,20 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    `api/postgres/passwords`, which must exist with both JSON keys before any plan (P4 review C M-1). The apply is iac
    `main`'s whole apply: its other owner steps come first, in iac `README.md` (B4's log-group imports, B5) and the
    db-roles plan.
-   **Two AWS deploy blockers, decided at deploy time (owner, 2026-10-01; P4 review C I-4 and I-1):**
+   **AWS deploy blockers, decided at deploy time (owner, 2026-10-01; P4 review C I-4 and I-1):**
    - Where the platform CLI runs. App Runner has no shell, the database and Weaviate are private to the VPC, and Task
      16 grants the Cognito actions to App Runner's role only. Until decided, legal (RTBF) requests, F2's owner erasure
      of a pilot, platform cancels and resumes cannot be made on AWS. Options: a one-off ECS task from the api image in
      the VPC, an SSM-managed admin box, or a platform-owner HTTP route.
    - Phoenix under O10 (c). App Runner's env (Terraform-managed) names no Phoenix and no "no Phoenix here" setting, so
-     once O10 is built every AWS erasure would freeze its person. Either iac declares "no Phoenix here" there, or AWS
-     gets a Phoenix with endpoint and key. The POC replica box runs a Phoenix but gives its api neither key.
+     once O10 is built every AWS erasure would freeze its person. Either iac declares "no Phoenix here"
+     (`PHOENIX_ENDPOINT=none`) there, or AWS gets a Phoenix with endpoint and key. The POC replica box runs a Phoenix
+     but gives its api neither key. Under the door ruling (Owner / legal items, O10), a host with neither refuses
+     every erasure request at the door (503) instead of freezing anyone.
+   - **A third, at the same time: X-Ray's `aws/spans` (P4 review C M-6).** With Transaction Search on (the owner's B5
+     toggle), browser spans carrying `enduser.id` are kept in `aws/spans`, which never expires, while the receipt says
+     `cloudwatch_days: 30`. Either set its retention right after the toggle (the Future Improvement "`aws/spans`
+     retention" says how), or the receipt gains a limit key for it.
 5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` (the
    owner's choice on 2026-10-01: the scheduler runs on AWS, so erasures and `/goodbye` finish on their own).
    Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the previous image
@@ -2253,6 +2266,40 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **Env samples: two dead knobs.** copilot-mro `config.py` keeps `otel_endpoint` (`OTEL_ENDPOINT`), which nothing reads
   (the OTel SDK takes the standard `OTEL_EXPORTER_OTLP_*` contract); `api/build.sh` passes a `GIT_TOKEN` build arg the
   Dockerfile never declares. *Complete fix:* delete both.
+- **`aws/spans` retention: the receipt's 30-day CloudWatch bound does not cover X-Ray's span group (P4 review C M-6;
+  P4 fix round part R, item 7).**
+  - *What is missing:* with Transaction Search on, X-Ray writes 100% of spans into the `aws/spans` log group; browser
+    spans carry `enduser.id`, which the collector upserts from the gateway header. The group never expires: iac
+    declares only its resource policy (`cloudwatch.tf` B5). The receipt states `cloudwatch_days: 30`.
+  - *Why deferred:* CloudWatch Logs reserves the `aws/` prefix (`CreateLogGroup`: "Log group names can't start with
+    the string aws/"), so Terraform cannot create the group; only X-Ray can, when the owner enables Transaction
+    Search. iac can hold its retention only by importing it after that toggle, and no other resource sets a log
+    group's retention. The toggle and the AWS deploy are both still the owner's.
+  - *Complete fix:* in the owner's B5 step, right after the toggle, `terraform import
+    aws_cloudwatch_log_group.transaction_search_spans aws/spans` against a new `cloudwatch.tf` block (`name =
+    "aws/spans"`, `retention_in_days = var.log_retention_days`, the usual tags, `lifecycle { prevent_destroy = true }`)
+    with an HCL block test; or, without an import, `aws logs put-retention-policy --log-group-name aws/spans
+    --retention-in-days 30`. Task 17's cloudwatch pin then covers it. The same applies to
+    `/aws/application-signals/data` if the service created it first. If the owner rules the receipt need not cover
+    `aws/spans`, the receipt gains a limit key instead. Not verifiable offline: that `PutRetentionPolicy` is accepted
+    on the service-created group.
+- **`request_channel_teardown`'s `escalated_by` defaults to the teardown token (P4 fix round part R, concern 2).** The
+  default keeps the channel door's call (it never escalates) and the unmerged branches' calls working; a future caller
+  passing `rtbf=True` without it would record the token as the escalation's actor again. Today only the owner CLI
+  states `rtbf`, and api tests pin the keyword on every teardown call. *Complete fix:* make it a required keyword
+  once the db-roles step 7 branch has merged.
+- **Task 17 lane P review (2026-10-01), five leftovers.**
+  - *M-3:* the finishers pin skips a string that names two or more scripts (none does today). *Complete fix:* check
+    every named script exists, and attribute each flag to the nearest preceding script mention.
+  - *M-5:* the dashboard has two rules for "no core beside" (the analytics contract skips only under
+    `GITHUB_ACTIONS`; the receipt guard defaults `REQUIRE_BACKEND` to 1 in `package.json`, POSIX-only; the run-error
+    and run-trigger guards still skip). *Complete fix:* one helper for the four sibling-reading guards.
+  - *M-6:* the pin file is the api suite's third AST module-literal reader. *Complete fix:* one shared
+    `tests/_ast_literals.py` before the next copy.
+  - *FI-1:* the operator-delete reader is heuristic (nullable means "bound to `None` in the route"; capitalised or
+    digit names are dropped). *Complete fix:* read the route's `response_model` once it has one.
+  - *FI-2:* the analytics failure message names `quality.py` where the literal was read from the defining module.
+    *Complete fix:* carry `resolveDeletedUserId(...).where` into the message.
 - **The out-of-band pilot erasure is two owner commands that nothing reconciles (controller ruling 2026-10-01: "an
   automatic reconcile stays an FI"; F2 report concern 7; P4 review C M-4).** `request --channel-teardown` (api host)
   and `python -m telegram_bot.purge_account` (bot host) are separate. A completed platform erasure whose bot purge
