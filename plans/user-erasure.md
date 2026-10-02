@@ -1,10 +1,12 @@
 # User Erasure (PP-MRO-1) — Implementation Plan
 
 > **For agentic workers:** SDD-driven. Controller = the owner's session; **implementers AND reviewers = Opus**
-> (fresh agent per task, one implementer per working tree, concurrency cap 2 unless the owner raises it).
+> (fresh agent per task, one implementer per working tree; concurrency cap 4, the owner's since 2026-10-01).
 > Ledger: `/home/aditya/Code/.superpowers/sdd/user-erasure/progress.md`. Durable scratch:
-> `~/.claude/scratch/user-erasure/<lane>/`. **Push rule:** Claude may push a repo's mainline after the phase review
-> closes; never rebase, squash, amend or force-push. Executors do not edit this plan; they report exact text.
+> `~/.claude/scratch/user-erasure/<lane>/`. **Push rule (in force since P3; the owner: Claude may push this program's
+> work):** each lane's merge is pushed once its own post-merge gate passes, before its phase review; a phase review's
+> findings land as a fix round, merged, gated and pushed the same way. Never rebase, squash, amend or force-push.
+> Executors do not edit this plan; they report exact text.
 
 **Goal:** a real erasure of one person from one tenant: freeze at once, erase after a 7-day cancellable window
 (immediately for a legal right-to-be-forgotten request), with the person's own trail deleted, tenant knowledge
@@ -106,8 +108,8 @@ the receipt states the backup bound.**
 | P1 foundations | 1–5 | C `core-erase`→master (1→2) · A `api-erase`→langgraph-merge (3, after 1) · M1 `copilot-mro-erase` (4) · M2 `copilot-mro-erase-b` (5) | ledger, registry, freeze/cancel, refactor, definer — nothing erases yet |
 | P2 seams | 6–10 | M1 (6, then 8) · M2 (7) · C (9) · S `shift-optimizer-erase`→main (10) | every store's erase + residue + line + drift guard |
 | P3 orchestration | 11, 11b, 12–14, 19 | C (11 → 13) · C-b `core-erase-b` (19 core) · M1 (19 copilot-mro → 11b) · A (12 → 19's registration) · D `dashboard-erase` (14 + 19's copy) · T `telegram-bot-erase`→main (the bot's teardown client, `/goodbye` flow and provisioning answer, Task 13) — order below | the flow end to end, Cognito delete, receipt, D11 on the job path, UI; operator delete deletes its own rows |
-| P4 telemetry/iac | 15–16 | M1 (15) · I `iac-erase`→obs-merge (16) | Phoenix user sweep, S3 lifecycle, Cognito IAM |
-| P5 proof | 17–18 | A (17) · controller + owner (18) | census, cross-repo pins, live E2E |
+| P4 telemetry/iac | 15–16 | M1 (15) · I `iac-erase`→main (16) | Phoenix user sweep, S3 lifecycle, Cognito IAM |
+| P5 proof | 17–18 | P (17's pins) · D (17's drift list) · C (17's census, after D) · controller + owner (18) | census, cross-repo pins, live E2E |
 
 **P3 dispatch and merge order (P3 plan review, recommended order and MI-6).** One implementer per worktree, at most
 three running at once; each lane is serial inside itself.
@@ -168,7 +170,8 @@ core's router mount site; tests (incl. edits to `tests/api/tenancy/test_user_upd
   (same gate): prior status restored, AdminEnableUser, ledger cancelled.
 - [x] Routes POST / GET (status + receipt) / DELETE (cancel) on `/users/{id}/erasure`, gated exactly as
   `_require_user_delete_allowed`; bare `DELETE /users/{id}` answers 202 as a request. `cognito_accounts.py`: disable,
-  enable, sign-out, delete, exists — configured pool only, no attribute reads.
+  enable, sign-out, delete, exists — configured pool only, no attribute reads. (Task 11 later added one: the
+  completion reads the account's tenant claim, `account_tenant_claim`; P4 review C M-9.)
 - [x] Proofs (fake Cognito): 403 without `users_modify` (self included), last-owner refusal, Cognito failure leaves
   status and ledger untouched, cancel restores exactly, a repeat request returns the open one. Mutants: skip the
   last-owner check; freeze without sign-out; cancel without restoring status.
@@ -872,9 +875,12 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
   seam's composed residue under a disjoint key. The receipt's Phoenix 30 d bound is the backstop.
 - [x] **Carry-ins from P3 (phase review E, 2026-09-30).**
   - A Phoenix leftover blocks completion (owner, 2026-10-01, O5: yes). As written: the copilot-mro seam raises an
-    incomplete and never purges while any residue reads non-zero, and core retries six times, then daily. So a Phoenix
-    outage, or a span ingested after the sweep, holds the erasure `erasing`, the person frozen and the Cognito account
-    undeleted (step 4 comes after the seams) until the sweep reads zero.
+    incomplete and never purges while any residue reads non-zero, and core retries six times, then daily. A failure the
+    seam's own reads see (a Phoenix outage at the seam, a span still there at its last read) holds the erasure
+    `erasing`, the person frozen and the Cognito account disabled, not deleted (step 4 comes after the seams). One
+    first seen at core's residue step (step 5: a span ingested after the seam's last read, or a Phoenix that fails only
+    there) holds the request `erasing` and the person frozen with the account already deleted (P4 review A M-1; pinned
+    by `test_a_span_exported_after_the_seams_step_holds_the_residue_step_after_the_account_went`).
   - Orphans per source (Future Improvement "Core keeps orphans per source, but copilot-mro reports one integer"):
     this task builds its complete fix, since it edits the seam (controller ruling, 2026-10-01).
   - Starts after Task 20's F1 merges: both edit copilot-mro's user-erasure seam.
@@ -903,10 +909,12 @@ Owned: `copilot_mro/app/services/agent_evaluation/phoenix_session_scrub.py`; new
   - The trial merge onto `5c2bf7f4` was clean, and the lanes passed on it with `PHOENIX_ENDPOINT` unset and dead
     alike.
   - M-1 (an HTTP error other than 404 is unproven as fail-closed) and M-2 (the session retry for a chat no reap ran
-    for) are one test each: carried into the P4 phase review's fix round. M-3 is the deploy text below (step 6).
-    M-4 and M-5 are Future Improvements.
-- Owner question O10 (open, asked in the morning): what a host that names no Phoenix does (below, Owner / legal
-  items).
+    for) are one test each; M-5 (= FI-E: the reap's WARNING logs `chat_id`) and FI-C (core's runtime-cap comment
+    should count up to four Phoenix requests a chat) are one line each. All four ride in the P4 phase review's fix
+    round (M-1, M-2, M-5 in part M; FI-C in part R; P4 review C M-3). M-3 is the deploy text below (step 6). M-4 is a
+    Future Improvement (FI-H).
+- Owner question O10: ruled (c) on 2026-10-01, "block unless declared"; built in the P4 fix round, part M (below,
+  Owner / legal items).
 
 ### Task 16: iac — S3 noncurrent-version expiry and the Cognito erasure policy (P4, lane I)
 Owned: `iac/s3.tf`, `iac/apprunner_iam.tf`; iac unit tests.
@@ -924,8 +932,9 @@ Owned: `iac/s3.tf`, `iac/apprunner_iam.tf`; iac unit tests.
     five actions core's `cognito_accounts.py` calls, on `aws_cognito_user_pool.clients["default"].arn`.
   - Proofs: 9 HCL tests red before, the iac suite 335 passed; 25 mutants killed, plus the review's four survivors
     (a `count`/`for_each` on either resource, a `Condition` key, an inline-policy name shared on the role) killed by
-    fix round 1. `terraform fmt -check` passes. `validate` against the pinned 6.x provider cannot run offline (not
-    cached); a scratch copy validated against the cached 5.100.0 provider, and CI's plan workflow is the real gate.
+    fix round 1. `terraform fmt -check` passes. `validate` against the pinned 6.x provider was thought not to run
+    offline; a scratch copy validated against the cached 5.100.0 provider. It can: P4 review C's probe V-1 validated
+    against 6.66.0 from `~/.claude/scratch/db-roles/tf/plugin-cache`, 0 warnings. CI's plan workflow is the real gate.
   - Deploy notes for the owner's apply (Deploy/rollout step 4): the rule covers the whole bucket, so any deleted or
     overwritten object, not only an erased person's, is unrecoverable after 30 days (no backups, D12); the first apply
     expires every existing noncurrent version older than 30 days at once. S3 rounds the 30 days to the next midnight
@@ -1368,8 +1377,10 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
 
 1. Per task: fresh Opus implementer → fresh Opus adversarial reviewer (brief + report + diff + the phase scope) who
    RE-RUNS the named red-befores and mutants and emits a claims table; P0/P1 block, P2/P3 → Future Improvements.
-2. Controller merges each task locally `--no-ff` into its mainline and re-runs the touched suites there.
-3. Phase review (independent, adversarial) → triage → owner pause; then Claude may push the phase's repos.
+2. Controller merges each task locally `--no-ff` into its mainline, runs the full post-merge gate there, and pushes
+   once it passes (known reds excepted, named in the ledger).
+3. Phase review (independent, adversarial) → triage → a fix round, merged, gated and pushed the same way. The owner
+   waived the pause between phases on 2026-10-01; owner questions go to the owner as they arise.
 
 ## Deploy/rollout
 
@@ -1391,10 +1402,13 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
 4. AWS (deferred until implementation is done): iac apply (Cognito policy + S3 lifecycle) BEFORE the routes are used
    on AWS — without the IAM grant every request fails closed at the Cognito disable. Read Task 16's deploy notes
    first: the lifecycle rule covers the whole bucket, and the first apply expires every existing noncurrent version
-   older than 30 days at once. The api process also needs the
-   grant-pool credentials (`POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam
-   runs the LLM-records definer on the grant pool, so without them every erasure freezes the person and then fails at
-   that step on every retry. iac `main` now declares both (P4 review C).
+   older than 30 days at once. The api process also needs the grant-pool credentials (`POSTGRES_GRANT_USER` /
+   `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam runs the LLM-records definer on the grant pool,
+   so without them every erasure freezes the person and then fails at that step on every retry. iac `main` declares
+   both (`apprunner.tf`): the user by default, the password from the owner's hand-made secret
+   `api/postgres/passwords`, which must exist with both JSON keys before any plan (P4 review C M-1). The apply is iac
+   `main`'s whole apply: its other owner steps come first, in iac `README.md` (B4's log-group imports, B5) and the
+   db-roles plan.
    **Two AWS deploy blockers, decided at deploy time (owner, 2026-10-01; P4 review C I-4 and I-1):**
    - Where the platform CLI runs. App Runner has no shell, the database and Weaviate are private to the VPC, and Task
      16 grants the Cognito actions to App Runner's role only. Until decided, legal (RTBF) requests, F2's owner erasure
@@ -1404,16 +1418,22 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
      once O10 is built every AWS erasure would freeze its person. Either iac declares "no Phoenix here" there, or AWS
      gets a Phoenix with endpoint and key. The POC replica box runs a Phoenix but gives its api neither key.
 5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` (the
-   owner's choice on 2026-10-01: the scheduler runs on AWS, so erasures and `/goodbye` finish on their own). Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the
-   previous image stands down (disables) the automations of anyone still frozen, and a later cancel does not re-enable
-   them (Task 12 review M-4). A request that can no longer be cancelled (immediate, or past its `erase_after`) keeps
+   owner's choice on 2026-10-01: the scheduler runs on AWS, so erasures and `/goodbye` finish on their own).
+   Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the previous image
+   stands down (disables) the automations of anyone still frozen, and a later cancel does not re-enable them (Task 12
+   review M-4). A request that can no longer be cancelled (immediate, or past its `erase_after`) keeps
    its person frozen: finish it with `--run-due` first, or re-enable those automations afterwards.
 6. Phoenix (Task 15, review M-3): the api host needs BOTH `PHOENIX_ENDPOINT` and `PHOENIX_API_KEY`, and the key must be
    allowed to delete spans and sessions (the collector README's system API key). The local Phoenix has auth on: with
    the endpoint alone, every erasure fails closed (`INCOMPLETE_PHOENIX`) and stays `erasing`, the person frozen and
    the account kept, 6 tries then daily; a key that cannot delete holds every request at its first span delete.
-   Owner, 2026-10-01 (O10): a host that names no Phoenix fails closed unless it declares "no Phoenix here", so name
-   both keys (or the declaration) before a host's first erasure. The owner adds both keys to dev's `api/.env`.
+   Owner, 2026-10-01 (O10): a host that names no Phoenix fails closed unless it declares "no Phoenix here"
+   (`PHOENIX_ENDPOINT=none`), so name both keys (or the declaration) before a host's first erasure. The owner added
+   both keys to dev's `api/.env` on 2026-10-01.
+   **The replay** (`copilot-mro/scripts/observability/scrub_erased_user_spans.py`, P4 review C M-7) sweeps a completed
+   erasure's Phoenix spans by `user.id`. Run it for a span exported after an erasure completed, and once on dev for the
+   erasures completed before the P4 fix round, which ran with Phoenix unread (the CLI never loaded `api/.env`; review A
+   I-1). Its CLI help and docstring follow O10 when part M merges.
 
 ## Owner / legal items
 
@@ -1437,13 +1457,20 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
   tenant turns stop being judged). Built in the P4 phase review's fix round, with one runner case.
 - [x] **O10 (Task 15 review, 2026-10-01): a host that names no Phoenix.** **Owner, 2026-10-01: (c), block unless
   declared** — unset fails closed (the erasure retries); an explicit "no Phoenix here" setting skips and records the
-  skip. Built in the P4 phase review's fix round. Today the seam skips Phoenix, warns once
-  and completes, recording one orphan per chat: O5's letter holds (no residue reads non-zero) but not its intent where
-  a Phoenix exists unnamed, as on dev. Options: (a) keep it; (b) unset fails closed (needs (c), or a deployment with
-  no Phoenix never completes an erasure); (c) unset fails closed and an explicit "no Phoenix here" setting skips and
-  records the skip (reviewer's recommendation); (d) record the skip only (a `phoenix_not_named` count). Safe to
-  leave as (a) meanwhile: it behaves as before Task 15 where no Phoenix is named. Whatever is picked lands in the one
-  `phoenix is None` branch of `user_erasure.py`.
+  skip. Built in the P4 phase review's fix round, part M. Controller ruling (2026-10-01): the declaration is
+  `PHOENIX_ENDPOINT=none` (OpenTelemetry's `none` convention: one key, no new flag); declared, the seam skips Phoenix,
+  records the skip as a `phoenix` source in its orphans per source, and completes. It closes both skip branches of
+  `user_erasure.py` (P4 review A M-4); chat delete's reap keeps today's behaviour for an unnamed host and reads
+  `none` as no Phoenix. Before the fix, the seam skipped Phoenix, warned once and completed, so dev erasures run with
+  Phoenix unread may keep spans (Deploy/rollout 6: the replay). Options as asked: (a) keep it; (b) unset fails closed;
+  (c) the above; (d) record the skip only.
+  - Controller ruling on P4 review C's consequence question (2026-10-01): a host that names neither a Phoenix nor the
+    declaration refuses at the door, as R-DOOR does for a missing seam: `user_erasure_wiring.wire()` registers nothing
+    and every door answers the existing 503 (`ERASURE_UNAVAILABLE`), so nobody is frozen by a misconfigured host; the
+    seam's fail-closed stays for a Phoenix that goes away later. Why: under (c) alone such a host freezes the person
+    and disables the account before the seam fails, and an immediate or legal request cannot be cancelled. Built after
+    part M merges (the door reads the Phoenix keys the way part M's settings do), with the grant-password check of the
+    Future Improvement "A gateway without the grant-pool credentials…". Cost if wrong: one boot check, reverted.
 
 ## Future Improvements
 
@@ -1936,7 +1963,9 @@ Recorded at the P3 plan review (2026-09-29):
     pins go, and the residue-arm pins that widen a chat id to a set stay.
 
 Recorded at the P3 phase review (2026-09-30); each was triaged as a Future Improvement:
-- **Core keeps orphans per source, but copilot-mro reports one integer (P3 phase review A M-1 = E M-3).**
+- **BUILT in Task 15 (`ue-t15`, merged `a0d71393`; P4 review C M-2): core keeps orphans per source, but copilot-mro
+  reports one integer (P3 phase review A M-1 = E M-3).** `user_erasure.py` `chat_orphan_source` and `_Tally.erasure`;
+  P-1's sequence pinned by `test_the_ledger_keeps_each_chats_orphans_after_a_purge_and_a_failed_prefix_delete`.
   - *What is missing:* copilot-mro's `_Tally.orphans` (`user_erasure.py`) is one summed integer, and core's `_latest`
     replaces an integer report with the next one. An attempt that reaps every chat with 3 Phoenix sessions left,
     purges the chats, then fails at the prefix delete, records 3. The retry gathers no chats and reports 0, so the
@@ -2202,6 +2231,32 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **Env samples: two dead knobs.** copilot-mro `config.py` keeps `otel_endpoint` (`OTEL_ENDPOINT`), which nothing reads
   (the OTel SDK takes the standard `OTEL_EXPORTER_OTLP_*` contract); `api/build.sh` passes a `GIT_TOKEN` build arg the
   Dockerfile never declares. *Complete fix:* delete both.
+- **The out-of-band pilot erasure is two owner commands that nothing reconciles (controller ruling 2026-10-01: "an
+  automatic reconcile stays an FI"; F2 report concern 7; P4 review C M-4).** `request --channel-teardown` (api host)
+  and `python -m telegram_bot.purge_account` (bot host) are separate. A completed platform erasure whose bot purge
+  never ran leaves `tg_users` (the Telegram id, the gone tenant and user ids), subscriptions and history; the reverse
+  leaves a frozen pilot with no bot row. *Deferred:* owner-run and rare; the README orders the steps and says why, and
+  `list --tenant` tells completed from wrong-pair. *Complete fix:* the bot's daily job, or its startup, lists
+  `tg_users` rows whose backend tenant no longer exists (the provisioning door answers 404), runs the same purge, and
+  logs the counts.
+- **P4 review A M-3: orphans per source keep a zero entry for every chat the person ever had.** Ledger size only; no
+  reader is wrong. *Complete fix:* core `_latest` drops a source whose latest count is 0, with one unit case.
+- **P4 review A M-5: the replay's owner-connection helpers are the third verbatim copy in `scripts/observability/`.**
+  Each copy is tested. *Complete fix:* `_owner_db.py` with `owner_connection(database, application_name)`, the
+  argument types and `_BIND_TENANT_SQL`; three imports.
+- **P4 review A M-6: "the rows binding" is read three ways, about seven times an attempt.** One predicate, so the
+  reads agree. *Complete fix:* the composer hands its binding to the parts (`Part.erase(subject, roster=…, **ids)`,
+  `Part.residue(…)`), each part keeping its own read for standalone callers.
+- **P4 review A: chat delete's reap builds a Phoenix client per chat** (one version check each), though inside an
+  erasure the composer already holds one. Cost only, counted in FI-C's arithmetic. *Complete fix:*
+  `reap_chat_copies(scrubbed, phoenix=None)` uses a passed client; the seam passes its own, chat delete keeps
+  building one.
+- **P4 review A M-7: `phoenix_sessions_deleted` counts the seam's retries only, never the reaps' deletes.** The
+  ledger's numbers only; the receipt carries no Phoenix count. *Complete fix:* one key in the reap's answer, summed.
+- **P4 review C M-11: one HCL helper is written three times.** `attributes(block)` in iac's
+  `test_s3_noncurrent_version_expiry.py`, `test_cognito_user_erasure_policy.py` and
+  `test_apprunner_postgres_passwords_by_reference.py`. *Complete fix:* one helper in `tests/_hcl_blocks.py` beside
+  `process_env`.
 
 ## Lessons
 
@@ -2216,6 +2271,16 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   utils 0.1.40, then 0.1.41, before the core and shift-optimizer wheels" on the owner's list. The owner corrected it:
   everything runs from the dev checkouts, and publishing happens once, after all code changes are final. Rule: do not
   list package publishing as owed during the phases; raise it once, when the code is final.
+- Seven agents and their lanes at once took the WSL VM down (P3b, 2026-10-01 ~07:06): every lane died, Postgres came
+  back on a fresh cluster and Weaviate on an empty schema (the known restart traps), and the owner capped agents at
+  4. Rule: at most 4 agents at a time; implementers commit early, because uncommitted work and running lanes die with
+  the VM.
+- A seam test must not take Phoenix from the environment (Task 15 `45e99261`: the seam's DB and exception-text tests
+  now name no Phoenix, whatever the shell exports). The shell may export the keys, and the api's `main` exports
+  `api/.env` into the test process on import (P4 review C M-5), so a test that leaves the client to the environment
+  builds a real one, and its result depends on the shell and on test order. Rule: every test that reaches a
+  Phoenix-reading seam passes its fake in, or declares no Phoenix (`PHOENIX_ENDPOINT=none` under O10); Task 17's census
+  too.
 
 ## Implementation notes
 
