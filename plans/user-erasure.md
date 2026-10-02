@@ -998,12 +998,12 @@ Lanes (2026-10-01; P4 review C M-5):
     most of lane D's jsonb keeps say the column names no person. The census must not read those as allowed places.
     - The vocabulary gains a kind, `no-person`, in all three erased-user lines. It is a kind rather than a field, so
       every placement must choose, and the tuple lines keep their shape. It is built in lane D's fix round, part B.
-    - `keep` then means only that the person's id or words may remain by ruling: D9 provenance, the ledger, D1
-      knowledge.
-    - `no-person` is a column a guard rule forced into the line where no writer puts the person's ID. The erasure
-      treats it as it treats `keep`. Words are not part of the kind; the census's seeding handles them. P's sentinel
-      goes where the erasure removes, and K's where text is kept (D1, D10). (Refined 2026-10-02 at part B's
-      hand-back.)
+    - `keep` then means only that the person's ID may remain by ruling: D9 provenance and the ledger's ids.
+    - `no-person` is a column where no writer puts the person's ID: one a guard rule forced into the line, or kept
+      text such as D1 knowledge and D10 comments. The erasure treats it as it treats `keep`. Words are not part of
+      the kind; the census's seeding handles them. P's sentinel goes where the erasure removes, and K's where text is
+      kept (D1, D10). (Refined 2026-10-02 at part B's hand-back. Part B's review then moved the five word-only keeps
+      to `no-person`: comment text and tags, an airline's details, memory payloads and the level-2 safe summary.)
     - The census asserts the person's ids ABSENT from every `no-person` placement, and a planted id there turns it
       red.
 
