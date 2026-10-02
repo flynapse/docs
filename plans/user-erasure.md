@@ -1387,8 +1387,8 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    grant-pool credentials (`POSTGRES_GRANT_USER` / `POSTGRES_GRANT_PASSWORD`, owner decision 26): the copilot-mro seam
    runs the LLM-records definer on the grant pool, so without them every erasure freezes the person and then fails at
    that step on every retry. iac declares neither today.
-5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` or a
-   daily `--run-due`. Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the
+5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` (the
+   owner's choice on 2026-10-01: the scheduler runs on AWS, so erasures and `/goodbye` finish on their own). Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the
    previous image stands down (disables) the automations of anyone still frozen, and a later cancel does not re-enable
    them (Task 12 review M-4). A request that can no longer be cancelled (immediate, or past its `erase_after`) keeps
    its person frozen: finish it with `--run-due` first, or re-enable those automations afterwards.
@@ -1396,19 +1396,29 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    allowed to delete spans and sessions (the collector README's system API key). The local Phoenix has auth on: with
    the endpoint alone, every erasure fails closed (`INCOMPLETE_PHOENIX`) and stays `erasing`, the person frozen and
    the account kept, 6 tries then daily; a key that cannot delete holds every request at its first span delete.
-   Neither dev `.env` names either key today, so dev erasures skip Phoenix with a warning (owner question O10).
+   Owner, 2026-10-01 (O10): a host that names no Phoenix fails closed unless it declares "no Phoenix here", so name
+   both keys (or the declaration) before a host's first erasure. The owner adds both keys to dev's `api/.env`.
 
 ## Owner / legal items
 
-- [ ] **D9 legal opinion:** airworthiness `reviewed_by`/`review_note`, `authorization_events` actor/subject (incl. the
+- [x] **D9 legal opinion** (owner, 2026-10-01: the current keep list is accepted without a legal review):
+  airworthiness `reviewed_by`/`review_note`, `authorization_events` actor/subject (incl. the
   erasure's own events: its completion's and an escalation's, each carrying `rtbf`), RBAC provenance columns, the ledger's opaque ids, and free-text knowledge kept under D1.
 - [x] **D12 backup bound:** no backup/snapshot config exists in iac or deployment; the receipt states the bound. No
   replay is built (owner decision 31, 2026-09-28: a restore is disaster recovery only); see Future Improvements.
 - [ ] SDK/CLI transcripts under `~/.claude/projects` on the API host: confirm retention or disable persistence.
-- [ ] Scheduler: the delayed half runs only where the scheduler is embedded/worker; otherwise a daily `--run-due`.
+  **Owner, 2026-10-01: turn saving off.** To build after P5's lanes: the api's Agent SDK sessions save no
+  transcript (prove no file appears under `~/.claude/projects` for an api turn); then the receipt's
+  `limit_host_sdk_transcripts` caveat goes, with core `RECEIPT_KEYS`, the dashboard contract and copy, and Task 17's
+  receipt pin moving together. Existing api transcripts on dev: a one-time delete, on the owner's word.
+- [x] Scheduler: the delayed half runs only where the scheduler is embedded/worker; otherwise a daily `--run-due`.
   Immediate requests and `/goodbye` then also wait for the owner's next `--run-due`, not 30 minutes (C-3, C-4).
-- [ ] D2 side question: should ordinary chat delete also hard-purge after N days (today it retains forever)?
-- [ ] **O10 (Task 15 review, 2026-10-01): a host that names no Phoenix.** Today the seam skips Phoenix, warns once
+  **Owner, 2026-10-01: run the scheduler on AWS** (`AUTOMATION_SCHEDULER_MODE` set there; Deploy/rollout 5).
+- [x] D2 side question: should ordinary chat delete also hard-purge after N days (today it retains forever)?
+  **Owner, 2026-10-01: keep forever** (no purge job).
+- [x] **O10 (Task 15 review, 2026-10-01): a host that names no Phoenix.** **Owner, 2026-10-01: (c), block unless
+  declared** — unset fails closed (the erasure retries); an explicit "no Phoenix here" setting skips and records the
+  skip. Built in the P4 phase review's fix round. Today the seam skips Phoenix, warns once
   and completes, recording one orphan per chat: O5's letter holds (no residue reads non-zero) but not its intent where
   a Phoenix exists unnamed, as on dev. Options: (a) keep it; (b) unset fails closed (needs (c), or a deployment with
   no Phoenix never completes an erasure); (c) unset fails closed and an explicit "no Phoenix here" setting skips and
