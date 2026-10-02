@@ -78,6 +78,23 @@
       before step 3 runs there.
   - **Next:** a fix round with those rulings and both reviews' findings is running. Then a scoped re-review and the
     sheet to the owner. Before step 7 merges, merge the moved mainlines into its branches.
+  - **Fix round progress (2026-10-01 evening).** Reading the 4,000-line provisioning script cost each agent most of its
+    context, so the round runs in narrow parts from one design file (`~/.claude/scratch/db-roles/s7-fix1/DESIGN.md`)
+    and symbol indexes:
+    - part 1: the definer's docstring, the E2E preflight, two stale sentences;
+    - part 2: PUBLIC's reach revokes only what PUBLIC holds and this role can revoke, one statement per routine; on
+      RDS, functions a superuser owns are named accepted lines; every role is swept for undeclared definers;
+    - part 3a: the definer-owner precondition (rc 2 before any write) and the two transactions (B14's revoke lands
+      even if PUBLIC's reach rolls back), proven live on a throwaway;
+    - core M6: a live test of the mint-receipt compensation through the definer;
+    - part 3b, running: TEMPORARY on `copilot_mro_test` only, membership-aware checks with the RDS creator edge, the
+      definer body compared, PostgreSQL 16's SET check;
+    - part 4, next: the sheet's text, its re-proof (forward, rollback, forward), the RDS-shaped run, and the hand-back
+      lanes.
+  - **The owner's rulings (2026-10-01, evening):**
+    - On RDS, PostgreSQL 16 makes the master a member of each role it creates, and the link cannot be removed. Verify
+      names that one edge on its own accepted line, and every other edge stays a finding.
+    - The owner runs step 6's 4c later today.
 - **Steps 6–7** each start with an owner DDL step. Tenant delete (B14) is step 7. Step 6 also carries step 4's re-review
   n1: a test that the default-privilege check covers every object kind, not only tables.
 - The ledger is `.superpowers/sdd/db-roles-consolidation/progress.md`.

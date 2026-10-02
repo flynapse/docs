@@ -986,6 +986,14 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
     the page.
   - The channel door: a test pilot sends `/goodbye`; the bot, core and storage are checked end to end.
   - The operator delete: delete an operator; its rows, Document Hub objects and partitions are gone.
+- [ ] **A fifth live leg: the owner path (owner, 2026-10-01, P4 review B OQ-B1).** A throwaway test pilot erased the way
+  the owner erases a pilot who cannot send `/goodbye`: `user_erasure_cli request --channel-teardown --tenant <t>
+  --user <u> --rtbf` on the api, then `python -m telegram_bot.purge_account` on the bot. The ledger and every view say
+  legal, the bot's `tg_*` rows are gone, and storage is clean.
+- [ ] **Prerequisites (2026-10-01).** The api host names Phoenix (both keys in dev's `api/.env`: done and verified,
+  values never read). The P4 phase review's fix round lands first: review A found that the owner CLI and a worker do not
+  see a Phoenix named only in `api/.env` (I-1), and that the evaluation gate reads a purged chat as live (I-2); no
+  erasure receipt is to be relied on before both are fixed.
 
 ### Task 19: core + copilot-mro — deleting an operator deletes its own rows (P3; lanes C-b, M1, A, D; owner question 4)
 Ruled by the owner on 2026-09-29: owner question 4 (the root fix), then Task 19 Q1–Q6, all yes.
@@ -1416,6 +1424,9 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
   **Owner, 2026-10-01: run the scheduler on AWS** (`AUTOMATION_SCHEDULER_MODE` set there; Deploy/rollout 5).
 - [x] D2 side question: should ordinary chat delete also hard-purge after N days (today it retains forever)?
   **Owner, 2026-10-01: keep forever** (no purge job).
+- [x] **I-2 (P4 review A, 2026-10-01): the evaluation gate reads a purged chat as live.** **Owner, 2026-10-01: (a)**
+  — in a tenant-project run, a judged chat with no `chats` row reads as deleted (golden-set runs unaffected; headless
+  tenant turns stop being judged). Built in the P4 phase review's fix round, with one runner case.
 - [x] **O10 (Task 15 review, 2026-10-01): a host that names no Phoenix.** **Owner, 2026-10-01: (c), block unless
   declared** — unset fails closed (the erasure retries); an explicit "no Phoenix here" setting skips and records the
   skip. Built in the P4 phase review's fix round. Today the seam skips Phoenix, warns once
@@ -2820,3 +2831,24 @@ locally, its gate running; Task 15 built.**
   it: on a host that names no Phoenix (`PHOENIX_ENDPOINT` unset, as on dev today), the erasure sweeps no Phoenix,
   warns once, and completes with one orphan recorded per chat. Task 18's live check needs Phoenix named on the api host.
 - **Then:** the P4 phase review (Tasks 15, 16 and 20), the owner's pause, and P5.
+
+**Status at compaction checkpoint 16 (2026-10-01, evening): P4 built and pushed; the P4 phase review two-thirds in;
+Task 17's pins in review.**
+- **Pushed:** core `c6f6e2e`, copilot-mro `96ab4f6d` (Task 15 `a0d71393`, then test-lane FI-4), api `4ec77c5`,
+  telegram-bot `a3a253d` (live), dashboard `f398f62`, iac `main` `34e2345` (the owner switched the iac checkout to
+  `main`). Task 15's gate: green but for the census reds.
+- **The owner's rulings today:** O10 (c); I-2 (a); the RDS creator edge kept as a named accepted line; D2 keep
+  forever; D9's keep list accepted; SDK transcripts off on the API host (a build after P5); the scheduler runs on AWS;
+  a fifth Task 18 leg (the owner path). The Phoenix keys are in dev's `api/.env` and verified.
+- **The P4 phase review:** A 0 Critical, 2 Important (I-1: the CLI and a worker do not see `api/.env`'s Phoenix; I-2:
+  the evaluation gate), 7 Minor; B 0 Critical, 0 Important, 6 Minor; C running. One fix round follows C, with Task
+  15's M-1, M-2 and M-5, its core comment, and O10 (c) and I-2 (a) built.
+- **Task 17** runs as three lanes:
+  - P, the cross-repo pins: built, in review; its fix round adds row 5h, review B's M-3 and M-4, and re-checks row 7
+    with `via` as a change key;
+  - D, the drift shape list: brief ready, with the controller's ruling on the list;
+  - C, the census: after D.
+- **Task 18:** the script is built next, with five legs. The live run waits for the owner's go, after the fix round.
+- **Also running:** the sample env files refreshed estate-wide (owner request); database users step 7's fix round
+  (its own ledger).
+
