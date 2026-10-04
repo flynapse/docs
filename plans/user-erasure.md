@@ -2483,6 +2483,17 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - *Complete fix:* the receipt names the class in the same change that adds the SDK-transcripts caveat, so core's
     `RECEIPT_KEYS`, the dashboard's contract and copy, and lane P's receipt pin change once. A payload-keyed residue
     (as for `feedback_data` above) removes a placement from the class.
+- **The parse-sidecar residue cannot see the content records (Task 18 fix round 2b's review, I-1).**
+  - A PDF's parsed text lives in its content record, `parse-sidecars/<tenant>/sha256/<digest>/`, which the upload's
+    alias points to. `reap_parse_sidecars` deletes the content records no other alias references, and keeps shared
+    ones.
+  - `count_parse_sidecars`, the residue, counts only the objects under the person's attachment ids. Once the aliases
+    are gone it cannot tell which content records they reached. So a content record the reap missed reads as a zero
+    residue, and nothing expires it.
+  - The Task 18 script reads the content prefix itself on its live run.
+  - *Complete fix:* the reap records the content ids it targets in the ledger before deleting, and the residue
+    counts what is left under them, less the shared ones. Or the receipt names it as statement-proven, with the
+    class above.
 - **uvicorn's access line names the raw request target in every service but the api gateway (P4 fix round part D3,
   concern 1).**
   - utils' intercept forwards `uvicorn.access` with only URL credentials withheld. The gateway now shapes it with its
