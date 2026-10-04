@@ -2475,6 +2475,22 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   proven by the statement (like P2's m-8): it counts what the row's id column says, not what the payload holds.
   *Complete fix:* a payload-keyed residue (`feedback_data->>'user_id' = ANY(the person's ids)`), so the count proves
   the scrub's own effect; one db case.
+- **The receipt does not name the row-keyed, statement-proven class (lane D fix part B3, concern 4).**
+  - Three placements count their residue by the row's id column, which the same statement rewrites:
+    `chat_turn_facts__cited_documents`, `chat_feedback__feedback_data`, and since B3 `chat_turn_facts__session_id`.
+    So the count cannot see a scrub the statement missed.
+  - The receipt names three statement-proven limits (`ledger.py:192-194`), but not this class.
+  - *Complete fix:* the receipt names the class in the same change that adds the SDK-transcripts caveat, so core's
+    `RECEIPT_KEYS`, the dashboard's contract and copy, and lane P's receipt pin change once. A payload-keyed residue
+    (as for `feedback_data` above) removes a placement from the class.
+- **uvicorn's access line names the raw request target in every service but the api gateway (P4 fix round part D3,
+  concern 1).**
+  - utils' intercept forwards `uvicorn.access` with only URL credentials withheld. The gateway now shapes it with its
+    own filter, and deployed, core's and copilot-mro's routes are served through the gateway's mounts.
+  - A process that runs uvicorn on its own (core's `python -m core.fastapi_app`, copilot-mro's own app,
+    shift-optimizer) still writes raw targets.
+  - *Complete fix:* the intercept reduces the target to a route template the app registers a resolver for, or to
+    `/:redacted`.
 
 ## Lessons
 
@@ -3291,3 +3307,30 @@ part D's merge; Task 18's review, then its live run on the owner's go.
   - the P5 phase review;
   - SDK transcripts off on the API host;
   - Task 18's live run, on the owner's go.
+
+**Status 2026-10-04 (the owner lifted the hold on new agents).**
+- **The dev stack's Docker Desktop is stopped** since the host restarted. The shared Postgres is down, so no
+  database lane and no post-merge gate can run, and nothing merges until it is back.
+- **Lane D fix part B3 is built and re-reviewed.**
+  - Both statement readers refuse an assignment they cannot read, and each guard (core's too) checks that every
+    column a statement assigns is placed.
+  - `chat_turn_facts.session_id` is placed `scrub`. All 21 mutants are killed by the guard files alone.
+  - Its re-review found one Minor: the readers lose their place on text they cannot delimit (comments, dollar
+    quotes, quoted identifiers, escape strings). No statement the erasure runs holds such text. Part B4, a
+    tests-only round, makes both readers refuse it; it is running.
+  - The database lanes of B2 and B3 are owed; they run before the merge, and again in the merge gate.
+- **P4 fix round part D3 is built; its review is running.**
+  - The door-check red is fixed: the test reads only what the CLI printed. The three settings modules log instead of
+    printing.
+  - The cache-write lines name no one.
+  - Per the owner's ruling, every request line, uvicorn's access line included, names the route template, or
+    `/:redacted` when no route matches.
+  - Two core lines on the erasure doors' failure paths still name the person; the next round fixes them.
+- **Task 18 fix part 2a is built.** The planted reads are a literal table, `after` reads every part again, the kept
+  fact is proven verbatim, and the claim check predicts the erasure exactly. All 23 mutants are killed.
+  - Part 2b is running on top: the parse sidecars and the agent-state Postgres rows read, all kept tenant knowledge
+    held verbatim (D1), a harmless Cognito pre-flight, and the remaining Minors and prerequisites. One review then
+    covers parts 2a and 2b.
+- **Queued:** the merge of lane D's fix round B (after B4 and Postgres); census part 1 (C1); D3's fix round, if its
+  review finds any; census part 2; the P5 phase review; SDK transcripts off on the API host; Task 18's live run, on
+  the owner's go.
