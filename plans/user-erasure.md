@@ -2494,6 +2494,22 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - *Complete fix:* the reap records the content ids it targets in the ledger before deleting, and the residue
     counts what is left under them, less the shared ones. Or the receipt names it as statement-proven, with the
     class above.
+- **A connection string still holds the test database's password (P4 fix round parts D5 and D6).**
+  - pytest's default traceback printed `psycopg2.connect`'s `dsn`, password included. D6 set `--tb=short` in every
+    repo's `addopts`, pinned. But a command line's own `--tb`, an `-o addopts=…` that drops it, or `-l` still prints
+    it.
+  - *Complete fix:* a libpq password file (`PGPASSFILE`), so no connection string the estate builds holds a
+    password.
+- **Settings objects still name secrets in their repr (P4 fix round part D6, concern 3).**
+  - utils' seven password fields are `repr=False`. Its AWS secret key, Weaviate key and Azure OpenAI key are not.
+    core's and copilot-mro's settings still show their SMTP and cache passwords.
+  - *Complete fix:* every secret field in every settings class is `repr=False` (or a `SecretStr`), pinned per repo.
+- **Core lines on routes other than the erasure doors name people (P4 fix round part D4, concern 6).** `PUT /users`
+  and the role removal log the person's id. *Complete fix:* constant messages with the ids as bound fields, as the
+  erasure doors now have.
+- **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
+  request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
+  `RequestRouteMiddleware`.
 - **uvicorn's access line names the raw request target in every service but the api gateway (P4 fix round part D3,
   concern 1).**
   - utils' intercept forwards `uvicorn.access` with only URL credentials withheld. The gateway now shapes it with its
