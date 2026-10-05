@@ -1608,6 +1608,21 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     - **Controller design:** each product session runs the CLI with its own private config directory, removed when
       the session ends and swept at startup. The memory hint is read before the directory goes.
     - Built in the P5 fix round, part X1. The receipt change is part X2.
+    - **X1's first implementer measured the design and stopped before building (2026-10-05).**
+      - `CLAUDE_CONFIG_DIR` alone moves into the private directory: the transcripts, the subagent transcripts, both
+        tool-result spills and `.claude.json`.
+      - The CLI still writes two per-session files outside it: an MCP log under `~/.cache/claude-cli-nodejs`, and a
+        task-output link under `/tmp/claude-<uid>`.
+      - With `CLAUDE_CODE_TMPDIR` and `XDG_CACHE_HOME` also pointed into the directory, nothing is left outside. This
+        was shown by a hermetic run of the bundled CLI against a fake model.
+      - `--no-session-persistence` stops the transcripts only, so it is not used.
+      - A second implementer builds it.
+    - **Controller rulings:**
+      - stdio MCP servers (the techpub browser) keep the process's own cache home, so the browser's profile stays
+        where it is;
+      - the crash sweep runs at a process's first session;
+      - on the dev box, product sessions stop loading the owner's user settings, hooks and plugins, as on a deployed
+        host. Both sites pass the model explicitly.
   - **Owner, 2026-10-05:** the one-time delete covers every product SDK transcript: 45 files in four folders
     (`-home-aditya-Code-api`, `-api-obs9`, `-copilot-mro-evals-probe`, `-copilot-mro-s44b2`). Files are selected by
     their `"entrypoint":"sdk-py"` marker. It runs after the build is merged and its live proof passes.
@@ -2665,6 +2680,19 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
   request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
   `RequestRouteMiddleware`.
+- **P5 fix round part X1's Future Improvements (2026-10-05).**
+  - **The techpub browser keeps one profile across every user's sessions (Q-1).** stdio MCP servers keep the
+    process's cache home, so `@playwright/mcp`'s Chrome profile is shared by every session: the history, cache and
+    cookies of the portals it visited.
+    - *Complete fix:* a profile per session, either in memory or under the session's directory, with the portal
+      login redone each session.
+    - It changes the demo flow, so it waits for the owner.
+  - **The crash sweep is lazy (Q-2).** A session directory that a crash leaves behind stays until the next process
+    starts its first session. *Complete fix:* the api's startup calls `sweep_stale_cli_sessions()`.
+  - **Unmeasured: a settings file's `env` block might re-point `CLAUDE_CONFIG_DIR` mid-run (concern 5).** No
+    settings file sets it today. *Complete fix:* measure it. If it can, pass the pins through `--settings` as well.
+  - **The session-site guard scans copilot-mro only.** api has no Agent SDK session today. *Complete fix:* an api
+    twin of the guard.
 - **uvicorn's access line names the raw request target in every service but the api gateway (P4 fix round part D3,
   concern 1).**
   - utils' intercept forwards `uvicorn.access` with only URL credentials withheld. The gateway now shapes it with its

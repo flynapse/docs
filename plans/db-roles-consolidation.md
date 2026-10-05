@@ -240,8 +240,21 @@
       - The probe connected as `postgres` to database `postgres` and ran only the module's `SET search_path`. A
         second attempt failed authentication.
       - No DDL, grant or write ran, and `copilot_mro` was not touched.
-  - **Next:** the scoped re-review (running), the merge into `langgraph-merge`, the post-merge test run (with api's
-    census, per the user-erasure merge protocol), then the push.
+  - **Fix round 1's re-review (2026-10-05): FIX FIRST, OPEN 1.**
+    - **The finding:** the reused-password check compares raw strings, but libpq SASLpreps a password before it
+      derives the verifier, and again at login.
+      - Live on a throwaway, the app's password plus a soft hyphen (U+00AD) was not refused.
+      - The reporting user was created, and it logged in with the app user's own password.
+    - The other round-1 items held. Every lane was green, and port 5432 was never touched.
+    - The fix-1 report said api and iac carry copies of the old rotation instruction. Neither does.
+  - **Fix round 2 (running):**
+    - "Equal" means equal after libpq's normalisation (C.1.2 to a space, B.1 removed, NFKC), or equal as raw strings.
+      This applies to the reporting check and the owner check.
+    - Also: the refusal tells how to fix a reporting user that already exists; with `--app-password`, the check also
+      compares the settings' value; the cutover runbook creates `flynapse_inspect` without a plaintext `PASSWORD`;
+      two spawners are pinned; and the secret scan's docstring states its other blind spots.
+  - **Next:** a scoped re-review, the merge into `langgraph-merge`, the post-merge test run (with api's census, per the
+    user-erasure merge protocol), then the push.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
@@ -546,6 +559,21 @@ DDL on shared databases, so every DDL step is the owner's to run.
     (`shell=True`), a list reaching `subprocess` through a loop target or a container, spawners this repo does not
     call (`asyncio.create_subprocess_exec`, `os.exec*`), and programs outside its list. The SAD test's own argv check
     is now a narrower twin of it. *Complete fix:* retire the twin, and widen the rule as those shapes appear.
+  - **The re-review found four more blind spots in the rule (m-1).** It does not see:
+    - a command line grown after it is built (`.append`, `.extend`, or `+=` on a stored line), an idiom the tree
+      already uses at 8 sites, none with a secret;
+    - a list spread into the line (`*flags`);
+    - a helper's parameter not led by a known program;
+    - a libpq URI's userinfo under a neutral name.
+
+    Fix round 2 names them in the docstring. *Complete fix:* read the arguments of `.append` and `.insert` as
+    elements, and the value of `.extend` and `+=` as a line; follow a spread to its list. One test shape each.
+  - **Two false-finding shapes (m-6):** `secrets.token_*` naming a random container, network or database, and a tuple
+    led by a program name used as data. Only the registered pragma hits one today.
+  - **The `docker exec` attempt's environment is pinned by nothing that runs here (m-7).** A mutant that drops the
+    value from the child's environment survives, because the 18 tests that need the dump skip whenever the fallback
+    fails. *Complete fix:* after the import-time-connect fix above, unit-pin `_pg_dump_schema_only`'s attempts: the
+    variable passed by name, and the value in each environment.
 - **copilot-mro's non-db lane reads the local test database (AWS phase 1, fix round 1).** Seven tests not marked
   `db` read `copilot_mro_test`. Three skip with "not present in this database" (the optimizer plan digest, the
   inventory plan, the optimizer decompose); four pass only with a database (`test_reset_demo`,
