@@ -2772,9 +2772,17 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
       `anyio.CancelScope(shield=True)`, then re-raises. The shield is what stops the wake-ups: anyio re-delivers to
       every task still inside the cancelled scope, so an absorbing `asyncio.wait` alone would only move them into
       `event_generator` (controller correction, 2026-10-05).
+    - **Moved into X1's fix round 2 (2026-10-05).** X1's re-review measured a full CPU core per mid-turn tab close:
+      366,843 wake-ups in 5.08 s. An absorbing `asyncio.wait` gave 476,552, and the shielded wait gave 0.
   - **The hermetic real-CLI test takes 67 s, over its 60 s target (X1 fix round, concern 1).** The fixed 8–14 s watch
     after each session dominates. *Complete fix:* end a mode's watch as soon as no process carries its
-    `CLAUDE_CONFIG_DIR`, since nothing else can write the directory.
+    `CLAUDE_CONFIG_DIR`, since nothing else can write the directory. **Moved into X1's fix round 2,** with the 8 s
+    and 14 s caps kept.
+  - **The helper's teardown at process exit (X1 re-review, M-3).** The event loop's shutdown cancels every task, so
+    it can cancel the pump directly. `KeyboardInterrupt`, `SystemExit` or `GeneratorExit` during the teardown also
+    runs the removal while the pump may still live. Both happen only as the process ends, and the next process's
+    sweep removes what is left. *Complete fix:* on the process-exit path, skip `_remove` and leave the directory to
+    the sweep, or record the CLI's pid and end it.
   - **The session-site census misses three shapes (X1 review M-3).**
     - It misses `getattr(sdk, "query")(…)`, the SDK's internals (`InternalClient().process_query`,
       `SubprocessCLITransport`), and an SDK module obtained through a function not named `load_sdk_module`.
@@ -3939,3 +3947,12 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - the api restart and the live proof;
   - the owner's one-time delete;
   - Task 18.
+
+**Status, 2026-10-05 (~08:48 PDT): X1's re-review said FIX FIRST; its fix round 2 is running.**
+- **C-1 is closed.** The CLI ends before its directory goes, for every cancellation pattern.
+- **Two open findings:**
+  - under xdist, the real-CLI test ran once per worker, so up to 12 CLIs at once;
+  - a narrow logging regression could write an error's text.
+- **The route fix moves into this round,** because the re-review measured a full CPU core per mid-turn tab close.
+  `event_generator` cancels the turn once and waits behind a shield.
+- **X2 stays ready.** The merge window waits for X1.
