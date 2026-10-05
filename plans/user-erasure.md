@@ -1082,6 +1082,11 @@ transcripts off (the receipt changes the script checks), with the API restarted 
 - **The transcripts check (X2):** `plant` counts the product's SDK transcripts before its first turn, in
   `~/.claude/projects` and in part X1's session root. A new one is INFO at `before` and fails the leg at `after`.
   Keep the host free of other product SDK sessions during the main leg.
+  - **`plant` exits 1 when it cannot take the count.** That happens if part X1 is not merged into the copilot-mro the
+    api imports, or if a root cannot be read. So the order binds: X1 merges, the api restarts, then Task 18 runs.
+  - **At each count, no product session may be in flight:** no other user's turn, no SAD session, no automation run.
+    A session's private directory lives until the session ends, so one in flight reads as a new transcript. The
+    printed counts are the witness.
 Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects zero tests; layout exemption with reason).
 - [ ] A throwaway dev-pool user in a dev tenant: real turns with uploads + a DocHub upload → immediate erasure →
   no current S3 objects under the user prefixes (noncurrent versions reported until the lifecycle applies), Weaviate
@@ -1517,6 +1522,8 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    they run. Since the P5 phase review (B, I-3), every merge of core, copilot-mro or shift-optimizer also runs the
    api census (`tests/integration/user_erasure`, `-n 0`, against `copilot_mro_test`, re-provisioned first when the
    merge changes a schema). The census is the only guard against some erasure regressions.
+   When the P5 fix round's parts X1 and X2 merge, api's pin file must show the X1 pin PASSED, not SKIPPED. A skip
+   there means X1's module moved, and the merge stops.
 3. Phase review (independent, adversarial) → triage → a fix round, merged, gated and pushed the same way. The owner
    waived the pause between phases on 2026-10-01; owner questions go to the owner as they arise.
 
@@ -2602,6 +2609,9 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - *Complete fix:* the receipt names the class in the same change that adds the SDK-transcripts caveat, so core's
     `RECEIPT_KEYS`, the dashboard's contract and copy, and lane P's receipt pin change once. A payload-keyed residue
     (as for `feedback_data` above) removes a placement from the class.
+  - **Being built (P5 fix round, part X2, in re-review):** the receipt names one limit per placement in the class.
+    After X2's fix round added four more (core's `product_events.session_id`, `comments`' author name and email, and
+    Document Hub's metadata), its report counts 11 members.
 - **The parse-sidecar residue cannot see the content records (Task 18 fix round 2b's review, I-1).**
   - A PDF's parsed text lives in its content record, `parse-sidecars/<tenant>/sha256/<digest>/`, which the upload's
     alias points to. `reap_parse_sidecars` deletes the content records no other alias references, and keeps shared
@@ -2784,6 +2794,13 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 
 ## Lessons
 
+- **A hand-back that runs only the touched folders lets a guard's red through a build and its review** (P5 fix
+  round, part X2, 2026-10-05).
+  - X2's chunk-edge case broke copilot-mro's depth guard (`tests/unit/infra`) at `207a81d8`. The build's hand-back
+    ran only `tests/unit/user_erasure`, and the review ran only touched folders. Only the fix round's whole-tree run
+    found it.
+  - Rule: an implementer's hand-back runs the full suite of every repo it touched. The controller checks that the
+    report's lanes name each one before dispatching the review.
 - The post-merge gate must be the whole suite of each repo the batch can affect, not the folders the batch touched.
   P1 added a core router, and copilot-mro's route-table test (its list of core routers) went red. The copilot-mro
   post-merge api lane ran only `tests/api/document_hub`, so the red was pushed twice (P1 and P2) and the router sweep
@@ -3836,7 +3853,9 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **X1's review** found one Critical: a session cancelled more than once while its CLI is ending loses its directory
   early, and the CLI writes it again. Closing the tab mid-turn does this. The fix round runs the SDK stream in a task
   the helper owns and builds the hermetic real-CLI test.
-- **Running:** X1's fix round and X2's fix round.
+- **Running:** X1's fix round, and the re-review of X2's fix round. X2's fix round is done at core `69c9968`,
+  dashboard `7b7ed8a`, copilot-mro `426b2527` and api `4b4a18f`: 31 of 31 mutants killed, and every lane green but
+  api's two known reds.
 - **DB users step 8** merged into copilot-mro `langgraph-merge` as `f72a3351`. It shares no file with X1 or X2.
 - **Next:** both re-reviews → the merges in one window → the api restart → the live proof (now including a tab
   closed mid-turn) → the owner's one-time delete → Task 18.
