@@ -1087,6 +1087,11 @@ transcripts off (the receipt changes the script checks), with the API restarted 
   - **At each count, no product session may be in flight:** no other user's turn, no SAD session, no automation run.
     A session's private directory lives until the session ends, so one in flight reads as a new transcript. The
     printed counts are the witness.
+  - **Run the script as the api's user, with the api's `HOME`** (X2 re-review). Part X1's root is the `~` of the
+    process that imports it, so another user would scan an empty directory and pass.
+  - **A `plant` that counts proves X1 is merged on disk, not that the api runs it.** The api's restart onto the
+    merged code stays the operator's step. A missed restart is still caught: the old code writes its transcripts
+    under `~/.claude/projects`, which is scanned too.
 Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects zero tests; layout exemption with reason).
 - [ ] A throwaway dev-pool user in a dev tenant: real turns with uploads + a DocHub upload → immediate erasure →
   no current S3 objects under the user prefixes (noncurrent versions reported until the lifecycle applies), Weaviate
@@ -2783,6 +2788,23 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
       by pruning.
     - *Complete fix:* the erasure deletes the person's object versions itself, or the receipt states 31 against
       iac's 30 with the same +1 pin. Bring it to the owner with the wording pass.
+- **P5 fix round part X2's re-review (2026-10-05, MERGE-READY with three Minors).**
+  - **The dashboard's receipt floor catches a dropped key, not a renamed one (m-1).** The floor counts current plus
+    retired keys. A rename that forgets to move the old key into `RETIRED` keeps that count at 26, and every old
+    receipt then shows the generic line for the old key. *Complete fix:* the contract generator refuses to write a
+    snapshot that drops a key of the previous one unless the page's `RETIRED` map holds it.
+  - **The backups row can read the backup bucket as "another bucket" (m-2, latent).**
+    - A bucket named by an interpolation and versioned by its rendered name passes the row. Only iac's own lane
+      catches it.
+    - A module whose versioning variable has a literal default, called with the backup bucket, passes the row and
+      iac's guard, which reads only root-level files.
+    - No form iac uses today reaches either.
+    - *Complete fix:* a literal resolves as another bucket only when every name of the backup bucket is a known
+      literal, and a variable declared in a module directory is unresolvable.
+  - **Two of the row's refusals have no fixture case (m-3).** The inline `object_lock_configuration` and the
+    `dynamic "expiration"` alternatives each survive the pin file when dropped. iac's own guard refuses both shapes
+    today. *Complete fix (cheap):* two `_BACKUPS_SHAPES` cases, each killed by its mutant, with the next api change
+    to the pin file.
 - **uvicorn's access line names the raw request target in every service but the api gateway (P4 fix round part D3,
   concern 1).**
   - utils' intercept forwards `uvicorn.access` with only URL credentials withheld. The gateway now shapes it with its
@@ -3871,3 +3893,13 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - X2's verdict;
   - the merges in one window, with api's pins (the X1 pin must pass) and census on each;
   - the api restart, the live proof, the owner's one-time delete, then Task 18.
+
+**Status, 2026-10-05 (~07:44 PDT): X2 is MERGE-READY; X1's fix round is still running.**
+- **X2's re-review:** MERGE-READY, three Minors, all Future Improvements.
+  - Every review finding is closed in the code.
+  - With X1's module merged in, the live-count check runs and its X1 pin passes.
+  - iac's main skips by name, and the AWS branch's 13 days passes.
+- **X2 waits for X1** at core `69c9968`, dashboard `7b7ed8a`, copilot-mro `426b2527` and api `4b4a18f`.
+- **Task 18** runs the script as the api's user, with the api's `HOME`.
+- **Next:** X1's fix round → its re-review → the merges in one window → the api restart → the live proof → the owner's
+  one-time delete → Task 18.

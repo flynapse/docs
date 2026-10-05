@@ -1,8 +1,8 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 is done (its fix round 2 re-reviewed MERGE-READY, OPEN 0); phase 2 (the Terraform) was reviewed
-FIX FIRST, and its fix round is done (iac `3933f47`) with the re-review queued; the box's dump prune round (with
-phase 1's three Minors) is running in copilot-mro** (2026-10-05, ~07:30 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status: **phase 1 is done, and the box's dump prune round (with phase 1's three Minors) is done at copilot-mro
+`93b64914`, in review; phase 2 (the Terraform) was reviewed FIX FIRST, and its fix round (iac `3933f47`) is in
+re-review** (2026-10-05, ~07:44 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -162,6 +162,33 @@ None: the owner answered all four on 2026-10-05 (above).
   - Two pins tightened. The unit's `[Service]` keys are an allow-list. The backup's stop-before-close order is
     pinned deterministically: a `kill` on `PATH` records whether the stream is still open.
   - 18 of 18 mutants killed. The non-db lane passed: 16524 passed, 0 failed.
+- **Phase 1, the box's dump prune round (done 2026-10-05, copilot-mro `585333e5..93b64914`; in review).**
+  - **The prune:** after every run, whatever the dumps did, the backup deletes every object under `<prefix>/` whose
+    `LastModified` is more than 12 days old: dumps, partial objects and probe objects. It lists with exactly
+    `--prefix "<prefix>/"`, deletes one key at a time, and prints only the keys it deleted. A failed listing or
+    delete fails the unit, naming the prune; a refused key does not stop the others.
+    - It uses `delete-object`, not `delete-objects`, because `delete-objects` exits 0 when it refuses a key.
+  - **12 days, not the 13 of the owner's option text.** The owner's purpose was the receipt's 14 days, and 13 cannot
+    meet it. A run deletes only what has passed the threshold, so a dump lives at most:
+    - the threshold, 12 days;
+    - plus the longest gap between two runs: a day, plus `RandomizedDelaySec` (10 min), plus systemd's default
+      `AccuracySec` (1 min);
+    - plus the run's `TimeoutStartSec` (3 h), since the prune comes after the dumps.
+
+    That is 13 d 3 h 11 min, under 14 days. A test reads every term from the timer, the service and the script,
+    against a constant named for core's `backups_days`.
+  - **m-a, m-b, m-d:** a failed pull's FAILED line prints before `up -d`, and the unit still exits 1; the failed-pull
+    test uses git's real 128; the pull runs with `GIT_TERMINAL_PROMPT=0`.
+  - Proofs: 18 of 18 mutants killed, the re-review's two survivors included. The non-db lane passed: 16538 passed,
+    0 failed (fix round 2's 16524 plus 14 new tests), with no docker call.
+  - **Rulings on its concerns:**
+    - iac still says the prune is 13 days (README, about `:654`; `postgres_phoenix.tf:60`), and the README's
+      `restart-services` lines lack m-d's facts. The next iac round fixes both (phase 3's list).
+    - Incomplete multipart uploads get no new grant: no S3 API reads their parts, and the lifecycle aborts them
+      after a day. Recorded as a Future Improvement.
+    - A night without a prune (S3 refused, or the 3 h limit) fails the unit visibly, and the 13-day expiry is the
+      bound until the next good night.
+    - The fake `aws` models the CLI's text output; phase 3's first-deploy checks measure it.
 - **Phase 2, the Terraform (built, iac `377c051`; reviewed FIX FIRST, OPEN 2; fix round done at `3933f47`, in
   re-review).**
   - **The fix round (2026-10-05, iac `377c051..3933f47`):**
@@ -254,7 +281,16 @@ None: the owner answered all four on 2026-10-05 (above).
     with the backup's environment;
   - the API's Phoenix key works: a request to `/v1/projects` with it returns 200. The key is read with `read -rs`
     and reaches curl on stdin (`-H @-` fed by `printf`), never on curl's command line;
-  - the first nightly prune deletes nothing younger than its threshold.
+  - the prune's listing works under the role's `s3:prefix` condition: as root with the backup's environment,
+    `aws s3api list-objects-v2 --prefix "$BACKUP_PREFIX/" --query 'Contents[].[LastModified, Key]' --output text`
+    prints a time, a tab and a key per line (or `None`), and `date -u -d` reads the time. This is the one CLI
+    behaviour the unit tests take from a fake;
+  - the first nightly run (or `systemctl start postgres-backup`) logs both dumps, no FAILED line and no `pruned`
+    line, and ends with status 0;
+  - `systemctl list-timers postgres-backup.timer` shows the next run between 21:30 and 21:41 UTC;
+  - about 13 days in, the journal shows `pruned` lines for the oldest night, and nothing under the prefix is older
+    than 13 days;
+  - `systemctl restart weaviate-observability` leaves the unit active.
 - **Operations:**
   - every manual compose command runs as root with `--env-file` (and never `config` without `--quiet`);
   - the root-owned unit, script and backup files change only through a new instance or a manual `install`.
@@ -272,13 +308,12 @@ None: the owner answered all four on 2026-10-05 (above).
   - a restore: first boot, then provisioning, then `pg_restore`, then verify. A restore can bring back people
     erased since the dump; no replay exists (user erasure decision 31).
 - **The erasure receipt** states that an erased person's data leaves the backups within 14 days (user erasure D12).
-  The nightly prune makes that hold while the box runs; the 13-day expiry is the backstop.
-- **Phase 1's re-review Minors, built with the box's dump prune** (the same copilot-mro tree, the next round):
-  - **m-a:** when the pull fails or times out and `up -d` then fails, the unit exits 1 without naming the pull.
-    Print the pull's FAILED line right after the pull, and add a test where compose fails.
-  - **m-b:** the failed-pull test uses exit 1, but git's real failure (an expired token) exits 128. Use 128.
-  - **m-d:** run by hand from a terminal, the pull waits on git's password prompt until the 300 s bound, then reports
-    "timed out". Set `GIT_TERMINAL_PROMPT=0` on the pull. The runbook says the pull runs only through `systemctl`.
+  The nightly prune makes that hold while the box's nightly runs succeed; the 13-day expiry is the backstop. The
+  receipt wording pass should say so.
+- **iac's texts to correct** (the next iac round: a phase 2 fix round 2 if its re-review asks, otherwise phase 3's):
+  - the prune is 12 days, not 13, with the bound above (the README, about `:654`; `postgres_phoenix.tf:60`);
+  - the README's `restart-services` lines (about `:243-245` and `:576-577`): run the pull only through `systemctl`;
+    git never prompts; a failed pull still brings the stack up and fails the unit, naming the pull.
 
 ## Future Improvements
 
@@ -286,6 +321,16 @@ None: the owner answered all four on 2026-10-05 (above).
   round, concern 7).** A security group attached through a `data "aws_network_interface"` lookup would pass. No such
   lookup exists today. *Complete fix:* resolve data sources in the guard, or fail on any `aws_network_interface*`
   data source in the root.
+- **The prune cannot reach incomplete multipart uploads (prune round, concern 2).** An upload stopped past the CLI's
+  8 MiB threshold leaves parts holding part of a dump. No S3 API reads them, and the lifecycle aborts them after a
+  day, but S3 may run that abort late. *Complete fix:* grant `s3:ListBucketMultipartUploads` and
+  `s3:AbortMultipartUpload` on the prefix, and have the prune abort uploads older than its threshold. The CLI's own
+  cleanup of a failed upload then works too.
+- **The prune trusts the box's clock (prune round, concern 3).** A clock far ahead would delete young dumps, the
+  night's own included. EC2's time sync makes this remote. *Complete fix:* take "now" from S3 (the listing
+  response's `Date`), or refuse to prune when the box's clock runs ahead of it.
+- **The backup test's unit-file parser duplicates the startup test's (prune round, concern 6).** *Complete fix:* one
+  helper under `tests/unit/demo_box/`, after the owner confirms.
 
 - **The GitHub token sits in the instance's user data** (pre-existing). *Complete fix:* read it at boot from SSM,
   like the box's other secrets.
