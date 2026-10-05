@@ -1527,8 +1527,10 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    they run. Since the P5 phase review (B, I-3), every merge of core, copilot-mro or shift-optimizer also runs the
    api census (`tests/integration/user_erasure`, `-n 0`, against `copilot_mro_test`, re-provisioned first when the
    merge changes a schema). The census is the only guard against some erasure regressions.
-   When the P5 fix round's parts X1 and X2 merge, api's pin file must show the X1 pin PASSED, not SKIPPED. A skip
-   there means X1's module moved, and the merge stops.
+   When the P5 fix round's parts X1 and X2 merge, the X1 pin must show PASSED, not SKIPPED. It is
+   `test_the_live_counts_second_root_is_part_x1s_cli_session_root`, in copilot-mro's
+   `tests/unit/user_erasure/test_user_erasure_e2e_live.py`, not in api's pin file. A skip there means X1's module
+   moved, and the merge stops.
 3. Phase review (independent, adversarial) → triage → a fix round, merged, gated and pushed the same way. The owner
    waived the pause between phases on 2026-10-01; owner questions go to the owner as they arise.
 
