@@ -247,6 +247,25 @@ risks, rollout order). This plan records the decisions and the order; the resear
     turn-record deletion. The Terraform reads both grant settings (and the app password) from Secrets Manager. The
     owner creates the secret and runs the apply.
 
+27. **Provisioning creates `flynapse_readonly` on request (owner, 2026-10-04).** Today the script grants to the
+    reporting user but never creates it, and a missing one is a finding that rolls back the whole run. So every
+    database had to carry a user that reads every tenant's rows, even where nothing uses it (no deployed service
+    does: only the local Grafana, the quality-report script and two owner scripts read as it).
+    - When `POSTGRES_READONLY_PASSWORD` is supplied, the script creates it with its reviewed attributes, and grants
+      exactly its table list.
+    - When the password is absent and the user too, the script skips it: not a finding.
+    - When the user exists, its exact table list is enforced, as today.
+    - Built after step 7 merges, since it is the same script.
+28. **AWS gets Postgres and Phoenix as containers on the Weaviate box (owner, 2026-10-05).** AWS has no Postgres
+    today: DynamoDB's tables left Terraform, and the API's database host still defaults to `localhost`.
+    - Postgres runs as a container beside Weaviate on the `weaviate-observability` EC2 box, with its data on the
+      box's disk, as on the local stack. It replaces DynamoDB for the API.
+    - Phoenix runs there the same way ("replicate Weaviate"), keeping its traces in its own `phoenix` user and
+      database in that Postgres, so they survive restarts. The client-account module's optional Phoenix, which keeps
+      nothing across restarts, is a separate matter.
+    - A nightly backup to S3 is built, since no managed backup exists, and the erasure receipt states its retention.
+    - Planned separately: `docs/plans/aws-postgres-and-phoenix.md`.
+
 ## Order (from the research's rollout, with the rulings applied)
 
 - [x] 1. Code only, no database change: the shared user-name module, env-var canonicalisation with fallbacks, owner
@@ -272,6 +291,10 @@ risks, rollout order). This plan records the decisions and the order; the resear
   `flynapse_grant` only, then `tenants` delete rights revoked from the grant user. Also the default-privilege revokes
   from decision 24: PUBLIC's EXECUTE on the `lo_*` and extension functions (granted back to the app user where it
   needs them; `wdm_graph` uses `similarity()`) and PUBLIC's TEMPORARY, each with a verify finding.
+- [ ] 3b. Terraform: App Runner reads `POSTGRES_QUERY_PASSWORD` from the same owner-made secret, by reference (owner,
+  2026-10-04: write it now; the owner applies it at deploy). Building on iac `db-roles-tf-query`.
+- [ ] 8. Decision 27: provisioning creates `flynapse_readonly` when its password is supplied, and a missing one with no
+  password is no finding. After step 7's merge.
 
 **Rules for every step:** grants and revokes run on `copilot_mro_test` first, then the protected databases, with the
 provisioning verify before and after. Table ownership stays with `postgres`. The auto-mode classifier refuses Claude's
@@ -324,12 +347,29 @@ DDL on shared databases, so every DDL step is the owner's to run.
     - rotate both passwords after the apply;
     - `start-deployment` after any rotation;
     - confirm the Postgres host, port, database and sslmode reach App Runner (neither `dev.tfvars` nor CI sets them).
+  - **Step 3b (2026-10-05)** adds a third key, `POSTGRES_QUERY_PASSWORD` (iac `db-roles-tf-query` `5e08621`, accepted
+    by controller read: one reference, its pin, 16/16 mutants killed, iac 335 passed). Its owner steps are in
+    `s3b-tf-query-report.md`:
+    - the secret holds all three keys, and every `put-secret-value` writes all three, since it replaces the whole
+      JSON;
+    - `flynapse_query` exists on the deployed database before its password goes in;
+    - rotation names the third user.
+
+    A missing key fails only at the deployment, not at the plan. The database host is still not set anywhere
+    (`aws-postgres-and-phoenix.md`).
   - The current app password sits in every earlier state version, and it may be the literal `postgres` if CI ever
     applied. Rotation closes that.
   - The grant USER is plain config, because a role name is not a secret. Decision 26's wording above covers the
     passwords.
 
 ## Future Improvements
+
+- **The password variables' names are pinned in iac as literals (step 3b, concern 1).**
+  - iac's CI lane checks out iac alone, so its guard cannot read utils' `db_roles.py`.
+  - A rename in utils of `POSTGRES_PASSWORD`, `POSTGRES_GRANT_PASSWORD` or `POSTGRES_QUERY_PASSWORD` would pass every
+    test and fail at the next deployment.
+  - *Complete fix:* a cross-repo pin in a lane that checks out both repos (api's checkout-pinned lane), comparing
+    iac's three keys with utils' constants.
 
 - **The passwords guard is a text matcher (step 3).**
   - *What is missing:* two ways around it survive:

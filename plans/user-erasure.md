@@ -1522,7 +1522,8 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    so a blank value in either, or only the deprecated `GRANT_POSTGRES_PASSWORD`, is refused).
    Before the door check, such a host froze the person and then failed at that step on every retry. iac `main` declares
    both (`apprunner.tf`): the user by default, the password from the owner's hand-made secret
-   `api/postgres/passwords`, which must exist with both JSON keys before any plan (P4 review C M-1). The apply is iac
+   `api/postgres/passwords`, which must exist with its JSON keys before any plan (P4 review C M-1): two, and a third,
+   `POSTGRES_QUERY_PASSWORD`, once DB roles step 3b merges. The apply is iac
    `main`'s whole apply: its other owner steps come first, in iac `README.md` (B4's log-group imports, B5) and the
    db-roles plan.
    **AWS deploy blockers, decided at deploy time (owner, 2026-10-01; P4 review C I-4 and I-1):**
@@ -2550,6 +2551,25 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     guard, closes the class.
   - **Owner, 2026-10-04: the three modules' lines are fixed now** (P4 fix round part D8). The sweep with a guard
     stays here.
+  - Left for the sweep (D8, concern 2): `user_feedback.py:548` and `:576` log the chat title and the email subject
+    (the user's own text); `chats.py` binds the browser session id on six lines (`list_user_chats`, `delete_chat`), and
+    `feedback.py` on one.
+- **copilot-mro's scope guard measures only from the newest merge (P4 fix round part D8, concern 3).** It should
+  measure from the telemetry track's merge. A change to a file that track approved now needs a fresh approval entry
+  (D8 added one for `user_feedback.py`), and the guard's docstring no longer holds. *Complete fix:* anchor the guard
+  on the track's merge commit by its recorded SHA, and pin that a file outside the approved set still fails.
+- **Census part 2's review, the Minors (2026-10-05).**
+  - M-1: ruling 1's condition (the erasure runs as an RLS-bound role) is checked in code only in the api process
+    (`assert_rls_enforced`). The owner CLI's `run`/`--run-due` and the standalone automation worker never check their
+    pool's role. Every erasure statement carries an explicit tenant predicate today, so nothing is exposed.
+  - M-2: the LLM records definer is the one erasure statement outside RLS, and tenant B holds no LLM row of P.
+    *Complete fix:* seed P's three LLM relations in B, with a definer-side mutant on a re-provisioned throwaway.
+  - M-3: nine rows of A that name no one (`operators`, `tenants`, `roles` and four more relations) are compared by no
+    rule.
+  - M-5: rule 6's S3 check accepts any valid re-key that comes back, not exactly the expected ones, so an orphan
+    re-keyed instead of deleted passes it.
+  - M-6: the census file is about 1,320 lines. *Complete fix:* move the helpers and the named lists to
+    `_census_rules.py`, keeping one estate run.
 - **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
   request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
   `RequestRouteMiddleware`.
@@ -3506,3 +3526,12 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - the P5 phase review;
   - SDK transcripts off;
   - Task 18's live run (its prerequisite: the API restarted on the merged code, step 6's 4c).
+
+**Status, 2026-10-05 (night).**
+- **Census part 2's review: FIX FIRST, three Important findings.** Each is a rule that stays green on a real erasure
+  regression: a re-upserted memory document's other fields, the sibling half's empty relations, and partial changes
+  inside an exception column. A fix round is running; the five Minors are Future Improvements.
+- **D8 is built** in four repos (shift-optimizer, telegram-bot, flynapse-otel, copilot-mro): every hand-back suite
+  green and 25 mutants killed. Its review is running.
+- **Merges wait on the owner.** Auto mode refused the controller's merge into the main checkouts ("Modify Shared
+  Resources"). The owner runs the merges, or approves them.
