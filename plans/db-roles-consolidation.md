@@ -247,21 +247,30 @@
       - The reporting user was created, and it logged in with the app user's own password.
     - The other round-1 items held. Every lane was green, and port 5432 was never touched.
     - The fix-1 report said api and iac carry copies of the old rotation instruction. Neither does.
-  - **Fix round 2 (done, tip `b41a2627`; in re-review):**
+  - **Fix round 2 (done, tip `b41a2627`; re-reviewed MERGE-READY):**
     - "Equal" means equal after libpq's normalisation (C.1.2 to a space, B.1 removed, NFKC), or equal as raw strings.
       This applies to the reporting check and the owner check.
     - Proven live on a throwaway: the soft-hyphen and BOM variants are refused with exit 2 in both modes, and nothing
       connects. U+200B is not refused, and it does not log in as the app.
     - Lanes: non-db 16558 passed, 0 failed; `tests/db/tenancy` 680 passed, 0 failed. 23 of 24 mutant runs were
       killed; the survivor is the control that justifies the extra NFKC pin.
-    - The helper's Unicode tables (Python 3.11) are older than libpq 17's. The controller expects this to be moot:
-      libpq compares any password holding a code point unassigned in Unicode 3.2 raw, and NFKC is stable for
-      assigned ones. The re-review checks this against the source.
+    - The helper's Unicode tables (Python 3.11) are older than libpq 17's. This is moot, as the re-review confirmed
+      from libpq's source and measured with libpq 17.9. libpq checks for prohibited and unassigned (Unicode 3.2) code
+      points before it normalises, and on any failure it uses the raw password. So its prepared form is always either
+      the helper's form or the raw string. A Unicode 15 character (U+1E030) is kept raw.
     - Also: the refusal tells how to fix a reporting user that already exists; with `--app-password`, the check also
       compares the settings' value; the cutover runbook creates `flynapse_inspect` without a plaintext `PASSWORD`;
       two spawners are pinned; and the secret scan's docstring states its other blind spots.
-  - **Next:** a scoped re-review, the merge into `langgraph-merge`, the post-merge test run (with api's census, per the
-    user-erasure merge protocol), then the push.
+  - **Fix round 2's re-review (2026-10-05): MERGE-READY, OPEN 0.**
+    - Lanes: `tests/unit/db` 966 passed; `tests/unit/observability` 1067 passed; `tests/db/tenancy` on a throwaway
+      680 passed, 0 failed.
+    - Live: a reporting password equal to the app's plus a soft hyphen exits 2 in both modes, with no connection, no
+      statement and an unchanged catalog. The owner case and a service-side case behave the same.
+    - Mutants: every round mutant was killed, and two of the reviewer's own. One survived (m-A, below). Port 5432 was
+      never touched.
+  - **Merged (2026-10-05)** into copilot-mro `langgraph-merge` as `f72a3351`. Step 8 touched only the provisioning
+    script, tests, runbooks and env samples. The post-merge run covers copilot-mro's non-db lane and every
+    `tests/db` folder, plus api's pins and census. **Next:** its verdict, then the push.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
@@ -581,6 +590,23 @@ DDL on shared databases, so every DDL step is the owner's to run.
     value from the child's environment survives, because the 18 tests that need the dump skip whenever the fallback
     fails. *Complete fix:* after the import-time-connect fix above, unit-pin `_pg_dump_schema_only`'s attempts: the
     variable passed by name, and the value in each environment.
+- **Step 8's fix round 2: what its re-review left (2026-10-05).**
+  - **The SASLprep pins only change one side (m-A).** Every pin varies the reporting or restricted user's password.
+    - A mutant that prepares only the first argument survived its aimed tests and their full lane.
+    - Today's code is symmetric: the reviewer's live case, with the variant on the app's side, was refused in both
+      modes.
+    - *Complete fix:* one more parametrisation per test, with the variant on the service side and on the owner side.
+  - **A docstring describes a gap that cannot open (m-B).** `_same_password`'s "Python's Unicode tables can lag
+    libpq's" is wrong: libpq uses the raw password for any code point unassigned in Unicode 3.2. *Complete fix:* say
+    that instead.
+  - **asyncpg and libpq disagree on U+200B (m-C).**
+    - libpq maps the zero-width space to a space; asyncpg removes it.
+    - So an app password equal to the owner's plus U+200B is not refused, as fix round 2's brief asked. With libpq it
+      does not log in as the owner. Through asyncpg, or a person retyping the password by eye, it would.
+    - The estate's clients all use libpq (psycopg2, psycopg 3), and asyncpg is not in the api venv.
+    - **Asked of the owner (2026-10-05):** should "equal" also refuse a copy that differs only by characters a client
+      may drop? *Complete fix, if yes:* "equal" also covers removing B.1 before mapping C.1.2 (asyncpg's order), the
+      four U+200B pins flip to "refused", and an operator who hits it chooses a new password.
 - **copilot-mro's non-db lane reads the local test database (AWS phase 1, fix round 1).** Seven tests not marked
   `db` read `copilot_mro_test`. Three skip with "not present in this database" (the optimizer plan digest, the
   inventory plan, the optimizer decompose); four pass only with a database (`test_reset_demo`,

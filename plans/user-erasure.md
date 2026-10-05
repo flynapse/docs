@@ -1648,6 +1648,29 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
     - The CLI is ended in line on every exit path. The measured design's `aclosing` left the CLI's last flush to
       asyncio's finalizer when the caller's own code raised.
     - The hermetic real-CLI test is left for the fix round. In review.
+  - **X1's review (2026-10-05): FIX FIRST, one Critical.** It drove the real SDK and CLI through 17 ways a session
+    can end. Every path with a single cancellation leaves nothing on disk.
+    - **C-1:** a cancellation that arrives more than once while the SDK is ending the CLI cuts the SDK's close short,
+      because its shield stops only anyio's cancellations. The helper then removes the directory while the CLI is
+      still alive, and the CLI writes it again: the transcript, a subagent's transcript and MCP logs. That copy
+      stays until the api restarts.
+    - **The trigger:** closing the browser tab mid-turn. `/rag/stream`'s disconnect path forwards a cancellation
+      into the turn on every event-loop pass. Two nested deadlines, or an error followed by a deadline, do the same.
+    - **Controller ruling: fixed in the helper now, with no receipt caveat.**
+      - One task the helper owns runs the whole SDK stream. On teardown the helper cancels it once, waits for it
+        while absorbing any later cancellation, and removes the directory only after it ends.
+      - Every session start also sweeps this process's own directories that no live session holds.
+      - The fix round also builds the hermetic real-CLI test, which must fail on `8a81b2d7` and pass on the fix.
+    - The stdio cache-home path on the CLI's command line is accepted: it is a path, not a secret.
+  - **The live proof** (the controller's, after the merges and the api restart). Run three sessions:
+    - one chat turn that dispatches a subagent and spills a large tool result;
+    - one SAD session;
+    - **one chat turn whose tab is closed while a tool runs** (X1 review).
+
+    Then list the names carrying each session id under `~/.claude`, `/tmp/claude-<uid>`,
+    `~/.cache/claude-cli-nodejs` and `~/.cache/copilot-mro/sdk-sessions`, before the sessions and about 15 s after.
+    Nothing new may appear. The spill's path must be under the session root and redacted in the trace, and the
+    memory hint must reach the curator.
   - **Merge order:** the API restarts on X2's receipt only once X1 is merged too. Otherwise a receipt completed in
     between drops the transcripts caveat while transcripts are still written.
 - [x] Scheduler: the delayed half runs only where the scheduler is embedded/worker; otherwise a daily `--run-due`.
@@ -2721,6 +2744,25 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     remove directories under `~/.cache/copilot-mro/sdk-sessions`, and the lazy sweep runs there. The sweep removes
     only dead processes' directories. *Complete fix:* a suite-wide pin in the shared conftest that points the root at
     a temporary directory.
+  - **`/rag/stream` forwards every repeated cancellation into the turn (X1 review, C-1's trigger).**
+    - On a client disconnect, `event_generator`'s `finally` does `await task` inside Starlette's cancelled task
+      group. anyio re-delivers its cancellation on every loop pass, and each one is forwarded into the pipeline task.
+    - X1's helper now absorbs them, so no session directory outlives its CLI. But any other teardown work in the
+      pipeline task is still cut short at its first await: telemetry flushes, partial-state saves.
+    - *Complete fix:* `event_generator` cancels the task once and waits with `asyncio.wait({task})` in a loop that
+      absorbs later cancellations, then re-raises.
+  - **The session-site census misses three shapes (X1 review M-3).**
+    - It misses `getattr(sdk, "query")(…)`, the SDK's internals (`InternalClient().process_query`,
+      `SubprocessCLITransport`), and an SDK module obtained through a function not named `load_sdk_module`.
+    - No such call exists today.
+    - *Complete fix:* also flag `getattr(<x>, "query" | "ClaudeSDKClient")` and any import of
+      `claude_agent_sdk._internal`, and treat a module that references `ClaudeAgentOptions` as reaching the SDK.
+  - **`_toollog` reads spills from the whole session root, not the session's own directory (X1 review M-4).**
+    - A spoofed spill wrapper in one session could name another live session's spill in the same process.
+    - The path is unguessable (a random directory suffix, the process token, the session UUID, the tool-use id),
+      and the scope is far narrower than the old `~/.claude/projects`.
+    - *Complete fix:* the helper binds the session's own directory in a contextvar, and `_under_persist_root` reads
+      it.
 - **P5 fix round part X2's review: what is left (2026-10-05).**
   - **Document Hub's `raw_s3_key` and `artifact_s3_prefix` carry the owner's id** and are re-keyed by the same
     statement as `document_hub_documents.metadata`, but no erased-user line places either column. *Complete fix:*
@@ -3789,3 +3831,12 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
     on each;
   - the api restarted only after both parts are merged;
   - the live proof, the owner's one-time delete, then Task 18.
+
+**Status, 2026-10-05 (~07:05 PDT): X1 reviewed FIX FIRST; its fix round is running.**
+- **X1's review** found one Critical: a session cancelled more than once while its CLI is ending loses its directory
+  early, and the CLI writes it again. Closing the tab mid-turn does this. The fix round runs the SDK stream in a task
+  the helper owns and builds the hermetic real-CLI test.
+- **Running:** X1's fix round and X2's fix round.
+- **DB users step 8** merged into copilot-mro `langgraph-merge` as `f72a3351`. It shares no file with X1 or X2.
+- **Next:** both re-reviews → the merges in one window → the api restart → the live proof (now including a tab
+  closed mid-turn) → the owner's one-time delete → Task 18.
