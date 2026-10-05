@@ -2558,6 +2558,15 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   measure from the telemetry track's merge. A change to a file that track approved now needs a fresh approval entry
   (D8 added one for `user_feedback.py`), and the guard's docstring no longer holds. *Complete fix:* anchor the guard
   on the track's merge commit by its recorded SHA, and pin that a file outside the approved set still fails.
+- **D8's review, the Minors (2026-10-05).**
+  - M-1: all seven `--tb=short` pins (D6's four, D8's three) match options by spelling, so `-ql` (show-locals) and
+    `--full-trace` pass them. *Complete fix:* each pin parses `addopts` with pytest's own parser and asserts short
+    style, no locals and no full trace.
+  - M-2: refusal and warning lines D8 did not change are run by no pin (`blocks.py`'s
+    `get_response_content_by_block_id` and `:465`; `user_feedback.py` `:516`, `:552`, `:554`, `:626`, `:632`). None
+    binds an email or session id today. The planned sweep's static guard closes it.
+  - M-3: a comment in both new pins says `failure_fields` quotes each frame's source text. It writes frame headers
+    only (`flynapse_otel/failure.py:84-90`).
 - **Census part 2's review, the Minors (2026-10-05).**
   - M-1: ruling 1's condition (the erasure runs as an RLS-bound role) is checked in code only in the api process
     (`assert_rls_enforced`). The owner CLI's `run`/`--run-due` and the standalone automation worker never check their
