@@ -3361,3 +3361,27 @@ part D's merge; Task 18's review, then its live run on the owner's go.
 - **Queued:** the merge of lane D's fix round B (after B4 and Postgres); census part 1 (C1); D3's fix round, if its
   review finds any; census part 2; the P5 phase review; SDK transcripts off on the API host; Task 18's live run, on
   the owner's go.
+
+**Status at compaction checkpoint 22 (2026-10-04).** The owner lifted the hold.
+- **Three rounds are built, reviewed and accepted, and wait to merge:**
+  - **Lane D's fix round B** (parts B2, B3 and B4). Both statement readers refuse what they cannot read, every
+    assigned column is placed, and `chat_turn_facts.session_id` is a `scrub`. Its database lanes run first.
+  - **The P4 fix round, parts D3 to D6.**
+    - The door-check red is fixed, and the settings modules log instead of printing.
+    - Every request line, uvicorn's access and WebSocket lines included, names the route template.
+    - The gateway serves no WebSockets. The websockets package's and `uvicorn.asgi`'s records never reach a sink.
+    - The last lines naming the person on the erasure doors are gone, and so are the auth-cache lines naming roles,
+      departments and tenants.
+    - pytest's tracebacks are short in every repo, so a failed connection prints no password.
+  - **The Task 18 script** (fix rounds 2a, 2b, 3 and 4).
+    - It reads the parsed PDF text, the agent-state rows and every chat of the person.
+    - It holds all kept tenant knowledge to verbatim, and runs a harmless Cognito pre-flight.
+    - It fixes a leg's person once planted.
+    - Its SQL ran against a database built from code: 42 checks, 0 bad.
+- **Next:**
+  - the three merges, each behind its full gate;
+  - census part 1 (C1), then C2;
+  - the P5 phase review;
+  - SDK transcripts off. That change also makes the receipt name the statement-proven class and the parse-sidecar
+    content records.
+  - Task 18's live run, on the owner's go.

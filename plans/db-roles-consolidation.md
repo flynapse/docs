@@ -152,6 +152,30 @@
       - a unit case for the trigger pin's `SET NULL` hop.
 
       It re-proves the sheet. A scoped re-review follows, then the sheet goes to the owner, with step 6's 4c first.
+    - **Fix rounds 3 to 7 (2026-10-04, after the owner lifted the hold).** Docker Desktop was stopped on the host
+      all day, so every throwaway was a user-space PostgreSQL 16 cluster unpacked from Ubuntu's own packages.
+      - **Round 3** built what was ruled and re-issued the sheet. Lens B found it SHEET-READY, with every quoted
+        number matching on the local shape and on three RDS shapes (A: the master is `postgres`; B: another master,
+        `postgres` owns the database; C: the master created the database).
+      - **Round 4** turned the last must-hold reads to the table level and gave a PUBLIC grant a remedy that names
+        PUBLIC.
+      - **Round 5** fixed round 4's quoted-name regression, and reports the read-only and grant roles' writes
+        anywhere.
+      - **Round 6** added an ownership census: any relation owned by a role other than `postgres` is a finding.
+      - **Rounds 4 to 6 each turned up one more privilege class verify never read**, the last being schema and
+        database ownership and CREATE on a schema. So **round 7** wrote a matrix of every PostgreSQL 16 privilege
+        against every role, with the check that reads each cell. It found 21 holes. Part 7a closed 10, part 7b
+        closed most of the rest, and part 7c (running) closes the last.
+    - **Controller ruling (2026-10-04, for the owner to confirm):** `rds_superuser`'s reach through
+      `pg_read_all_data` and `pg_write_all_data` is ONE accepted line, as the owner's ruling words it ("one narrowly
+      pinned line"), printed only while the premise holds.
+      - Until now each census printed a line per holding: 10 lines, and about 460 per database had the last matrix
+        cells closed the same way.
+      - Where the premise fails, it is one finding. Any other path stays a finding.
+    - **Controller ruling (2026-10-04):** nothing is accepted in silence. What the RDS master owns or holds is a named
+      accepted line, like the older ones.
+    - **Next:** part 7d re-issues the sheet and the census with the new RDS counts and accepted lines, re-proves it,
+      and runs the full lanes. One two-lens re-review follows, then SHEET READY, then the owner, after step 6's 4c.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
@@ -334,6 +358,37 @@ DDL on shared databases, so every DDL step is the owner's to run.
     creates that role.
   - *Complete fix:* create the owner role in the fixture, or have the fixture run the provisioner as its own
     superuser.
+- **Step 7's verify: what the fix rounds left (2026-10-04).** Each item below fails closed (verify stays red) or is
+  test-only, unless it says otherwise.
+  - **Step 1 on a database a non-`postgres` master owns** (PostgreSQL 15 and later) fails with an uncaught
+    `InsufficientPrivilege`: `postgres` lacks CREATE on `public`, and nothing is written. The sheet's probe stops the
+    owner first. *Complete fix:* a precondition that exits ABORTED (2) with the remedy.
+  - **The order of the printed remedies matters.** Run last-first, they can strip `postgres`'s own privileges on a
+    relation while verify reads clean. On RDS that breaks `delete_tenant` in the shape where `rds_superuser` holds
+    neither data role. Handing ownership back also takes the old owner's grants, and the app role's DML on an
+    ordinary table is checked nowhere. *Complete fix:* must-hold checks for the owner role's privileges and the app
+    role's DML.
+  - **On RDS, the master cannot hand back a relation the read-only, app or grant role owns.** *Complete fix:* the
+    remedy says to grant the master the role `WITH INHERIT TRUE` first, then run the `ALTER`.
+  - **A write reached through a membership is reported once per relation** (125 findings for `pg_write_all_data`),
+    each REVOKE taking nothing back. The membership finding names the real remedy. *Complete fix:* one collapsed
+    finding, or the membership clause on each.
+  - **Bare names:** utils' completeness cross-check and RLS emitters, and a few remedies (schema and role names in
+    `CREATE ON SCHEMA`, default-privilege and membership remedies), print names unquoted. A name that needs quoting
+    would raise or print a remedy that does not parse. No name in the schema needs quoting today. *Complete fix:*
+    `quote_ident` everywhere a name is printed or run.
+  - **A grant made by a grant-option holder stays after its printed remedy.** *Complete fix:* name the grantor in the
+    remedy.
+  - **`s7-census.sql`'s `tenants writer` row leaves out whichever role owns `tenants`.** Verify is the gate.
+  - **Unpinned or weakly pinned:**
+    - the new pass's quoted-name path (mutants X8b, X21);
+    - relation kinds in the unit fakes (X14, X16);
+    - a TRUNCATE outside `public` (X6);
+    - two wording mutants (PD1, PC1);
+    - two live acceptance tests that keep their own `has_table_privilege` SQL (`test_grant_role_acceptance.py:408`,
+      `test_user_operator_grants.py:336`).
+  - **Never run:** PostgreSQL 15, a real RDS, and the real Docker CLI. The local proof ran the sheet's `docker` blocks
+    through a stand-in.
 
 ## Lessons
 
@@ -356,6 +411,11 @@ DDL on shared databases, so every DDL step is the owner's to run.
   container too, so it skipped the sheet's re-proof at the merged tips, which needs one. Rule: a brief names what is
   protected by where it lives (the shared server's `copilot_mro`, the `postgres` container on port 5432), and says
   outright that a throwaway built from code may hold databases of any name.
+- **A class hunt needs a matrix, not another review (step 7, fix rounds 4–7, 2026-10-04).** Rounds 4, 5 and 6
+  each closed what the last review found, and each re-review then found one more privilege class verify never read.
+  Round 7 wrote down every privilege PostgreSQL has against every role, with the check that reads each cell, and
+  found 21 holes at once. Rule: when a second review in a row finds a new member of the same class, stop fixing one
+  at a time. Write the class out completely, and close it by construction.
 - **A large file's agents work from a design file and symbol indexes (step 7 fix round, 2026-10-01).** Two agents ran
   out of context reading the 4,000-line provisioning script. The round then ran as narrow parts, each with a
   "read only this" list, slices through a regenerated symbol index (`/usr/bin/grep`, since `grep` is ugrep here), and
