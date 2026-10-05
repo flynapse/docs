@@ -2764,8 +2764,15 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
       group. anyio re-delivers its cancellation on every loop pass, and each one is forwarded into the pipeline task.
     - X1's helper now absorbs them, so no session directory outlives its CLI. But any other teardown work in the
       pipeline task is still cut short at its first await: telemetry flushes, partial-state saves.
-    - *Complete fix:* `event_generator` cancels the task once and waits with `asyncio.wait({task})` in a loop that
-      absorbs later cancellations, then re-raises.
+    - While the helper waits for the CLI to close (about 5 s, at most the SDK's ~20 s), it wakes on every loop pass,
+      so a disconnected turn burns CPU for that long (X1 fix round, concern 2).
+    - *Complete fix:* `event_generator` cancels the task once, then waits for it inside
+      `anyio.CancelScope(shield=True)`, then re-raises. The shield is what stops the wake-ups: anyio re-delivers to
+      every task still inside the cancelled scope, so an absorbing `asyncio.wait` alone would only move them into
+      `event_generator` (controller correction, 2026-10-05).
+  - **The hermetic real-CLI test takes 67 s, over its 60 s target (X1 fix round, concern 1).** The fixed 8–14 s watch
+    after each session dominates. *Complete fix:* end a mode's watch as soon as no process carries its
+    `CLAUDE_CONFIG_DIR`, since nothing else can write the directory.
   - **The session-site census misses three shapes (X1 review M-3).**
     - It misses `getattr(sdk, "query")(…)`, the SDK's internals (`InternalClient().process_query`,
       `SubprocessCLITransport`), and an SDK module obtained through a function not named `load_sdk_module`.
@@ -3902,4 +3909,18 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **X2 waits for X1** at core `69c9968`, dashboard `7b7ed8a`, copilot-mro `426b2527` and api `4b4a18f`.
 - **Task 18** runs the script as the api's user, with the api's `HOME`.
 - **Next:** X1's fix round → its re-review → the merges in one window → the api restart → the live proof → the owner's
+  one-time delete → Task 18.
+
+**Status, 2026-10-05 (~07:51 PDT): X1's fix round is done, and its re-review is running.**
+- **X1's fix round** (copilot-mro `8a81b2d7..68aff427`):
+  - A task the helper owns now runs the SDK stream. However often the session is cancelled, the helper cancels
+    that task once and waits out the CLI's close. Only then does it remove the directory.
+  - A registry and a sweep at every session start remove anything a crash left.
+  - The real-CLI test fails at the old tip in exactly the four C-1 modes, and passes at the new one, 29 of 29.
+  - The non-db lane passed: 16562 passed, 0 failed. 13 of 13 mutants were killed.
+- **The costs, accepted:**
+  - a cancelled turn now ends once the CLI has closed, about 5 s later (20 s at worst);
+  - during a closed tab, the wait wakes on every loop pass for that time. The `/rag/stream` Future Improvement is
+    corrected to fix that.
+- **Next:** X1's re-review → the merges in one window (X2 is ready) → the api restart → the live proof → the owner's
   one-time delete → Task 18.
