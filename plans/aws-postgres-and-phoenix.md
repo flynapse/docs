@@ -2,9 +2,10 @@
 
 Status: **phase 1 is done, and the box's dump prune round (with phase 1's three Minors) was reviewed MERGE-READY at
 copilot-mro `93b64914`; phase 2 (the Terraform) is done at iac `3933f47` (re-reviewed MERGE-READY, OPEN 0); phase 3,
-the runbook, is built in iac at `99f85b9` with phase 2's four Minors and is in review by two lenses; the prune's fix
-round is done at copilot-mro `5700c550` (re-reviewed MERGE-READY, OPEN 0), and its four Minors wait for a small fix
-round 2** (2026-10-05, ~09:00 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+the runbook, is built in iac at `99f85b9` and was reviewed FIX FIRST by both lenses: its guards' fix round (1b) is
+running, and the runbook's (1a, for the owner's one combined deploy) follows on the same tree; the prune's fix round
+is done at copilot-mro `5700c550` (re-reviewed MERGE-READY, OPEN 0), and its fix round 2 for four Minors is
+running** (2026-10-05, ~09:45 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -46,6 +47,10 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
   - **Data:** start empty. AWS is the dev environment; tenants and users are created fresh.
   - **Network:** the box stays in the public subnet. Postgres and Phoenix admit only App Runner's security group and
     the box itself; SSH stays limited to the owner's IP.
+- **2026-10-05 (after phase 3's review): one combined deploy.** iac's root still holds the observability rebuild's
+  pending apply order (B2 to B8). The AWS runbook takes it over: B4's log-group imports first, the POC replica
+  stopped before its replacement, and step 6 listing everything else it carries. Alert arming (Phase 10, after
+  B1a's gate) stays a later step.
 - **2026-10-05: the step 3b Terraform** (`db-roles-tf-query`) stays on its branch and merges with this plan's iac work.
   Auto mode refused the controller's merge into iac `main`.
 - **2026-10-05: the box keeps deploying copilot-mro `main`, and `main` is fast-forwarded first.** The setup script
@@ -307,6 +312,31 @@ None: the owner answered all four on 2026-10-05 (above).
       Future Improvement.
   - **The review is split in two lenses,** because the round's implementer ended at 563k tokens. Lens A takes the
     runbook's prose and commands; lens B takes the guards and the pins.
+  - **The reviews (2026-10-05): both FIX FIRST.**
+    - **Lens A, the runbook: OPEN 7.**
+      - Step 6 deploys whatever image `:latest` holds, and the runbook never names or checks it.
+      - The restore's expected failure is not quoted, and its own remedy (run the migration) would break the restore.
+      - Rotation is wrong for the app roles' secret (a Secrets Manager JSON secret). It lacks the redeploy and the old
+        key's revocation, opens `secrets.env` in an editor, and leaves the box's own secrets stale for a re-initdb.
+      - Three blocks open a new shell on their first line, so a pasted block runs outside it.
+      - It ignores the root's other unapplied work: the observability rebuild's apply order.
+      - Two Minors to fix now: a bare `docker-compose` under `sudo -i`, and the prefix change's order.
+    - **Lens B, the guards and pins: OPEN 4,** all Minor real holes:
+      - `count = 0` on a pinned configuration drops it at apply, and both guards pass;
+      - `s3:GetObjectVersion` reads a dump unseen;
+      - the argument-list pin misses three curl forms and a `put-parameter` after a global option;
+      - the step-2 pin misses `-target <address>` written with a space.
+  - **Controller rulings:**
+    - The runbook names and checks the image before step 6 and before a rotation's redeploy. Deploying by the
+      immutable `:<sha>` tag is a Future Improvement.
+    - The box-only passwords (the superuser, `phoenix`) rotate by `\password`, then the parameter, then replacing the
+      instance, whose setup script rewrites `secrets.env` from the parameters, verifier included. Never an editor.
+    - Changing the prefix: apply, one hand-run backup, then empty the old prefix (the list below is changed).
+    - A restore drill joins "After the deploy".
+    - Every Minor of both lenses is taken, and lens B's FI-1, FI-2, FI-3 and FI-7 too.
+    - **The owner's decision on the root's other work: one combined deploy** (see Owner decisions).
+  - **Two fix rounds, in turn, on the same tree:** 1b, the guards (running); then 1a, the runbook for the combined
+    deploy, with lens A's findings and every runbook pin.
 
 ## Phase 3: what the runbook must cover (collected as the phases land)
 
@@ -390,8 +420,9 @@ None: the owner answered all four on 2026-10-05 (above).
   - read a missed night from `journalctl -u postgres-backup` (the previous boot included) and the timer's `LAST`,
     never from `systemctl is-failed`. A reboot during a run, or Docker failing to start, skips a night without
     failing the unit; start it by hand once the box is healthy;
-  - before changing `box_postgres_backup_prefix`, empty the old prefix: afterwards neither the prune nor the expiry
-    covers it;
+  - changing `box_postgres_backup_prefix`: apply first, run one backup by hand to the new prefix, then empty the
+    old prefix, which neither the prune nor the expiry covers any more. (Post-review change, lens A's m-3: emptying
+    it first leaves no backups until the next run, and a run before the apply writes a dump that never expires.)
   - never turn on the bucket's versioning by hand: each prune delete would leave only a delete marker.
 
 ## Future Improvements
@@ -438,6 +469,10 @@ None: the owner answered all four on 2026-10-05 (above).
 - **The backup's two `[SIGINT]` tests fail when pytest starts with SIGINT ignored** (under `nohup`, or as a
   script's background job). The failure is false, not a vacuous pass (phase 1 re-review, m-c). *Complete fix:* start
   the script through a small exec wrapper that resets HUP, INT and TERM to their defaults.
+- **App Runner deploys the mutable `:latest` (phase 3's review, I-1's complete fix).** Every deployment pulls
+  `:latest` as it is at that moment: step 6, a re-apply after a rollback, and a rotation's redeploy. api's CI pushes
+  it from both `main` and `develop`. The runbook checks the image's tags first. *Complete fix:* deploy by the
+  immutable `:<sha>` tag that the same CI run pushes, set in Terraform.
 - **The restore's first provisioning run fails by design (phase 3, concern 3).** It creates the roles, then refuses
   the empty database, and the runbook names the message to expect. An expected failure in a runbook invites the
   owner to pass over a real one. *Complete fix:* a roles-only mode in copilot-mro's `provision_rls.py`, so every

@@ -3956,3 +3956,21 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **The route fix moves into this round,** because the re-review measured a full CPU core per mid-turn tab close.
   `event_generator` cancels the turn once and waits behind a shield.
 - **X2 stays ready.** The merge window waits for X1.
+
+**Status, 2026-10-05 (~09:45 PDT): X1's fix round 2 is built (`68aff427..8ee30471`); its re-review is running.**
+- **Built:** the real-CLI test runs once per lane under xdist (a file lock; a peak of 4 CLIs), its watch ends at the
+  first empty scan (20.8 s, from 66.9 s), the scan reads only its own descendants, the teardown takes an abandoned
+  outcome and logs it by type, and the route cancels its turn once and waits behind a shield. The non-db lane passed
+  (16567), and 10 of 10 mutants were killed.
+- **The route never spun where it is served.** `/rag/stream` runs its turn in a worker thread
+  (`asyncio.to_thread`, then `asyncio.run`), so a tab close cancels only the route's wait, never the session. The
+  measured spin came from the test child's route, which has no thread hop. **Controller ruling:** the route change
+  stays; it is correct, and it removes the spin that would return if the turn ever ran on the route's own loop.
+- **What that means elsewhere:**
+  - A closed tab does not stop its turn: the model and tools run to the end, and the answer is never saved. This
+    predates X1.
+  - **The live proof's tab-closed leg** must wait for the turn's own end before it counts the session root. The
+    session ends with the turn, not with the tab.
+  - **Open question, for the controller before Task 18:** can a closed tab's turn write a person's data after their
+    erasure has completed? The re-review reads the freeze and completion steps and reports.
+- **X2 stays ready.** The merge window opens when X1's re-review says MERGE-READY.
