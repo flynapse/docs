@@ -21,6 +21,15 @@ all work is finished.
   box's data disk, as on the local stack. Phoenix keeps its traces in its own `phoenix` user and database in that
   Postgres. Asked against managed RDS, which the controller recommended; the owner chose the container.
 - **2026-10-04: AWS deploy only once all work is finished.**
+- **2026-10-05, the four open questions:**
+  - **Size:** a 16 GB box (`t3.xlarge`) and a 50 GB data disk.
+  - **Backups:** nightly dumps to S3, kept 14 days. The erasure receipt states that an erased person's data leaves the
+    backups within 14 days.
+  - **Data:** start empty. AWS is the dev environment; tenants and users are created fresh.
+  - **Network:** the box stays in the public subnet. Postgres and Phoenix admit only App Runner's security group and
+    the box itself; SSH stays limited to the owner's IP.
+- **2026-10-05: the step 3b Terraform** (`db-roles-tf-query`) stays on its branch and merges with this plan's iac work.
+  Auto mode refused the controller's merge into iac `main`.
 
 ## What exists today (measured 2026-10-05)
 
@@ -71,15 +80,12 @@ all work is finished.
    - the box's role may write only that prefix;
    - a restore drill;
    - the erasure receipt's backup bound (user erasure D12) then states that retention.
-6. **Sizing:** Weaviate, Postgres, Phoenix and the collector share the box. The instance and the data volume are
-   expected to grow. Measure Weaviate's current use before choosing.
+6. **Sizing:** Weaviate, Postgres, Phoenix and the collector share a `t3.xlarge` (16 GB), with a 50 GB data volume
+   that can grow online.
 
-## Open questions (ask before building)
+## Open questions
 
-- The instance size and the data volume's size.
-- The backup retention, in days. The erasure receipt states it.
-- Whether any data on AWS must be carried over (DynamoDB's old contents, the client's users).
-- Whether the box stays in the public subnet with the database port closed to the internet, or moves behind a NAT.
+None: the owner answered all four on 2026-10-05 (above).
 
 ## Risks
 
