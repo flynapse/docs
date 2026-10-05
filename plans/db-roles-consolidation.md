@@ -166,7 +166,7 @@
         database ownership and CREATE on a schema. So **round 7** wrote a matrix of every PostgreSQL 16 privilege
         against every role, with the check that reads each cell. It found 21 holes. Part 7a closed 10, part 7b
         closed most of the rest, and part 7c (running) closes the last.
-    - **Controller ruling (2026-10-04, for the owner to confirm):** `rds_superuser`'s reach through
+    - **Controller ruling (2026-10-04), confirmed by the owner the same night:** `rds_superuser`'s reach through
       `pg_read_all_data` and `pg_write_all_data` is ONE accepted line, as the owner's ruling words it ("one narrowly
       pinned line"), printed only while the premise holds.
       - Until now each census printed a line per holding: 10 lines, and about 460 per database had the last matrix
@@ -193,8 +193,14 @@
       - **7e** closed both. It also made the inspection fake read its SQL, and added the sheet's last corrections:
         `--no-ff` at the merge, and the inspection line's count may differ by database. Re-proof: 121 local checks
         and 216 on RDS.
-    - **Next:** 7e's scoped re-review (running). Then SHEET READY: the two tips filled and the banner lifted. Then the
-      owner, after step 6's 4c.
+    - **7e's scoped re-review: MERGE-READY, OPEN 0, SHEET READY (2026-10-04, night).** Its re-proof matched 7e's
+      exactly: 121 local checks, 16 passes compared, 216 on RDS. A `phoenix` given `pg_execute_server_program` is now
+      a finding, and the printed remedy clears it. Three Future Improvements (FI-R7E-1 to FI-R7E-3).
+    - **SHEET READY (2026-10-04, night):** the controller filled the two tips (`copilot-mro-s7` `767cdaa6`, `core-s7`
+      `be14dd81`) and lifted the banner; nothing else changed.
+    - **Next:** the owner runs step 6's 4c, then the sheet's steps 0 and 1 on both databases. The controller merges
+      `db-roles-s7` (core, then copilot-mro, `--no-ff`). The owner restarts the API and runs step 3. Then the
+      post-merge gate, the push, and the round's Future Improvements written into this plan.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but

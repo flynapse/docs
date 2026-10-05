@@ -1057,6 +1057,8 @@ Lanes (2026-10-01; P4 review C M-5):
   `partition_wiring.wire()` and `user_erasure_wiring.wire()`: step 6 and the operator row seams need the hooks.
 
 ### Task 18: live end-to-end on the dev stack (P5, controller-run on the owner's go)
+**Owner, 2026-10-04 (night): go given.** It runs after census part 2 merges, the P5 phase review and SDK
+transcripts off (the receipt changes the script checks), with the API restarted on the merged code.
 Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects zero tests; layout exemption with reason).
 - [ ] A throwaway dev-pool user in a dev tenant: real turns with uploads + a DocHub upload → immediate erasure →
   no current S3 objects under the user prefixes (noncurrent versions reported until the lifecycle applies), Weaviate
@@ -1492,6 +1494,8 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    waived the pause between phases on 2026-10-01; owner questions go to the owner as they arise.
 
 ## Deploy/rollout
+
+**Owner, 2026-10-04: the AWS deploy happens only once all work is finished.**
 
 1. Per database (`copilot_mro_test` → dev `copilot_mro` → prod), owner-run: `migrate_tenancy_schema.py`
    (`user_erasures`) → `provision_rls.py` (definer, EXECUTE, ledger grants) → `--verify-only` clean. Optimizer DB: none.
@@ -2517,6 +2521,8 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     command line passes `--tb=short`, as every gate recipe now does.
   - *Complete fix:* a libpq password file (`PGPASSFILE`), so no connection string the estate builds holds a
     password. Until then, `--tb=short` and its pin in those three repos too.
+  - **Owner, 2026-10-04: the three repos' `--tb=short` is built now** (P4 fix round part D8). The password file
+    stays here.
 - **Settings objects still name secrets in their repr (P4 fix round part D6, concern 3).**
   - utils' seven password fields are `repr=False`. Its AWS secret key, Weaviate key and Azure OpenAI key are not.
     core's and copilot-mro's settings still show their SMTP and cache passwords.
@@ -2542,6 +2548,8 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - *Complete fix:* no line carries an email or a browser session id. An id rides only as a bound field, as core's
     rule above has it. A sweep of every logger call that binds an email, name or session field, in every repo, with a
     guard, closes the class.
+  - **Owner, 2026-10-04: the three modules' lines are fixed now** (P4 fix round part D8). The sweep with a guard
+    stays here.
 - **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
   request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
   `RequestRouteMiddleware`.
@@ -3474,3 +3482,27 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **Owner decisions open:**
   - `--tb=short` in shift-optimizer, telegram-bot and flynapse-otel now, or later as the recorded Future Improvement;
   - the email and session-id log lines now, or later.
+
+**Status, 2026-10-04 (late night).**
+- **Census part 2** is built: the seven rules, each killed by its own production mutant (12 kills). Its review is
+  running.
+- **The owner's decisions:**
+  - `--tb=short` in shift-optimizer, telegram-bot and flynapse-otel: now;
+  - the email and session-id log lines in copilot-mro's three modules: now;
+  - both are being built as P4 fix round part D8;
+  - the scratch logs: scrubbed;
+  - the Task 18 go: given;
+  - the AWS deploy: only once all work is finished.
+- **Scratch scrub (controller, on the owner's word).** 187 scratch files held a local connection string with a
+  password, across nine programs. They were redacted in place, with nothing printed, and 0 are left.
+  - This program's own matches were copies of tracked repo files (tests, a plan, sheet blocks), not runtime leaks.
+  - Tracked files that hold a local URL with a password were named to the owner; their values were not read.
+- **The `ps` leak** was another workspace's MCP config (Code2), which carried the superuser's password. The owner moved
+  it to the read-only inspection user, with the password in `~/.pgpass`. This workspace's MCP had been passwordless
+  since 2026-10-01.
+- **Next:**
+  - census part 2's review, then its merge;
+  - D8's review, then its merge;
+  - the P5 phase review;
+  - SDK transcripts off;
+  - Task 18's live run (its prerequisite: the API restarted on the merged code, step 6's 4c).
