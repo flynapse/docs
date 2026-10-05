@@ -270,7 +270,11 @@
       never touched.
   - **Merged (2026-10-05)** into copilot-mro `langgraph-merge` as `f72a3351`. Step 8 touched only the provisioning
     script, tests, runbooks and env samples. The post-merge run covers copilot-mro's non-db lane and every
-    `tests/db` folder, plus api's pins and census. **Next:** its verdict, then the push.
+    `tests/db` folder, plus api's pins and census. It passed every lane, and `langgraph-merge` was pushed the same day:
+    - copilot-mro non-db: 16585 passed, 42 skipped, 0 failed;
+    - every `tests/db` folder: 0 failed (`tenancy` 710 passed, 35 skipped);
+    - db-marked tests outside `tests/db`: 145 passed;
+    - api's pins: 21 passed; api's census: 29 passed.
   - **Fix round 3 (queued; brief `s8-fix3-brief.md`):** the owner's ruling that "equal" also covers passwords that
     differ only by invisible characters (m-C), pins that vary the other side too (m-A), and the docstring (m-B). It
     runs on a new branch, `db-roles-s8c`, from `f72a3351`.
@@ -366,8 +370,9 @@ risks, rollout order). This plan records the decisions and the order; the resear
   needs them; `wdm_graph` uses `similarity()`) and PUBLIC's TEMPORARY, each with a verify finding.
 - [ ] 3b. Terraform: App Runner reads `POSTGRES_QUERY_PASSWORD` from the same owner-made secret, by reference (owner,
   2026-10-04: write it now; the owner applies it at deploy). Building on iac `db-roles-tf-query`.
-- [ ] 8. Decision 27: provisioning creates `flynapse_readonly` when its password is supplied, and a missing one with no
-  password is no finding. After step 7's merge.
+- [x] 8. Decision 27: provisioning creates `flynapse_readonly` when its password is supplied, and a missing one with no
+  password is no finding. After step 7's merge. Merged and pushed on 2026-10-05 (copilot-mro `f72a3351`). Fix round 3
+  (the owner's "visibly equal" ruling) follows on `db-roles-s8c`.
 
 **Rules for every step:** grants and revokes run on `copilot_mro_test` first, then the protected databases, with the
 provisioning verify before and after. Table ownership stays with `postgres`. The auto-mode classifier refuses Claude's
