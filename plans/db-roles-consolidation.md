@@ -221,12 +221,25 @@
   - Proofs: `tests/unit/db` 936 passed; `tests/db/tenancy` on a throwaway 680 passed; 11 of 11 mutants killed.
   - Review: MERGE-READY, OPEN 0. It ran step 7's merged script and the tip against the same databases, and found
     `--verify-only` output identical.
-  - **Fix round 1 (running) before the merge:**
-    - a reporting password equal to a service user's is refused before connecting (the review's m3: otherwise the
-      app's password would open a user that reads every tenant);
-    - `test_schema_conformance.py`'s fallback stops putting the owner's password on the `docker exec` command line,
-      and the secret scan extends to the test tree;
-    - the refusal's text, a unit pin that users are created before grants, and two runbook lines.
+  - **Fix round 1 (done, tip `98ef0033`):**
+    - A reporting password equal to the app's, grant's or query user's password is refused before anything
+      connects, with exit 2. The review's m3 found the hole: the app's password would otherwise open a user that
+      reads every tenant.
+    - `test_schema_conformance.py`'s fallback passes `PGPASSWORD` to `docker exec` by name, with the value in the
+      child's environment.
+      - The secret scan only read SQL text, and it listed that very `docker exec` shape as allowed. It gains a
+        command-line rule and now reads the test tree as well.
+    - The refusal says the reporting user was not created, and names the users the run did create. A unit pin holds
+      users created before grants. Six instructions that rotated a password with the plaintext in the statement now
+      use `\password`.
+    - Proofs: non-db 16537 passed, 0 failed; `tests/db/tenancy` on a throwaway 680 passed, 0 failed; 23 of 23 mutants
+      killed; live, the refused run never connected and created nothing.
+    - **A rule broke:** the implementer's probe connected once to the shared cluster on port 5432.
+      - Loading `test_schema_conformance.py` connects at import time to `POSTGRES_HOST`/`POSTGRES_PORT`, which default
+        to `localhost:5432`, and the probe had set only `ENV_FILE`.
+      - The probe connected as `postgres` to database `postgres` and ran only the module's `SET search_path`. A
+        second attempt failed authentication.
+      - No DDL, grant or write ran, and `copilot_mro` was not touched.
   - **Next:** a scoped re-review, the merge into `langgraph-merge`, the post-merge test run, then the push.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
@@ -522,6 +535,16 @@ DDL on shared databases, so every DDL step is the owner's to run.
     compare it with the owner's. Fix it with utils' next change.
   - **`tests/db/memory/test_memory_operator_rls.py:292` passes the owner's password in an in-process argument
     list.** It is not visible in `ps`, but it is the shape the secret scan refuses elsewhere.
+- **Step 8's fix round 1: what is left (2026-10-05).**
+  - **`test_schema_conformance.py` connects to a database when it is imported.** Its cluster check reads
+    `POSTGRES_HOST`/`POSTGRES_PORT` directly, defaulting to `localhost:5432`, not the settings `ENV_FILE` names. A
+    lane pointed at a throwaway only through `ENV_FILE` therefore reaches the shared cluster as soon as it loads the
+    module. *Complete fix:* resolve the address through the same settings as the rest of the suite, and connect in
+    a fixture rather than at import.
+  - **The secret scan's command-line rule has stated blind spots:** a command line given as one string
+    (`shell=True`), a list reaching `subprocess` through a loop target or a container, spawners this repo does not
+    call (`asyncio.create_subprocess_exec`, `os.exec*`), and programs outside its list. The SAD test's own argv check
+    is now a narrower twin of it. *Complete fix:* retire the twin, and widen the rule as those shapes appear.
 - **copilot-mro's non-db lane reads the local test database (AWS phase 1, fix round 1).** Seven tests not marked
   `db` read `copilot_mro_test`. Three skip with "not present in this database" (the optimizer plan digest, the
   inventory plan, the optimizer decompose); four pass only with a database (`test_reset_demo`,
@@ -549,6 +572,11 @@ DDL on shared databases, so every DDL step is the owner's to run.
   container too, so it skipped the sheet's re-proof at the merged tips, which needs one. Rule: a brief names what is
   protected by where it lives (the shared server's `copilot_mro`, the `postgres` container on port 5432), and says
   outright that a throwaway built from code may hold databases of any name.
+- **"Never connect to 5432" needs the address exported, not only `ENV_FILE` (step 8 fix round 1, 2026-10-05).** The
+  implementer's probe loaded `test_schema_conformance.py`, which connects at import to `POSTGRES_HOST`/`POSTGRES_PORT`
+  (default `localhost:5432`), so it reached the shared cluster although its settings named the throwaway. Rule: every
+  brief whose lanes or probes import `tests/db` modules exports `POSTGRES_HOST`/`POSTGRES_PORT` and
+  `PGHOST`/`PGPORT` set to the throwaway, as well as `ENV_FILE`.
 - **A class hunt needs a matrix, not another review (step 7, fix rounds 4–7, 2026-10-04).** Rounds 4, 5 and 6
   each closed what the last review found, and each re-review then found one more privilege class verify never read.
   Round 7 wrote down every privilege PostgreSQL has against every role, with the check that reads each cell, and
