@@ -994,6 +994,13 @@ Lanes (2026-10-01; P4 review C M-5):
   - both wirings, and the request's `erase_after` in the past (the carry-ins below);
   - the I-2 probe: plant a surviving Phoenix copy, run the evaluation store after the erasure, and see nothing
     derived.
+  - Controller ruling (2026-10-04, census part 1): the optimizer's rows are planted and read in `copilot_mro_test`,
+    not `shift_optimizer_test`.
+    - The api serves the optimizer in its own process, and utils builds every pool against the settings' one
+      database. So the real seam erases the optimizer's rows there.
+    - The snapshots take the rows of the estate's two tenants, and every row naming the run token, which every string
+      the estate mints carries. They do not take whole relations: the test database is shared, and `chunks` alone
+      holds about 310k rows.
   - Controller ruling (2026-10-01; lane D review concern 7): a `keep` today means "the person's id may stay here", but
     most of lane D's jsonb keeps say the column names no person. The census must not read those as allowed places.
     - The vocabulary gains a kind, `no-person`, in all three erased-user lines. It is a kind rather than a field, so
@@ -2510,6 +2517,14 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **Core lines on routes other than the erasure doors name people (P4 fix round part D4, concern 6).** `PUT /users`
   and the role removal log the person's id. *Complete fix:* constant messages with the ids as bound fields, as the
   erasure doors now have.
+- **copilot-mro's chat-store and sharing lines name people (census part 1, concern 9; controller, 2026-10-04).**
+  - `ChatHistoryDB.save_share` logs the recipient's email at INFO, twice.
+  - The response-sharing door logs it too: `user_feedback.py:578` at INFO, and `:594` at ERROR.
+  - `save_block` logs the browser session id.
+  - These lines are older than this program. A log sink keeps them to its retention, which the receipt states.
+  - *Complete fix:* no line carries an email or a browser session id. An id rides only as a bound field, as core's
+    rule above has it. A sweep of every logger call that binds an email, name or session field, in every repo, with a
+    guard, closes the class.
 - **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
   request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
   `RequestRouteMiddleware`.
