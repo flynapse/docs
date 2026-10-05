@@ -3,7 +3,8 @@
 Status: **phase 1 is done, and the box's dump prune round (with phase 1's three Minors) was reviewed MERGE-READY at
 copilot-mro `93b64914`; phase 2 (the Terraform) is done at iac `3933f47` (re-reviewed MERGE-READY, OPEN 0); phase 3,
 the runbook, is built in iac at `99f85b9` with phase 2's four Minors and is in review by two lenses; the prune's fix
-round is done at copilot-mro `5700c550` and in re-review** (2026-10-05, ~08:56 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+round is done at copilot-mro `5700c550` (re-reviewed MERGE-READY, OPEN 0), and its four Minors wait for a small fix
+round 2** (2026-10-05, ~09:00 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -179,7 +180,8 @@ None: the owner answered all four on 2026-10-05 (above).
     That is 13 d 3 h 11 min, under 14 days. A test reads every term from the timer, the service and the script,
     against a constant named for core's `backups_days`.
   - **m-a, m-b, m-d:** a failed pull's FAILED line prints before `up -d`, and the unit still exits 1; the failed-pull
-    test uses git's real 128; the pull runs with `GIT_TERMINAL_PROMPT=0`.
+    test uses git's real 128 (corrected by the fix round below: `git pull` exits 1 when its fetch fails); the pull
+    runs with `GIT_TERMINAL_PROMPT=0`.
   - Proofs: 18 of 18 mutants killed, the re-review's two survivors included. The non-db lane passed: 16538 passed,
     0 failed (fix round 2's 16524 plus 14 new tests), with no docker call.
   - **Rulings on its concerns:**
@@ -192,8 +194,8 @@ None: the owner answered all four on 2026-10-05 (above).
     - The fake `aws` models the CLI's text output; phase 3's first-deploy checks measure it.
   - **Its review (2026-10-05): MERGE-READY, OPEN 0, six Minors.** The bound holds while the nightly runs succeed, with
     a margin of 20 h 49 min. Measured from the erasure rather than the upload, a dump is gone within 13 d 6 h 11 min.
-    - **Taken now, in a small fix round** (copilot-mro `93b64914..5700c550`, done, in re-review; 21 of 21 mutants
-      killed, the non-db lane 16545 passed, 0 failed):
+    - **Taken now, in a small fix round** (copilot-mro `93b64914..5700c550`, done, re-reviewed MERGE-READY, OPEN 0;
+      21 of 21 mutants killed, the non-db lane 16545 passed, 0 failed):
       - m-1: the prune fails on a listing line it cannot read, but no test fed one. It also stopped at the first
         such line;
       - m-2: the bound's test read `TimeoutStartSec=0` as zero seconds, where systemd reads it as no limit;
@@ -205,6 +207,14 @@ None: the owner answered all four on 2026-10-05 (above).
       - m-6: the prune assumes a delete deletes, which versioning would break;
       - the prefix change: changing the backup prefix leaves the old prefix's dumps outside both the prune and
         the expiry.
+    - **The fix round's re-review (2026-10-05): MERGE-READY, OPEN 0, four Minors.** The sentinel never reads as a
+      key and keeps aws's own exit status; the bound still holds. All four Minors are taken in a fix round 2
+      (`p1-prune-fix2-brief.md`), which starts once phase 3's lens A has read the tree:
+      - n-1: two texts say more than the script does (a newline key's first line is still deleted; a failed
+        listing prunes nothing);
+      - n-2: the unreadable count is pinned only at 1;
+      - n-3: the bound pin reads Unicode digits and spaces, so a timeout that systemd refuses would pass it;
+      - n-4: the bound pin never reads `Type=`, so a later `Type=exec` would leave the run unbounded.
 - **Phase 2, the Terraform (done at iac `3933f47`: reviewed FIX FIRST, OPEN 2; its fix round re-reviewed
   MERGE-READY, OPEN 0).**
   - **The re-review (2026-10-05):** every finding closed, and the guards fail for the right reasons. It confirmed:
@@ -401,7 +411,10 @@ None: the owner answered all four on 2026-10-05 (above).
 - **The backup test's unit-file parser duplicates the startup test's (prune round, concern 6).** *Complete fix:* one
   helper under `tests/unit/demo_box/`, after the owner confirms.
 - **The prune reads keys from the CLI's text output (prune review, m-4's full fix).** A key with a tab or a newline
-  in it cannot be represented exactly, so the fix round makes such lines fail the run instead. *Complete fix:* list
+  in it cannot be represented exactly, so the fix round makes such lines fail the run instead. The fix round's
+  re-review found the silent cases: the line before the newline is still read and its key deleted, and the run exits
+  0 when the part after the newline is `None` or reads as a row of its own (a blank time reads as midnight). Only an
+  operator can write such a key. *Complete fix:* list
   with `--encoding-type url` and decode each key exactly (S3's form encoding, decoded as `unquote_plus` does, keeping
   a trailing newline).
 - **Two nights without a prune do not fail the unit (prune review, m-5).** *Complete fix:* run the prune in a unit
