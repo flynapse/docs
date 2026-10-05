@@ -1031,6 +1031,13 @@ Lanes (2026-10-01; P4 review C M-5):
 - [ ] Registry-derived census over every core + copilot-mro relation (owner connection, test DB only): P in no
   text/varchar/jsonb column; the ids only in declared keep places; K exactly in its kept rows, with no id; sibling and
   second-tenant rows byte-identical (full-row comparison); rerun changes 0 rows; the fakes saw every expected delete.
+  - *Done 2026-10-05: census part 2, api `d9a66e7` (pushed).* It took a review, two fix rounds and a re-review
+    (MERGE-READY, OPEN 0).
+    - The seven rules run over part 1's four snapshots, the fakes' records and the three erased-user lines.
+    - Rule 4's presence check holds per placement column, with five named exemptions held both ways.
+    - Every container the partial-change rule covers holds P's entry beside another person's.
+    - What is left is in Future Improvements.
+    - The P5 phase review says whether this box can be ticked.
 - [ ] Cross-repo pins (checkouts pinned): the three `deleted-user` literals equal; each receipt bound ≥ its configured
   retention (iac, Loki/Tempo configs, Phoenix); shift-optimizer's two unit-file copies of the ledger-key literal equal
   core's `IDENTIFIER_PATTERN`; rule the estate-wide drift shape list (`assignee`, `approver`, `requester`, `owner`,
@@ -2589,6 +2596,25 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - The census's partial-change rule (`_changed_off_p`) lets a whole key or list item go when anything inside it
     names P. Today's exception columns are flat, so nothing slips through now. *Complete fix:* recurse into a
     changed item before allowing it to go whole.
+- **Census part 2's second fix round and its re-review, what is left (2026-10-05; re-review MERGE-READY, OPEN 0).**
+  Each mutant that survived the census below is killed by the owning repo's own database lane.
+  - M-1: rule 4's witness check (`_witnessed`) reads a qualified placement (`__pending`/`__settled`,
+    `__personal`/`__tenant`, `__sender`/`__recipient`) at the whole column. Dropping the sibling's pending invitation
+    leaves the census green. Every qualifier has its own witness today. *Complete fix:* witness each qualifier
+    separately.
+  - M-2: P's entry comes first in every mixed list, so a scrub that drops the first entry gives the right answer on
+    this estate (mentions, finding texts). A scrub keyed by value would not do this. *Complete fix:* two seeds that
+    put P's entry between other people's.
+  - M-3: P's id sits only at the payload's top level, so a rewrite that reaches only the top level passes. The step's
+    runtime residue would refuse it. *Complete fix:* nest one of P's ids.
+  - M-4: three of the five exemption reasons over-claim "cannot hold a person": `automations__params`,
+    `users__preferences` and `document_hub_documents__metadata`. The last can also hold the owner's id when
+    processing is on, a chat-scoped document's chat, turn and attachment, and any metadata a client sends. The census
+    runs with processing off. Each is written only by a row-level statement witnessed through another column, so no
+    regression slips through. *Complete fix:* say exactly that in each reason, or witness the column.
+  - O-1: no census rule checks the parts of P's own kept rows that do not name P. A mutant that set every value in P's
+    run archive to the marker passed. *Complete fix:* compare a kept row's other columns to `before`.
+  - The census and its estate have grown to about 1,600 and 2,090 lines (review M-6, above).
 - **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
   request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
   `RequestRouteMiddleware`.
@@ -3581,3 +3607,11 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   exemptions. Every container the partial-change rule covers must hold P's entry beside another person's. All 17
   mutants are killed (api `cf32508`). Its scoped re-review is running.
 - **Next:** that re-review, then the merge into api; the P5 phase review; SDK transcripts off; Task 18's live run.
+
+**Status, 2026-10-05 (~05:00).**
+- **Census part 2 is merged and pushed** (api `d9a66e7`). Its second fix round's re-review found it MERGE-READY,
+  OPEN 0. Its four Minors and one outside note are Future Improvements. The api gate was green apart from the known
+  census-family red (pins 21; non-pg 1991 passed; pg 65 passed, 4 skipped).
+- **The P5 phase review has started,** in two areas: A, the census, drift guards and pins as one proof; B, the phase as
+  a whole, Task 18's readiness and the SDK-transcripts-off build. B is running; A starts when a slot frees.
+- **Next:** the phase review's fix round, with SDK transcripts off; then Task 18's live run.
