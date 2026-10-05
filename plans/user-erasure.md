@@ -3926,3 +3926,16 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
     corrected to fix that.
 - **Next:** X1's re-review → the merges in one window (X2 is ready) → the api restart → the live proof → the owner's
   one-time delete → Task 18.
+
+**Status at compaction checkpoint 29 (2026-10-05, ~08:45 PDT).**
+- **X2 is ready to merge.** Its re-review said MERGE-READY with three Minors, all Future Improvements.
+- **X1's fix round is done** (copilot-mro `68aff427`), and its re-review is running.
+- **The merge window is prepared.**
+  - All five merges are checked clean in advance, and X1 and X2 share no file.
+  - One gate covers everything that lands. It includes the X1 pin, which must pass.
+- **Next:**
+  - X1's verdict;
+  - the merges, the gate and the push;
+  - the api restart and the live proof;
+  - the owner's one-time delete;
+  - Task 18.

@@ -2,7 +2,8 @@
 
 Status: **phase 1 is done, and the box's dump prune round (with phase 1's three Minors) is done at copilot-mro
 `93b64914`, in review; phase 2 (the Terraform) is done at iac `3933f47` (re-reviewed MERGE-READY, OPEN 0); phase 3,
-the runbook, is being built in iac with phase 2's four Minors** (2026-10-05, ~08:10 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+the runbook, is being built in iac with phase 2's four Minors (five commits in at `99f85b9`); the prune's fix
+round is done at copilot-mro `5700c550` and in re-review** (2026-10-05, ~08:45 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
