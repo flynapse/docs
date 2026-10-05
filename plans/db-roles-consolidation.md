@@ -206,11 +206,11 @@
         check 2 passes again after the revoke.
     - **Step 6 is closed:** both of its 4c checks pass. A chat turn's SQL ran as `flynapse_query` through the running
       API.
-    - **Next:**
-      - the post-merge test run (running);
-      - the push;
-      - the worktrees removed, and the round's Future Improvements written into this plan;
-      - step 8 (decision 27).
+    - **Merged and pushed (2026-10-05):** core `master` `f8f9f67`, copilot-mro `langgraph-merge` `1f12e334` (step 7,
+      plus user erasure's D8 copilot-mro half). The post-merge test run was green apart from the known failures of
+      the sibling-checkout test family. The step's worktrees and branches are removed, and the rounds' Future
+      Improvements are written below.
+    - **Next:** step 8 (decision 27), running.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
@@ -295,9 +295,9 @@ risks, rollout order). This plan records the decisions and the order; the resear
     protected databases have the same surface.
 - [x] 5. Side services (22): the `phoenix` and `telegram_bot_app` users and databases; the superuser leaves both
   connection strings.
-- [ ] 6. The read-only query pool (24): the new user, its grants, the second pool in copilot-mro, and a check that no
+- [x] 6. The read-only query pool (24): the new user, its grants, the second pool in copilot-mro, and a check that no
   definer function is executable by it.
-- [ ] 7. B14 tenant delete, then, on top of this: the definer function with execute revoked from PUBLIC and granted to
+- [x] 7. B14 tenant delete, then, on top of this: the definer function with execute revoked from PUBLIC and granted to
   `flynapse_grant` only, then `tenants` delete rights revoked from the grant user. Also the default-privilege revokes
   from decision 24: PUBLIC's EXECUTE on the `lo_*` and extension functions (granted back to the app user where it
   needs them; `wdm_graph` uses `similarity()`) and PUBLIC's TEMPORARY, each with a verify finding.
@@ -464,6 +464,33 @@ DDL on shared databases, so every DDL step is the owner's to run.
       `test_user_operator_grants.py:336`).
   - **Never run:** PostgreSQL 15, a real RDS, and the real Docker CLI. The local proof ran the sheet's `docker` blocks
     through a stand-in.
+- **Step 7's verify: what the last re-reviews left (2026-10-04, night).** Each item fails closed or is test-only.
+  - **A server-file membership granted by a non-superuser holding ADMIN cannot be cleared by its printed remedy.**
+    - The printed `REVOKE <group> FROM <member>` is a no-op WARNING when a superuser runs it. It fails with
+      "dependent privileges exist" when the ADMIN holder runs it.
+    - Verify still fails, so nothing reads clean.
+    - *Complete fix:* print `GRANTED BY <grantor>`, or `CASCADE`.
+  - **A unit fake decides a result from its test data, not from the SQL:** the inspection shape's BYPASSRLS row filter.
+    Mutants O7b and A2-6 survive the unit run and are killed live. *Complete fix:* the fake reads the filter from the
+    SQL it is given.
+  - **Unpinned cells:**
+    - materialized views and foreign tables in the relation data census;
+    - the app role's `nextval` outside `public` (live), PUBLIC's `nextval`, and default privileges on functions and
+      types (all three closed, none pinned);
+    - a managed role in the server-file census, live.
+  - **One cause can make several findings,** for example a membership and each relation it reaches. *Complete fix:*
+    one finding per cause.
+  - **The sheet's probe query 8 leaves out the relation's owner,** like the `tenants writer` row above. Fixing it
+    changes the probe's output on RDS, so it needs a re-measure.
+  - **The sheet has no step-0 run of the branch's own verify.** An unmanaged holding on `copilot_mro` first shows at
+    step 3, after the merge, where it fails closed. *Complete fix:* step 0 runs the branch's verify read-only.
+  - **The "On RDS" probe's item 5 still accepts any `pg_…` row** (sheet text). A server-file role there fails verify.
+  - **Role names in the REVOKE remedies are unquoted.** This is part of the "Bare names" item above.
+- **Every login can CONNECT to `copilot_mro` through PUBLIC (AWS Postgres and Phoenix, phase 1).**
+  - *What is missing:* PUBLIC keeps CONNECT on the app database, and provisioning revokes only TEMPORARY. On the AWS
+    box the `phoenix` user shares the cluster, so it can connect there and reach whatever PUBLIC holds.
+  - *Complete fix:* provisioning revokes CONNECT from PUBLIC on the app database and grants it to the managed roles,
+    with a verify cell.
 
 ## Lessons
 

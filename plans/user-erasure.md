@@ -3555,3 +3555,10 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   it ("merge approved"); iac merges still need the owner's own word.
 - **Next:** census part 2's re-review and merge; the P5 phase review; SDK transcripts off; Task 18's live run (the
   owner's go is given).
+
+**Status, 2026-10-05 (~01:45).**
+- **D8 is pushed in all four repos.** Its copilot-mro half went out with DB users step 7 (copilot-mro `1f12e334`)
+  after that merge's full test run.
+- **Census part 2's fix round is done.** All of the reviewer's mutants and the original four now fail the census. A
+  fresh scoped re-review is running.
+- **Next:** that re-review, then the merge into api; the P5 phase review; SDK transcripts off; Task 18's live run.

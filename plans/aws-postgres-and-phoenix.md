@@ -1,8 +1,8 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 running** (2026-10-05): the box's compose, first boot, setup script and nightly backup. Phase 2 is
-the Terraform and phase 3 the runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work
-is finished.
+Status: **phase 1 built, in review** (2026-10-05): the box's compose, first boot, setup script and nightly backup.
+A fix round follows, because the box's old startup unit cannot start the new stack. Phase 2 is the Terraform and
+phase 3 the runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
 
