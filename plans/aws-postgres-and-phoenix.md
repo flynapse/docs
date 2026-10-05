@@ -1,7 +1,7 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 is done (its fix round 2 re-reviewed MERGE-READY, OPEN 0); phase 2 (the Terraform) is in review**
-(2026-10-05). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status: **phase 1 is done (its fix round 2 re-reviewed MERGE-READY, OPEN 0); phase 2 (the Terraform) was reviewed
+FIX FIRST and its fix round is running; the box's dump prune is the next copilot-mro round** (2026-10-05). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -31,6 +31,15 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
       the runbook says so.
     - **Controller, 2026-10-05:** S3 rounds an expiry up to the next midnight UTC, so the bucket's expiry is 13 days.
       A user-erasure pin holds the receipt's bound at least the expiry plus 1.
+    - **Owner, 2026-10-05 (after phase 2's review):** S3 can remove an expired dump "days or even weeks" late, and
+      the dump stays readable until then. So the box's nightly backup also deletes its own dumps older than 13
+      days. They are gone within 14 days while the box runs, and the 13-day expiry is the backstop.
+      - The box's role gains `s3:ListBucket` (prefix-conditioned) and `s3:DeleteObject` on the prefix. It can already
+        overwrite the dumps.
+  - **The ingest Lambda (owner, 2026-10-05):** a follow-up after the deploy. It writes Postgres but has no settings
+    or network path on AWS, so every ingest there fails, as it already did before this plan.
+  - **The POC replica (owner, 2026-10-05):** it stays. The bucket policy denies its role, as it does App Runner's,
+    the Lambdas' and the CI deployer's.
   - **Data:** start empty. AWS is the dev environment; tenants and users are created fresh.
   - **Network:** the box stays in the public subnet. Postgres and Phoenix admit only App Runner's security group and
     the box itself; SSH stays limited to the owner's IP.
@@ -143,8 +152,8 @@ None: the owner answered all four on 2026-10-05 (above).
     second database's dump left no Phoenix object and a complete `copilot_mro` one.
   - A default `timeout` signals the whole process group. `runuser -u` never calls `setsid()`, so git stays in that
     group, and `--kill-after` is not needed.
-  - The merge waits for phase 3, as planned. Its Minors m-a, m-b and m-d ride with phase 3 (same tree, small); m-c
-    is a Future Improvement.
+  - The merge waits for phase 3, as planned. Its Minors m-a, m-b and m-d ride with the box's dump prune round (same
+    tree, small); m-c is a Future Improvement.
   - Compose runs whatever the pull did, and the unit fails afterwards, naming the pull. The pull is bounded by
     `timeout 300`. The Weaviate UI gets a restart policy, and the pin covers every service.
   - The backup traps HUP, INT and TERM and stops the upload in flight. Live, each signal mid-dump left no object,
@@ -152,7 +161,18 @@ None: the owner answered all four on 2026-10-05 (above).
   - Two pins tightened. The unit's `[Service]` keys are an allow-list. The backup's stop-before-close order is
     pinned deterministically: a `kill` on `PATH` records whether the stream is still open.
   - 18 of 18 mutants killed. The non-db lane passed: 16524 passed, 0 failed.
-- **Phase 2, the Terraform (built, iac `377c051`; in review).**
+- **Phase 2, the Terraform (built, iac `377c051`; reviewed FIX FIRST, OPEN 2; fix round running).**
+  - **I-1:** two more roles can read and delete every dump: the POC replica's and the CI deployer's. The deny must
+    be `s3:*`, since the bucket-level actions otherwise let App Runner's role remove the deny itself.
+    - The safe form names the four roles in an `aws:PrincipalArn` condition, never as principals, and never by
+      exclusion.
+    - A guard fails on any broad-S3 role the deny does not name.
+  - **I-2:** the owner steps deployed the API before its database existed. The order is now: a targeted apply of
+    the box side, first boot, migrate and provision, mint the keys, the full apply, then confirm `SUCCEEDED`.
+  - Minors folded in: three guard holes plus object lock; the instance waits for its SSM grant; stale texts; the
+    API's key checked over the tunnel; the multipart probe's negative control.
+  - The fix round also sets the expiry to 13, gives the box's role its prune rights, takes every backup path from
+    one prefix variable, and names Weaviate by the box's name.
   - The box:
     - `t3.xlarge`, with a 50 GB volume that has `prevent_destroy` and `stop_instance_before_detaching`;
     - the setup script finds the volume by its id (the NVMe by-id path), and grows the filesystem at first boot.
@@ -177,6 +197,16 @@ None: the owner answered all four on 2026-10-05 (above).
 
 ## Phase 3: what the runbook must cover (collected as the phases land)
 
+- **The deploy order (phase 2 review, I-2):**
+  1. stop the box;
+  2. a targeted apply of the box side, which leaves out App Runner;
+  3. first boot;
+  4. migrate, provision and `--verify-only` over the tunnel;
+  5. mint both Phoenix keys and store them;
+  6. the full apply, which deploys the API once against a ready database;
+  7. `aws apprunner list-operations` shows `SUCCEEDED`.
+
+  Never follow a rolled-back deploy with `start-deployment`: it redeploys the old configuration.
 - **Before the deploy:**
   - stop the box before the first apply: it replaces the volume attachment, which was recorded without the new
     stop flag;
@@ -201,7 +231,11 @@ None: the owner answered all four on 2026-10-05 (above).
   - `runuser` works under the unit;
   - the volume's NVMe by-id link exists on Amazon Linux 2023;
   - a multipart upload passes the bucket's SSE policy;
-  - optional: Ctrl-C one backup run by hand, and confirm no new object appears.
+  - optional: Ctrl-C one backup run by hand, and confirm no new object appears;
+  - the multipart probe's negative control: the same upload without `--sse` is refused. Both probes run as root
+    with the backup's environment;
+  - the API's Phoenix key works: a request to `/v1/projects` with it returns 200, the key read with `read -rs`;
+  - the first nightly prune deletes nothing younger than its threshold.
 - **Operations:**
   - every manual compose command runs as root with `--env-file` (and never `config` without `--quiet`);
   - the root-owned unit, script and backup files change only through a new instance or a manual `install`.
@@ -209,7 +243,7 @@ None: the owner answered all four on 2026-10-05 (above).
   - a boot and a `systemctl restart weaviate-observability` both pull and apply the branch head. A failed pull still
     brings the stack up and fails the unit: after a reboot, check `systemctl status weaviate-observability`;
   - backups run only through `systemctl`. A hand-run backup killed with SIGKILL can leave a partial object, which
-    `pg_restore` rejects and the 14-day expiry removes;
+    `pg_restore` rejects and the nightly prune (or the 13-day expiry) removes;
   - rotation is by hand (a verifier or `\password`, plus the parameter);
   - growing the volume is the size in Terraform, then `xfs_growfs`.
 - **Recovery:**
@@ -219,7 +253,8 @@ None: the owner answered all four on 2026-10-05 (above).
   - a restore: first boot, then provisioning, then `pg_restore`, then verify. A restore can bring back people
     erased since the dump; no replay exists (user erasure decision 31).
 - **The erasure receipt** states that an erased person's data leaves the backups within 14 days (user erasure D12).
-- **Phase 1's re-review Minors, built with phase 3** (the same copilot-mro tree):
+  The nightly prune makes that hold while the box runs; the 13-day expiry is the backstop.
+- **Phase 1's re-review Minors, built with the box's dump prune** (the same copilot-mro tree, the next round):
   - **m-a:** when the pull fails or times out and `up -d` then fails, the unit exits 1 without naming the pull.
     Print the pull's FAILED line right after the pull, and add a test where compose fails.
   - **m-b:** the failed-pull test uses exit 1, but git's real failure (an expired token) exits 128. Use 128.
@@ -234,6 +269,10 @@ None: the owner answered all four on 2026-10-05 (above).
   it shares with Weaviate, Phoenix and the collector. *Complete fix:* tune it for a 16 GB box, with a compose memory
   budget.
 - **`aws s3 cp -` needs `--expected-size`** once a dump passes about 50 GB.
+- **SSE-KMS for the dumps (phase 2 review, I-1's complete fix).** A customer managed key whose policy admits only the
+  box's role and the owner, in place of a deny list to keep up to date. It costs about $1 a month, plus requests.
+- **The ingest Lambda's Postgres (owner: after the deploy).** Settings by reference, its password read from the
+  parameter store at start, and 5432 from `lambda_sg`.
 - **The backup's two `[SIGINT]` tests fail when pytest starts with SIGINT ignored** (under `nohup`, or as a
   script's background job). The failure is false, not a vacuous pass (phase 1 re-review, m-c). *Complete fix:* start
   the script through a small exec wrapper that resets HUP, INT and TERM to their defaults.

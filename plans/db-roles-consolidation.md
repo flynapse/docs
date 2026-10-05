@@ -247,9 +247,16 @@
       - The reporting user was created, and it logged in with the app user's own password.
     - The other round-1 items held. Every lane was green, and port 5432 was never touched.
     - The fix-1 report said api and iac carry copies of the old rotation instruction. Neither does.
-  - **Fix round 2 (running):**
+  - **Fix round 2 (done, tip `b41a2627`; in re-review):**
     - "Equal" means equal after libpq's normalisation (C.1.2 to a space, B.1 removed, NFKC), or equal as raw strings.
       This applies to the reporting check and the owner check.
+    - Proven live on a throwaway: the soft-hyphen and BOM variants are refused with exit 2 in both modes, and nothing
+      connects. U+200B is not refused, and it does not log in as the app.
+    - Lanes: non-db 16558 passed, 0 failed; `tests/db/tenancy` 680 passed, 0 failed. 23 of 24 mutant runs were
+      killed; the survivor is the control that justifies the extra NFKC pin.
+    - The helper's Unicode tables (Python 3.11) are older than libpq 17's. The controller expects this to be moot:
+      libpq compares any password holding a code point unassigned in Unicode 3.2 raw, and NFKC is stable for
+      assigned ones. The re-review checks this against the source.
     - Also: the refusal tells how to fix a reporting user that already exists; with `--app-password`, the check also
       compares the settings' value; the cutover runbook creates `flynapse_inspect` without a plaintext `PASSWORD`;
       two spawners are pinned; and the secret scan's docstring states its other blind spots.

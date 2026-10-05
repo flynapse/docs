@@ -1076,6 +1076,12 @@ Lanes (2026-10-01; P4 review C M-5):
 ### Task 18: live end-to-end on the dev stack (P5, controller-run on the owner's go)
 **Owner, 2026-10-04 (night): go given.** It runs after census part 2 merges, the P5 phase review and SDK
 transcripts off (the receipt changes the script checks), with the API restarted on the merged code.
+- **Free modes (P5 fix round, part X2):** run bare, the script prints its help. `--list` shows each leg and its
+  steps. `--dry-run [LEG …]` shows each leg's reads, prerequisites, owner confirmations, manual steps and wait. None
+  of them builds a client or touches the network.
+- **The transcripts check (X2):** `plant` counts the product's SDK transcripts before its first turn, in
+  `~/.claude/projects` and in part X1's session root. A new one is INFO at `before` and fails the leg at `after`.
+  Keep the host free of other product SDK sessions during the main leg.
 Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects zero tests; layout exemption with reason).
 - [ ] A throwaway dev-pool user in a dev tenant: real turns with uploads + a DocHub upload → immediate erasure →
   no current S3 objects under the user prefixes (noncurrent versions reported until the lifecycle applies), Weaviate
@@ -1592,10 +1598,15 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
 - [x] **D9 legal opinion** (owner, 2026-10-01: the current keep list is accepted without a legal review):
   airworthiness `reviewed_by`/`review_note`, `authorization_events` actor/subject (incl. the
   erasure's own events: its completion's and an escalation's, each carrying `rtbf`), RBAC provenance columns, the ledger's opaque ids, and free-text knowledge kept under D1.
-- [x] **D12 backup bound:** no backup/snapshot config exists in iac or deployment; the receipt states the bound. No
-  replay is built (owner decision 31, 2026-09-28: a restore is disaster recovery only); see Future Improvements.
-  **Owner, 2026-10-05:** the AWS box's nightly dumps, kept 14 days, do not change this. The receipt gains
-  `backups_days: 14` in the P5 fix round, and the dump bucket's expiry is set so that the bound holds.
+- [x] **D12 backup bound:** when D12 was written, no backup or snapshot config existed in iac or deployment. No replay
+  is built (owner decision 31, 2026-09-28: a restore is disaster recovery only); see Future Improvements.
+  **Owner, 2026-10-05:** the AWS box's nightly dumps do not change this. The receipt gains `backups_days: 14` (P5 fix
+  round, part X2).
+  - S3 can remove an expired object "days or even weeks" after the expiry, and the object stays readable until
+    then (AWS phase 2 review). So the expiry alone cannot hold 14 days.
+  - **Owner, the same day:** the box's nightly backup deletes its own dumps older than 13 days, so they are gone
+    within 14 days while the box runs. The bucket's 13-day expiry is the backstop.
+  - Built in the AWS plan: the IAM in phase 2's fix round, and the script in a copilot-mro round.
 - [x] **The one-off migration dumps** (decision 31: delete once the migration is proven). **Owner, 2026-10-05: delete
   both.** Deleted the same day: `copilot_mro_20260928T084630Z.dump` (dev) and `copilot_mro_test_20260928T040531Z.dump`.
 - [ ] SDK/CLI transcripts under `~/.claude/projects` on the API host: confirm retention or disable persistence.
@@ -1626,6 +1637,19 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
   - **Owner, 2026-10-05:** the one-time delete covers every product SDK transcript: 45 files in four folders
     (`-home-aditya-Code-api`, `-api-obs9`, `-copilot-mro-evals-probe`, `-copilot-mro-s44b2`). Files are selected by
     their `"entrypoint":"sdk-py"` marker. It runs after the build is merged and its live proof passes.
+    - **Owner, the same day:** also the one session folder beside them: 4 subagent transcripts and their 4 metadata
+      files. Nothing else.
+  - **X1 built (2026-10-05).** `copilot-mro-p5x1` `ue-p5-transcripts-off`, `1f12e334..8a81b2d7`:
+    - the helper `claude_cli_session.py`, through which both product sites run;
+    - `_toollog` reads spills only from the session root and redacts that root;
+    - a census guard over the session sites.
+
+    Proofs: 13 mutants killed; non-db lane 16525 passed, 0 failed.
+    - The CLI is ended in line on every exit path. The measured design's `aclosing` left the CLI's last flush to
+      asyncio's finalizer when the caller's own code raised.
+    - The hermetic real-CLI test is left for the fix round. In review.
+  - **Merge order:** the API restarts on X2's receipt only once X1 is merged too. Otherwise a receipt completed in
+    between drops the transcripts caveat while transcripts are still written.
 - [x] Scheduler: the delayed half runs only where the scheduler is embedded/worker; otherwise a daily `--run-due`.
   Immediate requests and `/goodbye` then also wait for the owner's next `--run-due`, not 30 minutes (C-3, C-4).
   **Owner, 2026-10-01: run the scheduler on AWS** (`AUTOMATION_SCHEDULER_MODE` set there; Deploy/rollout 5).
@@ -2693,6 +2717,20 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     settings file sets it today. *Complete fix:* measure it. If it can, pass the pins through `--settings` as well.
   - **The session-site guard scans copilot-mro only.** api has no Agent SDK session today. *Complete fix:* an api
     twin of the guard.
+  - **Offline tests touch the real session root (X1 build, concern 4).** Some offline `run_query` tests create and
+    remove directories under `~/.cache/copilot-mro/sdk-sessions`, and the lazy sweep runs there. The sweep removes
+    only dead processes' directories. *Complete fix:* a suite-wide pin in the shared conftest that points the root at
+    a temporary directory.
+- **P5 fix round part X2's review: what is left (2026-10-05).**
+  - **Document Hub's `raw_s3_key` and `artifact_s3_prefix` carry the owner's id** and are re-keyed by the same
+    statement as `document_hub_documents.metadata`, but no erased-user line places either column. *Complete fix:*
+    place both in the Document Hub lane's line, so the census and the receipt see them.
+  - **The 30-day noncurrent bound has S3's two delays (review M-4).**
+    - S3 rounds a noncurrent expiry up to the next midnight UTC, so `s3_noncurrent_days: 30` can be 31.
+    - S3 can remove an expired version days or weeks later, which is the same gap the owner closed for the backups
+      by pruning.
+    - *Complete fix:* the erasure deletes the person's object versions itself, or the receipt states 31 against
+      iac's 30 with the same +1 pin. Bring it to the owner with the wording pass.
 - **uvicorn's access line names the raw request target in every service but the api gateway (P4 fix round part D3,
   concern 1).**
   - utils' intercept forwards `uvicorn.access` with only URL credentials withheld. The gateway now shapes it with its
@@ -3722,3 +3760,19 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - the controller's live proof that no transcript file is written;
   - the owner's one-time delete of the 45 old transcripts;
   - Task 18's live run, which needs the owner for the Telegram legs and a second test pilot.
+
+**Status, 2026-10-05 (~05:40 PDT): both parts built; X1 in review, X2 in its fix round.**
+- **X1** (copilot-mro `8a81b2d7`) is built and in review. The review also drives the real CLI through every exit
+  path.
+- **X2** (core `6f83101`, dashboard `901e44c`, copilot-mro `b1a171ba`, api `f3e380a`) was reviewed FIX FIRST: 3
+  Important, 5 Minor.
+  - The receipt's statement-proven class has four more members: core's `product_events.session_id`, `comments`'
+    author name and email, and Document Hub's metadata.
+  - Task 18's transcripts check must also scan X1's session root.
+  - The backups pin's "not versioned" guard misses object lock and a bucket named literally.
+- **X2's fix round** runs those, plus the Task 18 delay pin, the dashboard's lint red from lane P, and the cheap
+  Minors.
+- **Owner, 2026-10-05:** the box deletes its own dumps older than 13 days each night, so the receipt's 14 days hold
+  while the box runs. The transcript delete includes the one session folder beside the 45 files.
+- **Next:** X1's verdict → its fix round (the hermetic test, and any findings) → X2's re-review → the merges (X1
+  and X2 together; the api restarts only after both) → the live proof → the delete → Task 18.
