@@ -1,9 +1,8 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 in fix round 2; phase 2 (the Terraform) building alongside it** (2026-10-05). Phase 1 is the
-box's compose, first boot, setup script, nightly backup and startup unit. Fix round 2 is copilot-mro only and phase
-2 is iac only, so they run side by side. Phase 3 is the runbook. It is built before the AWS deploy; the owner deploys
-to AWS only once all work is finished.
+Status: **phase 1's fix round 2 is in re-review; phase 2 (the Terraform) is built and waits for its review**
+(2026-10-05). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
 
@@ -27,6 +26,11 @@ to AWS only once all work is finished.
   - **Size:** a 16 GB box (`t3.xlarge`) and a 50 GB data disk.
   - **Backups:** nightly dumps to S3, kept 14 days. The erasure receipt states that an erased person's data leaves the
     backups within 14 days.
+    - **Owner, 2026-10-05:** no replay after a restore (user erasure decision 31 stands). The receipt gains
+      `backups_days: 14` in the user-erasure P5 fix round. A restore can bring back people erased since the dump, and
+      the runbook says so.
+    - **Controller, 2026-10-05:** S3 rounds an expiry up to the next midnight UTC, so the bucket's expiry is 13 days.
+      A user-erasure pin holds the receipt's bound at least the expiry plus 1.
   - **Data:** start empty. AWS is the dev environment; tenants and users are created fresh.
   - **Network:** the box stays in the public subnet. Postgres and Phoenix admit only App Runner's security group and
     the box itself; SSH stays limited to the owner's IP.
@@ -134,17 +138,42 @@ None: the owner answered all four on 2026-10-05 (above).
       GitHub token in the clone URL expiring.
     - A regression: `setsid` took the upload out of the backup script's process group. A signal to that group (a
       hand-run backup whose SSH session drops) then completed a partial object. Runs under systemd are unaffected.
-- **Phase 1, fix round 2 (running).**
+- **Phase 1, fix round 2 (done, copilot-mro `585333e5`; in re-review).**
   - Compose runs whatever the pull did, and the unit fails afterwards, naming the pull. The pull is bounded by
-    `timeout`. The Weaviate UI gets a restart policy, and the pin covers every service.
-  - The backup traps HUP, INT and TERM and stops the upload's group first.
-  - Two pins tighten: the unit's `[Service]` keys become an allow-list (an `ExecStartPre=… down` passed before), and
-    the backup's stop-before-close order is pinned.
-  - The iac README's "git pull origin main" lines go to phase 2, with the branch variable.
+    `timeout 300`. The Weaviate UI gets a restart policy, and the pin covers every service.
+  - The backup traps HUP, INT and TERM and stops the upload in flight. Live, each signal mid-dump left no object,
+    while round 1's script on SIGHUP completed a 100,000-byte object.
+  - Two pins tightened. The unit's `[Service]` keys are an allow-list. The backup's stop-before-close order is
+    pinned deterministically: a `kill` on `PATH` records whether the stream is still open.
+  - 18 of 18 mutants killed. The non-db lane passed: 16524 passed, 0 failed.
+- **Phase 2, the Terraform (built, iac `377c051`; its review is next).**
+  - The box:
+    - `t3.xlarge`, with a 50 GB volume that has `prevent_destroy` and `stop_instance_before_detaching`;
+    - the setup script finds the volume by its id (the NVMe by-id path), and grows the filesystem at first boot.
+  - `deployment_github_branch`, default `main`, refuses a SHA or a `refs/` path, and the boot fails unless the
+    clone is on that branch. The repository URL must end in `copilot-mro`.
+  - Ports 5432 and 6006 are open to App Runner's security group only. The instance role reads exactly the five
+    parameters and writes only the backup prefix.
+  - The bucket:
+    - public access blocked, ownership enforced, SSE-S3;
+    - TLS and `AES256` required;
+    - objects expire after 14 days (13 after the fix round) and unfinished uploads after 1; no versioning.
+  - App Runner reaches the box by one private name, `box.<env>.internal`, for Postgres and Phoenix. Its own Phoenix
+    key comes by reference.
+  - 22 of 22 mutants killed. iac's tests: 423 passed.
+  - **Its fix round, after the review:**
+    - an explicit deny on the backup bucket for App Runner's and the Lambdas' roles, whose `AmazonS3FullAccess`
+      reaches it today;
+    - the expiry set to 13 days;
+    - `WEAVIATE_URL` by the box's name.
+  - **Open, for the owner:** the ingest Lambda writes Postgres, but its Terraform gives it no Postgres settings (this
+    was already so). Should ingest on AWS reach the box's Postgres?
 
 ## Phase 3: what the runbook must cover (collected as the phases land)
 
 - **Before the deploy:**
+  - stop the box before the first apply: it replaces the volume attachment, which was recorded without the new
+    stop flag;
   - fast-forward copilot-mro `main` to `langgraph-merge` and push it, with the owner's approval. Check that the
     branch holds `deployment/demo/postgres/`;
   - create the four box parameters, and the placeholder for the API's Phoenix key.
@@ -163,12 +192,16 @@ None: the owner answered all four on 2026-10-05 (above).
   - `\l+` and `\du` show the designed databases and users;
   - Docker waits for the mount (`RequiresMountsFor` with `nofail`): `systemctl show docker -p Requires -p After`
     names `opt-persistent\x2ddata.mount`;
-  - `runuser` works under the unit.
+  - `runuser` works under the unit;
+  - the volume's NVMe by-id link exists on Amazon Linux 2023;
+  - a multipart upload passes the bucket's SSE policy;
+  - optional: Ctrl-C one backup run by hand, and confirm no new object appears.
 - **Operations:**
   - every manual compose command runs as root with `--env-file` (and never `config` without `--quiet`);
   - the root-owned unit, script and backup files change only through a new instance or a manual `install`.
     Phase 1's fix round 2 reaches an existing box only that way;
-  - a boot and a `systemctl restart weaviate-observability` both pull and apply the branch head;
+  - a boot and a `systemctl restart weaviate-observability` both pull and apply the branch head. A failed pull still
+    brings the stack up and fails the unit: after a reboot, check `systemctl status weaviate-observability`;
   - backups run only through `systemctl`. A hand-run backup killed with SIGKILL can leave a partial object, which
     `pg_restore` rejects and the 14-day expiry removes;
   - rotation is by hand (a verifier or `\password`, plus the parameter);
@@ -177,7 +210,8 @@ None: the owner answered all four on 2026-10-05 (above).
   - a failed first boot: stop Postgres, empty `postgres-data`, start again;
   - a volume attached after the device timeout leaves Docker "Dependency failed": attach it, then
     `systemctl start docker` and `systemctl restart weaviate-observability`;
-  - a restore: first boot, then provisioning, then `pg_restore`, then verify.
+  - a restore: first boot, then provisioning, then `pg_restore`, then verify. A restore can bring back people
+    erased since the dump; no replay exists (user erasure decision 31).
 - **The erasure receipt** states that an erased person's data leaves the backups within 14 days (user erasure D12).
 
 ## Future Improvements
@@ -188,5 +222,7 @@ None: the owner answered all four on 2026-10-05 (above).
   it shares with Weaviate, Phoenix and the collector. *Complete fix:* tune it for a 16 GB box, with a compose memory
   budget.
 - **`aws s3 cp -` needs `--expected-size`** once a dump passes about 50 GB.
+- **App Runner is closed to new customers** (AWS's pages, 2026-10-05). The existing service is unaffected; a new
+  account could not create one. *Complete fix, if ever needed:* move the API to ECS on Fargate.
 
 ## Lessons
