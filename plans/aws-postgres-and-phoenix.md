@@ -31,6 +31,15 @@ phase 3 the runbook. It is built before the AWS deploy; the owner deploys to AWS
     the box itself; SSH stays limited to the owner's IP.
 - **2026-10-05: the step 3b Terraform** (`db-roles-tf-query`) stays on its branch and merges with this plan's iac work.
   Auto mode refused the controller's merge into iac `main`.
+- **2026-10-05: the box keeps deploying copilot-mro `main`, and `main` is fast-forwarded first.** The setup script
+  clones `main` (hard-coded in `ec2.tf`). It last moved on 2026-02-11, is 3,164 commits behind `langgraph-merge` and
+  lacks this work, so a box built from it would fail at boot and take Weaviate and the collector down with it.
+  `main` is a strict ancestor of `langgraph-merge`. Before the deploy, `main` is fast-forwarded to `langgraph-merge`
+  and pushed, with the owner's approval. Phase 2 still makes the branch a Terraform variable, defaulting to `main`.
+- **2026-10-05 (controller, from phase 1's review): no globals dump.** On AWS every role comes from code: first boot
+  makes `phoenix`, and provisioning makes the app's. A globals dump without passwords would make provisioning find
+  the roles already there and never set their passwords. The restore order is: first boot, then provisioning, then
+  `pg_restore`, then verify.
 
 ## What exists today (measured 2026-10-05)
 
