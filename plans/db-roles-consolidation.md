@@ -275,7 +275,7 @@
     - every `tests/db` folder: 0 failed (`tenancy` 710 passed, 35 skipped);
     - db-marked tests outside `tests/db`: 145 passed;
     - api's pins: 21 passed; api's census: 29 passed.
-  - **Fix round 3 (built 2026-10-05, copilot-mro `db-roles-s8c` `f72a3351..fb0c68df`; in re-review):** the owner's
+  - **Fix round 3 (built 2026-10-05, copilot-mro `db-roles-s8c` `f72a3351..fb0c68df`; re-reviewed FIX FIRST, OPEN 1):** the owner's
     ruling that "equal" also covers passwords that differ only by invisible characters (m-C), pins that vary the other
     side too (m-A), and the docstring (m-B).
     - A password's visible form removes stringprep B.1 and every Unicode format character, maps every C.1.2 or Zs
@@ -291,6 +291,18 @@
     - Accepted: the Zs half of the space mapping adds nothing under Python's tables, since every Zs space but U+0020
       is already in C.1.2. The visible form also refuses a pair no client treats as equal (a left-to-right mark
       appended), as the ruling intends.
+    - **Its re-review: FIX FIRST, OPEN 1, with no Critical or Important finding and no regression.**
+      - **The hole (m-1):** the rule compared like with like, so one password's visible form was never compared
+        with the other's libpq form. Live, the app's password X + " z" + U+200B against the reporting password
+        X + U+200B + "z" was not refused. That app password, retyped by eye, logged in as the reporting user.
+      - **Three Minors:** "invisible" as B.1 + Cf misses 247 invisible characters and catches 25 visible ones; two
+        mutants of the visible form survived; two sentences say more than is true.
+  - **Fix round 4 (running since 2026-10-05; brief `s8-fix4-brief.md`):** all four.
+    - Two passwords are equal when any form of one (raw, libpq's, visible) equals any form of the other.
+    - **Controller ruling:** "invisible" means Unicode's `Default_Ignorable_Code_Point`, its own property for such
+      characters, hard-coded from `DerivedCoreProperties.txt` (stdlib only). B.1 stays, because asyncpg drops it.
+      The owner ruled on "invisible characters"; this replaces the controller's first reading, B.1 + Cf.
+    - Two more pins (a combining-mark pair and a visible-space control) and the two sentences.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but

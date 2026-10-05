@@ -191,7 +191,8 @@ None: the owner answered all four on 2026-10-05 (above).
     - The fake `aws` models the CLI's text output; phase 3's first-deploy checks measure it.
   - **Its review (2026-10-05): MERGE-READY, OPEN 0, six Minors.** The bound holds while the nightly runs succeed, with
     a margin of 20 h 49 min. Measured from the erasure rather than the upload, a dump is gone within 13 d 6 h 11 min.
-    - **Taken now, in a small fix round** (copilot-mro, running):
+    - **Taken now, in a small fix round** (copilot-mro `93b64914..5700c550`, done, in re-review; 21 of 21 mutants
+      killed, the non-db lane 16545 passed, 0 failed):
       - m-1: the prune fails on a listing line it cannot read, but no test fed one. It also stopped at the first
         such line;
       - m-2: the bound's test read `TimeoutStartSec=0` as zero seconds, where systemd reads it as no limit;
