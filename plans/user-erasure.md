@@ -37,7 +37,10 @@ kept, de-attributed. **D10** the user's automations deleted (runs kept, D3); com
 SAD sources kept, de-attributed. **D11** `/goodbye`'s channel teardown runs the same erase + Cognito delete. **D12**
 state the backup bound; replay completed erasures from the ledger after any restore. **Amended by the owner
 (2026-09-28, decision 31): no replay is built — no backups are configured, and a restore is disaster recovery only;
-the receipt states the backup bound.**
+the receipt states the backup bound.** **Owner, 2026-10-05: decision 31 stands now that the AWS box keeps nightly
+Postgres dumps for 14 days.** No replay is built. The receipt states that an erased person's data leaves the backups
+within 14 days (`backups_days`). A restore stays disaster recovery only, and the AWS runbook warns that it can bring
+back people erased since the dump.
 
 ## Global constraints
 
@@ -854,7 +857,8 @@ additions; new `contracts/user-erasure-receipt.json` and its generator in `scrip
   Both are Future Improvements.
 - The contract guard compares with core only where a core checkout sits beside the dashboard (its own words: "a
   developer check rather than a gate"). Task 17's pins make it a gate.
-- The receipt wording table from the review waits for the owner's wording pass (owner question O9).
+- The receipt wording table from the review waited for the owner's wording pass (owner question O9). The owner ruled
+  on 2026-10-01 to keep the agent-drafted wording.
 - P3 phase review, fixed in the dashboard batch: the operators list re-read after a refused delete (review B M-3); a
   repeat request over an `erasing` or `failed` request (D M-1); a `frozen` request past its date (D M-2); the receipt
   lines in the contract's order, not `jsonb`'s (D M-4, probe P-1 confirmed); copy for `owner_erasure_pending` (E M-4);
@@ -956,6 +960,8 @@ Lanes (2026-10-01; P4 review C M-5):
   literally; shift-optimizer's kinds are a subset; row 7 pins nothing (no reader outside core; `via` is a change
   key); the iac row reads the checkout like every other pin (the iac primary is on `main`). Rows beyond the table:
   F2's runbooks (help ↔ bot, README ↔ CLI) and the analytics contract.
+  **Merged and pushed (2026-10-01):** api `50b861d` (20 pins), copilot-mro `34fa1f96` (row 5h), dashboard `f3cc2bd` (the
+  receipt guard is a gate in `test:unit`).
 - **D, the drift shape list** (core, copilot-mro, shift-optimizer; `ue-t17-drift`). Owns the three drift guards and
   the placements they force. The list as ruled (controller, 2026-10-01): today's shapes plus `assignee`, `approver`,
   `requester`, `owner` (whole or a `_`-delimited part), `user_name`, `username`, `creator`; one list, shared or
@@ -1015,7 +1021,7 @@ Lanes (2026-10-01; P4 review C M-5):
       red.
 
     Cost if wrong: one kind across three lines.
-- [ ] Seed through the REAL writers into `copilot_mro_test` a personal sentinel (P) and a knowledge sentinel (K) in
+- [x] Seed through the REAL writers into `copilot_mro_test` a personal sentinel (P) and a knowledge sentinel (K) in
   every store of Tasks 6–9 (turns incl. a chat deleted beforehand, feedback, share, preference, curated example, tenant
   fact, correction, signal, finding, eval explanation, agent state, the three LLM relations, automation + run, comment
   + thumbs + a sibling's mention, notifications both ways, product event, invitation, private + shared DocHub rows, a
@@ -1028,9 +1034,12 @@ Lanes (2026-10-01; P4 review C M-5):
     - The empty stores are seeded. The one hand-written row is the automation that no writer stamps.
     - The fakes' records are deep copies.
     - Part 2's interface is in `p5-t17c1-fix2-report.md`, "How part 2 uses it".
-- [ ] Registry-derived census over every core + copilot-mro relation (owner connection, test DB only): P in no
-  text/varchar/jsonb column; the ids only in declared keep places; K exactly in its kept rows, with no id; sibling and
-  second-tenant rows byte-identical (full-row comparison); rerun changes 0 rows; the fakes saw every expected delete.
+- [x] Registry-derived census over every core + copilot-mro relation (owner connection, test DB only): P in no
+  text/varchar/jsonb column; the ids only in declared keep places; K exactly in its kept rows, with no id; rerun
+  changes 0 rows; the fakes saw every expected delete. The sibling's and the second tenant's rows compare whole,
+  except for the named exceptions where a line names P.
+  - The second tenant holds P's rows in 12 of the 33 relations with a removing placement. In the other 21, forced
+    row-level security and the guards' tenant keys keep the erasure inside its tenant (P5 phase review A, F-2).
   - *Done 2026-10-05: census part 2, api `d9a66e7` (pushed).* It took a review, two fix rounds and a re-review
     (MERGE-READY, OPEN 0).
     - The seven rules run over part 1's four snapshots, the fakes' records and the three erased-user lines.
@@ -1038,12 +1047,13 @@ Lanes (2026-10-01; P4 review C M-5):
     - Every container the partial-change rule covers holds P's entry beside another person's.
     - What is left is in Future Improvements.
     - The P5 phase review says whether this box can be ticked.
-- [ ] Cross-repo pins (checkouts pinned): the three `deleted-user` literals equal; each receipt bound ≥ its configured
+- [x] Cross-repo pins (checkouts pinned): the three `deleted-user` literals equal; each receipt bound ≥ its configured
   retention (iac, Loki/Tempo configs, Phoenix); shift-optimizer's two unit-file copies of the ledger-key literal equal
   core's `IDENTIFIER_PATTERN`; rule the estate-wide drift shape list (`assignee`, `approver`, `requester`, `owner`,
   `user_name`, `creator`, and person-bearing jsonb such as `automation_runs.params`) and apply it in all three repos.
-  Proofs: remove one placement's statement per repo → census red.
-- [ ] The wire contracts P3 created (P3 phase review E I-1). Each is a literal in two repos, pinned today only against
+  Proofs: remove one placement's statement per repo → census red (P5 phase review A: shown for core, copilot-mro and
+  shift-optimizer, each killed by the census).
+- [x] The wire contracts P3 created (P3 phase review E I-1). Each is a literal in two repos, pinned today only against
   its own copy. One pin per row, against pinned checkouts; a pin may live beside either side, and Task 17 owns that
   test file.
 
@@ -1059,7 +1069,7 @@ Lanes (2026-10-01; P4 review C M-5):
   | Task 11b's bounds and core's delay | core `core/resources/user_erasure/ledger.py` (`IMMEDIATE_ERASURE_DELAY`) | copilot-mro `copilot_mro/app/services/erasure_delay_bounds.py` and its pin, `tests/unit/user_erasure/test_erasure_delay_bounds.py` | the delay the bounds were judged against (30 minutes) equals core's, so any change to it goes red for a re-judgement (today's pin holds for every delay); absolute floors hold: the turn deadline at least a stated minimum, and the margin at least the sum of the stream block save's wait, the statement ceiling, the freeze's commit gap (about 75 s), the S3 client's timeouts and a clock-skew allowance. The bounds module's docstring says what the pin judges |
 
   Proofs: change one side of each row alone → its pin red.
-- [ ] **Carry-ins from P3 (phase review E, 2026-09-30).** An immediate request now waits `IMMEDIATE_ERASURE_DELAY`, so
+- [x] **Carry-ins from P3 (phase review E, 2026-09-30).** An immediate request now waits `IMMEDIATE_ERASURE_DELAY`, so
   the census builds its request with `erase_after` in the past. The orchestrator runs with BOTH
   `partition_wiring.wire()` and `user_erasure_wiring.wire()`: step 6 and the operator row seams need the hooks.
 
@@ -1106,6 +1116,8 @@ Owned: new `copilot-mro/tests/e2e/user_erasure/user_erasure_e2e.py` (collects ze
     user prefixes.
   - The dashboard leg: an admin who is not the person (F4), the dashboard, and the platform CLI for the escalation.
   - The channel leg: a test Telegram account the owner controls, through the live bot, never a real pilot.
+  - The owner-path leg: a second test pilot. The same account works only if it is registered again after the channel
+    leg's `after` has passed; otherwise its new rows land under the id that leg still reads (P5 phase review B, M-4).
   - The operator leg: a throwaway operator with rows, Document Hub objects and pair partitions.
   - Dev tenants only; never the internal or golden project.
 - [ ] **Every "gone" check reads non-zero first (P4 review C I-3, review A's P5 notes).** Before each erasure, the leg
@@ -1496,7 +1508,9 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    once it passes (known reds excepted, named in the ledger). Once Task 17's pins merge, every merge of a repo they
    read (core, copilot-mro, shift-optimizer, iac, telegram-bot, the dashboard) also runs the api pin file from the
    api primary, and a core merge also runs the dashboard's `test:unit` (lane P review M-7): the pins fire only when
-   they run.
+   they run. Since the P5 phase review (B, I-3), every merge of core, copilot-mro or shift-optimizer also runs the
+   api census (`tests/integration/user_erasure`, `-n 0`, against `copilot_mro_test`, re-provisioned first when the
+   merge changes a schema). The census is the only guard against some erasure regressions.
 3. Phase review (independent, adversarial) → triage → a fix round, merged, gated and pushed the same way. The owner
    waived the pause between phases on 2026-10-01; owner questions go to the owner as they arise.
 
@@ -1543,6 +1557,9 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
      (`PHOENIX_ENDPOINT=none`) there, or AWS gets a Phoenix with endpoint and key. The POC replica box runs a Phoenix
      but gives its api neither key. Under the door ruling (Owner / legal items, O10), a host with neither refuses
      every erasure request at the door (503) instead of freezing anyone (built in the P4 fix round, part D).
+     **The owner chose a Phoenix on the Weaviate box** (AWS plan, 2026-10-05). So App Runner's environment carries
+     `PHOENIX_ENDPOINT` and a `PHOENIX_API_KEY` allowed to delete spans and sessions, or every door answers 503. The
+     receipt's `phoenix_days` (30) must be at least that Phoenix's retention, pinned once iac declares it.
    - **A third, at the same time: X-Ray's `aws/spans` (P4 review C M-6).** With Transaction Search on (the owner's B5
      toggle), browser spans carrying `enduser.id` are kept in `aws/spans`, which never expires, while the receipt says
      `cloudwatch_days: 30`. Either set its retention right after the toggle (the Future Improvement "`aws/spans`
@@ -1577,11 +1594,23 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
   erasure's own events: its completion's and an escalation's, each carrying `rtbf`), RBAC provenance columns, the ledger's opaque ids, and free-text knowledge kept under D1.
 - [x] **D12 backup bound:** no backup/snapshot config exists in iac or deployment; the receipt states the bound. No
   replay is built (owner decision 31, 2026-09-28: a restore is disaster recovery only); see Future Improvements.
+  **Owner, 2026-10-05:** the AWS box's nightly dumps, kept 14 days, do not change this. The receipt gains
+  `backups_days: 14` in the P5 fix round, and the dump bucket's expiry is set so that the bound holds.
+- [x] **The one-off migration dumps** (decision 31: delete once the migration is proven). **Owner, 2026-10-05: delete
+  both.** Deleted the same day: `copilot_mro_20260928T084630Z.dump` (dev) and `copilot_mro_test_20260928T040531Z.dump`.
 - [ ] SDK/CLI transcripts under `~/.claude/projects` on the API host: confirm retention or disable persistence.
   **Owner, 2026-10-01: turn saving off.** To build after P5's lanes: the api's Agent SDK sessions save no
   transcript (prove no file appears under `~/.claude/projects` for an api turn); then the receipt's
   `limit_host_sdk_transcripts` caveat goes, with core `RECEIPT_KEYS`, the dashboard contract and copy, and Task 17's
   receipt pin moving together. Existing api transcripts on dev: a one-time delete, on the owner's word.
+  - **P5 phase review B, I-1:** the CLI also spills oversized tool results into the session's directory, and
+    copilot-mro reads those files back for memory hints. So the proof must use a turn that spills.
+    - **Controller design:** each product session runs the CLI with its own private config directory, removed when
+      the session ends and swept at startup. The memory hint is read before the directory goes.
+    - Built in the P5 fix round, part X1. The receipt change is part X2.
+  - **Owner, 2026-10-05:** the one-time delete covers every product SDK transcript: 45 files in four folders
+    (`-home-aditya-Code-api`, `-api-obs9`, `-copilot-mro-evals-probe`, `-copilot-mro-s44b2`). Files are selected by
+    their `"entrypoint":"sdk-py"` marker. It runs after the build is merged and its live proof passes.
 - [x] Scheduler: the delayed half runs only where the scheduler is embedded/worker; otherwise a daily `--run-due`.
   Immediate requests and `/goodbye` then also wait for the owner's next `--run-due`, not 30 minutes (C-3, C-4).
   **Owner, 2026-10-01: run the scheduler on AWS** (`AUTOMATION_SCHEDULER_MODE` set there; Deploy/rollout 5).
@@ -2048,8 +2077,10 @@ Recorded at the P3 plan review (2026-09-29):
   - *Complete fix:* keep "erased minus census" in the db test with a remedy message; move the extra-table check into
     the script at run time (the dry run names any such table, `--execute` refuses with exit 2), pinned by a unit test
     on made-up table sets.
-- **The dashboard's analytics quality-contract test is red since Task 9 (found in Task 14's build, confirmed by its
-  review).**
+- **Built (lane P, dashboard `644ceaf`, 2026-10-01; confirmed by the P5 phase review): the dashboard's analytics
+  quality-contract test is red since Task 9 (found in Task 14's build, confirmed by its review).** It passes (7 of 7)
+  and is no longer a known red. It is the only guard on the dashboard's copy of the `deleted-user` marker, which the
+  P5 fix round adds to lane P's row 1.
   - *What is missing:* Task 9 moved `DELETED_USER_ID` into core's `user_erasure/core_copies.py`, and `quality.py` now
     imports it. The dashboard's `tests/unit/analytics/analytics-core-quality-contract.test.ts` reads that constant as a
     module-level literal in `quality.py`, finds none, and fails on the dashboard base `0918191` against core `2ec64b5`
@@ -2615,6 +2646,22 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - O-1: no census rule checks the parts of P's own kept rows that do not name P. A mutant that set every value in P's
     run archive to the marker passed. *Complete fix:* compare a kept row's other columns to `before`.
   - The census and its estate have grown to about 1,600 and 2,090 lines (review M-6, above).
+- **The P5 phase review's Future Improvements (2026-10-05; A 0C/0I/2M, B 0C/3I/7M).**
+  - **26 of the 38 Postgres `no-person` placements are never filled in the census,** so its "P's id absent" check is
+    vacuous there. *Complete fix:* seed each through its writer, or name it in a list with the reason it cannot be
+    seeded.
+  - **The second tenant holds P's rows in only 12 of the 33 relations with a removing placement.** For the other
+    21, row-level security and the guards' tenant keys are the protection, not the census. *Complete fix:* seed P's
+    rows in the second tenant there too.
+  - **No census rule reads P's chat or turn links after the erasure.** The runtime residue covers them today.
+    *Complete fix:* a rule that P's chat and turn ids name nothing after the erasure.
+  - **App Runner's Phoenix keys are pinned to nothing.** *Complete fix:* a lane P row that iac's App Runner
+    environment names `PHOENIX_ENDPOINT` and `PHOENIX_API_KEY` exactly as copilot-mro's settings read them. It skips
+    by name until iac declares them; the AWS work adds them.
+  - **Task 18 is about 8,470 lines (script 4,215, unit tests 4,253) for a run made once,** and its store list can
+    drift from the erased-user lines unseen. *Complete fix:* split the unit file by leg and verdict family, and add
+    one unit test: every relation and index property with a removing placement is read by some leg, or named with
+    the reason it is not.
 - **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
   request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
   `RequestRouteMiddleware`.
@@ -3615,3 +3662,23 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **The P5 phase review has started,** in two areas: A, the census, drift guards and pins as one proof; B, the phase as
   a whole, Task 18's readiness and the SDK-transcripts-off build. B is running; A starts when a slot frees.
 - **Next:** the phase review's fix round, with SDK transcripts off; then Task 18's live run.
+
+**Status, 2026-10-05 (~06:00): the P5 phase review is done; its fix round runs in two parts.**
+- **Review A** (the census, drift guards and pins as one proof): 0 Critical, 0 Important, 2 Minor. Every regression
+  it could build went red somewhere, including the plan's "remove one placement's statement per repo → census red",
+  shown for core, copilot-mro and shift-optimizer.
+- **Review B** (the phase as a whole): 0 Critical, 3 Important, 7 Minor.
+  - The transcripts-off build must prove itself on a turn that spills a large tool result.
+  - The AWS backups change D12's premise.
+  - The census did not run on sibling merges; the merge protocol now runs it.
+- **The owner's rulings:**
+  - decision 31 stands with the AWS backups, and the receipt states 14 days;
+  - the transcript delete covers all 45 product transcripts;
+  - the two migration dumps were deleted.
+- **The fix round:**
+  - X1, copilot-mro: the product's SDK sessions get a private config directory, removed when the session ends.
+  - X2, the receipt change across core, the dashboard, api's pins and Task 18's script: `backups_days`, the
+    statement-proven limits, retired sentences for old receipts, Task 18's free modes and its transcripts check.
+- Task 17's five boxes are ticked. The dashboard's analytics test is no longer a known red.
+- **Next:** X1 and X2 → their reviews → the merges, with the census on each → the api restarted on the merged code →
+  the transcripts proof → the owner's one-time delete → Task 18's live run.
