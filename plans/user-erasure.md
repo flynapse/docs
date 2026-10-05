@@ -3655,7 +3655,7 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   mutants are killed (api `cf32508`). Its scoped re-review is running.
 - **Next:** that re-review, then the merge into api; the P5 phase review; SDK transcripts off; Task 18's live run.
 
-**Status, 2026-10-05 (~05:00).**
+**Status, 2026-10-05 (after census part 2's merge).**
 - **Census part 2 is merged and pushed** (api `d9a66e7`). Its second fix round's re-review found it MERGE-READY,
   OPEN 0. Its four Minors and one outside note are Future Improvements. The api gate was green apart from the known
   census-family red (pins 21; non-pg 1991 passed; pg 65 passed, 4 skipped).
@@ -3663,7 +3663,7 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   a whole, Task 18's readiness and the SDK-transcripts-off build. B is running; A starts when a slot frees.
 - **Next:** the phase review's fix round, with SDK transcripts off; then Task 18's live run.
 
-**Status, 2026-10-05 (~06:00): the P5 phase review is done; its fix round runs in two parts.**
+**Status, 2026-10-05 (~04:30 PDT): the P5 phase review is done; its fix round runs in two parts.**
 - **Review A** (the census, drift guards and pins as one proof): 0 Critical, 0 Important, 2 Minor. Every regression
   it could build went red somewhere, including the plan's "remove one placement's statement per repo → census red",
   shown for core, copilot-mro and shift-optimizer.
@@ -3682,3 +3682,15 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - Task 17's five boxes are ticked. The dashboard's analytics test is no longer a known red.
 - **Next:** X1 and X2 → their reviews → the merges, with the census on each → the api restarted on the merged code →
   the transcripts proof → the owner's one-time delete → Task 18's live run.
+
+**Status at compaction checkpoint 26 (2026-10-05, ~04:35 PDT).**
+- **Running:** the P5 fix round's two parts.
+  - X1, copilot-mro: the product's SDK sessions leave nothing on disk.
+  - X2, core, the dashboard, api and Task 18's script: the receipt change.
+- **Next:**
+  - their reviews;
+  - the merges, with api's pins and census on each;
+  - the api restarted on the merged code;
+  - the controller's live proof that no transcript file is written;
+  - the owner's one-time delete of the 45 old transcripts;
+  - Task 18's live run, which needs the owner for the Telegram legs and a second test pilot.

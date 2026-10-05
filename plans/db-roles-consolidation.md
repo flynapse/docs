@@ -240,7 +240,8 @@
       - The probe connected as `postgres` to database `postgres` and ran only the module's `SET search_path`. A
         second attempt failed authentication.
       - No DDL, grant or write ran, and `copilot_mro` was not touched.
-  - **Next:** a scoped re-review, the merge into `langgraph-merge`, the post-merge test run, then the push.
+  - **Next:** the scoped re-review (running), the merge into `langgraph-merge`, the post-merge test run (with api's
+    census, per the user-erasure merge protocol), then the push.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
