@@ -198,9 +198,19 @@
       a finding, and the printed remedy clears it. Three Future Improvements (FI-R7E-1 to FI-R7E-3).
     - **SHEET READY (2026-10-04, night):** the controller filled the two tips (`copilot-mro-s7` `767cdaa6`, `core-s7`
       `be14dd81`) and lifted the banner; nothing else changed.
-    - **Next:** the owner runs step 6's 4c, then the sheet's steps 0 and 1 on both databases. The controller merges
-      `db-roles-s7` (core, then copilot-mro, `--no-ff`). The owner restarts the API and runs step 3. Then the
-      post-merge gate, the push, and the round's Future Improvements written into this plan.
+    - **Run (2026-10-04/05, night):**
+      - the owner ran the sheet's steps 0 and 1 on both databases;
+      - the controller merged `db-roles-s7` (core `f8f9f67`, copilot-mro `a5374567`);
+      - the API was restarted on the merged code, and 2b's two checks pass;
+      - the owner ran step 3 on both databases. Each privilege snapshot's diff is exactly the sheet's, and step 2's
+        check 2 passes again after the revoke.
+    - **Step 6 is closed:** both of its 4c checks pass. A chat turn's SQL ran as `flynapse_query` through the running
+      API.
+    - **Next:**
+      - the post-merge test run (running);
+      - the push;
+      - the worktrees removed, and the round's Future Improvements written into this plan;
+      - step 8 (decision 27).
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but

@@ -3544,3 +3544,14 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   green and 25 mutants killed. Its review is running.
 - **Merges wait on the owner.** Auto mode refused the controller's merge into the main checkouts ("Modify Shared
   Resources"). The owner runs the merges, or approves them.
+
+**Status at compaction checkpoint 24 (2026-10-05, ~01:15).**
+- **D8 is merged.** shift-optimizer, telegram-bot and flynapse-otel are pushed after their full test runs. Its
+  copilot-mro half is merged locally and rides DB users step 7's test run, then the push.
+- **Census part 2's fix round** has built all three fixes: the re-upserted document compared whole, partial changes
+  inside an exception column, and the sibling seeded in all 27 relations. Five of the reviewer's six mutants now fail
+  the census. It is finishing its database proofs; then a scoped re-review.
+- **Merges:** auto mode now needs the owner's approval in chat for the controller's merges and pushes. The owner gave
+  it ("merge approved"); iac merges still need the owner's own word.
+- **Next:** census part 2's re-review and merge; the P5 phase review; SDK transcripts off; Task 18's live run (the
+  owner's go is given).
