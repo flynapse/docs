@@ -1,8 +1,8 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
 Status: **phase 1 is done, and the box's dump prune round (with phase 1's three Minors) is done at copilot-mro
-`93b64914`, in review; phase 2 (the Terraform) was reviewed FIX FIRST, and its fix round (iac `3933f47`) is in
-re-review** (2026-10-05, ~07:44 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+`93b64914`, in review; phase 2 (the Terraform) is done at iac `3933f47` (re-reviewed MERGE-READY, OPEN 0); phase 3,
+the runbook, is being built in iac with phase 2's four Minors** (2026-10-05, ~08:10 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -189,8 +189,21 @@ None: the owner answered all four on 2026-10-05 (above).
     - A night without a prune (S3 refused, or the 3 h limit) fails the unit visibly, and the 13-day expiry is the
       bound until the next good night.
     - The fake `aws` models the CLI's text output; phase 3's first-deploy checks measure it.
-- **Phase 2, the Terraform (built, iac `377c051`; reviewed FIX FIRST, OPEN 2; fix round done at `3933f47`, in
-  re-review).**
+- **Phase 2, the Terraform (done at iac `3933f47`: reviewed FIX FIRST, OPEN 2; its fix round re-reviewed
+  MERGE-READY, OPEN 0).**
+  - **The re-review (2026-10-05):** every finding closed, and the guards fail for the right reasons. It confirmed:
+    - `aws:PrincipalArn` carries a role's path as `.arn` does, so the deny has no path hole;
+    - CI runs as an IAM user, which the deny never names;
+    - the targeted apply pulls in neither App Runner nor the Lambda;
+    - every page of the prune's listing matches the `s3:prefix` condition;
+    - the role allows exactly what the as-built prune does.
+  - **Its four Minors ride with phase 3** (same tree):
+    - m-1: the readers guard tests a literal ARN against one sample key, so a grant on another database's dumps
+      escapes it;
+    - m-2: a second bucket policy that names the bucket through a local passes, and would replace the pinned policy
+      at apply;
+    - m-3: more texts still say the prune is 13 days;
+    - m-4: the single-apply fallback must wait for step 5's key, not only step 4.
   - **The fix round (2026-10-05, iac `377c051..3933f47`):**
     - the bucket's deny on the four broad roles, with a guard that works out the broad readers from the root's own
       grants. The guard needs the deny's list to match exactly, so narrowing a role's S3 access means taking it out
