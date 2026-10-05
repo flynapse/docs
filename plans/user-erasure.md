@@ -2495,11 +2495,14 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     counts what is left under them, less the shared ones. Or the receipt names it as statement-proven, with the
     class above.
 - **A connection string still holds the test database's password (P4 fix round parts D5 and D6).**
-  - pytest's default traceback printed `psycopg2.connect`'s `dsn`, password included. D6 set `--tb=short` in every
-    repo's `addopts`, pinned. But a command line's own `--tb`, an `-o addopts=…` that drops it, or `-l` still prints
-    it.
+  - pytest's default traceback printed `psycopg2.connect`'s `dsn`, password included. D6 set `--tb=short` in the
+    `addopts` of utils, core, copilot-mro and api, pinned. But a command line's own `--tb`, an `-o addopts=…` that
+    drops it, or `-l` still prints it.
+  - shift-optimizer, telegram-bot and flynapse-otel connect with psycopg too, and their `addopts` still lack
+    `--tb=short` (found at the CP22 batch merge, 2026-10-04). Their lanes print the `dsn` on such a red unless the
+    command line passes `--tb=short`, as every gate recipe now does.
   - *Complete fix:* a libpq password file (`PGPASSFILE`), so no connection string the estate builds holds a
-    password.
+    password. Until then, `--tb=short` and its pin in those three repos too.
 - **Settings objects still name secrets in their repr (P4 fix round part D6, concern 3).**
   - utils' seven password fields are `repr=False`. Its AWS secret key, Weaviate key and Azure OpenAI key are not.
     core's and copilot-mro's settings still show their SMTP and cache passwords.
@@ -3372,7 +3375,9 @@ part D's merge; Task 18's review, then its live run on the owner's go.
     - The gateway serves no WebSockets. The websockets package's and `uvicorn.asgi`'s records never reach a sink.
     - The last lines naming the person on the erasure doors are gone, and so are the auth-cache lines naming roles,
       departments and tenants.
-    - pytest's tracebacks are short in every repo, so a failed connection prints no password.
+    - pytest's tracebacks are short in utils, core, copilot-mro and api, so a failed connection prints no password
+      there (shift-optimizer, telegram-bot and flynapse-otel still lack it: see the connection-string item in Future
+      Improvements).
   - **The Task 18 script** (fix rounds 2a, 2b, 3 and 4).
     - It reads the parsed PDF text, the agent-state rows and every chat of the person.
     - It holds all kept tenant knowledge to verbatim, and runs a harmless Cognito pre-flight.
@@ -3385,3 +3390,25 @@ part D's merge; Task 18's review, then its live run on the owner's go.
   - SDK transcripts off. That change also makes the receipt name the statement-proven class and the parse-sidecar
     content records.
   - Task 18's live run, on the owner's go.
+
+**Status 2026-10-04, evening: the three rounds merged and pushed.** Docker Desktop is back, and the restart traps
+read clear: Postgres serves the real data directory, and Weaviate's schema holds its 14 classes.
+- **Lane D's owed database lanes passed** on the fix round's final tips: core `tests/db` and `tests/authz` 1036,
+  copilot-mro `tests/db/user_erasure` and `tests/db/chat_history` 79.
+- **Merged, `--no-ff`:**
+  - lane D's fix round B into core, copilot-mro and shift-optimizer;
+  - the P4 fix round, parts D3 to D6, into utils, core, copilot-mro and api;
+  - the Task 18 script into copilot-mro.
+- **One post-merge gate covered all three.** It ran utils, core, copilot-mro, api and shift-optimizer in full, the
+  api pins and the dashboard's unit lane. One red was new: core's settings-import test (part D3).
+  - Cause: `find_env_file` also searches the config module's own directory, and the primary core checkout keeps a
+    gitignored `.env` there. D3's worktree had none, so the test never ran that case.
+  - Part D7, test code only, fixed the test in core, copilot-mro and api, which share its shape. Its own gate ran the
+    three repos' full non-db lanes.
+  - Only the known reds remain: the census family `test_cross_repo_reads_name_their_checkout.py`, and api's
+    `test_checkout_variant_pin` declaration case.
+- **Pushed:** utils `9c36bba`, core `0c2fe12`, copilot-mro `eb096589`, api `22f0572`, shift-optimizer `028c640`.
+  The rounds' worktrees and branches are removed.
+- **Running:** census part 1 (C1), from api `020ef1a`.
+- **Next:** C2; the P5 phase review; SDK transcripts off, with the receipt changes; Task 18's live run, on the
+  owner's go.
