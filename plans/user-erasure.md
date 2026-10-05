@@ -2579,6 +2579,16 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     re-keyed instead of deleted passes it.
   - M-6: the census file is about 1,320 lines. *Complete fix:* move the helpers and the named lists to
     `_census_rules.py`, keeping one estate run.
+- **Census part 2's fix round and its re-review, what is left (2026-10-05).**
+  - copilot-mro's feedback propagator writes a memory row's `success_score` and `updated_at` without re-indexing the
+    document, so the index goes stale until the next re-upsert. The census allows only a move to the row's own value.
+    *Complete fix:* the propagator re-indexes, or writes through the store that does.
+  - copilot-mro's own erasure tests pass a narrowed `MEMORY_ROWS_SQL` that keeps only the owner's rows (mutant
+    `x2b`). The census is the only guard against it. *Complete fix:* a copilot-mro database test that seeds another
+    person's memory row in the erased chat and asserts it goes.
+  - The census's partial-change rule (`_changed_off_p`) lets a whole key or list item go when anything inside it
+    names P. Today's exception columns are flat, so nothing slips through now. *Complete fix:* recurse into a
+    changed item before allowing it to go whole.
 - **`span_details` resolves routes for traced URLs with no belt of its own (P4 fix round part D5, concern 5).** No
   request can make it raise today. *Complete fix:* the same "any error → the path's shape" belt as
   `RequestRouteMiddleware`.
