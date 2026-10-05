@@ -303,10 +303,25 @@
       characters, hard-coded from `DerivedCoreProperties.txt` (stdlib only). B.1 stays, because asyncpg drops it.
       The owner ruled on "invisible characters"; this replaces the controller's first reading, B.1 + Cf.
     - Two more pins (a combining-mark pair and a visible-space control) and the two sentences.
-  - **Owed with step 8 (from AWS phase 3, 2026-10-05):** `provision_rls.py`'s docstring (`:141-213` on
-    `langgraph-merge`) still says `agent_state`'s declaration is on an unmerged branch, and its usage example passes
-    `--enforce-undeclared`. `agent_state` has been declared since `a8ca2114`. The flag only enforces more, so the
-    text misleads without harm. Fix it in step 8's next round, or in a docs round after the merge.
+  - **Fix round 4, built (2026-10-05, `fb0c68df..2f01edff`):** the cross-form rule, Default_Ignorable (Unicode
+    18.0.0's table, 4,174 code points), the two pins and the sentences. Its tests pass: the whole-tree non-db lane
+    16688, `tests/db/tenancy` 680 on a throwaway, and 9 of 9 mutants killed.
+    - **It measured a login that still gets through, by asyncpg.** The app's password X + U+3164 + " z" + U+200B
+      against the reporting password X + U+3164 + U+200B + "z" is not refused. libpq stored the second as
+      X + U+1160 + " z". asyncpg removes U+200B before it maps spaces, so it sends the first in exactly that form.
+      Six characters do this (U+115F, U+1160, U+3164, U+FFA0, U+17B4, U+17B5). It is not a regression: round 3 missed
+      the pair too.
+  - **Fix round 5 (running since 2026-10-05; brief `s8-fix5-brief.md`):**
+    - **Controller ruling:** asyncpg's prepared form becomes a fourth form, so two passwords are equal when any of
+      {raw, libpq's, asyncpg's, visible} of one equals any of the other's. The check models each client's own
+      preparation. It costs about 770 more refusals among 389,018 fuzzed pairs, all of them exotic.
+    - Every range of the Default_Ignorable table is pinned at both ends.
+    - A live asyncpg login on a throwaway proves the hole before the fix refuses it.
+    - **It also takes an item from AWS phase 3:** `provision_rls.py`'s docstring (`:141-213` on `langgraph-merge`)
+      still says `agent_state`'s declaration is on an unmerged branch, and its usage example passes
+      `--enforce-undeclared`. `agent_state` has been declared since `a8ca2114`.
+    - Then one scoped re-review over rounds 4 and 5. Round 5 is the loop's last; the controller adjudicates anything
+      after it.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
