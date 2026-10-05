@@ -3859,3 +3859,15 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **DB users step 8** merged into copilot-mro `langgraph-merge` as `f72a3351`. It shares no file with X1 or X2.
 - **Next:** both re-reviews → the merges in one window → the api restart → the live proof (now including a tab
   closed mid-turn) → the owner's one-time delete → Task 18.
+
+**Status at compaction checkpoint 28 (2026-10-05, ~07:30 PDT).**
+- **Running:**
+  - X1's fix round. The helper's own task and the leftover sweep are committed (`e18ddc0e`, `f005c541`). The
+    real-CLI test, the fast pins, the mutants and the report are left.
+  - The re-review of X2's fix round.
+  - Both were stopped by a controller restart at 07:24 and resumed with their trees intact.
+- **Next:**
+  - X1's re-review (first in the agent queue);
+  - X2's verdict;
+  - the merges in one window, with api's pins (the X1 pin must pass) and census on each;
+  - the api restart, the live proof, the owner's one-time delete, then Task 18.

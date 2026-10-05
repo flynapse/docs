@@ -1,8 +1,8 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
 Status: **phase 1 is done (its fix round 2 re-reviewed MERGE-READY, OPEN 0); phase 2 (the Terraform) was reviewed
-FIX FIRST and its fix round is running; the box's dump prune round (with phase 1's three Minors) is running in
-copilot-mro** (2026-10-05). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+FIX FIRST, and its fix round is done (iac `3933f47`) with the re-review queued; the box's dump prune round (with
+phase 1's three Minors) is running in copilot-mro** (2026-10-05, ~07:30 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why

@@ -275,7 +275,7 @@
     - every `tests/db` folder: 0 failed (`tenancy` 710 passed, 35 skipped);
     - db-marked tests outside `tests/db`: 145 passed;
     - api's pins: 21 passed; api's census: 29 passed.
-  - **Fix round 3 (queued; brief `s8-fix3-brief.md`):** the owner's ruling that "equal" also covers passwords that
+  - **Fix round 3 (running since 2026-10-05; brief `s8-fix3-brief.md`):** the owner's ruling that "equal" also covers passwords that
     differ only by invisible characters (m-C), pins that vary the other side too (m-A), and the docstring (m-B). It
     runs on a new branch, `db-roles-s8c`, from `f72a3351`.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
