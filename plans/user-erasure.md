@@ -3974,3 +3974,9 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - **Open question, for the controller before Task 18:** can a closed tab's turn write a person's data after their
     erasure has completed? The re-review reads the freeze and completion steps and reports.
 - **X2 stays ready.** The merge window opens when X1's re-review says MERGE-READY.
+- **Owner, 2026-10-05 (~09:45 PDT):**
+  - The AWS login waits for the morning, so the api restart and the live proof wait for it too. The merges, the
+    gate and the push go ahead overnight once X1 is MERGE-READY.
+  - **The one-time delete is the controller's,** right after the live proof passes: exactly the 45 product
+    transcripts and the one session folder, listed in the ledger first. Task 18 then needs the owner only for its
+    Telegram legs and a second test pilot.

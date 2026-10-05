@@ -47,6 +47,8 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
   - **Data:** start empty. AWS is the dev environment; tenants and users are created fresh.
   - **Network:** the box stays in the public subnet. Postgres and Phoenix admit only App Runner's security group and
     the box itself; SSH stays limited to the owner's IP.
+- **2026-10-05 (~09:45 PDT): the iac merge is approved,** once phase 3's fix rounds are re-reviewed MERGE-READY and
+  gated. It carries the step 3b Terraform too (below).
 - **2026-10-05 (after phase 3's review): one combined deploy.** iac's root still holds the observability rebuild's
   pending apply order (B2 to B8). The AWS runbook takes it over: B4's log-group imports first, the POC replica
   stopped before its replacement, and step 6 listing everything else it carries. Alert arming (Phase 10, after
