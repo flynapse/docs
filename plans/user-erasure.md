@@ -3776,3 +3776,16 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   while the box runs. The transcript delete includes the one session folder beside the 45 files.
 - **Next:** X1's verdict → its fix round (the hermetic test, and any findings) → X2's re-review → the merges (X1
   and X2 together; the api restarts only after both) → the live proof → the delete → Task 18.
+
+**Status at compaction checkpoint 27 (2026-10-05, ~06:35 PDT).**
+- **Running:**
+  - X1's review, which also drives the real CLI through every way a session can end;
+  - X2's fix round: four more limits, Task 18's second root, the backups pin's holes, the delay pin and the
+    dashboard's lint.
+- **Next:**
+  - X1's fix round (the hermetic test, plus any findings) and its re-review;
+  - X2's re-review;
+  - the merges in one window (core with the dashboard, then copilot-mro, then api last), with api's pins and census
+    on each;
+  - the api restarted only after both parts are merged;
+  - the live proof, the owner's one-time delete, then Task 18.
