@@ -162,7 +162,22 @@ None: the owner answered all four on 2026-10-05 (above).
   - Two pins tightened. The unit's `[Service]` keys are an allow-list. The backup's stop-before-close order is
     pinned deterministically: a `kill` on `PATH` records whether the stream is still open.
   - 18 of 18 mutants killed. The non-db lane passed: 16524 passed, 0 failed.
-- **Phase 2, the Terraform (built, iac `377c051`; reviewed FIX FIRST, OPEN 2; fix round running).**
+- **Phase 2, the Terraform (built, iac `377c051`; reviewed FIX FIRST, OPEN 2; fix round done at `3933f47`, in
+  re-review).**
+  - **The fix round (2026-10-05, iac `377c051..3933f47`):**
+    - the bucket's deny on the four broad roles, with a guard that works out the broad readers from the root's own
+      grants. The guard needs the deny's list to match exactly, so narrowing a role's S3 access means taking it out
+      of the deny too;
+    - the 13-day expiry; the box's prune grants (list `<prefix>/` with the trailing slash, delete under it, no read);
+      one prefix variable; object lock refused;
+    - `WEAVIATE_URL` by `box.<env>.internal`; the role-resource and network-interface guard holes; the instance's
+      `depends_on`;
+    - the README's owner steps in the new order, the stale texts, the key check and the probes' negative controls;
+    - beyond the brief: the bucket guard also fails on a versioning or object-lock resource whose bucket it cannot
+      tell apart.
+    - Proofs: iac's tests 445 passed, 1 skipped (shellcheck absent); `fmt`, `validate` and the three CI validators
+      pass; 32 of 32 mutants killed.
+    - CI's Terraform runs as backend-bootstrap's `terraform-deployer`, which the deny never names.
   - **I-1:** two more roles can read and delete every dump: the POC replica's and the CI deployer's. The deny must
     be `s3:*`, since the bucket-level actions otherwise let App Runner's role remove the deny itself.
     - The safe form names the four roles in an `aws:PrincipalArn` condition, never as principals, and never by
@@ -213,14 +228,16 @@ None: the owner answered all four on 2026-10-05 (above).
     stop flag;
   - fast-forward copilot-mro `main` to `langgraph-merge` and push it, with the owner's approval. Check that the
     branch holds `deployment/demo/postgres/`;
-  - create the four box parameters, and the placeholder for the API's Phoenix key.
+  - create the four box parameters. The API's Phoenix key gets no placeholder: it is minted and stored before the
+    full apply (deploy step 5).
 - **After first boot:**
   - change the Phoenix admin's password;
   - mint a System API key each for the collector and the API, and store them;
   - put the collector's key into `/opt/otel/collector.env` and recreate the collector;
-  - run `start-deployment` for App Runner.
+  - store the API's key in its parameter before the full apply, which deploys it. Never `start-deployment`.
 - **The database, over an SSH tunnel:**
-  - migrate, provision, and `--verify-only` clean;
+  - migrate, provision, and `--verify-only` clean, with the DB-roles sheet's exact invocations (the README's owner
+    steps only summarise them);
   - no reporting user (leave `POSTGRES_READONLY_PASSWORD` unset) and no inspection user;
   - the sheets' "On RDS" stops do not apply: the box's Postgres has a real superuser.
 - **First-deploy checks** (unprovable locally):
@@ -235,7 +252,8 @@ None: the owner answered all four on 2026-10-05 (above).
   - optional: Ctrl-C one backup run by hand, and confirm no new object appears;
   - the multipart probe's negative control: the same upload without `--sse` is refused. Both probes run as root
     with the backup's environment;
-  - the API's Phoenix key works: a request to `/v1/projects` with it returns 200, the key read with `read -rs`;
+  - the API's Phoenix key works: a request to `/v1/projects` with it returns 200. The key is read with `read -rs`
+    and reaches curl on stdin (`-H @-` fed by `printf`), never on curl's command line;
   - the first nightly prune deletes nothing younger than its threshold.
 - **Operations:**
   - every manual compose command runs as root with `--env-file` (and never `config` without `--quiet`);
@@ -263,6 +281,11 @@ None: the owner answered all four on 2026-10-05 (above).
     "timed out". Set `GIT_TERMINAL_PROMPT=0` on the pull. The runbook says the pull runs only through `systemctl`.
 
 ## Future Improvements
+
+- **The network-interface guard does not follow a data-source indirection to the box's interface (phase 2 fix
+  round, concern 7).** A security group attached through a `data "aws_network_interface"` lookup would pass. No such
+  lookup exists today. *Complete fix:* resolve data sources in the guard, or fail on any `aws_network_interface*`
+  data source in the root.
 
 - **The GitHub token sits in the instance's user data** (pre-existing). *Complete fix:* read it at boot from SSM,
   like the box's other secrets.
