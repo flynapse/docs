@@ -491,6 +491,25 @@ DDL on shared databases, so every DDL step is the owner's to run.
     box the `phoenix` user shares the cluster, so it can connect there and reach whatever PUBLIC holds.
   - *Complete fix:* provisioning revokes CONNECT from PUBLIC on the app database and grants it to the managed roles,
     with a verify cell.
+- **Step 8: what its review left (2026-10-05).**
+  - **An existing reporting user is not held to its whole shape.** A NOLOGIN, NOBYPASSRLS or INHERIT reporting user
+    reads clean today, since step 7 exempts it from the LOGIN check; CREATEDB and REPLICATION are findings.
+    *Complete fix:* verify holds an existing reporting user to exactly LOGIN, BYPASSRLS and NOINHERIT.
+  - **`--verify-only` does not predict the creation refusal.** It names the superuser requirement but does not check
+    whether the connecting role could create a BYPASSRLS user, so a real run can still roll back. *Complete fix:* a
+    precondition, like the definer-owner check, that refuses before phase 1 creates anything.
+  - **Any two service users may share a password.** Fix round 1 refuses the reporting user's password when it
+    equals a service user's. *Complete fix:* refuse any two of the app, grant, query and reporting users that share a
+    password, before connecting.
+  - **utils' `readonly_credentials` docstring** still says the provisioner reads the reporting password only to
+    compare it with the owner's. Fix it with utils' next change.
+  - **`tests/db/memory/test_memory_operator_rls.py:292` passes the owner's password in an in-process argument
+    list.** It is not visible in `ps`, but it is the shape the secret scan refuses elsewhere.
+- **copilot-mro's non-db lane reads the local test database (AWS phase 1, fix round 1).** Seven tests not marked
+  `db` read `copilot_mro_test`. Three skip with "not present in this database" (the optimizer plan digest, the
+  inventory plan, the optimizer decompose); four pass only with a database (`test_reset_demo`,
+  `test_workout_tool_adapters`, and `test_doc_catalog_ingest_writes` twice). *Complete fix:* mark them `db`, or have
+  them skip without a database, so the non-db lane needs none.
 
 ## Lessons
 
