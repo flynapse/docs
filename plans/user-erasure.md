@@ -2581,6 +2581,14 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - A mutant ran on a tree while that tree's full suite was collecting (lane D fix round part B, 2026-10-02): the suite
   failed one test with the mutant's exact signature, and only a re-run alone was green. Rule: never run `mutant.sh` on
   a tree while that tree's suite runs; mutate a scratch extract, or wait for the suite. Every brief says so.
+- **A test of a lookup's "nothing found" case must empty every place the lookup searches (P4 fix round part D7,
+  2026-10-04).**
+  - D3's settings-import test ran `find_env_file` from an empty directory and expected "No .env file found".
+  - The function also searches its own module's directory. The primary core checkout keeps a gitignored `.env`
+    there; D3's worktree did not.
+  - So the test passed in the worktree and failed at the merge gate.
+  - Rule: for a lookup's miss branch, list every root it searches, and empty each one in the test (the module's own
+    location included). Worktrees hide files that primaries have.
 
 ## Implementation notes
 
@@ -3444,3 +3452,25 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **Running:** census part 1 (C1), from api `020ef1a`.
 - **Next:** C2; the P5 phase review; SDK transcripts off, with the receipt changes; Task 18's live run, on the
   owner's go.
+
+**Status at compaction checkpoint 23 (2026-10-04, night).**
+- **Merged and pushed today:**
+  - lane D's fix round B;
+  - the P4 fix round, parts D3 to D7;
+  - the Task 18 script;
+  - census part 1.
+
+  The pushed mainlines: utils `9c36bba`, core `0c2fe12`, copilot-mro `eb096589`, api `5a7d0eb`, shift-optimizer
+  `028c640`.
+- **Census part 1** took a review and two fix rounds. Its rerun is a real second pass, the fakes' checks read the
+  erasure's own deletes, the empty stores are seeded, and the fakes' records are copies.
+- **Running:** census part 2, the rules over part 1's snapshots, each proven to fail on a production mutant in a
+  private worktree.
+- **Next:**
+  - census part 2's review;
+  - the P5 phase review;
+  - SDK transcripts off, with the receipt changes;
+  - Task 18's live run, on the owner's go.
+- **Owner decisions open:**
+  - `--tb=short` in shift-optimizer, telegram-bot and flynapse-otel now, or later as the recorded Future Improvement;
+  - the email and session-id log lines now, or later.

@@ -174,8 +174,27 @@
       - Where the premise fails, it is one finding. Any other path stays a finding.
     - **Controller ruling (2026-10-04):** nothing is accepted in silence. What the RDS master owns or holds is a named
       accepted line, like the older ones.
-    - **Next:** part 7d re-issues the sheet and the census with the new RDS counts and accepted lines, re-proves it,
-      and runs the full lanes. One two-lens re-review follows, then SHEET READY, then the owner, after step 6's 4c.
+    - **Parts 7c to 7e (2026-10-04, evening; Docker Desktop back on, the shared cluster untouched).**
+      - **7c** put `rds_superuser`'s data-role reach on one accepted line. It accepted the inspection user by its shape
+        (decision 23: never named), and made any stray superuser a finding. It also closed the last two cells: a role
+        the script does not manage reading or writing any relation.
+      - **7d** merged the mainlines into the branch, so step 3 and the window run the code that will land. It re-issued
+        the sheet and the census (FI-B: the owner of `tenants` is listed). It re-proved every block: 117 local checks
+        and 215 on RDS.
+      - **The controller read the shared dev cluster's roles,** read-only and never `copilot_mro`:
+        - only `postgres` is a superuser;
+        - `flynapse_inspect` is exactly the shape;
+        - `phoenix` and `telegram_bot_app` hold nothing on `copilot_mro_test`.
+        So step 0's verify there should print the inspection line alone.
+      - **A three-lens re-review** (the checks; the tests; the sheet, re-proven independently) found:
+        - one real hole: membership in the server-file roles (`pg_execute_server_program` and its two siblings) was
+          read by no census. A role holding one runs OS commands as the server, while verify reads clean;
+        - one wrong sentence in the sheet.
+      - **7e** closed both. It also made the inspection fake read its SQL, and added the sheet's last corrections:
+        `--no-ff` at the merge, and the inspection line's count may differ by database. Re-proof: 121 local checks
+        and 216 on RDS.
+    - **Next:** 7e's scoped re-review (running). Then SHEET READY: the two tips filled and the banner lifted. Then the
+      owner, after step 6's 4c.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
@@ -420,3 +439,13 @@ DDL on shared databases, so every DDL step is the owner's to run.
   out of context reading the 4,000-line provisioning script. The round then ran as narrow parts, each with a
   "read only this" list, slices through a regenerated symbol index (`/usr/bin/grep`, since `grep` is ugrep here), and
   a "Status after part N" section appended to one design file, so every next agent started from durable state.
+- **A merge by name records whatever the name points at then (step 7 part 7d, 2026-10-04).** Part 7d merged
+  `langgraph-merge` and `master` "by name". A test-only merge landed on both 18 seconds earlier. The sheet, the
+  report and the ledger all named the SHAs the brief gave, not the ones actually merged. Lens B caught it by reading
+  the merge commits' parents. Rule: a report names a merge's parents as `git log --format=%p` prints them, never as the
+  brief expected them.
+- **A matrix needs a row for every kind of grant, including predefined roles (step 7 re-review, 2026-10-04).** The
+  privilege matrix left membership in PostgreSQL's predefined server-file roles as "may" for unmanaged roles. That
+  membership lets a role run OS commands as the server, a superuser's reach, so verify read clean on it. Rule: a
+  matrix of privileges lists every predefined role whose membership grants a capability. Each is a row, never a
+  "may" by default.
