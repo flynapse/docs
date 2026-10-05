@@ -1021,6 +1021,13 @@ Lanes (2026-10-01; P4 review C M-5):
   + thumbs + a sibling's mention, notifications both ways, product event, invitation, private + shared DocHub rows, a
   data-discovery source); a sibling user; a second tenant holding rows under the SAME user id. Run the real
   orchestrator (fake Cognito, recording fakes for S3/Weaviate/Phoenix).
+  - *Done 2026-10-04: census part 1, api `5a7d0eb` (pushed).* It took a review and two fix rounds.
+    - The rerun is a real second pass of every seam and core's copies. The CLI's second `run` is a no-op, so it does
+      not count.
+    - The fakes' "reached" checks read the erasure's own deletes.
+    - The empty stores are seeded. The one hand-written row is the automation that no writer stamps.
+    - The fakes' records are deep copies.
+    - Part 2's interface is in `p5-t17c1-fix2-report.md`, "How part 2 uses it".
 - [ ] Registry-derived census over every core + copilot-mro relation (owner connection, test DB only): P in no
   text/varchar/jsonb column; the ids only in declared keep places; K exactly in its kept rows, with no id; sibling and
   second-tenant rows byte-identical (full-row comparison); rerun changes 0 rows; the fakes saw every expected delete.
@@ -2517,6 +2524,16 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **Core lines on routes other than the erasure doors name people (P4 fix round part D4, concern 6).** `PUT /users`
   and the role removal log the person's id. *Complete fix:* constant messages with the ids as bound fields, as the
   erasure doors now have.
+- **The census estate's gaps (census part 1 and its fix rounds, 2026-10-04).**
+  - `update_automation` never stamps `automations.updated_by`, and no writer sets `created_by` on another member's
+    automation. The erasure's two de-attribute statements are proven only on a hand-written row. *Complete fix:* the
+    writer stamps `updated_by`, or the line drops the placement as writer-less.
+  - The data-discovery source is planted through its repository writer, not its door (`create_source`).
+  - Held Document Hub attempts are not seeded: they need the processing pipeline.
+  - The optimizer run stays `pending`, so `optimizer_runs.output` and `config_used` stay NULL.
+  - The second pass's orphan sources are not compared with the ledger's, as its statements are.
+  - P has one id (core mints `user_id == external_id`). R-IDS's two ids are proven only in core's db tests.
+  - `shift_optimizer` is outside api's checkout pins (`tests/_checkout_pin.py`).
 - **copilot-mro's chat-store and sharing lines name people (census part 1, concern 9; controller, 2026-10-04).**
   - `ChatHistoryDB.save_share` logs the recipient's email at INFO, twice.
   - The response-sharing door logs it too: `user_feedback.py:578` at INFO, and `:594` at ERROR.
