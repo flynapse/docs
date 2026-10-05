@@ -3572,3 +3572,12 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **Census part 2's fix round is done.** All of the reviewer's mutants and the original four now fail the census. A
   fresh scoped re-review is running.
 - **Next:** that re-review, then the merge into api; the P5 phase review; SDK transcripts off; Task 18's live run.
+
+**Status at compaction checkpoint 25 (2026-10-05, ~04:00).**
+- **Census part 2's first fix round was re-reviewed: FIX FIRST, two holes one level down.** Rule 4's presence check
+  worked per relation, so `automation_runs.user_id` was vacuous. And three containers held P's entry alone, so the
+  partial-change rule had nothing to protect.
+- **Fix round 2 fixed both at the root.** The presence check now works per placement column, with five named
+  exemptions. Every container the partial-change rule covers must hold P's entry beside another person's. All 17
+  mutants are killed (api `cf32508`). Its scoped re-review is running.
+- **Next:** that re-review, then the merge into api; the P5 phase review; SDK transcripts off; Task 18's live run.

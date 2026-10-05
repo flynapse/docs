@@ -1,8 +1,8 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 built, in review** (2026-10-05): the box's compose, first boot, setup script and nightly backup.
-A fix round follows, because the box's old startup unit cannot start the new stack. Phase 2 is the Terraform and
-phase 3 the runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
+Status: **phase 1 built, fixed once, in re-review** (2026-10-05): the box's compose, first boot, setup script,
+nightly backup and startup unit. Phase 2's brief (the Terraform) is drafted and starts once phase 1 settles. Phase
+3 is the runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
 
@@ -103,5 +103,72 @@ None: the owner answered all four on 2026-10-05 (above).
   volume loses everything since the last nightly dump.
 - **Upgrades and patching of Postgres are by hand.**
 - **The `<secret ARN>:<JSON key>::` reference form** is unproven until the first deployment (DB roles step 3).
+
+## Implementation notes
+
+- **Phase 1 built (2026-10-05).** copilot-mro `aws-pg-phoenix` (`copilot-mro-awspg`, from `langgraph-merge`
+  `a5374567`) and iac `aws-pg-phoenix` (`iac-awspg`, on step 3b's `5e08621`).
+  - **Compose:** `postgres` (16-alpine; data on the volume; published 5432) and `phoenix` (20.8.0; its own database
+    and user; auth on; 30-day retention; published 6006). Each secret is read by interpolation from one root-only
+    env file, so each container gets only its own.
+  - **First boot:** one SQL file creates the `phoenix` user from a SCRAM verifier computed on the box, its database
+    with CONNECT and TEMPORARY revoked from PUBLIC, and `copilot_mro`. No password appears in any statement, command
+    line or log (proven with `log_statement=all`).
+  - **The setup script** reads the four secrets by name from SSM SecureStrings into a 0600 file. It refuses a value
+    it cannot carry safely, naming the parameter.
+  - **The nightly backup** streams a custom-format dump of each database to S3 through a FIFO, and kills the upload
+    before end of stream on a failed dump, so no partial object is ever completed.
+  - Review: FIX FIRST, one Important finding (the old startup unit) and nine Minors.
+- **Phase 1, fix round 1 (2026-10-05).** copilot-mro `24e3652e`, iac `a74b69e`.
+  - The startup unit runs as root from a root-owned copy. It pulls as ec2-user (`--ff-only`), then runs compose with
+    the env file and the Phoenix override, and never `down`.
+  - Docker waits for the data volume (`RequiresMountsFor`). The fstab line names the volume by UUID, and every
+    compose run checks the mountpoint first.
+  - Postgres waits out crash recovery (`start_period` 300 s) and stops cleanly (60 s). First boot's SQL stops at its
+    first error. The volume root is 755. The Phoenix secret's rule is enforced.
+  - The backup kills the upload's whole process group. On the same cut dump, the phase's script had completed a
+    100,000-byte partial object.
+  - Its re-review is running. One open question: a failed pull at boot stops the unit before compose, leaving the
+    Weaviate UI down.
+
+## Phase 3: what the runbook must cover (collected as the phases land)
+
+- **Before the deploy:**
+  - fast-forward copilot-mro `main` to `langgraph-merge` and push it, with the owner's approval. Check that the
+    branch holds `deployment/demo/postgres/`;
+  - create the four box parameters, and the placeholder for the API's Phoenix key.
+- **After first boot:**
+  - change the Phoenix admin's password;
+  - mint a System API key each for the collector and the API, and store them;
+  - put the collector's key into `/opt/otel/collector.env` and recreate the collector;
+  - run `start-deployment` for App Runner.
+- **The database, over an SSH tunnel:**
+  - migrate, provision, and `--verify-only` clean;
+  - no reporting user (leave `POSTGRES_READONLY_PASSWORD` unset) and no inspection user;
+  - the sheets' "On RDS" stops do not apply: the box's Postgres has a real superuser.
+- **First-deploy checks** (unprovable locally):
+  - `docker-compose --env-file … config --quiet` reads the quoted values literally;
+  - Phoenix creates its schema;
+  - `\l+` and `\du` show the designed databases and users;
+  - Docker waits for the mount (`RequiresMountsFor` with `nofail`);
+  - `runuser` works under the unit.
+- **Operations:**
+  - every manual compose command runs as root with `--env-file` (and never `config` without `--quiet`);
+  - the root-owned unit, script and backup files change only through a new instance or a manual `install`;
+  - rotation is by hand (a verifier or `\password`, plus the parameter);
+  - growing the volume is the size in Terraform, then `xfs_growfs`.
+- **Recovery:**
+  - a failed first boot: stop Postgres, empty `postgres-data`, start again;
+  - a restore: first boot, then provisioning, then `pg_restore`, then verify.
+- **The erasure receipt** states that an erased person's data leaves the backups within 14 days (user erasure D12).
+
+## Future Improvements
+
+- **The GitHub token sits in the instance's user data** (pre-existing). *Complete fix:* read it at boot from SSM,
+  like the box's other secrets.
+- **Postgres runs at the image's defaults** (128 MB shared buffers, 64 MB `/dev/shm`) with no memory limit, on a box
+  it shares with Weaviate, Phoenix and the collector. *Complete fix:* tune it for a 16 GB box, with a compose memory
+  budget.
+- **`aws s3 cp -` needs `--expected-size`** once a dump passes about 50 GB.
 
 ## Lessons

@@ -210,7 +210,24 @@
       plus user erasure's D8 copilot-mro half). The post-merge test run was green apart from the known failures of
       the sibling-checkout test family. The step's worktrees and branches are removed, and the rounds' Future
       Improvements are written below.
-    - **Next:** step 8 (decision 27), running.
+    - **Next:** step 8 (decision 27).
+- **Step 8 built and reviewed (2026-10-05): decision 27.** Branch `db-roles-s8` in `copilot-mro-s8`, from
+  `langgraph-merge` `1f12e334`, tip `05541e4a`.
+  - The provisioner creates `flynapse_readonly` (LOGIN, BYPASSRLS, NOINHERIT, its password as a SCRAM verifier) only
+    when `POSTGRES_READONLY_PASSWORD` is supplied, then grants exactly its table list. Absent with no password is a
+    note, not a finding. An existing user is left as it is, and its password is never reset. An owner that cannot
+    create a BYPASSRLS user (RDS's master) gets a finding, and the run rolls back.
+  - The env samples call the password optional, and the cutover runbook has a section on the three cases.
+  - Proofs: `tests/unit/db` 936 passed; `tests/db/tenancy` on a throwaway 680 passed; 11 of 11 mutants killed.
+  - Review: MERGE-READY, OPEN 0. It ran step 7's merged script and the tip against the same databases, and found
+    `--verify-only` output identical.
+  - **Fix round 1 (running) before the merge:**
+    - a reporting password equal to a service user's is refused before connecting (the review's m3: otherwise the
+      app's password would open a user that reads every tenant);
+    - `test_schema_conformance.py`'s fallback stops putting the owner's password on the `docker exec` command line,
+      and the secret scan extends to the test tree;
+    - the refusal's text, a unit pin that users are created before grants, and two runbook lines.
+  - **Next:** a scoped re-review, the merge into `langgraph-merge`, the post-merge test run, then the push.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
