@@ -189,6 +189,20 @@ None: the owner answered all four on 2026-10-05 (above).
     - A night without a prune (S3 refused, or the 3 h limit) fails the unit visibly, and the 13-day expiry is the
       bound until the next good night.
     - The fake `aws` models the CLI's text output; phase 3's first-deploy checks measure it.
+  - **Its review (2026-10-05): MERGE-READY, OPEN 0, six Minors.** The bound holds while the nightly runs succeed, with
+    a margin of 20 h 49 min. Measured from the erasure rather than the upload, a dump is gone within 13 d 6 h 11 min.
+    - **Taken now, in a small fix round** (copilot-mro, running):
+      - m-1: the prune fails on a listing line it cannot read, but no test fed one. It also stopped at the first
+        such line;
+      - m-2: the bound's test read `TimeoutStartSec=0` as zero seconds, where systemd reads it as no limit;
+      - m-3: `git pull` exits 1, not 128, when its fetch fails;
+      - m-4: the cheap half. A key ending in a tab or a newline was reported pruned under the wrong name.
+    - **To phase 3's runbook:**
+      - m-5: two nights without a prune leave the unit inactive, not failed. One is a reboot during a run; the
+        other is Docker failing to start;
+      - m-6: the prune assumes a delete deletes, which versioning would break;
+      - the prefix change: changing the backup prefix leaves the old prefix's dumps outside both the prune and
+        the expiry.
 - **Phase 2, the Terraform (done at iac `3933f47`: reviewed FIX FIRST, OPEN 2; its fix round re-reviewed
   MERGE-READY, OPEN 0).**
   - **The re-review (2026-10-05):** every finding closed, and the guards fail for the right reasons. It confirmed:
@@ -326,7 +340,16 @@ None: the owner answered all four on 2026-10-05 (above).
 - **iac's texts to correct** (the next iac round: a phase 2 fix round 2 if its re-review asks, otherwise phase 3's):
   - the prune is 12 days, not 13, with the bound above (the README, about `:654`; `postgres_phoenix.tf:60`);
   - the README's `restart-services` lines (about `:243-245` and `:576-577`): run the pull only through `systemctl`;
-    git never prompts; a failed pull still brings the stack up and fails the unit, naming the pull.
+    git never prompts; a failed pull is named before compose runs, the stack still comes up, and the unit then
+    fails, naming the pull.
+- **From the prune's review** (phase 3's round):
+  - run the "nothing older than 13 days" check right after a nightly run has finished, never just before one;
+  - read a missed night from `journalctl -u postgres-backup` (the previous boot included) and the timer's `LAST`,
+    never from `systemctl is-failed`. A reboot during a run, or Docker failing to start, skips a night without
+    failing the unit; start it by hand once the box is healthy;
+  - before changing `box_postgres_backup_prefix`, empty the old prefix: afterwards neither the prune nor the expiry
+    covers it;
+  - never turn on the bucket's versioning by hand: each prune delete would leave only a delete marker.
 
 ## Future Improvements
 
@@ -344,6 +367,17 @@ None: the owner answered all four on 2026-10-05 (above).
   response's `Date`), or refuse to prune when the box's clock runs ahead of it.
 - **The backup test's unit-file parser duplicates the startup test's (prune round, concern 6).** *Complete fix:* one
   helper under `tests/unit/demo_box/`, after the owner confirms.
+- **The prune reads keys from the CLI's text output (prune review, m-4's full fix).** A key with a tab or a newline
+  in it cannot be represented exactly, so the fix round makes such lines fail the run instead. *Complete fix:* list
+  with `--encoding-type url` and decode each key exactly (S3's form encoding, decoded as `unquote_plus` does, keeping
+  a trailing newline).
+- **Two nights without a prune do not fail the unit (prune review, m-5).** *Complete fix:* run the prune in a unit
+  of its own, without `Requires=docker.service`, triggered after the dumps or on its own timer.
+- **The prune trusts that a delete deletes (prune review, m-6).** *Complete fix:* fail the run when a delete's
+  response carries a delete marker or a version id.
+- **The bucket's expiry is scoped to the backup prefix (prune review).** A changed prefix orphans the old one's
+  dumps. *Complete fix:* make the expiry cover the whole bucket, which holds only backups, and let the api's
+  backups row read that form.
 
 - **The GitHub token sits in the instance's user data** (pre-existing). *Complete fix:* read it at boot from SSM,
   like the box's other secrets.
