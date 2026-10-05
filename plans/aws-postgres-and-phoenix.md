@@ -1,8 +1,9 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 built, fixed once, in re-review** (2026-10-05): the box's compose, first boot, setup script,
-nightly backup and startup unit. Phase 2's brief (the Terraform) is drafted and starts once phase 1 settles. Phase
-3 is the runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
+Status: **phase 1 in fix round 2; phase 2 (the Terraform) building alongside it** (2026-10-05). Phase 1 is the
+box's compose, first boot, setup script, nightly backup and startup unit. Fix round 2 is copilot-mro only and phase
+2 is iac only, so they run side by side. Phase 3 is the runbook. It is built before the AWS deploy; the owner deploys
+to AWS only once all work is finished.
 
 ## Why
 
@@ -128,8 +129,18 @@ None: the owner answered all four on 2026-10-05 (above).
     first error. The volume root is 755. The Phoenix secret's rule is enforced.
   - The backup kills the upload's whole process group. On the same cut dump, the phase's script had completed a
     100,000-byte partial object.
-  - Its re-review is running. One open question: a failed pull at boot stops the unit before compose, leaving the
-    Weaviate UI down.
+  - Re-review: FIX FIRST, two open items. Every fix closed its finding, and nothing the phase proved moved.
+    - A failed pull at boot stops the unit before compose, leaving the Weaviate UI down. The likely trigger is the
+      GitHub token in the clone URL expiring.
+    - A regression: `setsid` took the upload out of the backup script's process group. A signal to that group (a
+      hand-run backup whose SSH session drops) then completed a partial object. Runs under systemd are unaffected.
+- **Phase 1, fix round 2 (running).**
+  - Compose runs whatever the pull did, and the unit fails afterwards, naming the pull. The pull is bounded by
+    `timeout`. The Weaviate UI gets a restart policy, and the pin covers every service.
+  - The backup traps HUP, INT and TERM and stops the upload's group first.
+  - Two pins tighten: the unit's `[Service]` keys become an allow-list (an `ExecStartPre=… down` passed before), and
+    the backup's stop-before-close order is pinned.
+  - The iac README's "git pull origin main" lines go to phase 2, with the branch variable.
 
 ## Phase 3: what the runbook must cover (collected as the phases land)
 
@@ -150,15 +161,22 @@ None: the owner answered all four on 2026-10-05 (above).
   - `docker-compose --env-file … config --quiet` reads the quoted values literally;
   - Phoenix creates its schema;
   - `\l+` and `\du` show the designed databases and users;
-  - Docker waits for the mount (`RequiresMountsFor` with `nofail`);
+  - Docker waits for the mount (`RequiresMountsFor` with `nofail`): `systemctl show docker -p Requires -p After`
+    names `opt-persistent\x2ddata.mount`;
   - `runuser` works under the unit.
 - **Operations:**
   - every manual compose command runs as root with `--env-file` (and never `config` without `--quiet`);
-  - the root-owned unit, script and backup files change only through a new instance or a manual `install`;
+  - the root-owned unit, script and backup files change only through a new instance or a manual `install`.
+    Phase 1's fix round 2 reaches an existing box only that way;
+  - a boot and a `systemctl restart weaviate-observability` both pull and apply the branch head;
+  - backups run only through `systemctl`. A hand-run backup killed with SIGKILL can leave a partial object, which
+    `pg_restore` rejects and the 14-day expiry removes;
   - rotation is by hand (a verifier or `\password`, plus the parameter);
   - growing the volume is the size in Terraform, then `xfs_growfs`.
 - **Recovery:**
   - a failed first boot: stop Postgres, empty `postgres-data`, start again;
+  - a volume attached after the device timeout leaves Docker "Dependency failed": attach it, then
+    `systemctl start docker` and `systemctl restart weaviate-observability`;
   - a restore: first boot, then provisioning, then `pg_restore`, then verify.
 - **The erasure receipt** states that an erased person's data leaves the backups within 14 days (user erasure D12).
 
