@@ -303,6 +303,10 @@
       characters, hard-coded from `DerivedCoreProperties.txt` (stdlib only). B.1 stays, because asyncpg drops it.
       The owner ruled on "invisible characters"; this replaces the controller's first reading, B.1 + Cf.
     - Two more pins (a combining-mark pair and a visible-space control) and the two sentences.
+  - **Owed with step 8 (from AWS phase 3, 2026-10-05):** `provision_rls.py`'s docstring (`:141-213` on
+    `langgraph-merge`) still says `agent_state`'s declaration is on an unmerged branch, and its usage example passes
+    `--enforce-undeclared`. `agent_state` has been declared since `a8ca2114`. The flag only enforces more, so the
+    text misleads without harm. Fix it in step 8's next round, or in a docs round after the merge.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but

@@ -2,8 +2,8 @@
 
 Status: **phase 1 is done, and the box's dump prune round (with phase 1's three Minors) was reviewed MERGE-READY at
 copilot-mro `93b64914`; phase 2 (the Terraform) is done at iac `3933f47` (re-reviewed MERGE-READY, OPEN 0); phase 3,
-the runbook, is being built in iac with phase 2's four Minors (five commits in at `99f85b9`); the prune's fix
-round is done at copilot-mro `5700c550` and in re-review** (2026-10-05, ~08:45 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+the runbook, is built in iac at `99f85b9` with phase 2's four Minors and is in review by two lenses; the prune's fix
+round is done at copilot-mro `5700c550` and in re-review** (2026-10-05, ~08:56 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -266,6 +266,37 @@ None: the owner answered all four on 2026-10-05 (above).
     - `WEAVIATE_URL` by the box's name.
   - **Open, for the owner:** the ingest Lambda writes Postgres, but its Terraform gives it no Postgres settings (this
     was already so). Should ingest on AWS reach the box's Postgres?
+- **Phase 3, the runbook (built at iac `3933f47..99f85b9`, 5 commits; in review by two lenses).**
+  - **The round (2026-10-05):**
+    - iac's README demo-box section is now the owner's deploy runbook, in deploy order: before the deploy, the seven
+      steps, after the deploy, operations, and recovery. Every bullet of the list below has its lines (the round's
+      coverage table, in `p3-runbook-report.md`).
+    - The prune texts say 12 days, with the 13 d 3 h 11 min bound, and every object under the prefix. The
+      restart-services lines are corrected.
+    - Phase 2's m-1: the readers guard matches a literal pattern as IAM does, against the bucket and every object in
+      it. m-2: the untold-bucket check covers all seven configuration types.
+    - Six runbook pins: the steps' order, step 2's targets, step 4's order, step 5's key, no `start-deployment`
+      advice, and no key on an argument list.
+    - The database step runs the cutover runbook's commands over the tunnel, in a clean shell (`env -i`,
+      `ENV_FILE=/dev/null`). Without it, the owner's dev `.env` would leak in, and a dev
+      `POSTGRES_READONLY_PASSWORD` would create the reporting user on the box.
+    - Proofs: iac's tests 472 passed, 1 skipped; `fmt`, `validate` and the three validators pass; 13 of 13 mutants
+      killed.
+  - **Rulings on its concerns:**
+    - `--no-snapshot` on the first migrate is accepted: the database is new and empty.
+    - The restore's first provisioning run exits 1 by design. Accepted only if the runbook names the exact message
+      and stops on any other. A roles-only mode is a Future Improvement.
+    - `provision_rls.py`'s docstring is stale about `agent_state`. Recorded in the DB-roles plan.
+    - **`start-deployment`:** the round's brief over-generalised the plan's two rules. A rotated secret reaches App
+      Runner only at its next deployment, so rotation ends with `start-deployment`, run only when `list-operations`
+      shows the latest operation `SUCCEEDED`. After a rollback, the runbook still says never. The next fix round
+      builds it and narrows the pin. The owner may overturn this.
+    - The Phase 10 sentence that `main` has no `deployment/otel/` goes stale at the fast-forward. The next fix
+      round corrects it.
+    - m-2's reach stays the seven types: ACLs are closed by the enforced ownership, and access points by the SSE-KMS
+      Future Improvement.
+  - **The review is split in two lenses,** because the round's implementer ended at 563k tokens. Lens A takes the
+    runbook's prose and commands; lens B takes the guards and the pins.
 
 ## Phase 3: what the runbook must cover (collected as the phases land)
 
@@ -394,6 +425,13 @@ None: the owner answered all four on 2026-10-05 (above).
 - **The backup's two `[SIGINT]` tests fail when pytest starts with SIGINT ignored** (under `nohup`, or as a
   script's background job). The failure is false, not a vacuous pass (phase 1 re-review, m-c). *Complete fix:* start
   the script through a small exec wrapper that resets HUP, INT and TERM to their defaults.
+- **The restore's first provisioning run fails by design (phase 3, concern 3).** It creates the roles, then refuses
+  the empty database, and the runbook names the message to expect. An expected failure in a runbook invites the
+  owner to pass over a real one. *Complete fix:* a roles-only mode in copilot-mro's `provision_rls.py`, so every
+  step of the restore exits 0.
+- **The untold-bucket check counts seven configuration types (phase 3, concern 8).** Other resources that name a
+  bucket, such as `aws_s3_bucket_acl` and `aws_s3_object`, are not counted. ACLs are closed by the enforced
+  ownership, and an object write is no read. *Complete fix:* count every resource type with a `bucket` argument.
 - **App Runner is closed to new customers** (AWS's pages, 2026-10-05). The existing service is unaffected; a new
   account could not create one. *Complete fix, if ever needed:* move the API to ECS on Fargate.
 
