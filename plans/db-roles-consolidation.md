@@ -275,9 +275,22 @@
     - every `tests/db` folder: 0 failed (`tenancy` 710 passed, 35 skipped);
     - db-marked tests outside `tests/db`: 145 passed;
     - api's pins: 21 passed; api's census: 29 passed.
-  - **Fix round 3 (running since 2026-10-05; brief `s8-fix3-brief.md`):** the owner's ruling that "equal" also covers passwords that
-    differ only by invisible characters (m-C), pins that vary the other side too (m-A), and the docstring (m-B). It
-    runs on a new branch, `db-roles-s8c`, from `f72a3351`.
+  - **Fix round 3 (built 2026-10-05, copilot-mro `db-roles-s8c` `f72a3351..fb0c68df`; in re-review):** the owner's
+    ruling that "equal" also covers passwords that differ only by invisible characters (m-C), pins that vary the other
+    side too (m-A), and the docstring (m-B).
+    - A password's visible form removes stringprep B.1 and every Unicode format character, maps every C.1.2 or Zs
+      space to U+0020, then applies NFKC. Two passwords are equal when their raw strings, their libpq forms or their
+      visible forms are equal. Both checks use it, and the refusal says "equal, or equal once invisible characters
+      are ignored".
+    - The pins are one table: 10 changes, on either side, in both modes, for both checks, plus a control. Two extra
+      pairs, each equal under one form only, keep round 2's mutants dying now that the visible form also catches
+      their cases.
+    - Proofs: 13 of 13 mutants killed. The non-db lane passed (16632 passed, 0 failed), and so did `tests/db/tenancy`
+      on a throwaway (680 passed). Live, the app's password plus U+200B is refused in both modes, before anything
+      connects, as the reporting password and as the owner's.
+    - Accepted: the Zs half of the space mapping adds nothing under Python's tables, since every Zs space but U+0020
+      is already in C.1.2. The visible form also refuses a pair no client treats as equal (a left-to-right mark
+      appended), as the ruling intends.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
