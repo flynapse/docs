@@ -271,6 +271,9 @@
   - **Merged (2026-10-05)** into copilot-mro `langgraph-merge` as `f72a3351`. Step 8 touched only the provisioning
     script, tests, runbooks and env samples. The post-merge run covers copilot-mro's non-db lane and every
     `tests/db` folder, plus api's pins and census. **Next:** its verdict, then the push.
+  - **Fix round 3 (queued; brief `s8-fix3-brief.md`):** the owner's ruling that "equal" also covers passwords that
+    differ only by invisible characters (m-C), pins that vary the other side too (m-A), and the docstring (m-B). It
+    runs on a new branch, `db-roles-s8c`, from `f72a3351`.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
@@ -590,7 +593,8 @@ DDL on shared databases, so every DDL step is the owner's to run.
     value from the child's environment survives, because the 18 tests that need the dump skip whenever the fallback
     fails. *Complete fix:* after the import-time-connect fix above, unit-pin `_pg_dump_schema_only`'s attempts: the
     variable passed by name, and the value in each environment.
-- **Step 8's fix round 2: what its re-review left (2026-10-05).**
+- **Step 8's fix round 2: what its re-review left (2026-10-05). All three are built in fix round 3 (owner ruling on
+  m-C).**
   - **The SASLprep pins only change one side (m-A).** Every pin varies the reporting or restricted user's password.
     - A mutant that prepares only the first argument survived its aimed tests and their full lane.
     - Today's code is symmetric: the reviewer's live case, with the variant on the app's side, was refused in both
@@ -604,9 +608,11 @@ DDL on shared databases, so every DDL step is the owner's to run.
     - So an app password equal to the owner's plus U+200B is not refused, as fix round 2's brief asked. With libpq it
       does not log in as the owner. Through asyncpg, or a person retyping the password by eye, it would.
     - The estate's clients all use libpq (psycopg2, psycopg 3), and asyncpg is not in the api venv.
-    - **Asked of the owner (2026-10-05):** should "equal" also refuse a copy that differs only by characters a client
-      may drop? *Complete fix, if yes:* "equal" also covers removing B.1 before mapping C.1.2 (asyncpg's order), the
-      four U+200B pins flip to "refused", and an operator who hits it chooses a new password.
+    - **Owner, 2026-10-05: refuse it too.** A service password that matches another user's once invisible
+      characters are ignored is refused.
+      - "Equal" gains a third form, *visibly equal*. It removes stringprep B.1 and every Unicode format character
+        (category Cf), maps every space to U+0020, then applies NFKC.
+      - The four U+200B pins flip to "refused". An operator who hits the refusal chooses a new password.
 - **copilot-mro's non-db lane reads the local test database (AWS phase 1, fix round 1).** Seven tests not marked
   `db` read `copilot_mro_test`. Three skip with "not present in this database" (the optimizer plan digest, the
   inventory plan, the optimizer decompose); four pass only with a database (`test_reset_demo`,
