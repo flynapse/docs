@@ -2854,6 +2854,17 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     saved (about 20-40 lines and a test, keeping X1's cancel pin), or cancel the turn for real.
   - **Owner, 2026-10-06 (~00:00 PDT): finish and save it.** Part X4 builds it now, so this entry closes when X4
     merges.
+- **Runs with no memory loop curate inline (X3 review, M-4).** The non-streaming `/rag` route and automation runs
+  pass no `memory_task_loop`, so the curator's recall, its model calls and its write run before the turn returns;
+  for an automation that time counts inside `max_runtime_seconds`, and each run can write tenant-grain notes under
+  its owner. It restores the behaviour before 2026-09-03. *Complete fix:* give those runs a background loop so
+  curation leaves the run's clock.
+- **Both memory writers share the turn's citation dictionaries (X3 review, M-1).** No writer mutates its input
+  today. *Complete fix:* hand each writer its own copy, or freeze what they must not change.
+- **A disconnected turn is still lost to a restart, and can land after a newer turn (X4, concerns 2 and 3).** A
+  deploy or restart while the turn is in its pipeline call cancels it; and a closed-tab turn saved after a newer
+  turn on the same chat appears below it, outside the newer turn's context. *Complete fix:* a shutdown-budget
+  term in api for held turns, and an order key taken at the turn's start.
 - **The live proof's DEBUG dumps carry the private folder's raw path (accepted).** The per-tool debug dumps are raw
   tool input and output by design, and DEBUG-only. The folder is gone when the session ends, and the user-facing
   trace shows no path.
@@ -4101,3 +4112,15 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   API onto it and runs two short live turns (about $0.60) to see the curator's line.
 - **A closed tab finishes and saves its answer** (part X4, copilot-mro branch `ue-p5-x4`). It lands with X3, so one
   restart serves both, and one of the two live turns closes its tab to prove the save.
+
+**Status, 2026-10-06, ~01:15 PDT: both fixes built; the memory fix needs one more round.**
+- **The closed-tab fix (X4)** keeps a closed tab's turn alive until it ends and saves it once, as a connected turn is
+  saved. It is in review.
+- **The memory fix (X3) is right, but turning the writers back on opens paths that must close first.** Its review
+  found that private content could reach tenant-wide notes or fact proposals: on the other agent runtime (its
+  privacy gate never closed), from a person's upload, and from a Document Hub answer recalled from an earlier turn.
+  The controller ruled to close all of them before X3 merges: the gate now reads each turn's own sources on every
+  turn, treats uploads as private, and reads recalled evidence. The same round pins the token-guard read-back
+  against the real CLI and fixes a test that failed only because of today's date.
+- **Next:** that round and its re-review, X4's review, both merges, then the API restart and two live chats (the
+  owner's go is given).
