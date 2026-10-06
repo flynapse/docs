@@ -2830,6 +2830,14 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     shift-optimizer) still writes raw targets.
   - *Complete fix:* the intercept reduces the target to a route template the app registers a resolver for, or to
     `/:redacted`.
+- **The negative control's failure messages name one cause of two (X1 fix round 3's re-review, n-1).**
+  - Where: copilot-mro `tests/integration/agent_claude/test_cli_session_leaves_nothing.py` about `:221-222`.
+  - A CLI that stops writing would be reported as "the watch ended before the leak". The two causes read differently:
+    the EE1 mutant gives 0.0 s with 3 sessions alive, and a changed CLI would give about 5 s with 0 alive.
+  - *Complete fix:* name both causes, and put `secs_watch` and `alive_after_watch` in the message.
+- **The run-once pin's second message is too narrow (n-2).** At about `:236-237`, it says "a worker ran the modes
+  itself" for any per-worker `cli-sessions*`. A per-worker lock alone also trips it (the LK1b mutant). *Complete fix:*
+  "a worker keeps run-once state of its own".
 
 ## Lessons
 

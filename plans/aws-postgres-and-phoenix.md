@@ -1,11 +1,11 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
 Status: **phase 1 is done; the prune's fix round 3 (a byte-order mark the bound pin missed, and one systemd reader
-for both unit tests) is built at copilot-mro `2499baab`, and its re-review is running; phase 2 (the Terraform) is done
+for both unit tests) is done at copilot-mro `2499baab` (re-review MERGE-READY), and round 4 takes its three Minors; phase 2 (the Terraform) is done
 at iac `3933f47`; phase 3's guards round (1b) is done at iac `75ba769`, and the runbook's first round (1a) made it one
 combined deploy at `acdd9a3`. Round 1a2 added the hand-built API image at `50356e2`. Round 1d (the POC replica's Postgres
 settings, and the image built before the deploy so its build and push stay out of the outage) is running. Then, on the same
-tree: 1c (the commands inside the steps, and the email credentials once the owner decides); then a
+tree: 1e (the email login, stored in AWS: owner decision) and 1c (the commands inside the steps); then a
 re-review by two lenses** (2026-10-05, ~21:00 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
@@ -66,6 +66,15 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
   image needs Postgres at boot, which its setup does not give it. Its setup gets the box's Postgres host and the app
   passwords from the same secret App Runner reads, so it keeps working after the deploy. This amends the network
   decision below: Postgres (not Phoenix) also admits the POC replica's security group.
+- **2026-10-05 (~21:05 PDT): the email login is stored in AWS.** api's GitHub build baked `SMTP_USER` and
+  `SMTP_PASSWORD` into the image as build arguments. The hand-built image carries neither, and App Runner set neither,
+  so the API would have sent no email (invitations, feedback, AD notifications).
+  - The owner makes a Secrets Manager secret (`api/smtp`) with those two keys, once, before the deploy. App Runner
+    reads it by reference, as it reads the Postgres passwords, with a grant of its own.
+  - The owner chose this over deploying without email and over baking the login into the image (anyone who can pull
+    the image could read it).
+  - Fix round 1e builds it, and round 1d moves the image build before the deploy, so the build and push stay out of
+    the outage.
 - **2026-10-05: the step 3b Terraform** (`db-roles-tf-query`) stays on its branch and merges with this plan's iac work.
   Auto mode refused the controller's merge into iac `main`.
 - **2026-10-05: the box keeps deploying copilot-mro `main`, and `main` is fast-forwarded first.** The setup script
