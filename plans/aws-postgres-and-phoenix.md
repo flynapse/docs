@@ -3,8 +3,9 @@
 Status (2026-10-06, ~00:15 PDT): **phase 1 is built at copilot-mro `5099fbf9` (the prune's fix round 5, the last;
 its re-review is next); phase 2 (the Terraform) is done at iac `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e
 are done at iac `9e3ea13` (guards, one combined deploy, the hand-built image built before the deploy, the Weaviate
-schema step, the email login). Round 1f (protect a client's box: no `main` or `:latest` moves, owner decision
-~22:50) is running; then 1c (the commands inside the steps). Phase 4, the POC server as a one-box client install,
+schema step, the email login), and 1f at `d15664d` (protect a client's box: App Runner runs the commit tag, the
+boxes deploy `aws-deploy`, nothing moves `main` or `:latest`, the Weaviate sources checked before step 1). Round 1c
+(the commands inside the steps) is running. Phase 4, the POC server as a one-box client install,
 is designed and the owner answered its questions. Its dashboard change (a hand publish that leaves `latest` alone,
 dashboard `6011e32`) is in review. Its copilot-mro rounds start after the prune's re-review, its iac rounds after
 1c. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
@@ -660,6 +661,12 @@ None: the owner answered all four on 2026-10-05 (above).
   `UNREACHABLE` where `NIL` was expected once, and passed alone and with its file run serially. An isolation bug,
   outside this plan's code. *Complete fix:* find the state its workers share (capture or attachment state is the
   first suspect) and isolate it.
+
+- **ECR tags stay mutable** (round 1f, concern 5). Step 6 relies on `describe-images` showing one tag and the
+  build's push time to notice a replaced `:<api commit>` image. *Complete fix:* make commit tags immutable (ECR's
+  tag-mutability exclusions can keep `latest` mutable for the client path).
+- **The runbook's inline-code scans read one line at a time** (round 1f, concern 7). A code span wrapped across two
+  lines escapes them. *Complete fix:* scan joined paragraphs, or refuse a wrapped span.
 
 ## Lessons
 
