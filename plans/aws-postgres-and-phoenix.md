@@ -1,11 +1,10 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 is done, and the box's dump prune round (with phase 1's three Minors) was reviewed MERGE-READY at
-copilot-mro `93b64914`; phase 2 (the Terraform) is done at iac `3933f47` (re-reviewed MERGE-READY, OPEN 0); phase 3,
-the runbook, is built in iac at `99f85b9` and was reviewed FIX FIRST by both lenses: its guards' fix round (1b) is
-running, and the runbook's (1a, for the owner's one combined deploy) follows on the same tree; the prune's fix round
-is done at copilot-mro `5700c550` (re-reviewed MERGE-READY, OPEN 0), and its fix round 2 for four Minors is
-running** (2026-10-05, ~09:45 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status: **phase 1 is done; the prune's fix round 2 was re-reviewed FIX FIRST (a byte-order mark the bound pin
+missed) and fix round 3 is running at copilot-mro `00209d05`; phase 2 (the Terraform) is done at iac `3933f47`;
+phase 3's guards round (1b) is done at iac `75ba769`, and the runbook's first round (1a) made it one combined deploy
+at `acdd9a3`. Next on the same tree, one round at a time: the hand-built API image with 1a's leftovers, the POC
+replica's Postgres settings, then the commands inside the steps (1c); then a re-review** (2026-10-05, ~20:25 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -46,13 +45,25 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
     the Lambdas' and the CI deployer's.
   - **Data:** start empty. AWS is the dev environment; tenants and users are created fresh.
   - **Network:** the box stays in the public subnet. Postgres and Phoenix admit only App Runner's security group and
-    the box itself; SSH stays limited to the owner's IP.
+    the box itself; SSH stays limited to the owner's IP. (Amended 2026-10-05 ~20:20 PDT: Postgres also admits the POC
+    replica's security group, below.)
 - **2026-10-05 (~09:45 PDT): the iac merge is approved,** once phase 3's fix rounds are re-reviewed MERGE-READY and
   gated. It carries the step 3b Terraform too (below).
 - **2026-10-05 (after phase 3's review): one combined deploy.** iac's root still holds the observability rebuild's
   pending apply order (B2 to B8). The AWS runbook takes it over: B4's log-group imports first, the POC replica
   stopped before its replacement, and step 6 listing everything else it carries. Alert arming (Phase 10, after
   B1a's gate) stays a later step.
+- **2026-10-05 (~20:20 PDT): the API image is built by hand at deploy time.** api's GitHub build cannot build a
+  current image: since `d4974ab` (2026-07-22) api declares `mro-copilot`, `core`, `flynapse-utils` and
+  `shift-optimizer` as local path dependencies, its CI checks out api alone, and its wheel check refuses a `file://`
+  requirement. So ECR's `:latest` is from before then unless pushed by hand. Asked against fixing the build first
+  (recommended) and keeping the current image; the owner chose a runbook step in which they build the image on their
+  machine from the checkouts and push it to ECR, tagged with the api commit. The GitHub build stays broken (a Future
+  Improvement).
+- **2026-10-05 (~20:20 PDT): the POC replica gets the Postgres settings.** The deploy replaces it, and a current API
+  image needs Postgres at boot, which its setup does not give it. Its setup gets the box's Postgres host and the app
+  passwords from the same secret App Runner reads, so it keeps working after the deploy. This amends the network
+  decision below: Postgres (not Phoenix) also admits the POC replica's security group.
 - **2026-10-05: the step 3b Terraform** (`db-roles-tf-query`) stays on its branch and merges with this plan's iac work.
   Auto mode refused the controller's merge into iac `main`.
 - **2026-10-05: the box keeps deploying copilot-mro `main`, and `main` is fast-forwarded first.** The setup script
