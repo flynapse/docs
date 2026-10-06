@@ -3980,3 +3980,28 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - **The one-time delete is the controller's,** right after the live proof passes: exactly the 45 product
     transcripts and the one session folder, listed in the ledger first. Task 18 then needs the owner only for its
     Telegram legs and a second test pilot.
+
+**Status at compaction checkpoint 31 (2026-10-05, ~21:15 PDT).**
+- **The host slept from about 10:25 to 19:45 PDT.** Every agent paused, and the overnight merges did not happen.
+- **X1's fix round 2 was re-reviewed MERGE-READY, OPEN 0,** with four Minors. The controller took all four before the
+  merge, as fix round 3 (`8ee30471..e16350ca`, test and text only, two implementers):
+  - run-once is pinned under xdist;
+  - the negative control requires both halves;
+  - the route pin fails instead of hanging if its cancel is dropped;
+  - the texts the route change left untrue are fixed.
+
+  The full non-db lane passed (16,568), and 7 of 7 mutants were killed. Its scoped re-review is running.
+- **The open question is closed: a closed tab's turn cannot write a person's data after their erasure completes.**
+  - The turn runs under its 15-minute deadline.
+  - Erasure starts 30 minutes after the freeze at the earliest, or 7 days for a windowed request.
+  - A closed-tab turn never reaches the block save.
+  - The residual risk does not depend on the tab and is documented (`erasure_delay_bounds.py`): off-path memory
+    curation, and content captured after a turn.
+- **The merge window is ready.** The mainlines are unchanged and clean, and every trial merge is clean: X1, X2, and
+  DB users step 8's `db-roles-s8c`, which can land in the same window under one gate.
+- **Next:**
+  - X1's verdict;
+  - the merges, the gate (the X1 pin must PASS) and the push;
+  - the api restart and the live proof, once the owner has run `aws sso login` (asked);
+  - the one-time delete;
+  - Task 18.

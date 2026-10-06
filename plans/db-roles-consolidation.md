@@ -322,6 +322,19 @@
       `--enforce-undeclared`. `agent_state` has been declared since `a8ca2114`.
     - Then one scoped re-review over rounds 4 and 5. Round 5 is the loop's last; the controller adjudicates anything
       after it.
+  - **Fix round 5, built (2026-10-05, `2f01edff..cad0fbbe`):**
+    - asyncpg's form is the fourth form, with asyncpg's own fallbacks. `_saslprep_form` takes its map order as a
+      parameter.
+    - The 17 ranges' first and last code points are pinned.
+    - The docstring and its usage example are true. The flag is needed only for a live tenant-columned table that no
+      selected registry declares.
+    - The fuzz shows 0 missed logins. The only extra refusals are the 144 and 140 real asyncpg logins.
+    - Live, asyncpg 0.31.0 logged in with S as the role whose password is R, so the hole was real. Both checks now
+      refuse the pair.
+    - Lanes: non-db 16,992 passed; tenancy 680.
+    - **A note for later:** a service password whose libpq and asyncpg forms differ cannot be used through asyncpg by
+      its own holder. No workspace code imports asyncpg, so refusing such a password is a Future Improvement.
+    - The scoped re-review over rounds 4 and 5 is running. Round 5 was the loop's last.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but

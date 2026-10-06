@@ -1,10 +1,11 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 is done; the prune's fix round 2 was re-reviewed FIX FIRST (a byte-order mark the bound pin
-missed) and fix round 3 is running at copilot-mro `00209d05`; phase 2 (the Terraform) is done at iac `3933f47`;
-phase 3's guards round (1b) is done at iac `75ba769`, and the runbook's first round (1a) made it one combined deploy
-at `acdd9a3`. Next on the same tree, one round at a time: the hand-built API image with 1a's leftovers, the POC
-replica's Postgres settings, then the commands inside the steps (1c); then a re-review** (2026-10-05, ~20:25 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status: **phase 1 is done; the prune's fix round 3 (a byte-order mark the bound pin missed, and one systemd reader
+for both unit tests) is built at copilot-mro `2499baab`, and its re-review is running; phase 2 (the Terraform) is done
+at iac `3933f47`; phase 3's guards round (1b) is done at iac `75ba769`, and the runbook's first round (1a) made it one
+combined deploy at `acdd9a3`. Round 1a2 (the hand-built API image, with 1a's leftovers) is running. Then, on the same
+tree, one round at a time: 1d (the POC replica's Postgres settings) and 1c (the commands inside the steps); then a
+re-review by two lenses** (2026-10-05, ~21:15 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -495,5 +496,30 @@ None: the owner answered all four on 2026-10-05 (above).
   ownership, and an object write is no read. *Complete fix:* count every resource type with a `bucket` argument.
 - **App Runner is closed to new customers** (AWS's pages, 2026-10-05). The existing service is unaffected; a new
   account could not create one. *Complete fix, if ever needed:* move the API to ECS on Fargate.
+- **api's GitHub build cannot build the API image (owner, 2026-10-05: hand-built for this deploy).** Since `d4974ab`
+  (2026-07-22) api declares `mro-copilot`, `core`, `flynapse-utils` and `shift-optimizer` as local path
+  dependencies, under its own comment that they must stay on CodeArtifact. Its CI checks out api alone, and its wheel
+  check refuses a `file://` requirement, so every push to `main` or `develop` fails before the image. *Complete fix:*
+  CI swaps the path dependencies for published versions at build time (or checks the siblings out at pinned
+  commits), the siblings publish in order (flynapse-otel, utils, core, copilot-mro), and api builds `:latest` again.
+- **A bad prune threshold aborts the prune in silence (prune fix round 2, concern 3).** `PRUNE_AFTER_DAYS` is a
+  constant, so only an edit reaches it, and the keep test catches one by its behaviour. But a non-numeric value makes
+  bash's arithmetic abort the whole `prune || failed+=(...)` line, and the run exits 0 having pruned nothing.
+  *Complete fix:* refuse a non-numeric threshold before the prune, or run its arithmetic where a failure fails the
+  run.
+- **A second `TimeoutStartSec=` is refused only by an unpack's `ValueError`** (prune fix round 2, concern 2). It fails
+  the test all the same. *Complete fix:* a named assert, like the `Type=` check.
+- **No repo test can see an override on the box itself** (prune fix round 2's re-review). A drop-in or `systemctl
+  edit` changes the loaded unit without changing the repo's files. *Complete fix:* the setup script checks the
+  loaded units after install (`systemctl show -p Type,TimeoutStartUSec` on the service, and the timer's delays).
+- **`span`'s refusal message omits `infinity`** (prune fix round 3, concern 4). Both unit tests refuse `infinity` on
+  purpose, but the message says systemd reads only digits and units. *Complete fix:* name `infinity` in the message.
+- **A second `aws_s3_bucket` naming the backup bucket would read as another bucket's** (phase 3 fix round 1b,
+  concern 2). Only a deliberate `import` reaches it, and the bucket guard does not count `aws_s3_bucket` itself.
+  *Complete fix:* count it, and refuse a second resource for the same bucket name.
+- **Bucket-level actions are not counted by the readers guard** (phase 3 fix round 1b, concern 3), for example
+  `PutBucketOwnershipControls`, `PutBucketPublicAccessBlock` and `PutReplicationConfiguration`. Each needs a second
+  step to reach a dump, or affects only availability. *Complete fix:* count every action that can change who reads
+  the bucket.
 
 ## Lessons
