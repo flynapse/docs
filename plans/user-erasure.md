@@ -2852,6 +2852,8 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - Once part X3 lands, such a turn's memory note will name a chat block that is never saved.
   - *Complete fix (a product choice for the owner):* either let the pipeline finish detached so the block is
     saved (about 20-40 lines and a test, keeping X1's cancel pin), or cancel the turn for real.
+  - **Owner, 2026-10-06 (~00:30 PDT): finish and save it.** Part X4 builds it now, so this entry closes when X4
+    merges.
 - **The live proof's DEBUG dumps carry the private folder's raw path (accepted).** The per-tool debug dumps are raw
   tool input and output by design, and DEBUG-only. The folder is gone when the session ends, and the user-facing
   trace shows no path.
@@ -4093,3 +4095,9 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   25k-token guard, so its hint is no longer lost.
 - **Next:** X3's review and merge; then the owner's go for an API restart onto it, and one live turn to see the
   curator's line; then Task 18, which needs the owner for its two Telegram legs.
+
+**Status, 2026-10-06, ~00:40 PDT: the owner's two answers.**
+- **Restart and re-check:** once the memory fix is reviewed, merged and its gate passes, the controller restarts the
+  API onto it and runs two short live turns (about $0.60) to see the curator's line.
+- **A closed tab finishes and saves its answer** (part X4, copilot-mro branch `ue-p5-x4`). It lands with X3, so one
+  restart serves both, and one of the two live turns closes its tab to prove the save.
