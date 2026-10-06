@@ -1,12 +1,12 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status: **phase 1 is done; the prune's fix round 3 (a byte-order mark the bound pin missed, and one systemd reader
-for both unit tests) is done at copilot-mro `2499baab` (re-review MERGE-READY), and round 4 takes its three Minors; phase 2 (the Terraform) is done
-at iac `3933f47`; phase 3's guards round (1b) is done at iac `75ba769`, and the runbook's first round (1a) made it one
-combined deploy at `acdd9a3`. Round 1a2 added the hand-built API image at `50356e2`. Round 1d (the POC replica's Postgres
-settings, and the image built before the deploy so its build and push stay out of the outage) is running. Then, on the same
-tree: 1e (the email login, stored in AWS: owner decision) and 1c (the commands inside the steps); then a
-re-review by two lenses** (2026-10-05, ~21:00 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status (2026-10-05, ~21:45 PDT): **phase 1 is done at copilot-mro `2499baab` (the prune's fix round 3 re-reviewed
+MERGE-READY), and prune round 4 takes that review's three Minors; phase 2 (the Terraform) is done at iac `3933f47`;
+phase 3's rounds 1b, 1a and 1a2 are done at iac `50356e2` (guards, one combined deploy, the hand-built image).
+Round 1d stopped by size after one item, which the POC decision then withdrew. Round 1d2 is running: it reverts
+that item, moves the image build before the deploy, and adds the Weaviate schema step. Then 1e (the email login)
+and 1c (the commands inside the steps). Phase 4, the POC server as a one-box client install (owner decision), is
+in design. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -47,8 +47,8 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
     the Lambdas' and the CI deployer's.
   - **Data:** start empty. AWS is the dev environment; tenants and users are created fresh.
   - **Network:** the box stays in the public subnet. Postgres and Phoenix admit only App Runner's security group and
-    the box itself; SSH stays limited to the owner's IP. (Amended 2026-10-05 ~20:20 PDT: Postgres also admits the POC
-    replica's security group, below.)
+    the box itself; SSH stays limited to the owner's IP. (An amendment at ~20:20 PDT let Postgres admit the POC
+    replica's security group too; it was withdrawn at ~21:40, when the POC became a one-box install, below.)
 - **2026-10-05 (~09:45 PDT): the iac merge is approved,** once phase 3's fix rounds are re-reviewed MERGE-READY and
   gated. It carries the step 3b Terraform too (below).
 - **2026-10-05 (after phase 3's review): one combined deploy.** iac's root still holds the observability rebuild's
@@ -62,10 +62,19 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
   (recommended) and keeping the current image; the owner chose a runbook step in which they build the image on their
   machine from the checkouts and push it to ECR, tagged with the api commit. The GitHub build stays broken (a Future
   Improvement).
-- **2026-10-05 (~20:20 PDT): the POC replica gets the Postgres settings.** The deploy replaces it, and a current API
+- **2026-10-05 (~20:20 PDT), superseded at ~21:40: the POC replica gets the Postgres settings.** The deploy replaces it, and a current API
   image needs Postgres at boot, which its setup does not give it. Its setup gets the box's Postgres host and the app
   passwords from the same secret App Runner reads, so it keeps working after the deploy. This amends the network
   decision below: Postgres (not Phoenix) also admits the POC replica's security group.
+- **2026-10-05 (~21:40 PDT): the POC server is a one-box client install, built into this deploy.**
+  - The owner's context: the POC server replicates how a client deployment runs, with everything (Postgres, Weaviate,
+    the API, the dashboard and the rest) on one EC2 box. The internal deployment is this plan's main shape: App
+    Runner runs the API, and a separate box runs Weaviate and Postgres.
+  - So the POC server gets its own Postgres beside its own Weaviate, and never reaches the main box's Postgres. This
+    supersedes the ~20:20 decision. Round 1d2 reverts the security-group change round 1d made for it (`97830ca`).
+  - Asked against "its own plan, after this deploy" (recommended) and "keep today's version running", the owner chose
+    to build it into this deploy.
+  - A read-only design comes first (phase 4 below), then the owner's answers to its questions, then its rounds.
 - **2026-10-05 (~21:05 PDT): the email login is stored in AWS.** api's GitHub build baked `SMTP_USER` and
   `SMTP_PASSWORD` into the image as build arguments. The hand-built image carries neither, and App Runner set neither,
   so the API would have sent no email (invitations, feedback, AD notifications).
@@ -448,6 +457,35 @@ None: the owner answered all four on 2026-10-05 (above).
     old prefix, which neither the prune nor the expiry covers any more. (Post-review change, lens A's m-3: emptying
     it first leaves no backups until the next run, and a run before the apply writes a dump that never expires.)
   - never turn on the bucket's versioning by hand: each prune delete would leave only a delete marker.
+- **The Weaviate schema step (controller finding, 2026-10-05, ~21:30 PDT).** The API refuses to start unless Weaviate
+  has every declared multi-tenant collection, with exactly the partitions Postgres's tenants imply. It does this in a
+  deployed environment, with no way to only warn.
+  - The seven declared collections date from 2026-07-30 and 2026-08-16. The image that wrote the box's Weaviate is
+    older, so the box almost surely has none of them, and App Runner's deployment in step 6 would fail.
+  - Step 4 runs copilot-mro's `scripts/provision_weaviate_mt.py` (no `--partitions-from`) over the tunnel. It only
+    adds the missing collections. A dry run of the API's boot checks comes before step 6's apply.
+  - The runbook also says what to run when tenants are added later. Round 1d2 builds it.
+
+## Phase 4: the POC server as a one-box client install (owner, 2026-10-05)
+
+- **Goal.** After this deploy, the POC server runs everything on one EC2 box, as a client install would: its own
+  Postgres beside its own Weaviate, plus the API, the dashboard and the rest. The API boots on it (migrated and
+  provisioned database, Weaviate's collections and partitions), and the box survives a reboot.
+- **Order.**
+  - A read-only design (`p4-poc-design.md` in the plan's SDD workspace) covers:
+    - the services, and reuse of the main box's `deployment/demo/`;
+    - the passwords, and which container gets which;
+    - how the database and Weaviate are made ready (at first boot or by the owner);
+    - later tenants, reboots, backups, the POC's existing data, the runbook, and IAM and network.
+  - Then the owner's answers to the design's questions.
+  - Then its rounds, in copilot-mro (`deployment/poc/`, branch `aws-pg-phoenix`) and iac.
+  - The two-lens re-review then covers it with the rest of phase 3.
+- **Already known.**
+  - The POC compose sets `WEAVIATE_URL` in `environment:`, which overrides `.env`.
+  - The dashboard reads the API's `.env`.
+  - The POC's restart unit (a template enabled without an instance) and its restart script (user `ubuntu`) are broken
+    today.
+  - Its setup passes AWS access keys as template variables.
 
 ## Future Improvements
 
@@ -544,3 +582,13 @@ None: the owner answered all four on 2026-10-05 (above).
   fails at startup never opens its port. *Complete fix:* turn it on in a later apply, path `/health/live`.
 
 ## Lessons
+
+- **Ask what a server is for before recommending how it connects (2026-10-05).** I recommended giving the POC server
+  the main box's Postgres, assuming it was a second copy of the internal deployment. The owner corrected that: it
+  replicates a client install, with everything on one box. A round was built on the wrong premise and reverted. Rule:
+  when a recommendation depends on a component's purpose, state the assumed purpose in the question, so the owner can
+  correct the premise before choosing.
+- **Name the slices an implementer reads (2026-10-05).** Round 1d's brief listed three reports, the plan, eight files
+  and "every guard that reads" the area. The implementer spent 356k tokens reading before its first edit, and stopped
+  after one item. Rule: a brief names the sections and line ranges to read, points at a prior round's design instead
+  of its whole report, and says "read only what each item names".
