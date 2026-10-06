@@ -2845,6 +2845,13 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - *Complete fix:* read the guard's spill file back too, while the session is live (the file sits in the session's
     private folder until the session ends), with a pin for each spill form. The live proof's follow-up investigation
     sizes it.
+- **A turn whose tab is closed keeps nothing (investigation, 2026-10-05; predates X1).**
+  - Where: copilot-mro `chat_management.py`: the block is saved only after the threaded pipeline returns (about
+    `:1677`, then `:1737-1815`). On a disconnect the route cancels the wait at `:1677`. The worker thread cannot be
+    cancelled, so it finishes the turn, pays for it, and its result is thrown away.
+  - Once part X3 lands, such a turn's memory note will name a chat block that is never saved.
+  - *Complete fix (a product choice for the owner):* either let the pipeline finish detached so the block is
+    saved (about 20-40 lines and a test, keeping X1's cancel pin), or cancel the turn for real.
 - **The live proof's DEBUG dumps carry the private folder's raw path (accepted).** The per-tool debug dumps are raw
   tool input and output by design, and DEBUG-only. The folder is gone when the session ends, and the user-facing
   trace shows no path.
@@ -4074,3 +4081,15 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   whether that predates X1.
 - **Next:** the investigation's verdict on the memory hint; then Task 18 (the owner for the Telegram legs and a
   second test pilot).
+
+**Status, 2026-10-06, ~00:20 PDT: the memory hint never reached the curator; fix part X3 is running.**
+- **The cause, found by a read-only investigation and confirmed by the controller:** since 2026-09-03 the served
+  turn's lifecycle hands the memory curator and the tenant-fact proposer read-only copies of the turn's hints and
+  citations. The curator accepts only plain dictionaries, so it found nothing to curate on any served turn and logged
+  nothing. The fact proposer lost its cited sources the same way. The earlier route passed plain dictionaries, which
+  is why the memory loop worked before. Part X1 is not involved.
+- **Part X3** (copilot-mro, branch `ue-p5-x3`) hands both writers plain copies, checks every other consumer of those
+  read-only fields, adds a test wired to the real curator, and also reads back the spill of a result over the CLI's
+  25k-token guard, so its hint is no longer lost.
+- **Next:** X3's review and merge; then the owner's go for an API restart onto it, and one live turn to see the
+  curator's line; then Task 18, which needs the owner for its two Telegram legs.
