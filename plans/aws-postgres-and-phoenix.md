@@ -1,13 +1,13 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-05, ~23:15 PDT): **phase 1 is done at copilot-mro `5099fbf9` (the prune's fix round 5, the last, is built and
-awaits its re-review); phase 2 (the Terraform) is done at iac
-`3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e are done at iac `9e3ea13` (guards, one combined deploy, the
-hand-built image built before the deploy, the Weaviate schema step, the email login). Round 1f (protect a client's
-box: no `main` or `:latest` moves, owner decision ~23:10) is running; then 1c (the commands inside the steps).
-Phase 4, the POC server as a one-box client install, is designed and the owner answered its questions; a dashboard
-round (a publish that leaves `latest` alone) is running, and the POC's rounds follow (copilot-mro after prune round
-5, iac after 1c). A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status (2026-10-06, ~00:15 PDT): **phase 1 is built at copilot-mro `5099fbf9` (the prune's fix round 5, the last;
+its re-review is next); phase 2 (the Terraform) is done at iac `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e
+are done at iac `9e3ea13` (guards, one combined deploy, the hand-built image built before the deploy, the Weaviate
+schema step, the email login). Round 1f (protect a client's box: no `main` or `:latest` moves, owner decision
+~22:50) is running; then 1c (the commands inside the steps). Phase 4, the POC server as a one-box client install,
+is designed and the owner answered its questions. Its dashboard change (a hand publish that leaves `latest` alone,
+dashboard `6011e32`) is in review. Its copilot-mro rounds start after the prune's re-review, its iac rounds after
+1c. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -87,13 +87,13 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
     the outage.
 - **2026-10-05: the step 3b Terraform** (`db-roles-tf-query`) stays on its branch and merges with this plan's iac work.
   Auto mode refused the controller's merge into iac `main`.
-- **2026-10-05 (superseded ~23:10 PDT, below): the box keeps deploying copilot-mro `main`, and `main` is
+- **2026-10-05 (superseded ~22:50 PDT, below): the box keeps deploying copilot-mro `main`, and `main` is
   fast-forwarded first.** The setup script clones `main` (hard-coded in `ec2.tf`). It last moved on 2026-02-11, is
   3,164 commits behind `langgraph-merge` and lacks this work, so a box built from it would fail at boot and take
   Weaviate and the collector down with it. `main` is a strict ancestor of `langgraph-merge`. Before the deploy, `main`
   is fast-forwarded to `langgraph-merge` and pushed, with the owner's approval. Phase 2 still makes the branch a
   Terraform variable, defaulting to `main`.
-- **2026-10-05 (~23:10 PDT): protect a client's box; our deploy never moves `main` or `:latest`.**
+- **2026-10-05 (~22:50 PDT): protect a client's box; our deploy never moves `main` or `:latest`.**
   - The POC design found that copilot-mro's old POC kit (`deployment/poc/restart-services.sh`, "go live changes",
     2025-12-11) restarts a box at a fixed private address outside our AWS network, most likely a client's server.
     At every restart it pulls copilot-mro `main`, logs in to our ECR, and pulls the API and dashboard images by their
@@ -104,7 +104,7 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
     box". So: our boxes deploy their own branch (`aws-deploy`, created and fast-forwarded by the runbook), App Runner
     runs the API image by its commit tag (recorded in `dev.tfvars`), and nothing in the deploy moves `main`,
     `flynapse-api-ecr:latest` or `dashboard-ecr:latest`. Fix round 1f builds it. It supersedes the decision above.
-- **2026-10-05 (~23:10 PDT): the POC server's design questions** (phase 4), each the recommended option:
+- **2026-10-05 (~22:50 PDT): the POC server's design questions** (phase 4), each the recommended option:
   - **Readiness on its own:** the box makes its passwords at first boot and a one-shot helper container migrates,
     provisions, verifies and creates the Weaviate collections before the API starts. Chosen over the owner making
     four SSM passwords and running the setup over tunnels after the deploy.
