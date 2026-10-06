@@ -342,7 +342,8 @@
       - The output is byte-identical to the parent's, apart from the literal-copy refusal's `ABORTED` line.
       - Its five Minors are Future Improvements: the controller adjudicated them, since round 5 was the loop's last
         and none can let a login through.
-      - It merges in the user-erasure window.
+      - **Merged and pushed (2026-10-05, ~21:25 PDT):** copilot-mro `langgraph-merge` `a8d4f876`, in the user-erasure
+        window, under its gate.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but

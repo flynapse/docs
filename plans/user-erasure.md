@@ -4013,3 +4013,19 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - the api restart and the live proof, once the owner has run `aws sso login` (asked);
   - the one-time delete;
   - Task 18.
+
+**Status, 2026-10-05, ~21:45 PDT: X1 and X2 are merged and pushed.**
+- X1's fix round 3 was re-reviewed MERGE-READY, OPEN 0. Its two Minors are Future Improvements.
+- One window merged X1 and X2, with DB users step 8's password rule:
+  - core `master` at `a653c47`;
+  - the dashboard's `agent_sdk` at `1d7f914`;
+  - copilot-mro `langgraph-merge` at `a8d4f876`;
+  - api `langgraph-merge` at `44f7684`.
+- **The gate passed.** The X1 pin passed. copilot-mro's non-db lane had 17,143 passes, and every `tests/db` folder
+  passed. The dashboard's unit tests, typecheck and lint passed.
+- **Three reds, none from these merges.** Two are the known sibling-checkout census reds. The third is a flake in an
+  api automations test: no merged file touches that code, and it passed 3 of 3 times on its own.
+- **Next,** once the owner has run `aws sso login`:
+  - the api restart, and the live proof;
+  - the authorized one-time delete;
+  - Task 18.
