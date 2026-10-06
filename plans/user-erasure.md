@@ -2838,6 +2838,16 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **The run-once pin's second message is too narrow (n-2).** At about `:236-237`, it says "a worker ran the modes
   itself" for any per-worker `cli-sessions*`. A per-worker lock alone also trips it (the LK1b mutant). *Complete fix:*
   "a worker keeps run-once state of its own".
+- **A tool result over the CLI's 25k-token guard loses its memory hint (live proof, 2026-10-05; predates X1).**
+  - Where: copilot-mro `copilot_mro/app/services/agent_claude/_toollog.py`, `extract_memory_hint` (about `:173-184`).
+    It reads back only a `<persisted-output>` spill. The guard's form ("result too large — truncated by the runtime")
+    is never read back, so a large `db_query` result's hint never reaches the curator.
+  - *Complete fix:* read the guard's spill file back too, while the session is live (the file sits in the session's
+    private folder until the session ends), with a pin for each spill form. The live proof's follow-up investigation
+    sizes it.
+- **The live proof's DEBUG dumps carry the private folder's raw path (accepted).** The per-tool debug dumps are raw
+  tool input and output by design, and DEBUG-only. The folder is gone when the session ends, and the user-facing
+  trace shows no path.
 
 ## Lessons
 
@@ -4043,3 +4053,24 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
 - **Next:**
   - the delete, only after "LIVE PROOF PASSED";
   - then Task 18 (the owner for the Telegram legs and a second test pilot).
+
+**Status, 2026-10-05, ~23:45 PDT: the live proof held on transcripts; the one-time delete is done.**
+- **The live proof** ran four product chat sessions on the restarted API: a subagent turn, a turn that spilled a
+  127,015-character database result, a third turn, and a turn whose tab was closed while a tool ran (counted after the
+  turn's own end). **No session left any file behind**: no transcript, subagent transcript, spill or session folder,
+  at every count. The spill sat inside its session's private folder, and the user-facing trace showed no path.
+- **Two checks could not pass, so the report says LIVE PROOF FAILED:**
+  - **The SAD session could not run:** Data Discovery is switched off on the served API. **The owner counted SAD
+    proven** (~23:35): SAD opens its session through the same private-folder helper the chat sessions proved live,
+    and a test fails if any product session bypasses that helper.
+  - **No memory curator line appeared** for any of the four turns. The hint is read inside the session, before the
+    private folder is removed, so X1 cannot drop it by design. Why the curator logged nothing is under a read-only
+    investigation. Separately, a result over the CLI's 25k-token guard never yields its hint; that predates X1 and is
+    a Future Improvement.
+- **The one-time delete is done** (~23:38, the owner's "Delete now"). The 29 listed files were re-checked first:
+  each was present, older than the 05:25 authorization, and marked as a product session. Exactly those 29 were
+  removed, and the four folders now hold no product-session file.
+- **Noticed:** a turn whose tab is closed runs to its end but never saves its chat block. The investigation checks
+  whether that predates X1.
+- **Next:** the investigation's verdict on the memory hint; then Task 18 (the owner for the Telegram legs and a
+  second test pilot).

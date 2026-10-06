@@ -2,11 +2,12 @@
 
 Status (2026-10-05, ~23:15 PDT): **phase 1 is done at copilot-mro `c24049f6` (the prune's fix round 4 re-reviewed
 MERGE-READY), and prune round 5, the last, takes that review's four Minors; phase 2 (the Terraform) is done at iac
-`3933f47`; phase 3's rounds 1b, 1a, 1a2 and 1d2 are done at iac `5c081f7` (guards, one combined deploy, the
-hand-built image built before the deploy, the Weaviate schema step). Round 1e (the email login) is running; then 1f
-(protect a client's box: no `main` or `:latest` moves, owner decision ~23:10) and 1c (the commands inside the
-steps). Phase 4, the POC server as a one-box client install, is designed and the owner answered its questions; its
-rounds follow (copilot-mro after prune round 5, iac after 1c). A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+`3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e are done at iac `9e3ea13` (guards, one combined deploy, the
+hand-built image built before the deploy, the Weaviate schema step, the email login). Round 1f (protect a client's
+box: no `main` or `:latest` moves, owner decision ~23:10) is running; then 1c (the commands inside the steps).
+Phase 4, the POC server as a one-box client install, is designed and the owner answered its questions; a dashboard
+round (a publish that leaves `latest` alone) is running, and the POC's rounds follow (copilot-mro after prune round
+5, iac after 1c). A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -110,8 +111,9 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
   - **No backups:** dev data, the data disk survives replacements, and the erasure receipt's 14 days hold with nothing
     to wait for. Chosen over local nightly dumps and nightly dumps to S3.
   - **Size:** `t3.xlarge` (16 GiB) and a 30 GB data disk, chosen over keeping `t2.large` and 10 GB.
-  - **The POC's dashboard image:** not yet asked. Under the protection above, a refresh must not move
-    `dashboard-ecr:latest`, which dashboard's publish job moves today.
+  - **The POC's dashboard image (~23:30 PDT): refreshed on its own tag.** Dashboard's publish job always moves
+    `dashboard-ecr:latest`, which the client's box pulls. A small dashboard change lets a hand run push only the
+    commit tag, and the POC runs that tag. Chosen over keeping the POC's May dashboard.
 - **2026-10-05 (controller, from phase 1's review): no globals dump.** On AWS every role comes from code: first boot
   makes `phoenix`, and provisioning makes the app's. A globals dump without passwords would make provisioning find
   the roles already there and never set their passwords. The restore order is: first boot, then provisioning, then
@@ -641,6 +643,13 @@ None: the owner answered all four on 2026-10-05 (above).
   uses, then drop the role from the dumps bucket's deny. That is the precondition for any S3 backup of the POC.
 - **The POC's `.env` holds the Azure key and Grafana's password, and the dashboard reads that file** (POC design).
   *Complete fix:* move both into the root-only secrets file, and take the GitHub token out of user data.
+- **Nothing after the deploy proves email works** (phase 3 fix round 1e, concern 2). Step 6 checks that the secret
+  holds both keys, not that Gmail accepts the login or the default sender. *Complete fix:* a step 7 check that sends
+  one test message to the owner through the API.
+- **The POC sends no email** (round 1e, item 4). Its `.env` carries no email setting, and the hand-built image carries
+  none, so once the POC runs that image it sends none. Email is not needed for the POC to boot, and a client install
+  brings its own mail login. *Complete fix:* if the POC should send mail, add the two keys to its root-only secrets
+  file at first boot.
 
 ## Lessons
 
