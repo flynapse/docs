@@ -1,14 +1,14 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, ~00:15 PDT): **phase 1 is built at copilot-mro `5099fbf9` (the prune's fix round 5, the last;
-its re-review is next); phase 2 (the Terraform) is done at iac `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e
+Status (2026-10-06, ~01:15 PDT): **phase 1 is done at copilot-mro `5099fbf9` (the prune's fix round 5, the last,
+re-reviewed MERGE-READY); phase 2 (the Terraform) is done at iac `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e
 are done at iac `9e3ea13` (guards, one combined deploy, the hand-built image built before the deploy, the Weaviate
 schema step, the email login), and 1f at `d15664d` (protect a client's box: App Runner runs the commit tag, the
 boxes deploy `aws-deploy`, nothing moves `main` or `:latest`, the Weaviate sources checked before step 1). Round 1c
 (the commands inside the steps) is running. Phase 4, the POC server as a one-box client install,
 is designed and the owner answered its questions. Its dashboard change (a hand publish that leaves `latest` alone,
-dashboard `6011e32`) is in review. Its copilot-mro rounds start after the prune's re-review, its iac rounds after
-1c. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+dashboard `6011e32`) is in review. Its first copilot-mro round (the readiness program) is running; its iac rounds
+follow 1c. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -652,10 +652,14 @@ None: the owner answered all four on 2026-10-05 (above).
   brings its own mail login. *Complete fix:* if the POC should send mail, add the two keys to its root-only secrets
   file at first boot.
 
-- **The backup's unit pins check that a value is present, not the value systemd ends with** (prune round 5,
-  concern 1; pre-existing). `Persistent=true` followed by `Persistent=false`, or an emptied `WantedBy=` after the
-  pinned one, passes both backup tests, and both fail silently on the box. *Complete fix:* pin each key's final
-  value list as systemd computes it (the last assignment wins; an empty one clears the list before it).
+- **The backup's unit pins check that a value is present, not the timer's whole effect** (prune round 5, concern 1,
+  and its re-review's N-1; pre-existing). Each of these passes every demo-box test, yet stops the nightly run:
+  `Persistent=true` followed by `Persistent=false`; an emptied `WantedBy=`; an empty `OnBootSec=` (or any `On*=`
+  trigger key) after `OnCalendar=`, which clears every trigger; `Unit=` naming another service. The erasure bound
+  still holds, because the bucket's lifecycle rule expires the prefix after 13 days; what stops is the backups.
+  *Complete fix:* pin each key's final value list as systemd computes it (the last assignment wins; an empty one
+  clears the list before it), treat every `On*=` key as one trigger list, and refuse any `Unit=` other than the
+  backup service. Also pin the header check's top control character (`\x1f`).
 - **A copilot-mro test fails intermittently under `-n`** (prune round 5, concern 4):
   `tests/agent_sdk/techpub/test_techpub_tools.py::test_final_round_trip_closes_the_delta_new_then_nil` answered
   `UNREACHABLE` where `NIL` was expected once, and passed alone and with its file run serially. An isolation bug,
