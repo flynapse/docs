@@ -1,12 +1,13 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, 02:01 PDT): **phase 1 is done at copilot-mro `5099fbf9`; phase 2 (the Terraform) is done at
-iac `3933f47`; phase 3's fix rounds (1b, 1a, 1a2, 1d2, 1e, 1f, 1c) are done at iac `34cfec1`. Phase 4, the POC
-server as a one-box client install: the readiness program (P4-1, copilot-mro `a8c9ec67`) and the setup script
-(P4-4, iac `c153078`) are built; the Postgres overlay (P4-2) and the role, size and attachment (P4-5) are running;
-the startup unit (P4-3) and the runbook (P4-6) follow. The dashboard change (a hand publish that leaves `latest`
-alone, dashboard `6011e32`) was reviewed MERGE-READY; a small fix round for its pin and summary is queued. A
-two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status (2026-10-06, 03:55 PDT): **phases 1 to 3 are done (copilot-mro `5099fbf9`; iac `3933f47`, then phase 3's
+fix rounds to `34cfec1`). Phase 4, the POC server as a one-box client install, is built except its startup unit:
+copilot-mro `96cc2fcc` holds the readiness program (P4-1) and the Postgres overlay (P4-2), and the startup unit
+(P4-3) is running; iac `860f55a` holds the setup script (P4-4), the ECR grant, size and attachment flag (P4-5), and
+the runbook with the POC data disk's `prevent_destroy` (P4-6). The dashboard change (a hand publish that leaves
+`latest` alone) is in its second fix round: its test must never reach the real AWS CLI. The final review runs in
+three lenses: the main deploy's runbook (running), iac's code and guards, and the POC end to end. One owner decision
+is coming: whether a browser should reach the POC's UI (Open questions).** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -172,7 +173,14 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
 
 ## Open questions
 
-None: the owner answered all four on 2026-10-05 (above).
+- **Should a browser reach the POC's UI?** Today it cannot.
+  - The POC's security group admits no 3000, and nothing listens on 80 or 443.
+  - Through an SSH tunnel, the page's origin is not one the API admits.
+
+  The final review's lens B states what access would take: the port from the owner's address, the API's origins,
+  and the sign-in's callback URLs. Then the owner decides. Until then, the runbook checks the UI on the box itself.
+
+The owner answered the design's four questions on 2026-10-05 (above).
 
 ## Risks
 
@@ -528,6 +536,64 @@ None: the owner answered all four on 2026-10-05 (above).
   - **Under the protection decision:** the POC clones the deploy branch and pulls the API by its commit tag.
   - **Rounds:** three in copilot-mro (the helper program, the overlay, the startup unit and script), then three in iac
     (the setup script, the role and size, the runbook).
+- **Implementation notes (2026-10-06, to 03:55 PDT).**
+  - **copilot-mro (`aws-pg-phoenix`):**
+    - **P4-1 (`a8c9ec67`):** `deployment/poc/db_init.py`.
+      - It waits at most 300 s for Weaviate.
+      - **A fresh database:** migrate with `--no-snapshot`, provision, verify, then the Weaviate collections, never
+        with `--partitions-from`.
+      - **An existing database:** the migration runs only with `--verify-only`. A failure names the README's
+        "Operations (POC)" step "A schema change", and exits 1.
+    - **P4-2 (`96cc2fcc`):**
+      - **On an existing database, db-init checks the provisioning first** and provisions only if that check fails
+        (the controller's ruling). Provisioning takes ACCESS EXCLUSIVE locks on every tenant table while an API
+        serves.
+      - **The overlay** `deployment/poc/docker-compose.postgres.yml`:
+        - `postgres:16-alpine`, on `127.0.0.1:5432` only, its password only through `${…:?}`;
+        - db-init from the API's image, with read-only mounts, `init: true` and `WEAVIATE_URL`;
+        - the API's additions, and its `depends_on` db-init completed.
+      - `.env.sample` gains the four password names, and the compose tests read the overlay.
+      - The client kit stays byte-identical to the branch's merge base.
+    - **P4-3 (running):** `poc-stack.service` and `poc-stack-up.sh`.
+      - A oneshot unit that never runs down, pull or git.
+      - `up -d --pull never`: an implicit pull would use an ECR login that expired 12 hours after the first boot.
+      - It refreshes the three public-address lines of `.env` from IMDSv2.
+  - **iac (`aws-pg-phoenix`):**
+    - **P4-4 (`c153078`):** `poc_ec2_setup.sh`, on the main box's pattern:
+      - the data volume found by its id;
+      - scoped permissions;
+      - secrets made once;
+      - ECR by the instance role;
+      - the image-label check;
+      - both env files and both compose files.
+
+      It also adds `poc_dashboard_image_tag`.
+    - **P4-5 (`7545a90`):** `poc_replica_ecr_pull` (pull only, two repositories), which the instance waits for;
+      `t3.xlarge`; 30 GB; the attachment's stop flag.
+    - **P4-6 (`860f55a`):** the runbook's POC parts.
+      - Before the deploy: the POC's Weaviate read, and the dashboard published by hand with `move_latest=false`,
+        its tag then set in `dev.tfvars`.
+      - Counts 61/11/4.
+      - The POC's checks after the deploy, "Operations (POC)" and "Recovery (POC)".
+      - **The rotation's way back after a rollback** (the controller's ruling): in the rotation path only, after a
+        login proof with the stored value, one `start-deployment` gated on
+        `START_DEPLOYMENT:ROLLBACK_SUCCEEDED`. The deploy path keeps "never after a rollback".
+      - **`prevent_destroy` on the POC data disk** (the controller's ruling): it is the POC database's only copy,
+        and the main box's volume already makes a whole-root destroy refuse.
+  - **Dashboard (`dashboard-publish-tag`):**
+    - `6011e32`: a hand run with `move_latest` off pushes the commit tag alone;
+    - fix 1 (`317f462`): the pin proves the push, catches any `latest`, and the summary names tags only;
+    - fix 2 (queued): the pin seals its step runs from the real AWS CLI.
+  - **Learnings:**
+    - **Tests that run shell scripts on this box can reach the real AWS account.** `/usr/local/bin/aws` finds
+      `~/.aws` even with `HOME` unset. Every such test puts refusing `aws`, `gh` and `docker` stubs first on `PATH`
+      and sets its own `HOME`.
+    - **Compose behaviour cannot be proven without Docker here:** overlay merges, `up -d` re-running an exited
+      one-shot, and `run` ignoring `container_name`. The final review checks it against the Compose spec, and the
+      deploy's checks are the live proof.
+    - **db-init's failure message says "run compose up -d again".** That leaves the startup unit disabled after a
+      failed first boot. The README gives the unit's two lines instead, and the final review's fix round corrects
+      the message.
 
 ## Future Improvements
 
@@ -663,8 +729,13 @@ None: the owner answered all four on 2026-10-05 (above).
   `UNREACHABLE` where `NIL` was expected once, and passed alone and with its file run serially. An isolation bug,
   outside this plan's code. Two ingest tests (`test_document_writers_name_their_operator[crew_manual_parser]`,
   `test_ifim_revision_identity`) also failed once on one worker and pass serially; an earlier test replacing a
-  module in `sys.modules` is the likely cause. *Complete fix:* find the state each shares across a worker and
-  isolate it.
+  module in `sys.modules` is the likely cause. A wall-clock test fails the same way under heavy load (P4-2):
+  `tests/unit/lang_agent/test_manual_research_graph.py::test_parent_fans_out_two_compiled_research_graphs_and_waits_to_join`
+  missed its 1 s wait at a load of 12 to 19, and passed serially 10 times. *Complete fix:* find the state each shares
+  across a worker and isolate it, and give the wall-clock test a bound that does not depend on the host's load.
+- **The API image's health check calls `curl`, which `python:3.11-slim` lacks** (P4-2, concern 7). On the POC,
+  `docker ps` may show the API unhealthy while it serves; nothing waits on it, and the runbook reads `/health/ready`
+  instead. *Complete fix:* a Python health probe in the image, or `curl` installed in it.
 
 - **ECR tags stay mutable** (round 1f, concern 5). Step 6 relies on `describe-images` showing one tag and the
   build's push time to notice a replaced `:<api commit>` image. *Complete fix:* make commit tags immutable (ECR's

@@ -2845,6 +2845,7 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - *Complete fix:* read the guard's spill file back too, while the session is live (the file sits in the session's
     private folder until the session ends), with a pin for each spill form. The live proof's follow-up investigation
     sizes it.
+  - Part X3 builds this read-back, pinned against the real CLI's wording; this entry closes when X3 merges.
 - **A turn whose tab is closed keeps nothing (investigation, 2026-10-05; predates X1).**
   - Where: copilot-mro `chat_management.py`: the block is saved only after the threaded pipeline returns (about
     `:1677`, then `:1737-1815`). On a disconnect the route cancels the wait at `:1677`. The worker thread cannot be
@@ -2872,6 +2873,27 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **The live proof's DEBUG dumps carry the private folder's raw path (accepted).** The per-tool debug dumps are raw
   tool input and output by design, and DEBUG-only. The folder is gone when the session ends, and the user-facing
   trace shows no path.
+- **A deleted chat's save failure counts as a failure (X4 fix round 1, M-2).**
+  - `save_block` returns `False` from one place for every refusal: the chat deleted, never existing, someone else's,
+    another department's, or no binding.
+  - So a person who closes a tab mid-turn and then deletes the chat can fire the critical `ChatBlockSaveFailures`.
+    The runbook tells on-call how to recognise that case.
+  - *Complete fix, before alert delivery is armed:* a typed refusal from `save_block`, with "the chat is gone"
+    counted apart from failures.
+- **Turns and block saves share the event loop's default executor (X4 fix round 1, concerns 3 and 6).**
+  - A block save can wait behind turns, and a queued turn's deadline starts late.
+  - `_on_a_worker` restates the executor's start test, because asyncio exposes no handle on its default executor.
+  - *Complete fix:* a dedicated executor for turns, sized to the worker budget. It also lets the helper use the
+    executor's own futures; X4's second fix round pins the helper's parity with `to_thread` first.
+- **The tenant-memory gate trusts each backend's signals (X3 fix round 1, concern 2).**
+  - The backends compute the gate's signals, and X3's second fix round makes "not computed" close the gate.
+  - *Complete fix:* the lifecycle also derives the cited families from the exact citation list the writers receive.
+    Then a backend that computes them wrongly still fails closed for cited sources.
+- **The techpub demo's twice-monthly dates depend on the reset day (X3 fix round 1, concern 4).**
+  - The suite's test no longer depends on the clock. But from 2026-10-06 a trimmed demo run sweeps eight sources until
+    the seeds are moved.
+  - *Complete fix (the techpub demo, not this plan):* `reset_demo.py` seeds the twice-monthly dates relative to the
+    reset day.
 
 ## Lessons
 
@@ -4139,3 +4161,27 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   updates the save-failure alert's description for held turns.
 - **Next:** each round's re-review, the two merges and their gate, then the API restart and the two live chats the
   owner approved, then Task 18.
+
+**Status, 2026-10-06, 03:55 PDT: both fixes are in their second fix rounds.**
+- **X3, the memory fix.** Its first fix round closed the tenant-memory gate on every turn whose citations or recalled
+  evidence name a private source, on both runtimes.
+  - Its own report found a gap: private content that a turn uses without citing it still reaches tenant-wide memory.
+  - **The controller's ruling** follows from this program's premise: an upload is private to its maker, and a
+    Document Hub document is readable only by those its ACL admits.
+    - A turn into which an upload or a Document Hub document returned content feeds no tenant-wide note and no
+      tenant fact, cited or not.
+    - A DataView built from an upload stays private in later turns.
+    - The gate fails closed when a backend computes nothing.
+    - A `db_query` turn still learns.
+  - The second round builds it, and reports what happens to the person's own memory.
+- **X4, the closed tab.** Its first fix round cancels a turn that no worker has started: it never runs and saves
+  nothing. A started turn is held and saved once.
+  - The re-review found the code right and race-free.
+  - But its parity with the old thread call was unpinned: nothing tested that the request's context (the tenant
+    binding, the log fields) reaches the pipeline thread.
+  - The second round pins that, an exception's propagation and a cancelled wait, and corrects three docs.
+- **Next:**
+  1. each round's scoped re-review;
+  2. the merges (X3, then X4) and their gate;
+  3. the API restart and the two live chats the owner approved;
+  4. Task 18.
