@@ -1,9 +1,10 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-05, ~21:45 PDT): **phase 1 is done at copilot-mro `2499baab` (the prune's fix round 3 re-reviewed
+Status (2026-10-05, ~22:20 PDT): **phase 1 is done at copilot-mro `2499baab` (the prune's fix round 3 re-reviewed
 MERGE-READY), and prune round 4 takes that review's three Minors; phase 2 (the Terraform) is done at iac `3933f47`;
 phase 3's rounds 1b, 1a and 1a2 are done at iac `50356e2` (guards, one combined deploy, the hand-built image).
-Round 1d stopped by size after one item, which the POC decision then withdrew. Round 1d2 is running: it reverts
+Round 1d stopped by size after one item, which the POC decision then withdrew. Round 1d2 is running (its revert
+landed as `e2b2431`): it reverts
 that item, moves the image build before the deploy, and adds the Weaviate schema step. Then 1e (the email login)
 and 1c (the commands inside the steps). Phase 4, the POC server as a one-box client install (owner decision), is
 in design. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the

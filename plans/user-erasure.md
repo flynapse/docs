@@ -4029,3 +4029,17 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - the api restart, and the live proof;
   - the authorized one-time delete;
   - Task 18.
+
+**Status, 2026-10-05, ~22:20 PDT: the live proof is running.**
+- The owner logged in to AWS.
+- The API was restarted at 22:07 on the merged code, and its boot checks passed.
+- The live proof runs its three sessions on it:
+  - a turn that dispatches a subagent and spills a large tool result;
+  - a SAD session;
+  - a turn whose tab is closed while a tool runs, counted after the turn's own end.
+- **The one-time delete is listed, waiting on the proof.** 29 files survive of the owner's 45 and the session folder.
+  The other 16, and the session folder, had already gone on 2026-10-05 at 20:16, which fits Claude Code's own
+  30-day transcript cleanup. The list is in the ledger.
+- **Next:**
+  - the delete, only after "LIVE PROOF PASSED";
+  - then Task 18 (the owner for the Telegram legs and a second test pilot).
