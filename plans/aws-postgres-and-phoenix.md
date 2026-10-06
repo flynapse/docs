@@ -1,20 +1,21 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, 06:15 PDT): **phases 1 to 4 are built, and the final review is done; its fix rounds run.**
-- **Built:** copilot-mro `e4e8bb57` (phase 4: the readiness program, the Postgres overlay, the startup unit); iac
-  `860f55a` (the setup script, the ECR grant, size and attachment flag, the runbook); dashboard `6654418` (a hand
-  publish that leaves `latest` alone, in three fix rounds).
-- **The final review, three lenses:** the main deploy's runbook FIX FIRST (2 Important, 7 Minor); iac's code and
-  guards FIX FIRST (1 Important, 4 Minor, all in the tests, none in the deployed code); the POC end to end
-  MERGE-READY (4 Minor).
+Status (2026-10-06, 09:45 PDT): **phases 1 to 4 are built and reviewed; the dashboard is merged; the last fix rounds
+run.**
+- **Dashboard: MERGED and pushed** (`agent_sdk` `0795b14`). A hand publish with `move_latest` off pushes the commit
+  tag alone, and its pin runs the workflow's steps sealed from the real AWS, GitHub and Docker CLIs.
+- **copilot-mro** (`aws-pg-phoenix` `eb7aef68`): its fix round's re-review says MERGE-READY with two Minors (a loose
+  docstring, a message line not pinned whole). A short round takes both now.
+- **iac** (`aws-pg-phoenix` `df80315`): both fix rounds are done:
+  - F1, the pins and the POC clone's token;
+  - F2, the runbook's 16 fixes, the SSH tunnel included.
+  Two re-reviews run in parallel, one per round. A last round F3 follows with their findings, the tunnel's exact text
+  and one more reboot sentence.
 - **The owner chose (06:09):** the POC's web app is opened through an SSH tunnel, with no change in AWS.
-- **Running:** copilot-mro's fix round (db-init's schema-change message, a comment, the proofs the 05:02 restart cut
-  short) and iac's first fix round (the pins, and the POC clone's token).
 - **Next:**
-  - iac's second fix round, the runbook;
-  - scoped re-reviews of each fix round, the dashboard's included;
-  - the merges: copilot-mro into `langgraph-merge` after user erasure's X3 and X4, iac into `main`, dashboard into
-    `agent_sdk`;
+  - iac F3 and its check;
+  - the merges: copilot-mro into `langgraph-merge` after user erasure's X3 and X4, keeping both scope-guard blocks;
+    iac into `main` with `db-roles-tf-query`;
   - then the owner's deploy.
 
 Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the runbook. It is
@@ -654,6 +655,48 @@ tunnel, with no change in AWS (Owner decisions). The owner answered the design's
       2026-10-06.
     - **A browser reaches the POC through a tunnel with no change.** `http://localhost:3000` is already a default CORS
       origin, and the dashboard's sign-in needs no callback URL.
+- **The fix rounds (2026-10-06, 06:10 to 09:45 PDT).**
+  - **copilot-mro** (`e4e8bb57..eb7aef68`):
+    - db-init's schema-change message now ends with the unit's two lines (`systemctl enable poc-stack`, then
+      `systemctl restart poc-stack`), pinned word for word;
+    - the reboot comment and its family are corrected: a new API starts only after db-init, while a reboot restarts
+      the existing one;
+    - a new test pins the overlay's API environment exactly. Without it, pointing the API at the superuser passed
+      every test.
+    - Lens C's 14 mutants and 5 more die; the full suite equals P4-3's.
+    - **Its re-review:** MERGE-READY, with two Minors taken in a short second round.
+  - **iac F1** (`860f55a..76369c7`):
+    - the six image labels are pinned and tied to the setup's image check;
+    - guard 1 reads dequoted words;
+    - the setup's compose calls are pinned to `pull` and `up -d`;
+    - the volume-stage tests run on both scripts;
+    - the IAM pin fails on a role it cannot resolve;
+    - the POC clone's remote goes back to the token-free URL right after the clone.
+    - 662 passed; lens B's 26 mutants and 7 more die.
+  - **iac F2** (`76369c7..df80315`), the runbook:
+    - step 6 tests each role's password before the apply;
+    - the box's Weaviate version is read before step 3;
+    - the retry checks the image;
+    - a stop-and-start check, and the IMDS warning's recovery;
+    - a login check per rotated POC role;
+    - the tunnel;
+    - "A schema change" tied to db-init's message;
+    - lens A's text minors.
+    - 679 passed. It stopped at its size limit before its seven mutants, which its re-review runs.
+  - **Dashboard fix 4** (`ce36b07`): the seal's self-test proves its order and its tool list. Every step runs with
+    the session bus and the instance metadata service switched off. Merged into `agent_sdk` (`0795b14`) after its
+    gate: the five-file lane 35/35, lint and tsc clean. A push to `agent_sdk` publishes nothing, since the workflow
+    runs on `main` with `[publish]` or by hand.
+  - **The tunnel, ruled:**
+    - `-o ExitOnForwardFailure=yes`, as the README's other tunnels;
+    - a free one of local ports 3000 and 3001, both default CORS origins of the API. On the owner's machine, the
+      local Grafana holds `127.0.0.1:3000`.
+  - **Learnings:**
+    - **After the 05:02 restart, every local container port but Phoenix's reset connections from WSL,** while the
+      data inside was intact. A raw TCP probe per port shows it; `ss` still lists the listener. One stop and start
+      of the containers, on the owner's word, fixed it.
+    - **The account's session rate limit stopped three agents at about 07:00.** Each resumed from its transcript
+      after the reset, once its tree and extract were checked.
 
 ## Future Improvements
 
@@ -829,6 +872,19 @@ tunnel, with no change in AWS (Owner decisions). The owner answered the design's
 - **Grafana's admin password is regenerated into the POC's `.env` on every replacement** (P4-4, concern 6;
   pre-existing), while Grafana keeps its own in its database. *Complete fix:* generate it once into the root-only
   secrets file, beside the Postgres passwords.
+
+- **The setup's compose pin finds calls by name** (iac F1, concern 5). A helper renamed along with every caller is
+  seen only if the stubbed boot runs it. Like guard 1, the pin reads no heredoc body. *Complete fix:* resolve shell
+  functions before the scan, and scan heredoc bodies that are executed.
+- **The demo box keeps its GitHub token in its clone's `.git/config`** (iac F1, concern 7). This is by design: its
+  startup unit pulls at every boot. The POC's clone no longer keeps it. *Complete fix:* a credential helper that
+  reads a root-only file, so no token sits in a world-readable tree.
+- **The dashboard pin's stand-ins do not cover a Windows `aws.exe` reached through WSL interop** (dashboard
+  re-review, route 2). A Linux workflow's step never calls it. *Complete fix:* a fixed step `PATH`, not the caller's.
+- **The dashboard pin refuses `${{ secrets.* }}` and `${{ github.token }}` only in the steps' own `env:` and `run:`
+  and in the build's tags.** A top-level `env:` value reaches a step raw. That is harmless in the test, which holds
+  no credential, but a later top-level secret would give every step the token. *Complete fix:* refuse them in the
+  workflow's and the job's `env:` too.
 
 ## Lessons
 

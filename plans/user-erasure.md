@@ -2905,7 +2905,29 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - A later change that recalls user-grain items in another chat would carry a private chat's content with the gate
     open.
   - *Complete fix, if that ever changes:* the summary records its chat's private families, and recalling it closes
-    the gate. X3's fourth round adds a pin that recall stays tenant-only.
+    the gate. X3's fourth round pinned that recall stays tenant-only (`b11f19f1`).
+- **A DataView consumer's read counts as its tool's family, not its view's origin (X3 fix round 4, item 4).**
+  - X3's fifth round closes every known way an upload's content reaches a later turn, by one rule at the chat's
+    grain: while a chat holds an upload, no turn of it feeds tenant memory.
+  - That leaves this open for any view whose origin is private but not an upload.
+  - *Complete fix:* each consumer reports the origins of the views it resolved (`dataview_source_family`), through
+    the shared resolver and a request-scoped record, and the read producer counts them.
+- **The closed-tab test's settle step matches the release's one hop (X4 re-review, N-3).**
+  - If `hold_turn` ever releases through a second hop, the hold test turns flaky, not red.
+  - *Complete fix:* settle by waiting until `chat_block_saves._TURNS` is empty. A hold that never lets go then fails
+    as a timeout, and the final `gc.collect()` check still proves nothing else holds the turn.
+- **A dismissed save-failure page misses a later failure of the same reason (X4 fix round 3, concern 2).**
+  - The rule sums by reason. A real failure after on-call stood the page down joins the still-firing alert, and is
+    re-sent only at the 1 h repeat.
+  - *Complete fix:* the typed refusal above, counted apart, which removes the stand-down step.
+- **copilot-mro's full suite reaches the local Weaviate during collection (X4 fix round 2, concern 6).**
+  - The Weaviate-probing integration modules probe at import, before `-m` deselects them. A read-only readiness
+    check, but it breaks the lanes' "never connect" rule, and it shifts the skip counts when Weaviate is down.
+  - *Complete fix:* move each probe behind its marker, into a fixture.
+- **A Phoenix session-scrub test misses its wall-clock bound under load (X3 fix round 4).**
+  - `test_a_phoenix_that_never_answers_holds_the_delete_for_one_bound` failed once at load 11 to 14 (14.8 s), and
+    passes alone and serially.
+  - *Complete fix:* a bound measured from the request's own clock, or an event, not the host's load.
 
 ## Lessons
 
@@ -4233,3 +4255,36 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   3. the merges (X3, then X4) and their gate;
   4. the API start on the merge and the two live chats the owner approved;
   5. Task 18.
+
+**Status, 2026-10-06, 09:45 PDT: X4 is ready to merge; X3 is in its fifth round, with a chat-wide upload rule.**
+- **X4, the closed tab: MERGE-READY at `29336973`.**
+  - The re-review found every `to_thread` property pinned in the served shape, the hold test's race fix sound, and
+    no parity gap. It left two texts untrue: a comment that named the wrong middleware, and a runbook sentence that
+    let on-call stand down a page carrying a real loss.
+  - A third round applied the reviewer's own wording, and the controller checked the diff.
+- **X3, the memory fix.**
+  - **Fourth round (`b11f19f1`):** the other runtime's badges for earlier turns' tables carry their origin, and
+    in-turn recall is pinned to tenant-only notes. Full suite: 17,210 passed; the reds are the two closed-port ones
+    and a Phoenix test's wall-clock bound under load.
+  - **It also tested the last ruling's premise and found it does not hold in full.** An upload's content can still
+    reach tenant memory through rare paths:
+    - a file read that saves its tables and then errs;
+    - a failed turn whose tables stay behind;
+    - an over-size read whose truncated content the model still sees;
+    - the work-package tool reading uploaded pages.
+  - **The controller's ruling for the fifth round:** while a chat holds any upload, no turn of that chat feeds a
+    tenant-wide note or fact, whether or not the upload was read. Each such turn's record carries the upload, so the
+    chat stays closed after the upload is gone.
+    - **Why:** four rounds closed paths one at a time, and each found more. Every path starts from an upload the chat
+      holds, so one rule at the chat's grain closes them all, and any found later.
+    - **The cost:** a chat with an upload teaches tenant memory nothing. The person's own memory still learns, and a
+      chat without uploads that reads shared sources learns on every turn.
+  - An over-size reader result now counts as a read; every other error still does not.
+- **The local containers** stopped answering from WSL after the 05:02 restart, with their data intact. One stop and
+  start, on the owner's word at 08:07, fixed every port, so the API can start on the merge.
+- **Next:**
+  1. X3's fifth round, then one re-review over its five rounds, in two lenses: the privacy rule end to end, and the
+     plumbing and tests;
+  2. the merges (X3, then X4) and their gate;
+  3. the API start on the merge and the two live chats the owner approved, in fresh chats without uploads;
+  4. Task 18.
