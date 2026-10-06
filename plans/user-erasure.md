@@ -4128,3 +4128,14 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   against the real CLI and fixes a test that failed only because of today's date.
 - **Next:** that round and its re-review, X4's review, both merges, then the API restart and two live chats (the
   owner's go is given).
+
+**Status, 2026-10-06, 02:01 PDT: both fixes are in their fix rounds.**
+- **X3's fix round** closes the paths its review found: the other runtime's privacy gate, uploads (now private), and
+  Document Hub answers recalled from earlier turns. It also pins the token-guard read-back against the real CLI and
+  makes the date-dependent test independent of the clock.
+- **X4's fix round:** the controller ruled that a turn still queued for a worker when its tab closes is never started
+  (nothing has run or been paid for, so the owner's finish-and-save premise does not cover it); a running turn is
+  held and saved once, as the owner chose. It also pins that the memory note's block id is the saved block's, and
+  updates the save-failure alert's description for held turns.
+- **Next:** each round's re-review, the two merges and their gate, then the API restart and the two live chats the
+  owner approved, then Task 18.

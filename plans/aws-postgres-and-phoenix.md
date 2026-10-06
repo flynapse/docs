@@ -1,14 +1,12 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, 01:04 PDT): **phase 1 is done at copilot-mro `5099fbf9` (the prune's fix round 5, the last,
-re-reviewed MERGE-READY); phase 2 (the Terraform) is done at iac `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e
-are done at iac `9e3ea13` (guards, one combined deploy, the hand-built image built before the deploy, the Weaviate
-schema step, the email login), 1f at `d15664d` (protect a client's box: App Runner runs the commit tag, the boxes deploy
-`aws-deploy`, nothing moves `main` or `:latest`, the Weaviate sources checked before step 1) and 1c at `34cfec1` (the
-commands inside the steps, rotation rewritten). Phase 3's fix rounds are done. Phase 4, the POC server as a one-box client install,
-is designed and the owner answered its questions. Its dashboard change (a hand publish that leaves `latest` alone,
-dashboard `6011e32`) was reviewed MERGE-READY; a small fix round for its pin and summary is queued. Its first copilot-mro round (the readiness program) and its first iac round (the setup
-script) are running. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status (2026-10-06, 02:01 PDT): **phase 1 is done at copilot-mro `5099fbf9`; phase 2 (the Terraform) is done at
+iac `3933f47`; phase 3's fix rounds (1b, 1a, 1a2, 1d2, 1e, 1f, 1c) are done at iac `34cfec1`. Phase 4, the POC
+server as a one-box client install: the readiness program (P4-1, copilot-mro `a8c9ec67`) and the setup script
+(P4-4, iac `c153078`) are built; the Postgres overlay (P4-2) and the role, size and attachment (P4-5) are running;
+the startup unit (P4-3) and the runbook (P4-6) follow. The dashboard change (a hand publish that leaves `latest`
+alone, dashboard `6011e32`) was reviewed MERGE-READY; a small fix round for its pin and summary is queued. A
+two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -677,6 +675,10 @@ None: the owner answered all four on 2026-10-05 (above).
 - **Rotating a box-only password replaces the instance** (round 1c, concern 3). The box reads those secrets at
   first boot, so a rotation is a full box outage, the API's database included. *Complete fix:* rotate them in
   place: rewrite the root-only secrets file and recreate only the containers that read it.
+
+- **Grafana's admin password is regenerated into the POC's `.env` on every replacement** (P4-4, concern 6;
+  pre-existing), while Grafana keeps its own in its database. *Complete fix:* generate it once into the root-only
+  secrets file, beside the Postgres passwords.
 
 ## Lessons
 
