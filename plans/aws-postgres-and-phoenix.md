@@ -660,11 +660,13 @@ None: the owner answered all four on 2026-10-05 (above).
   *Complete fix:* pin each key's final value list as systemd computes it (the last assignment wins; an empty one
   clears the list before it), treat every `On*=` key as one trigger list, and refuse any `Unit=` other than the
   backup service. Also pin the header check's top control character (`\x1f`).
-- **A copilot-mro test fails intermittently under `-n`** (prune round 5, concern 4):
+- **copilot-mro tests fail intermittently under `-n`** (prune round 5, concern 4; P4-1, concern 4):
   `tests/agent_sdk/techpub/test_techpub_tools.py::test_final_round_trip_closes_the_delta_new_then_nil` answered
   `UNREACHABLE` where `NIL` was expected once, and passed alone and with its file run serially. An isolation bug,
-  outside this plan's code. *Complete fix:* find the state its workers share (capture or attachment state is the
-  first suspect) and isolate it.
+  outside this plan's code. Two ingest tests (`test_document_writers_name_their_operator[crew_manual_parser]`,
+  `test_ifim_revision_identity`) also failed once on one worker and pass serially; an earlier test replacing a
+  module in `sys.modules` is the likely cause. *Complete fix:* find the state each shares across a worker and
+  isolate it.
 
 - **ECR tags stay mutable** (round 1f, concern 5). Step 6 relies on `describe-images` showing one tag and the
   build's push time to notice a replaced `:<api commit>` image. *Complete fix:* make commit tags immutable (ECR's
