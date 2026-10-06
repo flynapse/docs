@@ -1,7 +1,7 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-05, ~23:15 PDT): **phase 1 is done at copilot-mro `c24049f6` (the prune's fix round 4 re-reviewed
-MERGE-READY), and prune round 5, the last, takes that review's four Minors; phase 2 (the Terraform) is done at iac
+Status (2026-10-05, ~23:15 PDT): **phase 1 is done at copilot-mro `5099fbf9` (the prune's fix round 5, the last, is built and
+awaits its re-review); phase 2 (the Terraform) is done at iac
 `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e are done at iac `9e3ea13` (guards, one combined deploy, the
 hand-built image built before the deploy, the Weaviate schema step, the email login). Round 1f (protect a client's
 box: no `main` or `:latest` moves, owner decision ~23:10) is running; then 1c (the commands inside the steps).
@@ -650,6 +650,16 @@ None: the owner answered all four on 2026-10-05 (above).
   none, so once the POC runs that image it sends none. Email is not needed for the POC to boot, and a client install
   brings its own mail login. *Complete fix:* if the POC should send mail, add the two keys to its root-only secrets
   file at first boot.
+
+- **The backup's unit pins check that a value is present, not the value systemd ends with** (prune round 5,
+  concern 1; pre-existing). `Persistent=true` followed by `Persistent=false`, or an emptied `WantedBy=` after the
+  pinned one, passes both backup tests, and both fail silently on the box. *Complete fix:* pin each key's final
+  value list as systemd computes it (the last assignment wins; an empty one clears the list before it).
+- **A copilot-mro test fails intermittently under `-n`** (prune round 5, concern 4):
+  `tests/agent_sdk/techpub/test_techpub_tools.py::test_final_round_trip_closes_the_delta_new_then_nil` answered
+  `UNREACHABLE` where `NIL` was expected once, and passed alone and with its file run serially. An isolation bug,
+  outside this plan's code. *Complete fix:* find the state its workers share (capture or attachment state is the
+  first suspect) and isolate it.
 
 ## Lessons
 
