@@ -1,14 +1,24 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, 03:55 PDT): **phases 1 to 3 are done (copilot-mro `5099fbf9`; iac `3933f47`, then phase 3's
-fix rounds to `34cfec1`). Phase 4, the POC server as a one-box client install, is built except its startup unit:
-copilot-mro `96cc2fcc` holds the readiness program (P4-1) and the Postgres overlay (P4-2), and the startup unit
-(P4-3) is running; iac `860f55a` holds the setup script (P4-4), the ECR grant, size and attachment flag (P4-5), and
-the runbook with the POC data disk's `prevent_destroy` (P4-6). The dashboard change (a hand publish that leaves
-`latest` alone) is in its second fix round: its test must never reach the real AWS CLI. The final review runs in
-three lenses: the main deploy's runbook (running), iac's code and guards, and the POC end to end. One owner decision
-is coming: whether a browser should reach the POC's UI (Open questions).** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
-runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
+Status (2026-10-06, 06:15 PDT): **phases 1 to 4 are built, and the final review is done; its fix rounds run.**
+- **Built:** copilot-mro `e4e8bb57` (phase 4: the readiness program, the Postgres overlay, the startup unit); iac
+  `860f55a` (the setup script, the ECR grant, size and attachment flag, the runbook); dashboard `6654418` (a hand
+  publish that leaves `latest` alone, in three fix rounds).
+- **The final review, three lenses:** the main deploy's runbook FIX FIRST (2 Important, 7 Minor); iac's code and
+  guards FIX FIRST (1 Important, 4 Minor, all in the tests, none in the deployed code); the POC end to end
+  MERGE-READY (4 Minor).
+- **The owner chose (06:09):** the POC's web app is opened through an SSH tunnel, with no change in AWS.
+- **Running:** copilot-mro's fix round (db-init's schema-change message, a comment, the proofs the 05:02 restart cut
+  short) and iac's first fix round (the pins, and the POC clone's token).
+- **Next:**
+  - iac's second fix round, the runbook;
+  - scoped re-reviews of each fix round, the dashboard's included;
+  - the merges: copilot-mro into `langgraph-merge` after user erasure's X3 and X4, iac into `main`, dashboard into
+    `agent_sdk`;
+  - then the owner's deploy.
+
+Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the runbook. It is
+built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
 
@@ -114,6 +124,13 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
   - **The POC's dashboard image (~23:30 PDT): refreshed on its own tag.** Dashboard's publish job always moves
     `dashboard-ecr:latest`, which the client's box pulls. A small dashboard change lets a hand run push only the
     commit tag, and the POC runs that tag. Chosen over keeping the POC's May dashboard.
+- **2026-10-06 (06:09 PDT): the POC's web app is opened through an SSH tunnel, with no change in AWS.** The final
+  review's lens B found that the tunnel works as things are:
+  - the API's port 8000 is already public;
+  - `http://localhost:3000` is in the API's default CORS origins;
+  - the dashboard's password sign-in (Amplify SRP) needs no callback URL.
+
+  Chosen over a port-3000 rule from the owner's address.
 - **2026-10-05 (controller, from phase 1's review): no globals dump.** On AWS every role comes from code: first boot
   makes `phoenix`, and provisioning makes the app's. A globals dump without passwords would make provisioning find
   the roles already there and never set their passwords. The restore order is: first boot, then provisioning, then
@@ -173,14 +190,8 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
 
 ## Open questions
 
-- **Should a browser reach the POC's UI?** Today it cannot.
-  - The POC's security group admits no 3000, and nothing listens on 80 or 443.
-  - Through an SSH tunnel, the page's origin is not one the API admits.
-
-  The final review's lens B states what access would take: the port from the owner's address, the API's origins,
-  and the sign-in's callback URLs. Then the owner decides. Until then, the runbook checks the UI on the box itself.
-
-The owner answered the design's four questions on 2026-10-05 (above).
+None open. The last one, whether a browser should reach the POC's UI, was answered on 2026-10-06: through an SSH
+tunnel, with no change in AWS (Owner decisions). The owner answered the design's four questions on 2026-10-05.
 
 ## Risks
 
@@ -554,10 +565,17 @@ The owner answered the design's four questions on 2026-10-05 (above).
         - the API's additions, and its `depends_on` db-init completed.
       - `.env.sample` gains the four password names, and the compose tests read the overlay.
       - The client kit stays byte-identical to the branch's merge base.
-    - **P4-3 (running):** `poc-stack.service` and `poc-stack-up.sh`.
-      - A oneshot unit that never runs down, pull or git.
-      - `up -d --pull never`: an implicit pull would use an ECR login that expired 12 hours after the first boot.
-      - It refreshes the three public-address lines of `.env` from IMDSv2.
+    - **P4-3 (`e4e8bb57`):** `poc-stack.service` and `poc-stack-up.sh`.
+      - A oneshot unit that never runs down, pull or git. It runs as root, after docker and the network, with a
+        1,200 s start limit (Postgres' 300 s recovery window plus db-init's 300 s Weaviate wait and its steps).
+      - `up -d --pull never`: an implicit pull would use an ECR login that expired 12 hours after the first boot. A
+        missing image now fails the unit, by design.
+      - It refreshes the three public-address lines of `.env` from IMDSv2, with a 60 s token and 10 s per call. An
+        answer that is not an IPv4 address leaves the file as it is, with a warning.
+      - It refuses, running nothing, without the data volume mounted, the secrets file, or one of the three lines.
+      - Its 31 tests run the real script against stubs: 40 of 40 mutants died.
+      - **What only the box can prove:** compose's `--pull never` failing on a missing image, the boot order, IMDS at
+        boot, and systemd's PATH finding `docker-compose`. The deploy's checks and one stop and start are the proof.
   - **iac (`aws-pg-phoenix`):**
     - **P4-4 (`c153078`):** `poc_ec2_setup.sh`, on the main box's pattern:
       - the data volume found by its id;
@@ -583,7 +601,41 @@ The owner answered the design's four questions on 2026-10-05 (above).
   - **Dashboard (`dashboard-publish-tag`):**
     - `6011e32`: a hand run with `move_latest` off pushes the commit tag alone;
     - fix 1 (`317f462`): the pin proves the push, catches any `latest`, and the summary names tags only;
-    - fix 2 (queued): the pin seals its step runs from the real AWS CLI.
+    - fix 2 (`7672233`): the pin seals its step runs from the real AWS CLI (refusing `aws`, `docker` and `gh` first
+      on `PATH`, its own `HOME`), and `continue-on-error` on a step fails it;
+    - fix 3 (`6654418`): the seal proves itself through the pin's own runner, no caller credential variable reaches
+      a step, and `continue-on-error` on the job fails the pin.
+- **The final review (2026-10-06, 04:05 to 05:30 PDT), three lenses on iac `860f55a` and copilot-mro `e4e8bb57`.**
+  - **Lens A, the main deploy's runbook: FIX FIRST, 2 Important, 7 Minor.**
+    - **I-1:** nothing checks the three database passwords typed at step 4 before step 6's apply. A typo in the grant
+      or query password would show only at the first signup or query, after the deploy looks done.
+    - **I-2:** the box's Weaviate version is never read before step 3 starts the pinned version on its only data.
+    - Every phase 3 finding is closed, and the plan counts derive from the Terraform.
+  - **Lens B, iac's code, scripts, guards and pins: FIX FIRST, 1 Important, 4 Minor.** The Terraform plans what is
+    intended and the grants are exact. All five findings are gaps in the pins:
+    - **I-1:** the image's commit labels are unpinned. A wrong edit would pass every test, then stop the POC at
+      boot after step 6 replaced it.
+    - **m-1:** guard 1 skips quoted `.env` words.
+    - **m-2:** nothing would stop a `compose config` line printing every password to cloud-init's log.
+    - **m-3:** the POC's volume stage runs only its happy path.
+    - **m-4:** the IAM pin skips a role it cannot resolve.
+  - **Lens C, the POC end to end: MERGE-READY, 4 Minor.**
+    - **The two repositories agree:** the three address lines are byte-identical in both.
+    - **m-1:** the runbook never proves a stop and start.
+    - **m-2:** at a reboot Docker restarts the API before db-init runs, so db-init gates only the API's creation.
+    - **m-3:** a refused dispatch leaves the runbook's "list again" endless.
+    - **m-4:** the POC's password rotation has no login check.
+    - **Also:** db-init's message is to name the unit's two lines; the clone keeps the GitHub token in `.git/config`.
+  - **The 05:02 restart** cut both reviews' mutant runs short (about 40 mutants); the fix rounds run them.
+  - **The rulings:**
+    - one copilot-mro fix round;
+    - iac in two rounds, one after the other on the one tree: F1 the pins and the token, F2 the runbook;
+    - guard 1's compose allowance stays, with lens B's two fixes;
+    - the IMDS hop limit of 2 stays (the API reaches Bedrock and S3 through the instance role);
+    - the token on `git clone`'s argument list at first boot stays in the user-data Future Improvement.
+  - **A merge-order fact:** on the branch, `provision_rls.py` treats a missing `flynapse_readonly` role as fatal, and
+    nothing on the POC creates it. `langgraph-merge` (`2b364e03`) makes it a note, and the deploy clones `aws-deploy`
+    after the merge, so the deploy is safe. A POC cloned from the branch itself would fail at first boot.
   - **Learnings:**
     - **Tests that run shell scripts on this box can reach the real AWS account.** `/usr/local/bin/aws` finds
       `~/.aws` even with `HOME` unset. Every such test puts refusing `aws`, `gh` and `docker` stubs first on `PATH`
@@ -594,6 +646,14 @@ The owner answered the design's four questions on 2026-10-05 (above).
     - **db-init's failure message says "run compose up -d again".** That leaves the startup unit disabled after a
       failed first boot. The README gives the unit's two lines instead, and the final review's fix round corrects
       the message.
+    - **Memory: the machine restarted at 05:02 (2026-10-06).** The guest ran out of RAM and its 16 GB of swap, with
+      four of this program's agents and another session's sharing the box. The slot script checks free memory only
+      when a run starts. Heavy runs now ask for 10 GB free (`pytest-slot.sh -m 10`), one at a time per agent.
+    - **A killed mutant run leaves its mutant in place.** `mutant.sh` cannot restore a file on SIGKILL. After a
+      restart, compare each extract or worktree with its commit before any further run. Two held a mutant on
+      2026-10-06.
+    - **A browser reaches the POC through a tunnel with no change.** `http://localhost:3000` is already a default CORS
+      origin, and the dashboard's sign-in needs no callback URL.
 
 ## Future Improvements
 
@@ -626,8 +686,10 @@ The owner answered the design's four questions on 2026-10-05 (above).
   dumps. *Complete fix:* make the expiry cover the whole bucket, which holds only backups, and let the api's
   backups row read that form.
 
-- **The GitHub token sits in the instance's user data** (pre-existing). *Complete fix:* read it at boot from SSM,
-  like the box's other secrets.
+- **The GitHub token sits in the instance's user data** (pre-existing). On the POC it is also on `git clone`'s
+  argument list during the first boot (the final review's lens C); iac's fix round F1 removes it from the clone's
+  `.git/config` afterwards. *Complete fix:* read it at boot from SSM, like the box's other secrets, and hand it to
+  git through a credential helper, never the URL.
 - **Postgres runs at the image's defaults** (128 MB shared buffers, 64 MB `/dev/shm`) with no memory limit, on a box
   it shares with Weaviate, Phoenix and the collector. *Complete fix:* tune it for a 16 GB box, with a compose memory
   budget.
@@ -706,6 +768,23 @@ The owner answered the design's four questions on 2026-10-05 (above).
   retire `copilots.service` and `restart-services.sh` from copilot-mro.
 - **The POC's S3 policy reaches every bucket** (POC design). *Complete fix:* narrow it to the buckets the POC's API
   uses, then drop the role from the dumps bucket's deny. That is the precondition for any S3 backup of the POC.
+- **The POC's containers reach its instance role, and its API port is public** (the final review's lens C, 2026-10-06).
+  - The metadata hop limit of 2 lets a container fetch the role's credentials. The API needs that: it reaches
+    Bedrock and S3 through the role, with no static keys.
+  - Ports 8000 and 4318 admit the whole internet (the design kept the group unchanged).
+  - So a request forgery in the API would reach the role, and with it the S3 policy above.
+
+  *Complete fix:* narrow the S3 policy first. Then admit 8000 and 4318 only from the owner's address, which the SSH
+  tunnel the owner chose already allows for. Or put the API behind a proxy that alone reaches the metadata service.
+- **Formats copied between iac and copilot-mro, with nothing comparing them** (P4-3, concern 2). Several values are
+  written twice, once in each repository:
+  - the three `.env` address lines;
+  - the unit's and script's install paths;
+  - the box's paths.
+
+  The final review compared them byte for byte, but a test in one repository cannot read the other on this branch.
+  *Complete fix:* a cross-repository pin run where both checkouts sit side by side (the workspace's `tests/_root.py`
+  `sibling_repo`), at the merge gate.
 - **The POC's `.env` holds the Azure key and Grafana's password, and the dashboard reads that file** (POC design).
   *Complete fix:* move both into the root-only secrets file, and take the GitHub token out of user data.
 - **Nothing after the deploy proves email works** (phase 3 fix round 1e, concern 2). Step 6 checks that the secret

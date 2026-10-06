@@ -2894,6 +2894,18 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     the seeds are moved.
   - *Complete fix (the techpub demo, not this plan):* `reset_demo.py` seeds the twice-monthly dates relative to the
     reset day.
+- **The chat rule reads every earlier turn of the chat (X3 fix round 3, concern 2).**
+  - A turn's saved record holds only that turn's private sources. A chat stays closed because the gate reads the
+    union over all its earlier blocks, and that holds only while a turn loads the whole chat.
+  - *Complete fix, if a later change windows the history or deletes single blocks:* each saved block carries the
+    chat's families forward, so the latest block alone tells. `chat_private_source_families` is the one reader to
+    change.
+- **The person's own memory never crosses chats today, and nothing pins that (X3 fix round 3, item 3).**
+  - Compaction summaries are read back only into their own chat. In-turn recall asks for tenant notes only.
+  - A later change that recalls user-grain items in another chat would carry a private chat's content with the gate
+    open.
+  - *Complete fix, if that ever changes:* the summary records its chat's private families, and recalling it closes
+    the gate. X3's fourth round adds a pin that recall stays tenant-only.
 
 ## Lessons
 
@@ -4185,3 +4197,39 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   2. the merges (X3, then X4) and their gate;
   3. the API restart and the two live chats the owner approved;
   4. Task 18.
+
+**Status, 2026-10-06, 06:15 PDT: X3 in its fourth round; X4's second round finishing.**
+- **The machine restarted at 05:02,** out of memory (four of this program's agents and another session's on one box).
+  Every agent was resumed from its transcript, and two private test copies that still held a mutant were caught first.
+  The API on port 8000 went down with it; it is started on the merged code at the planned restart.
+- **X3, the memory fix.**
+  - **Second round (`1f494fdc`):** a turn into which an upload or Document Hub reader returned content feeds no
+    tenant-wide memory, cited or not. A DataView badge keeps its origin. "Not computed" closes the gate. Full suite:
+    17,169 passed, the two closed-port reds; 14 of 14 mutants died. It proved that an uncited Document Hub read
+    reached tenant memory before this round.
+  - **The controller's ruling for the third round:** once private content has reached the model in a chat, no later
+    turn of that chat feeds tenant-wide memory. Each saved turn records the private sources that reached it, and a
+    turn reads its chat's earlier turns.
+    - **Why:** every path that carries content forward is per chat: an earlier upload's table read again, a table
+      derived from it, an earlier answer in the replayed history. One rule at the chat's grain closes them all, and
+      any found later.
+    - **The cost:** tenant memory learns nothing from the rest of such a chat. The person's own memory still learns.
+    - **Chats saved before the change carry no record,** so they never feed tenant memory again (dev data). New
+      chats learn.
+  - **Third round (`10167d62`, `9dd7b6f7`):** the record and the chat rule. It found that the person's own memory
+    cannot carry private content into another chat today: summaries are read back only into their own chat, and
+    in-turn recall reads tenant notes only.
+  - **Fourth round, next:**
+    - the other runtime's badges for earlier turns' tables;
+    - a pin that recall stays tenant-only;
+    - two Claude-side test cases;
+    - the full suite.
+- **X4, the closed tab.** The second round pins that the pipeline's thread runs in the request's context, that an
+  exception ends the turn unchanged, and that a cancelled turn cancels its queued call. It corrects three docs, and
+  it fixed a real race in X4's own hold test. Its full suite is running.
+- **Next:**
+  1. X4's scoped re-review;
+  2. X3's fourth round, then one scoped re-review over X3's three fix rounds and the fourth;
+  3. the merges (X3, then X4) and their gate;
+  4. the API start on the merge and the two live chats the owner approved;
+  5. Task 18.
