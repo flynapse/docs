@@ -334,7 +334,15 @@
     - Lanes: non-db 16,992 passed; tenancy 680.
     - **A note for later:** a service password whose libpq and asyncpg forms differ cannot be used through asyncpg by
       its own holder. No workspace code imports asyncpg, so refusing such a password is a Future Improvement.
-    - The scoped re-review over rounds 4 and 5 is running. Round 5 was the loop's last.
+    - **The re-review over rounds 4 and 5: MERGE-READY, OPEN 0 (2026-10-05, evening).**
+      - It found 0 missed logins over 3.1M enumerated pairs. Its libpq model was built from `saslprep.c`'s own
+        tables, and it ran asyncpg's own `_normalize_password` text.
+      - Live, the 8 cases × 2 modes exited 2 with 0 connections and an unchanged catalog. asyncpg 0.31.0 confirmed
+        the model's fallbacks.
+      - The output is byte-identical to the parent's, apart from the literal-copy refusal's `ABORTED` line.
+      - Its five Minors are Future Improvements: the controller adjudicated them, since round 5 was the loop's last
+        and none can let a login through.
+      - It merges in the user-erasure window.
   - **Controller ruling (2026-10-01, night):** the owner's stand-in, the connected role that passed the definer-owner
     precondition, is excluded from every holder census, each naming it on an accepted line; any other member of the
     owner stays a finding. Why: under the RDS ruling ("report the rest"), a master that is a member of `postgres` but
@@ -675,6 +683,26 @@ DDL on shared databases, so every DDL step is the owner's to run.
       - "Equal" gains a third form, *visibly equal*. It removes stringprep B.1 and every Unicode format character
         (category Cf), maps every space to U+0020, then applies NFKC.
       - The four U+200B pins flip to "refused". An operator who hits the refusal chooses a new password.
+- **The fourth form refuses some pairs no client logs in with (rounds 4–5 re-review, m-1).**
+  - The pairs involve code points libpq keeps raw (U+0340 and the like) while asyncpg prepares the other password.
+  - Measured: 31 of 389k pairs in an extended fuzz, and 720 of 3.67M in an exhaustive enumeration. Round 5's "no
+    refusal without a login is added" holds only within round 4's fuzz alphabet.
+  - Every one is an over-refusal: an operator chooses another password. *Complete fix:* compare libpq's form with
+    asyncpg's only where both clients could hold the password, measured with the same enumeration.
+- **asyncpg's fallbacks are only partly pinned (m-2).**
+  - Two mutants survive the aimed file and the full lane: dropping the bidi D.2 clause, and dropping C.2 from the
+    prohibited list. Dropping C.3 or C.9 behaves the same way.
+  - Each mutant only adds refusals, so no login gets through. *Complete fix:* three more controls, each a password
+    one of those fallbacks decides.
+- **The Default_Ignorable table is pinned only from inside (m-3).**
+  - Lengthening a range by one code point survives the full lane. That would refuse a visible character and miss a
+    retyped login.
+  - The table equals Unicode 14.0.0 and 18.0.0 today. *Complete fix:* pin each range's outside neighbours too.
+- **Stale comments in `scripts/create_akasa_solo_tenant.py:211-213` (m-4).** They say `agent_state` and the
+  improvement-loop tables live on unmerged branches; both are declared at `cad0fbbe`. *Complete fix:* correct the
+  comment at that script's next change.
+- **Two sentences (m-5).** In `_asyncpg_form`'s bidi description, "beside" should read "anywhere". `_saslprep_form`'s
+  "the version of Python's tables cannot matter" is true of libpq's form only.
 - **copilot-mro's non-db lane reads the local test database (AWS phase 1, fix round 1).** Seven tests not marked
   `db` read `copilot_mro_test`. Three skip with "not present in this database" (the optimizer plan digest, the
   inventory plan, the optimizer decompose); four pass only with a database (`test_reset_demo`,

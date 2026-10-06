@@ -3,9 +3,10 @@
 Status: **phase 1 is done; the prune's fix round 3 (a byte-order mark the bound pin missed, and one systemd reader
 for both unit tests) is built at copilot-mro `2499baab`, and its re-review is running; phase 2 (the Terraform) is done
 at iac `3933f47`; phase 3's guards round (1b) is done at iac `75ba769`, and the runbook's first round (1a) made it one
-combined deploy at `acdd9a3`. Round 1a2 (the hand-built API image, with 1a's leftovers) is running. Then, on the same
-tree, one round at a time: 1d (the POC replica's Postgres settings) and 1c (the commands inside the steps); then a
-re-review by two lenses** (2026-10-05, ~21:15 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+combined deploy at `acdd9a3`. Round 1a2 added the hand-built API image at `50356e2`. Round 1d (the POC replica's Postgres
+settings, and the image built before the deploy so its build and push stay out of the outage) is running. Then, on the same
+tree: 1c (the commands inside the steps, and the email credentials once the owner decides); then a
+re-review by two lenses** (2026-10-05, ~21:00 PDT). Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -521,5 +522,16 @@ None: the owner answered all four on 2026-10-05 (above).
   `PutBucketOwnershipControls`, `PutBucketPublicAccessBlock` and `PutReplicationConfiguration`. Each needs a second
   step to reach a dump, or affects only availability. *Complete fix:* count every action that can change who reads
   the bucket.
+- **The hand-built image takes third-party versions from pip at build time** (phase 3 fix round 1a2, concern 2), as
+  api's own production build does, not from api's `poetry.lock`. Two builds of the same commits can differ.
+  *Complete fix:* export the lock's pins as a constraints file and install with it.
+- **The image check proves only the api commit** (phase 3 fix round 1a2, concern 4). The sibling repositories'
+  commits are printed and kept as image labels, not checked. The script also does not warn when a checkout has
+  uncommitted changes. `git archive` stages the commit, so such changes never reach the image, but step 4 runs from
+  those checkouts. *Complete fix:* the check reads all six commits from the labels, and the script refuses a dirty
+  checkout.
+- **App Runner's HTTP health check stays off** (phase 3 fix round 1a2, concern 8). Its comment's condition is now met:
+  the image serves `/health/live` at the root. Over TCP's check it adds little for this deploy, since an image that
+  fails at startup never opens its port. *Complete fix:* turn it on in a later apply, path `/health/live`.
 
 ## Lessons
