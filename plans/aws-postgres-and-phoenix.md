@@ -1,6 +1,6 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, ~01:15 PDT): **phase 1 is done at copilot-mro `5099fbf9` (the prune's fix round 5, the last,
+Status (2026-10-06, 00:51 PDT): **phase 1 is done at copilot-mro `5099fbf9` (the prune's fix round 5, the last,
 re-reviewed MERGE-READY); phase 2 (the Terraform) is done at iac `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e
 are done at iac `9e3ea13` (guards, one combined deploy, the hand-built image built before the deploy, the Weaviate
 schema step, the email login), and 1f at `d15664d` (protect a client's box: App Runner runs the commit tag, the
