@@ -1,13 +1,12 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-05, ~22:20 PDT): **phase 1 is done at copilot-mro `2499baab` (the prune's fix round 3 re-reviewed
-MERGE-READY), and prune round 4 takes that review's three Minors; phase 2 (the Terraform) is done at iac `3933f47`;
-phase 3's rounds 1b, 1a and 1a2 are done at iac `50356e2` (guards, one combined deploy, the hand-built image).
-Round 1d stopped by size after one item, which the POC decision then withdrew. Round 1d2 is running (its revert
-landed as `e2b2431`): it reverts
-that item, moves the image build before the deploy, and adds the Weaviate schema step. Then 1e (the email login)
-and 1c (the commands inside the steps). Phase 4, the POC server as a one-box client install (owner decision), is
-in design. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+Status (2026-10-05, ~23:15 PDT): **phase 1 is done at copilot-mro `c24049f6` (the prune's fix round 4 re-reviewed
+MERGE-READY), and prune round 5, the last, takes that review's four Minors; phase 2 (the Terraform) is done at iac
+`3933f47`; phase 3's rounds 1b, 1a, 1a2 and 1d2 are done at iac `5c081f7` (guards, one combined deploy, the
+hand-built image built before the deploy, the Weaviate schema step). Round 1e (the email login) is running; then 1f
+(protect a client's box: no `main` or `:latest` moves, owner decision ~23:10) and 1c (the commands inside the
+steps). Phase 4, the POC server as a one-box client install, is designed and the owner answered its questions; its
+rounds follow (copilot-mro after prune round 5, iac after 1c). A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -87,11 +86,32 @@ runbook. It is built before the AWS deploy; the owner deploys to AWS only once a
     the outage.
 - **2026-10-05: the step 3b Terraform** (`db-roles-tf-query`) stays on its branch and merges with this plan's iac work.
   Auto mode refused the controller's merge into iac `main`.
-- **2026-10-05: the box keeps deploying copilot-mro `main`, and `main` is fast-forwarded first.** The setup script
-  clones `main` (hard-coded in `ec2.tf`). It last moved on 2026-02-11, is 3,164 commits behind `langgraph-merge` and
-  lacks this work, so a box built from it would fail at boot and take Weaviate and the collector down with it.
-  `main` is a strict ancestor of `langgraph-merge`. Before the deploy, `main` is fast-forwarded to `langgraph-merge`
-  and pushed, with the owner's approval. Phase 2 still makes the branch a Terraform variable, defaulting to `main`.
+- **2026-10-05 (superseded ~23:10 PDT, below): the box keeps deploying copilot-mro `main`, and `main` is
+  fast-forwarded first.** The setup script clones `main` (hard-coded in `ec2.tf`). It last moved on 2026-02-11, is
+  3,164 commits behind `langgraph-merge` and lacks this work, so a box built from it would fail at boot and take
+  Weaviate and the collector down with it. `main` is a strict ancestor of `langgraph-merge`. Before the deploy, `main`
+  is fast-forwarded to `langgraph-merge` and pushed, with the owner's approval. Phase 2 still makes the branch a
+  Terraform variable, defaulting to `main`.
+- **2026-10-05 (~23:10 PDT): protect a client's box; our deploy never moves `main` or `:latest`.**
+  - The POC design found that copilot-mro's old POC kit (`deployment/poc/restart-services.sh`, "go live changes",
+    2025-12-11) restarts a box at a fixed private address outside our AWS network, most likely a client's server.
+    At every restart it pulls copilot-mro `main`, logs in to our ECR, and pulls the API and dashboard images by their
+    `latest` tags.
+  - The deploy as written would fast-forward `main` and move `flynapse-api-ecr:latest`. That box's next restart would
+    then run an API that cannot boot there (no Postgres, no multi-tenant collections).
+  - Asked whether such a box still runs, the owner chose "protect it" over "no box runs it" and "I'll handle that
+    box". So: our boxes deploy their own branch (`aws-deploy`, created and fast-forwarded by the runbook), App Runner
+    runs the API image by its commit tag (recorded in `dev.tfvars`), and nothing in the deploy moves `main`,
+    `flynapse-api-ecr:latest` or `dashboard-ecr:latest`. Fix round 1f builds it. It supersedes the decision above.
+- **2026-10-05 (~23:10 PDT): the POC server's design questions** (phase 4), each the recommended option:
+  - **Readiness on its own:** the box makes its passwords at first boot and a one-shot helper container migrates,
+    provisions, verifies and creates the Weaviate collections before the API starts. Chosen over the owner making
+    four SSM passwords and running the setup over tunnels after the deploy.
+  - **No backups:** dev data, the data disk survives replacements, and the erasure receipt's 14 days hold with nothing
+    to wait for. Chosen over local nightly dumps and nightly dumps to S3.
+  - **Size:** `t3.xlarge` (16 GiB) and a 30 GB data disk, chosen over keeping `t2.large` and 10 GB.
+  - **The POC's dashboard image:** not yet asked. Under the protection above, a refresh must not move
+    `dashboard-ecr:latest`, which dashboard's publish job moves today.
 - **2026-10-05 (controller, from phase 1's review): no globals dump.** On AWS every role comes from code: first boot
   makes `phoenix`, and provisioning makes the app's. A globals dump without passwords would make provisioning find
   the roles already there and never set their passwords. The restore order is: first boot, then provisioning, then
@@ -484,9 +504,29 @@ None: the owner answered all four on 2026-10-05 (above).
 - **Already known.**
   - The POC compose sets `WEAVIATE_URL` in `environment:`, which overrides `.env`.
   - The dashboard reads the API's `.env`.
-  - The POC's restart unit (a template enabled without an instance) and its restart script (user `ubuntu`) are broken
-    today.
+  - The POC's restart unit (a template enabled without an instance) and its restart script (user `ubuntu`) do not
+    work on the AWS POC. The design found why: they serve a client's box (see the ~23:10 decision), so they stay
+    untouched and the AWS POC gets its own.
   - Its setup passes AWS access keys as template variables.
+- **The design (done 2026-10-05, ~23:05 PDT; owner's answers ~23:10).**
+  - **The services:** a new compose overlay beside the unchanged base adds Postgres 16, listening on the box's
+    loopback only, with its data on the POC's data disk. No Phoenix: the API is told the host has none, so user
+    erasure records that skip honestly instead of holding.
+  - **Readiness:** passwords generated at first boot into a root-only file on the data disk (kept across replacements;
+    the setup stops if the database exists without them). A one-shot helper container from the API's own image runs
+    the checkout's migration, provisioning, verification and Weaviate schema scripts before the API may start. It
+    migrates only an empty database; a database that holds data is verified, and a needed migration is the owner's
+    step, with a snapshot first.
+  - **Startup:** a new root-owned unit and script on the main box's pattern that never take the stack down, never
+    pull code or images, and wait for the data disk.
+  - **IAM:** the CI deploy user's static keys leave the POC; its role gains a scoped ECR pull grant. No security
+    group change; the main box's group is never extended to the POC.
+  - **Existing data:** the old Weaviate collections stay, because the schema step copies its shape from them. Before
+    the deploy the runbook reads the POC's Weaviate version (not newer than the pin), the seven legacy sources, and
+    that no declared collection exists with multi-tenancy off.
+  - **Under the protection decision:** the POC clones the deploy branch and pulls the API by its commit tag.
+  - **Rounds:** three in copilot-mro (the helper program, the overlay, the startup unit and script), then three in iac
+    (the setup script, the role and size, the runbook).
 
 ## Future Improvements
 
@@ -581,6 +621,26 @@ None: the owner answered all four on 2026-10-05 (above).
 - **App Runner's HTTP health check stays off** (phase 3 fix round 1a2, concern 8). Its comment's condition is now met:
   the image serves `/health/live` at the root. Over TCP's check it adds little for this deploy, since an image that
   fails at startup never opens its port. *Complete fix:* turn it on in a later apply, path `/health/live`.
+- **No script runs the API's two boot checks outside a boot** (phase 3 fix round 1d2, concern 1). Step 6's dry run
+  uses the provisioning scripts' verify-only modes instead. It does not check the database's row-level security as
+  App Runner's role sees it, and once tenants exist nothing before a deploy checks for partitions no tenant names.
+  *Complete fix:* a copilot-mro script that runs both boot checks, read only, as the app's role, for the runbook to
+  call.
+- **The Weaviate schema step needs seven legacy collections** (POC design, finding 1; round 1d2, concern 3). The
+  provisioner copies six collections' shape from live legacy collections, so a Weaviate without them (every fresh
+  client box) cannot get its schema, and the provisioner stops at the first missing one. *Complete fix:* commit the
+  seven collections' intended properties and vectors, generated once from a cluster that has the sources; the
+  provisioner and its verify mode read that file when a source is absent, and a pin regenerates and compares it.
+  Then the POC's old collections may go.
+- **The client kit's restart files still pull `main` and `latest`** (POC design, finding 2). Our deploy now leaves
+  both alone, but two other paths still move them: dashboard's publish job pushes `dashboard-ecr:latest` on every
+  `[publish]` commit to its `main`, and api's image build (broken since July) pushed `flynapse-api-ecr:latest`.
+  *Complete fix:* once the owner confirms which client boxes exist, give each its own pinned tags and branch, then
+  retire `copilots.service` and `restart-services.sh` from copilot-mro.
+- **The POC's S3 policy reaches every bucket** (POC design). *Complete fix:* narrow it to the buckets the POC's API
+  uses, then drop the role from the dumps bucket's deny. That is the precondition for any S3 backup of the POC.
+- **The POC's `.env` holds the Azure key and Grafana's password, and the dashboard reads that file** (POC design).
+  *Complete fix:* move both into the root-only secrets file, and take the GitHub token out of user data.
 
 ## Lessons
 
