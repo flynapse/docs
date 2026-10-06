@@ -2865,6 +2865,10 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   deploy or restart while the turn is in its pipeline call cancels it; and a closed-tab turn saved after a newer
   turn on the same chat appears below it, outside the newer turn's context. *Complete fix:* a shutdown-budget
   term in api for held turns, and an order key taken at the turn's start.
+- **A Telegram turn the bot cuts at 600 s is still saved (X4 review, M-3).** The bot apologises and refunds at its
+  600 s wall clock, but the backend's interactive deadline is 900 s, so after X4 the answer is still saved and the
+  pilot's next turn reads an answer they were told had failed. *Complete fix:* align the bot's wall clock with the
+  backend's deadline, or have the bot ask that a turn it abandons is not saved.
 - **The live proof's DEBUG dumps carry the private folder's raw path (accepted).** The per-tool debug dumps are raw
   tool input and output by design, and DEBUG-only. The folder is gone when the session ends, and the user-facing
   trace shows no path.
