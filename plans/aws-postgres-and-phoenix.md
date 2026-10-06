@@ -3,12 +3,12 @@
 Status (2026-10-06, 00:51 PDT): **phase 1 is done at copilot-mro `5099fbf9` (the prune's fix round 5, the last,
 re-reviewed MERGE-READY); phase 2 (the Terraform) is done at iac `3933f47`; phase 3's rounds 1b, 1a, 1a2, 1d2 and 1e
 are done at iac `9e3ea13` (guards, one combined deploy, the hand-built image built before the deploy, the Weaviate
-schema step, the email login), and 1f at `d15664d` (protect a client's box: App Runner runs the commit tag, the
-boxes deploy `aws-deploy`, nothing moves `main` or `:latest`, the Weaviate sources checked before step 1). Round 1c
-(the commands inside the steps) is running. Phase 4, the POC server as a one-box client install,
+schema step, the email login), 1f at `d15664d` (protect a client's box: App Runner runs the commit tag, the boxes deploy
+`aws-deploy`, nothing moves `main` or `:latest`, the Weaviate sources checked before step 1) and 1c at `34cfec1` (the
+commands inside the steps, rotation rewritten). Phase 3's fix rounds are done. Phase 4, the POC server as a one-box client install,
 is designed and the owner answered its questions. Its dashboard change (a hand publish that leaves `latest` alone,
-dashboard `6011e32`) is in review. Its first copilot-mro round (the readiness program) is running; its iac rounds
-follow 1c. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
+dashboard `6011e32`) is in review. Its first copilot-mro round (the readiness program) and its first iac round (the setup
+script) are running. A two-lens re-review covers phases 3 and 4.** Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the
 runbook. It is built before the AWS deploy; the owner deploys to AWS only once all work is finished.
 
 ## Why
@@ -671,6 +671,10 @@ None: the owner answered all four on 2026-10-05 (above).
   tag-mutability exclusions can keep `latest` mutable for the client path).
 - **The runbook's inline-code scans read one line at a time** (round 1f, concern 7). A code span wrapped across two
   lines escapes them. *Complete fix:* scan joined paragraphs, or refuse a wrapped span.
+
+- **Rotating a box-only password replaces the instance** (round 1c, concern 3). The box reads those secrets at
+  first boot, so a rotation is a full box outage, the API's database included. *Complete fix:* rotate them in
+  place: rewrite the root-only secrets file and recreate only the containers that read it.
 
 ## Lessons
 
