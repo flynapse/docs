@@ -2942,9 +2942,18 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - **A unit case connects at run time too (X3 fix round 7c, concern 2).**
     `tests/unit/lang_agent/test_pilot_scenarios.py::test_recall_arc_restates_a_prior_turn_figure_without_re_searching`
     opens a client at the default `WEAVIATE_URL` (`localhost:8080`). Rounds 6, 7b and 7c's first lang run reached the
-    owner's local Weaviate through it, because the lanes closed Postgres but not Weaviate. It is most likely a by-id
-    chunk read; round 7d traces it. Since 7c, every lane and the merge gate set `WEAVIATE_URL=http://127.0.0.1:9` and
-    `WEAVIATE_GRPC_PORT=9`, and the case still passes.
+    owner's local Weaviate through it, because the lanes closed Postgres but not Weaviate. Since 7c, every lane and the
+    merge gate set `WEAVIATE_URL=http://127.0.0.1:9` and `WEAVIATE_GRPC_PORT=9`, and the case still passes.
+    - Round 7d traced it: the collection check, then a by-id chunk read. The same path would create a collection for
+      an absent non-multi-tenant class. No class setting is set here, so the multi-tenant default was used: reads
+      only.
+    - The client's start-up checks also fetch `pypi.org`, so every lane that reached Weaviate reached PyPI too.
+  - **A health test fails when Weaviate is closed on `127.0.0.1` (X3 fix round 7e, concern 1).**
+    `tests/unit/health/test_llama_index_health_details_carry_no_traceback.py` asserts that the health details never
+    contain `127.0.0.1`, but they carry the configured URL. With the lanes' address, 4 of its 7 cases fail; with
+    `http://localhost:9` all pass. The test must pin its own URL.
+  - Round 7e audited a whole full suite with Weaviate closed: every Python socket the tests opened went to a server the
+    test had just started.
   - *Complete fix:* move each probe behind its marker, into a fixture. The non-live lanes refuse live services by
     default (a conftest pin of the service addresses to a closed port), so a lane cannot reach one by omission.
 - **A Phoenix session-scrub test misses its wall-clock bound under load (X3 fix round 4).**
