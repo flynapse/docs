@@ -1606,6 +1606,22 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
    erasures completed before the P4 fix round, which ran with Phoenix unread (the CLI never loaded `api/.env`; review A
    I-1). Its docstring and `--help` follow O10, and the owner CLI's help names it and when to run it (P4 fix round,
    part D).
+7. **X3 (tenant memory back on): no older process may still write to a database once an X3 process serves turns on
+   it** (X3 re-review 2, privacy lens, M-1; controller ruling, 2026-10-07).
+   - **Why:** X3's gate treats a stored row that has no turn record as safe only when it is older than the chat's
+     first record. An older process still running after the switch (a rolling deploy's drain), or an older host whose
+     clock runs ahead, can store a failed or closed-tab turn's subagent runs later than that. A later turn could then
+     read an upload's text with the gate open.
+   - **Each deploy shape meets this today:**
+     - *Local dev:* one API process. Start X3 only when port 8000 is free and no other API process runs.
+     - *AWS:* the box's Postgres is new, and the old App Runner instances have no database (their host defaults to
+       `localhost`).
+     - *A client box:* compose recreates the API container: the old one stops before the new one starts, on one
+       clock.
+   - **Any other shape** stops every older process before the first X3 turn, or lets the old processes drain past the
+     interactive turn deadline (15 minutes) before X3 takes traffic.
+   - **A rollback below X3** on a database X3 has served breaks the rule. Build the clock-free fix (Future
+     Improvements) before X3 serves that database again.
 
 ## Owner / legal items
 
@@ -2961,6 +2977,20 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     holds family names only.
   - *Complete fix:* the agent-state writers refuse a chat marked deleted, in the same statement (a guarded insert), or
     the delete waits for the chat's open turns, as X4 already tracks them.
+- **X3's ordering backstop trusts the deploy and the clocks (X3 re-review 2, privacy lens, M-1).**
+  - A stored row without a turn record is counted only when it is older than the chat's first record. That is sound
+    only while no older process writes after an X3 process serves, and while hosts' clocks agree to within the gap
+    before a chat's first record. Deploy/rollout item 7 holds the first; the codebase allows hosts 10 seconds of skew.
+  - It was ruled operational because none of our deploy shapes runs an older writer beside X3. A rollback below X3 on
+    a database X3 has served would be one.
+  - *Complete fix:* each turn's record lists the keys of the model-readable rows its turn stored, and the gate closes
+    on any model-readable row of the chat that no record lists. That needs no clock, no deploy rule and no DDL. Rows
+    from before the fix are listed by no record, so it also replaces the ordering backstop, and it covers a pipeline
+    built without the record store.
+    - A run's key is known when the resolver runs, because the runs are stored after it. The tech-pub sweep's
+      checkpoint is stored mid-turn, so its writer must report its key to the turn.
+    - The reviewer's alternative, a turn-id column on agent state, needs DDL. The gate cannot read a turn id from the
+      payload, because a large payload is stored in the object store.
 
 ## Lessons
 
