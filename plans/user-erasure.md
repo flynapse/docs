@@ -2923,7 +2923,14 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **copilot-mro's full suite reaches the local Weaviate during collection (X4 fix round 2, concern 6).**
   - The Weaviate-probing integration modules probe at import, before `-m` deselects them. A read-only readiness
     check, but it breaks the lanes' "never connect" rule, and it shifts the skip counts when Weaviate is down.
-  - *Complete fix:* move each probe behind its marker, into a fixture.
+  - **A unit case connects at run time too (X3 fix round 7c, concern 2).**
+    `tests/unit/lang_agent/test_pilot_scenarios.py::test_recall_arc_restates_a_prior_turn_figure_without_re_searching`
+    opens a client at the default `WEAVIATE_URL` (`localhost:8080`). Rounds 6, 7b and 7c's first lang run reached the
+    owner's local Weaviate through it, because the lanes closed Postgres but not Weaviate. It is most likely a by-id
+    chunk read; round 7d traces it. Since 7c, every lane and the merge gate set `WEAVIATE_URL=http://127.0.0.1:9` and
+    `WEAVIATE_GRPC_PORT=9`, and the case still passes.
+  - *Complete fix:* move each probe behind its marker, into a fixture. The non-live lanes refuse live services by
+    default (a conftest pin of the service addresses to a closed port), so a lane cannot reach one by omission.
 - **A Phoenix session-scrub test misses its wall-clock bound under load (X3 fix round 4).**
   - `test_a_phoenix_that_never_answers_holds_the_delete_for_one_bound` failed once at load 11 to 14 (14.8 s), and
     passes alone and serially.
@@ -2947,6 +2954,13 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   structural pin that each writer folds the chat's uploads. *Complete fix:* make the chat's upload state a required
   argument of the record writer, so that a new writer cannot be written without it. That rewrites many predicate
   tests for two writers, so it waits for a third.
+- **A turn still running when its chat is deleted writes after the scrub (X3 fix round 7, fact 5).** It predates X3.
+  - The chat-delete scrub clears every agent-state row of the chat. But a turn still in flight upserts its subagent
+    runs, and now its privacy record, after the scrub (last writer wins, `db/agent_state/rows.py`).
+  - So a deleted chat can keep a run's text until erasure's residue count or a later sweep finds it. The turn's record
+    holds family names only.
+  - *Complete fix:* the agent-state writers refuse a chat marked deleted, in the same statement (a guarded insert), or
+    the delete waits for the chat's open turns, as X4 already tracks them.
 
 ## Lessons
 
@@ -4345,3 +4359,38 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   4. the merges (X3, then X4) and their gate;
   5. the API start and the two live chats;
   6. Task 18.
+
+**Status, 2026-10-06, 23:56 PDT: X3's turn record is built; its proof round and a privacy re-review run side by side.**
+- **Round 6, the proofs (`aa5b4ef4..b6f0faf6`), accepted:** tests and docstrings only. The tests re-review's five
+  survivors, its two vacuity probes and two new census mutants all die, aimed and on the full lane.
+- **Round 7, the per-turn privacy record, built in three rounds** (`b6f0faf6..0f1dbdad`, production +632/-67 in 13
+  files). Each round stopped at its context limit with its work committed.
+  - **What it does:**
+    - each turn writes a record the moment it is accepted, before it stores anything; if that write fails, the turn
+      stops;
+    - the record is resolved with what the turn reached at the end of its work, failed or not, before its runs are
+      stored;
+    - every other turn of the chat counts the records, and a record never resolved closes them;
+    - it covers both runtimes, the legacy adapter and every path without the agent loop.
+  - **It needs no DDL.** It is a new namespace in the existing agent-state table, which no model tool can list or read.
+    Chat delete and user erasure already clear it.
+  - **The controller's rulings:**
+    - *Rows from before the fix* carry no turn id. A model-readable row older than the chat's first record closes the
+      gate. This holds because every turn now writes its record before anything else, and a row's creation time is
+      set once. In practice it adds only chats whose every earlier turn failed: any chat with an older saved answer
+      is already closed, since those answers carry no record.
+    - *The lifecycle fails closed:* with no record store wired, a turn feeds no tenant memory. Both served pipelines
+      wire it, and a test pins that.
+    - *The other runtime's failures match Claude's:* a turn that fails without reaching private content no longer
+      closes its chat for good.
+- **One environment finding:** three rounds' test runs reached the owner's local Weaviate through one existing unit
+  test, most likely a read. Every lane and the merge gate now close Weaviate too (Future Improvements).
+- **Running:**
+  - round 7d, the proofs: a census that every path writes and resolves the record, about 24 mutants, the full suite
+    with an audit of any live service it reaches, and the agent-state db lane on a throwaway;
+  - the re-review's privacy lens, on the production code.
+- **Next:**
+  1. the re-review's tests lens, after round 7d;
+  2. the merges (X3, then X4) and their gate;
+  3. the API start and the two live chats;
+  4. Task 18.
