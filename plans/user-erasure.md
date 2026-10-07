@@ -2992,6 +2992,11 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     before a chat's first record. Deploy/rollout item 7 holds the first; the codebase allows hosts 10 seconds of skew.
   - It was ruled operational because none of our deploy shapes runs an older writer beside X3. A rollback below X3 on
     a database X3 has served would be one.
+  - **One host's clock stepping back breaks it too (X3 fix round 8a).** The dev box's clock steps back 0.3 to 0.9 s
+    about every 30 s. A step between a turn's record and a run stored within a second of it makes the run look older
+    than the chat's first record, and the chat's gate then stays closed for good. That fails closed, and served turns
+    store their runs well after their record. It made one lang test flaky until the privacy tests got a clock that
+    never steps back.
   - *Complete fix:* each turn's record lists the keys of the model-readable rows its turn stored, and the gate closes
     on any model-readable row of the chat that no record lists. That needs no clock, no deploy rule and no DDL. Rows
     from before the fix are listed by no record, so it also replaces the ordering backstop, and it covers a pipeline
@@ -3043,6 +3048,14 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - So the test passed in the worktree and failed at the merge gate.
   - Rule: for a lookup's miss branch, list every root it searches, and empty each one in the test (the module's own
     location included). Worktrees hide files that primaries have.
+- **A test lane reaches whatever its environment names** (X3 rounds 6 to 7e, 2026-10-06 to 10-07).
+  - The lanes closed Postgres but not Weaviate, so three rounds read the owner's local Weaviate. Eight integration
+    modules had also connected at import in every earlier full suite.
+  - Rule: every lane closes each live service it can reach, not only the database, and a full suite runs with a
+    socket audit. A test that compares wall-clock timestamps takes an injected clock, because this box's clock steps
+    back.
+- **A FULL mutant lane only confirms a survivor** (X3 round 7d, 2026-10-07). Round 7d's brief asked for a FULL lane on
+  every aimed kill, about three hours of lane time for nothing. Rule: briefs ask for FULL lanes only for survivors.
 
 ## Implementation notes
 
@@ -4430,6 +4443,29 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   - the re-review's privacy lens, on the production code.
 - **Next:**
   1. the re-review's tests lens, after round 7d;
+  2. the merges (X3, then X4) and their gate;
+  3. the API start and the two live chats;
+  4. Task 18.
+
+**Status, 2026-10-07, 02:30 PDT: X3's turn record is proved and reviewed; the last test round runs before the merges.**
+- **The privacy re-review: ready to merge.** The record holds on every served path. Its one finding needs older and
+  newer servers writing to the same database at once. None of our deploys does that, so it is ruled a deploy rule
+  (Deploy/rollout item 7), and the clock-free fix is a Future Improvement.
+- **The proofs, rounds 7d and 7e:**
+  - a census that every path that saves a turn accepts, resolves and supersedes its record;
+  - pins that a chat delete and a user erasure empty the record. The old db test missed this; the new ones catch it;
+  - 32 mutants, each killed by its test;
+  - the full suite: 17,341 passed. Its only reds were the two known closed-port tests and a health test that broke
+    under the closed Weaviate address.
+  - A connection audit of that run found no test reaching a live service.
+- **The tests re-review asked for fixes first.** No test had two earlier turns, nothing pinned when the gate reads the
+  records, and one lang test was flaky. Five smaller gaps came with them.
+  - Round 8a closed the three Important ones and named the backstop's conditions in its docstring.
+  - The flake's cause was the dev box's clock, which steps back about half a second every 30 s. The privacy tests now
+    use a clock that never steps back (Future Improvements).
+  - Round 8b, running, closes the Minor ones and the health test, then runs the round's full suite.
+- **Next:**
+  1. a scoped re-review of rounds 8a and 8b;
   2. the merges (X3, then X4) and their gate;
   3. the API start and the two live chats;
   4. Task 18.
