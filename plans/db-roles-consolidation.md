@@ -501,6 +501,9 @@ DDL on shared databases, so every DDL step is the owner's to run.
 
     A missing key fails only at the deployment, not at the plan. The database host is still not set anywhere
     (`aws-postgres-and-phoenix.md`).
+  - **Step 3b MERGED and PUSHED (2026-10-06, ~21:00 PDT)** into iac `main` as `a772a0a`, inside the AWS plan's
+    `aws-pg-phoenix`, on the owner's word. The merge's gate gave 702 passed, 2 skipped. Not applied: the owner
+    deploys by hand.
   - The current app password sits in every earlier state version, and it may be the literal `postgres` if CI ever
     applied. Rotation closes that.
   - The grant USER is plain config, because a role name is not a secret. Decision 26's wording above covers the

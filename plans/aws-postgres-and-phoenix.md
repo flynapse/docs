@@ -1,20 +1,19 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, 20:15 PDT): **phases 1 to 4 are built and reviewed; the dashboard is merged; copilot-mro is
-ready to merge; iac's last fix round is in review.**
+Status (2026-10-06, 21:00 PDT): **phases 1 to 4 are built and reviewed; the dashboard and iac are merged and
+pushed; copilot-mro is ready to merge.**
 - **Dashboard: MERGED and pushed** (`agent_sdk` `0795b14`). A hand publish with `move_latest` off pushes the commit
   tag alone, and its pin runs the workflow's steps sealed from the real AWS, GitHub and Docker CLIs.
+- **iac: MERGED and pushed** (`main` `a772a0a`, with DB users' step 3b), on the owner's word at about 20:50.
+  - F3's re-review said MERGE-READY with three test Minors, and F4 applied them in the reviewer's own text.
+  - The merge's gate: 702 passed, 2 skipped (shellcheck is not installed here).
+  - The push starts GitHub's Terraform plan. It is plan only: apply stays manual behind its approval code.
 - **copilot-mro: MERGE-READY** (`aws-pg-phoenix` `2814b9b1`). The short round took the re-review's two Minors in the
   reviewer's own words, and the controller checked the diff.
-- **iac** (`aws-pg-phoenix` `bb890ca`): the re-reviews of F1 and F2 found the tunnel still unsafe and the
-  secret-assignment check loosened too far. F3 fixed both, with the reviews' Minors and the clone token's 401 leak.
-  Its scoped re-review runs.
 - **The owner chose (06:09):** the POC's web app is opened through an SSH tunnel, with no change in AWS.
 - **Next:**
-  - F3's re-review;
-  - the merges: copilot-mro into `langgraph-merge` after user erasure's X3 and X4, keeping both scope-guard blocks;
-    iac into `main` with `db-roles-tf-query`;
-  - then the owner's deploy.
+  - copilot-mro into `langgraph-merge`, after user erasure's X3 and X4, keeping both scope-guard blocks;
+  - then the owner's deploy, by hand, from iac's `README.md` on `main`.
 
 Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the runbook. It is
 built before the AWS deploy; the owner deploys to AWS only once all work is finished.
@@ -727,6 +726,14 @@ tunnel, with no change in AWS (Owner decisions). The owner answered the design's
       approval, 19:1x).
     - **ssh's local forward without an address binds both loopbacks,** and `ExitOnForwardFailure` counts one bind as
       success. A port held on one loopback only is the trap.
+  - **F3's re-review:** MERGE-READY. The README and both setup scripts are right. Three test Minors:
+    - the localhost-client scan read only three client forms;
+    - nothing tied step 4's Postgres forward to the port its clients dial;
+    - no decoy pinned the rotation line's exact-text exemption.
+  - **iac F4** (`bb890ca..92e0b53`) applied the reviewer's proven test change, one test file, byte for byte. Its five
+    surviving mutants now die.
+  - **The iac merge** (`a772a0a`, owner's word): its tree equals `92e0b53`'s. The gate gave 702 passed, 2 skipped,
+    and it is pushed.
 
 ## Future Improvements
 
@@ -908,6 +915,11 @@ tunnel, with no change in AWS (Owner decisions). The owner answered the design's
   run as code (`su -c`, `bash -c`, `eval`) passes both the compose pin and guard 1 (F1's re-review). *Complete fix:*
   resolve shell functions before the scan, scan heredoc bodies that are executed, and refuse a compose word inside a
   string handed to a shell.
+- **The runbook's localhost-client scan reads four forms** (iac F4, concern). Its docstring says no span passes
+  `localhost` as a client's host, but it reads `--host`, `-h`, `host=` and a `*HOST=` setting only. A quoted value
+  after a flag, `host = "localhost"` with spaces, or a URL with no placeholder port would pass. None is in the README
+  today. *Complete fix:* parse each command's arguments with `shlex` and check every host-like value, with a decoy for
+  each form.
 - **Guard 1 misses two spellings of a write to `.env`** (F1's re-review, m-1).
   - A brace expansion such as `cp ./.env{.local,}` writes `.env` and passes every test that reads the setup script.
   - A backslash continuation can put `docker-compose` at the start of a line that is really part of a `tee`. On the
