@@ -1,23 +1,26 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, 21:00 PDT): **phases 1 to 4 are built and reviewed; the dashboard and iac are merged and
-pushed; copilot-mro is ready to merge.**
+Status (2026-10-07, 06:05 PDT): **phases 1 to 4 are built and reviewed; the dashboard, iac and copilot-mro are
+merged and pushed. Left: the owner's deploy.**
 - **Dashboard: MERGED and pushed** (`agent_sdk` `0795b14`). A hand publish with `move_latest` off pushes the commit
   tag alone, and its pin runs the workflow's steps sealed from the real AWS, GitHub and Docker CLIs.
 - **iac: MERGED and pushed** (`main` `a772a0a`, with DB users' step 3b), on the owner's word at about 20:50.
   - F3's re-review said MERGE-READY with three test Minors, and F4 applied them in the reviewer's own text.
   - The merge's gate: 702 passed, 2 skipped (shellcheck is not installed here).
   - The push starts GitHub's Terraform plan. It is plan only: apply stays manual behind its approval code.
-- **copilot-mro: MERGE-READY** (`aws-pg-phoenix` `2814b9b1`). The short round took the re-review's two Minors in the
-  reviewer's own words, and the controller checked the diff.
+- **copilot-mro: MERGED and pushed** (`langgraph-merge` `e429a8ba`, from `aws-pg-phoenix` `2814b9b1`), in user
+  erasure's merge window and under its gate. The short round had taken the re-review's two Minors in the reviewer's
+  own words, and the controller checked the diff.
 - **The owner chose (06:09):** the POC's web app is opened through an SSH tunnel, with no change in AWS.
-- **Next:**
-  - copilot-mro into `langgraph-merge`, after user erasure's X3 and X4, keeping both scope-guard blocks;
-  - then the owner's deploy, by hand, from iac's `README.md` on `main`.
+- **Next:** the owner's deploy, by hand, from iac's `README.md` on `main`.
 - **2026-10-07, 04:25 PDT: the copilot-mro merge joins user erasure's window.** X3, X4 and `aws-pg-phoenix` merge
   one after another into `langgraph-merge`, under one gate at the last merge commit. A dry merge shows the branch
   conflicts with X3 or X4 only in the scope guard's list of approved files, where both sides are kept. X3's last test
   round and its final review run first.
+- **2026-10-07, 06:05 PDT: the copilot-mro branch is merged and pushed.** `aws-pg-phoenix` (`2814b9b1`) merged into
+  `langgraph-merge` at `e429a8ba`, after X3 and X4, keeping both sides of the scope guard's list. The env sample
+  merged cleanly. User erasure's gate passed at that commit, and it was pushed. The branch and its worktree are
+  removed. Left: the owner's deploy.
 
 Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the runbook. It is
 built before the AWS deploy; the owner deploys to AWS only once all work is finished.

@@ -3005,9 +3005,10 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
       checkpoint is stored mid-turn, so its writer must report its key to the turn.
     - The reviewer's alternative, a turn-id column on agent state, needs DDL. The gate cannot read a turn id from the
       payload, because a large payload is stored in the object store.
-- **The census of the memory writers' paths cannot see three kinds of reference (X3 re-review 4, items 1, 5 and 6).**
-  The census reads production's source and allows only the reference shapes production uses today (rounds 8c and
-  8d). Production has none of these three:
+- **The census of the memory writers' paths cannot see six kinds of reference (X3 re-review 4, items 1, 5 and 6;
+  re-review 5's three candidates).** The census reads production's source and allows only the reference shapes
+  production uses today (rounds 8c and 8d). Re-review 5 ran 51 inputs against rounds 8b, 8c and 8d: none that an
+  earlier round's census failed passes round 8d's. Production has none of these six:
   - **A reference by a string:** `getattr(module, "…")`, `importlib`, `globals()[…]`. No source census sees one.
   - **The two callees the census does not follow, at a new site:** `with_chat_uploads` (a pure fold for the
     acceptance value) and `TurnPrivacyRecords()` (the record store). The REC tests and T-4's test pin them where they
@@ -3015,11 +3016,37 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - **A rebinding of a census name** (`write_subagent_runs = other`, a parameter or a `def` of that name, or
     `module.write_subagent_runs = other`). It is the other direction: the census would follow a call that is no
     longer the real one.
-  - *Why deferred:* none occurs in production, and each needs its own leg for a shape nobody writes.
+  - **An annotation that runs code.** In a module that does not postpone annotations, a subscript or a `|` in an
+    annotation runs when the function is defined. So an annotation that only names `LifecycleServices` can still
+    build the services with any record store, and the census never sees the call. Production's one annotation site
+    is in `agent_shared/lifecycle.py`, which postpones annotations.
+  - **The run writer's binding is matched by its receiver's name, not as the one call.** The binding moved to a second
+    `PilotAssembly(…)` call in `_build_lang_pipeline`, or written through the module's name, passes. Today the
+    writer-reads check limits the damage: the only reader is `LangAgentBackend._record_subagent_runs`.
+  - **The resolver's key can be stored at any site.** A new store of `TURN_PRIVACY_RESOLVER_SERVICE` into the services
+    passes. A resolver that does nothing fails closed, but one that records no families would pass. It is the same
+    class as the unfollowed callees at a new site.
+  - *Why deferred:* none occurs in production, and each needs its own leg for a shape nobody writes. Re-review 5 was
+    the census's last review: it counted only a fix that failed or a census looser than an earlier round's.
   - *Complete fix:* make the writers' privacy order a type rather than a census. The record writer takes the chat's
     upload state as a required argument, and the run writer takes the resolved record. Then no path can reach a
     writer without the gate's order, however it names it. That is the census-of-record-writers FI above, extended to
     the run writer.
+- **The database tests that need the operational sample data have no marker** (the X3, X4 and AWS merge gate).
+  - The 32 `test_agent_sdk_sql_examples_live.py` cases and the AD seeder's tenancy test pass only against a database
+    that carries the AMOS sample rows and T1's fleet rows. The shared test database has them; a seeded throwaway does
+    not, so a throwaway gate shows 33 reds that say nothing about the code.
+  - *Why deferred:* the gate proved them environmental with a pre-merge control on the same throwaway, and nothing in
+    this work touches them.
+  - *Complete fix:* give these tests a marker of their own (the data they need), so a throwaway lane deselects them by
+    name. Or extend the estate seeder with a small AMOS and fleet sample that the worked examples match.
+- **api's network-guard test reads the runner's `PGHOST`/`PGPORT`** (the same gate).
+  - Its "libpq defaults" case expects libpq's built-in default, port 5432. A runner that sets `PGHOST`/`PGPORT` to a
+    closed loopback port turns the case into an allowed connection, and the test fails. The guard itself is right.
+  - *Why deferred:* api changed nothing in this window. The gate proved the cause by running the file without those
+    two variables (34 passed).
+  - *Complete fix:* the case clears `PGHOST`, `PGPORT`, `PGHOSTADDR` and `PGSERVICE` itself, so no runner's
+    environment can decide it.
 
 ## Lessons
 
@@ -3083,6 +3110,19 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
 - **A small clock step proves little on a busy box** (X3 re-review 4).
   - A 450 ms injected step killed a mutant at load 10 that it missed at a lower load.
   - Rule: a clock proof uses a large step (60 s), or a plugin that records which clock stamped each row.
+- **A gate's throwaway database must carry the data the shared test database carries** (the X3, X4 and AWS merge
+  gate, 2026-10-07).
+  - The gate built its throwaway by migrating and provisioning only. About 60 database tests failed because the
+    estate was missing. Seeding it the way the database-users lanes do left 33 reds, which need the operational
+    sample data. The same 33 failed on the pre-merge code against a throwaway seeded the same way.
+  - Rule: a gate seeds its throwaway as the database-users lanes do. When a red needs data the throwaway lacks, the
+    gate runs the same tests on the parent commit against the same throwaway before ruling.
+- **A lane's environment can decide a guard test's case** (the same gate).
+  - The gate set `PGHOST`/`PGPORT` to the closed port 9. That made the api network guard's "libpq defaults" case
+    connect to a loopback port that is not a service, which the guard rightly allows, so the test went red. Without
+    those two variables it passed.
+  - Rule: a lane sets only the variables it needs. Before ruling on a new red, run it again with the parent's
+    environment.
 
 ## Implementation notes
 
@@ -4518,3 +4558,23 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   2. the three merges, their gate and the push;
   3. once the owner has logged in to AWS, the API start and the two live chats;
   4. Task 18.
+
+**Status, 2026-10-07, 06:05 PDT: X3 and X4 are merged and pushed; the API runs on the merge.**
+- **The census's last rounds are done.** Round 8d narrowed each allowed shape to what production uses. Re-review 5
+  found no open finding: none of 51 inputs that rounds 8b or 8c failed passes now, and all nine planted bugs are
+  caught. Its three candidates joined the census's Future Improvement.
+- **X3, X4 and the AWS plan's copilot-mro branch merged into `langgraph-merge`** (`e429a8ba`, pushed). The only
+  conflict was the expected one, in one test's list of approved files, and both sides were kept.
+- **The gate passed.** copilot-mro's non-database suite: 17,640 passed, and only the two known tests that need the
+  closed database port failed. The socket audit found no test reaching a live service. The api's pins passed.
+  - The api's non-database suite had one new red, which came from the gate's own settings, not the code (Lessons).
+  - The database tests ran on a throwaway seeded as the database-users lanes seed theirs. 33 reds need operational
+    sample data the throwaway lacks. The pre-merge code fails the same 33 against the same throwaway (Future
+    Improvements).
+- **The worktrees and the merged branches are removed.**
+- **The API started on the merged code at 06:01** (the one planned start). Its partition check passed and both health
+  checks answer 200.
+- **Next:**
+  1. the two live chats (running now);
+  2. Task 18;
+  3. the owner's AWS deploy.
