@@ -1076,6 +1076,12 @@ Lanes (2026-10-01; P4 review C M-5):
 ### Task 18: live end-to-end on the dev stack (P5, controller-run on the owner's go)
 **Owner, 2026-10-04 (night): go given.** It runs after census part 2 merges, the P5 phase review and SDK
 transcripts off (the receipt changes the script checks), with the API restarted on the merged code.
+**Owner, 2026-10-07 (06:2x PDT): skipped for now.** Every prerequisite the controller owns is met: the script is
+merged and the API runs the merged code. Still owed by the owner:
+- throwaway dev sign-ins: a person for the main leg with memory-edit rights, a person and a separate admin for the
+  dashboard leg, and an admin for the operator leg;
+- the two Phoenix confirmations (answered "not sure");
+- the two Telegram legs, also skipped for now.
 - **Free modes (P5 fix round, part X2):** run bare, the script prints its help. `--list` shows each leg and its
   steps. `--dry-run [LEG …]` shows each leg's reads, prerequisites, owner confirmations, manual steps and wait. None
   of them builds a client or touches the network.
@@ -4578,3 +4584,14 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   1. the two live chats (running now);
   2. Task 18;
   3. the owner's AWS deploy.
+
+**Status, 2026-10-07, 06:25 PDT: the live chats passed; Task 18 waits for the owner.**
+- **Both live chats passed on the merged code**, with no retry ($0.98 in all).
+  - A chat whose tab closed while its database query ran still finished, and saved its answer once.
+  - The memory curator ran for both chats. For the second, it read back a result that had spilled to a file.
+  - The API log has no error line.
+- **The owner skipped Task 18 for now** (its entry above lists what it still needs).
+- **Seen in passing, not part of this work:** the product's model ran a shell command (`tail` on the spilled file).
+  Its sessions take the repository's own Claude settings, so those settings decide what shell commands it may run.
+  The orchestrator's comments already list scoping this as a hardening follow-up.
+- **Next:** the owner's AWS deploy.
