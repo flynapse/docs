@@ -3005,6 +3005,21 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
       checkpoint is stored mid-turn, so its writer must report its key to the turn.
     - The reviewer's alternative, a turn-id column on agent state, needs DDL. The gate cannot read a turn id from the
       payload, because a large payload is stored in the object store.
+- **The census of the memory writers' paths cannot see three kinds of reference (X3 re-review 4, items 1, 5 and 6).**
+  The census reads production's source and allows only the reference shapes production uses today (rounds 8c and
+  8d). Production has none of these three:
+  - **A reference by a string:** `getattr(module, "…")`, `importlib`, `globals()[…]`. No source census sees one.
+  - **The two callees the census does not follow, at a new site:** `with_chat_uploads` (a pure fold for the
+    acceptance value) and `TurnPrivacyRecords()` (the record store). The REC tests and T-4's test pin them where they
+    are today. A new call elsewhere passes the census.
+  - **A rebinding of a census name** (`write_subagent_runs = other`, a parameter or a `def` of that name, or
+    `module.write_subagent_runs = other`). It is the other direction: the census would follow a call that is no
+    longer the real one.
+  - *Why deferred:* none occurs in production, and each needs its own leg for a shape nobody writes.
+  - *Complete fix:* make the writers' privacy order a type rather than a census. The record writer takes the chat's
+    upload state as a required argument, and the run writer takes the resolved record. Then no path can reach a
+    writer without the gate's order, however it names it. That is the census-of-record-writers FI above, extended to
+    the run writer.
 
 ## Lessons
 
@@ -3056,6 +3071,18 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
     back.
 - **A FULL mutant lane only confirms a survivor** (X3 round 7d, 2026-10-07). Round 7d's brief asked for a FULL lane on
   every aimed kill, about three hours of lane time for nothing. Rule: briefs ask for FULL lanes only for survivors.
+- **A replaced guard must still catch everything the old one caught** (X3 round 8c and re-review 4, 2026-10-07).
+  - Round 8c replaced the census's deny-list with an allowlist, and proved it only on new plants.
+  - One allowed shape was wider than the old check: a second binding of the writer, in attribute form, now passed.
+    The old leg had failed it.
+  - Rule: when a guard is replaced, its brief also runs the old guard's kill set against the new one.
+- **A test's own `monkeypatch.undo()` also removes its autouse fixtures' patches** (X3 re-review 3, N-1).
+  - A lang test undid its own patch halfway through. That also removed the steady clock that an autouse fixture had
+    installed, so the rest of the test ran on the box's stepping clock.
+  - Rule: a test that must undo its own patch midway patches inside `monkeypatch.context()`.
+- **A small clock step proves little on a busy box** (X3 re-review 4).
+  - A 450 ms injected step killed a mutant at load 10 that it missed at a lower load.
+  - Rule: a clock proof uses a large step (60 s), or a plugin that records which clock stamped each row.
 
 ## Implementation notes
 
@@ -4468,4 +4495,26 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   1. a scoped re-review of rounds 8a and 8b;
   2. the merges (X3, then X4) and their gate;
   3. the API start and the two live chats;
+  4. Task 18.
+
+**Status, 2026-10-07, 04:25 PDT: the last test rounds before the merges.** X3's product code has not changed since
+02:30. Every round since then changed tests only.
+- **Round 8b closed the tests lens's Minor findings and fixed the health test.** Its full suite passed 17,360 tests.
+  The only two reds were the known tests that need the closed database port. A connection audit found no test
+  reaching a live service.
+- **Re-review 3 closed every finding of the tests lens.** It found one new gap: a lang test switched off its own steady
+  clock halfway through, so a clock step could hide a regression. Round 8c fixed it.
+- **The census now allows only the shapes production uses.** Round 8c turned its alias check into an allowlist.
+  Re-review 4 found one shape wider than the check it replaced: a second binding of the run writer, written another
+  way, passed. Round 8d, running now, narrows each shape to what production uses today. Re-review 5 is the census's
+  last review. The three blind spots left are Future Improvements.
+- **The merges are ready.** X3, X4 and the AWS plan's copilot-mro branch merge in one window, under one gate at the last
+  merge commit. They conflict only in one test's list of approved files, where both sides are kept. The gate runs
+  copilot-mro's non-database suite with the socket audit, every database test folder on a throwaway database, and
+  the api's pins and non-database suite.
+- **The owner's AWS login has expired.** The API cannot start until the owner runs `aws sso login`.
+- **Next:**
+  1. round 8d, then re-review 5;
+  2. the three merges, their gate and the push;
+  3. once the owner has logged in to AWS, the API start and the two live chats;
   4. Task 18.

@@ -14,6 +14,10 @@ pushed; copilot-mro is ready to merge.**
 - **Next:**
   - copilot-mro into `langgraph-merge`, after user erasure's X3 and X4, keeping both scope-guard blocks;
   - then the owner's deploy, by hand, from iac's `README.md` on `main`.
+- **2026-10-07, 04:25 PDT: the copilot-mro merge joins user erasure's window.** X3, X4 and `aws-pg-phoenix` merge
+  one after another into `langgraph-merge`, under one gate at the last merge commit. A dry merge shows the branch
+  conflicts with X3 or X4 only in the scope guard's list of approved files, where both sides are kept. X3's last test
+  round and its final review run first.
 
 Phase 1 is the box's compose, first boot, setup script, nightly backup and startup unit. Phase 3 is the runbook. It is
 built before the AWS deploy; the owner deploys to AWS only once all work is finished.
