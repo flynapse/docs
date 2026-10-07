@@ -1,19 +1,17 @@
 # AWS: Postgres and Phoenix as containers on the Weaviate box
 
-Status (2026-10-06, 09:45 PDT): **phases 1 to 4 are built and reviewed; the dashboard is merged; the last fix rounds
-run.**
+Status (2026-10-06, 20:15 PDT): **phases 1 to 4 are built and reviewed; the dashboard is merged; copilot-mro is
+ready to merge; iac's last fix round is in review.**
 - **Dashboard: MERGED and pushed** (`agent_sdk` `0795b14`). A hand publish with `move_latest` off pushes the commit
   tag alone, and its pin runs the workflow's steps sealed from the real AWS, GitHub and Docker CLIs.
-- **copilot-mro** (`aws-pg-phoenix` `eb7aef68`): its fix round's re-review says MERGE-READY with two Minors (a loose
-  docstring, a message line not pinned whole). A short round takes both now.
-- **iac** (`aws-pg-phoenix` `df80315`): both fix rounds are done:
-  - F1, the pins and the POC clone's token;
-  - F2, the runbook's 16 fixes, the SSH tunnel included.
-  Two re-reviews run in parallel, one per round. A last round F3 follows with their findings, the tunnel's exact text
-  and one more reboot sentence.
+- **copilot-mro: MERGE-READY** (`aws-pg-phoenix` `2814b9b1`). The short round took the re-review's two Minors in the
+  reviewer's own words, and the controller checked the diff.
+- **iac** (`aws-pg-phoenix` `bb890ca`): the re-reviews of F1 and F2 found the tunnel still unsafe and the
+  secret-assignment check loosened too far. F3 fixed both, with the reviews' Minors and the clone token's 401 leak.
+  Its scoped re-review runs.
 - **The owner chose (06:09):** the POC's web app is opened through an SSH tunnel, with no change in AWS.
 - **Next:**
-  - iac F3 and its check;
+  - F3's re-review;
   - the merges: copilot-mro into `langgraph-merge` after user erasure's X3 and X4, keeping both scope-guard blocks;
     iac into `main` with `db-roles-tf-query`;
   - then the owner's deploy.
@@ -697,6 +695,38 @@ tunnel, with no change in AWS (Owner decisions). The owner answered the design's
       of the containers, on the owner's word, fixed it.
     - **The account's session rate limit stopped three agents at about 07:00.** Each resumed from its transcript
       after the reset, once its tree and extract were checked.
+- **The last rounds (2026-10-06, 09:45 to 20:15 PDT).**
+  - **copilot-mro, fix round 2** (`eb7aef68..2814b9b1`): db-init's docstring and its test say an API "may" already be
+    serving the database (at a reboot, and at the unit's run after a first boot). The schema-change line is pinned
+    whole. Both are the re-review's own words; the controller read the diff. The message text is unchanged, so iac's
+    cross-repo pins at `eb7aef68` still read what ships.
+  - **The re-reviews of F1 and F2.**
+    - F1's re-review: MERGE-READY. All 33 earlier mutants die. Two Minors:
+      - guard 1 misses two exotic writes to `.env`, now a Future Improvement;
+      - a 401 from GitHub prints a clone URL's token, fixed in F3.
+    - F2's re-review: FIX FIRST. All of F2's 16 items are right, and its seven unrun mutants die. Two findings:
+      - **The tunnel:** a forward with no bind address also binds `::1`. With the owner's Grafana holding
+        `127.0.0.1:3000`, ssh neither fails nor exits, and the browser can open Grafana instead of the POC.
+      - **The secret check:** the widened secret-assignment check let a password onto `docker exec -e`'s argument
+        list unseen.
+  - **iac F3** (`df80315..bb890ca`):
+    - every tunnel in the runbook binds `127.0.0.1` explicitly, and every client of a forward dials `127.0.0.1`
+      (Weaviate's URL, the scripts' `--host`, the login proofs, Phoenix). The POC's browser still opens `localhost`,
+      since the API's CORS origins name it;
+    - the secret-assignment check is strict again, with one exemption by exact text;
+    - a one-time no-password login check at the POC's first boot;
+    - step 6 says how to add a missing key;
+    - both boxes clone with the token in the password place, which git never prints. The demo box gets this without
+      an extra restart, since step 2 already replaces it.
+    - 688 passed; 13 mutants die.
+  - **The tunnel, ruled again:** `-o ExitOnForwardFailure=yes` alone was not enough. The forward must name
+    `127.0.0.1`, so a port taken there stops ssh, and the client must dial that same address.
+  - **Learnings:**
+    - **The shared test-slot script took its lock folder from `$HOME`,** so an agent that set its own `HOME` before
+      calling it ran outside the machine's six slots. It now takes the account's home from the system (owner's
+      approval, 19:1x).
+    - **ssh's local forward without an address binds both loopbacks,** and `ExitOnForwardFailure` counts one bind as
+      success. A port held on one loopback only is the trap.
 
 ## Future Improvements
 
@@ -874,11 +904,23 @@ tunnel, with no change in AWS (Owner decisions). The owner answered the design's
   secrets file, beside the Postgres passwords.
 
 - **The setup's compose pin finds calls by name** (iac F1, concern 5). A helper renamed along with every caller is
-  seen only if the stubbed boot runs it. Like guard 1, the pin reads no heredoc body. *Complete fix:* resolve shell
-  functions before the scan, and scan heredoc bodies that are executed.
+  seen only if the stubbed boot runs it. Like guard 1, the pin reads no heredoc body. A compose call inside a string
+  run as code (`su -c`, `bash -c`, `eval`) passes both the compose pin and guard 1 (F1's re-review). *Complete fix:*
+  resolve shell functions before the scan, scan heredoc bodies that are executed, and refuse a compose word inside a
+  string handed to a shell.
+- **Guard 1 misses two spellings of a write to `.env`** (F1's re-review, m-1).
+  - A brace expansion such as `cp ./.env{.local,}` writes `.env` and passes every test that reads the setup script.
+  - A backslash continuation can put `docker-compose` at the start of a line that is really part of a `tee`. On the
+    POC script, the exact list of compose calls catches it.
+  - Every quoted or escaped spelling of `.env` is caught.
+  - Deferred: the guard is a backstop for realistic writes, and the scripts are reviewed.
+  - *Complete fix:* read lines with continuations joined and braces expanded, each with a case that must fail.
 - **The demo box keeps its GitHub token in its clone's `.git/config`** (iac F1, concern 7). This is by design: its
-  startup unit pulls at every boot. The POC's clone no longer keeps it. *Complete fix:* a credential helper that
-  reads a root-only file, so no token sits in a world-readable tree.
+  startup unit pulls at every boot. The POC's clone no longer keeps it.
+  - Since F3, the token sits in the password place under `x-access-token`, so a refused pull or clone prints no token.
+  - It is still in the user data and on `git clone`'s argument list.
+  - *Complete fix:* a credential helper that reads a root-only file, so no token sits in a world-readable tree or an
+    argument list.
 - **The dashboard pin's stand-ins do not cover a Windows `aws.exe` reached through WSL interop** (dashboard
   re-review, route 2). A Linux workflow's step never calls it. *Complete fix:* a fixed step `PATH`, not the caller's.
 - **The dashboard pin refuses `${{ secrets.* }}` and `${{ github.token }}` only in the steps' own `env:` and `run:`

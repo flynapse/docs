@@ -2928,6 +2928,25 @@ Recorded at the Task 20 and Task 16 task reviews (2026-10-01):
   - `test_a_phoenix_that_never_answers_holds_the_delete_for_one_bound` failed once at load 11 to 14 (14.8 s), and
     passes alone and serially.
   - *Complete fix:* a bound measured from the request's own clock, or an event, not the host's load.
+- **The feedback-improvement loop mines private answers into tenant-wide rules (X3 re-review, lens A, I-2).** It
+  predates X3, and X3 does not widen it.
+  - The implicit sweep reads every chat's earlier answer and next question with no privacy filter
+    (`improvement/collect_implicit.py`). The distiller writes tenant-scope rules that every user in the tenant
+    recalls (`improvement/distiller.py`, `rule_items.py`).
+  - An upload-grounded answer followed by a correction could carry the upload's content into a rule for everyone.
+  - It is off today: `ENABLE_IMPROVEMENT_PIPELINE` defaults off, and its clock defaults to none.
+  - **It must be fixed before anyone turns the pipeline on.** It needs X3's per-turn record, so it comes after X3
+    merges.
+  - *Complete fix:* the sweep skips a pair unless the chat's record up to the earlier turn holds no private family,
+    and that block's policy allows memory. A block without a record skips, which pauses mining of chats saved before
+    X3.
+- **No unit test pins that a closed tab's turn curates once X3 and X4 are merged (X3 re-review, lens A, M-1).** It
+  does by construction: the held turn runs the same pipeline, lifecycle and block save. The live proof's first turn
+  checks the curator's log for it. *Complete fix:* after the merge, a test drives a held turn with recording writers.
+- **The census of record writers pins a shape, not a type (X3 re-review, lens B, ruling 1).** Fix round 6 adds a
+  structural pin that each writer folds the chat's uploads. *Complete fix:* make the chat's upload state a required
+  argument of the record writer, so that a new writer cannot be written without it. That rewrites many predicate
+  tests for two writers, so it waits for a third.
 
 ## Lessons
 
@@ -4288,3 +4307,41 @@ read clear: Postgres serves the real data directory, and Weaviate's schema holds
   2. the merges (X3, then X4) and their gate;
   3. the API start on the merge and the two live chats the owner approved, in fresh chats without uploads;
   4. Task 18.
+
+**Status, 2026-10-06, 20:15 PDT: X3's fifth round is built; its two re-reviews ask for two more rounds.**
+- **X3's fifth round (`aa5b4ef4`):**
+  - while a chat holds any upload, no turn of it feeds tenant memory. This holds on both runtimes, the legacy adapter
+    and every path that runs without the agent loop;
+  - an over-size result counts as a read.
+  - Full suite: 17,249 passed, with the two closed-port reds. All 26 of its mutants die.
+- **The privacy re-review** (lens A) confirmed:
+  - the upload rule;
+  - that a fresh chat's first turn learns;
+  - that the closed-tab fix's saved turns carry X3's record.
+- **It also found one live path:** a turn that fails still leaves its helper agents' runs readable by the chat's
+  later turns. A later turn can list and read them without the gate noticing, so an upload or Document Hub text from
+  the failed turn could reach tenant memory. X3 turns this path on, so it is fixed before the merge.
+- **The controller's ruling for that fix (round 7):**
+  - each turn writes a privacy record the moment it is accepted, before it stores anything;
+  - the record is resolved with the turn's computed sources at the end of its work, failed or not;
+  - every other turn of the chat counts these records;
+  - a record never resolved, because its turn crashed or still runs, closes the chat's other turns.
+  - **Why:** one mechanism covers uploads, Document Hub, the helper agents' runs, stored tables and the closed tab's
+    race, without labelling each store.
+  - **The cost:** a chat with a crashed turn stops teaching tenant memory.
+- **The tests re-review** (lens B):
+  - the machinery is right, and every earlier round's mutants still die;
+  - in places nothing tests the code (lang's Document Hub reads through its real outcome step, the assembled pilot
+    tools), and three tests can no longer fail.
+  - Round 6 fixes the proof first, so that the tests guarding round 7 can fail for the right reason.
+  - Round 7 also makes the other runtime's budget-capped turn compute its record, as Claude's does. Without that,
+    one capped turn closes its chat for good.
+- **The feedback-improvement loop** could turn private answers into tenant-wide rules. It predates X3 and is off by
+  default. It is now its own item, to fix before anyone turns it on (Future Improvements).
+- **Next:**
+  1. round 6, the proofs (running);
+  2. round 7, the turn record;
+  3. a scoped re-review of both;
+  4. the merges (X3, then X4) and their gate;
+  5. the API start and the two live chats;
+  6. Task 18.
