@@ -717,10 +717,10 @@ must remain disabled until the named client fixtures and target-environment acti
 
 **TDD:**
 
-- [ ] **Step 1:** Prove two ticking processes enqueue one occurrence, a crash before schedule CAS is repaired, a later occurrence waits behind an active run of the same source, a missed schedule queues once after that run closes, and different tenants cannot see each other's sources.
-- [ ] **Step 2:** Prove the handler receives the carrier attempt, exact `execution_started_at`, and operator binding; persists business summary/report state only while that fence owns the row; closes a handled business `failed` result technically `completed`; and closes an unhandled exception technically `failed` without fabricating counts.
-- [ ] **Step 3:** Prove enqueue-disable stops new rows but still serves an existing claimed ingestion row.
-- [ ] **Step 4:** From `api`, run the five focused test files named above, then the existing one-shot and worker-entrypoint suites.
+- [x] **Step 1:** Prove two ticking processes enqueue one occurrence, a crash before schedule CAS is repaired, a later occurrence waits behind an active run of the same source, a missed schedule queues once after that run closes, and different tenants cannot see each other's sources.
+- [x] **Step 2:** Prove the handler receives the carrier attempt, exact `execution_started_at`, and operator binding; persists business summary/report state only while that fence owns the row; closes a handled business `failed` result technically `completed`; and closes an unhandled exception technically `failed` without fabricating counts.
+- [x] **Step 3:** Prove enqueue-disable stops new rows but still serves an existing claimed ingestion row.
+- [x] **Step 4:** From `api`, run the five focused test files named above, then the existing one-shot and worker-entrypoint suites.
 
 **Commit:** `feat: run client ingestion from automation worker`
 
@@ -754,16 +754,22 @@ must remain disabled until the named client fixtures and target-environment acti
 - Permit schedule, recipients, secret reference, connector config, and product config updates with optimistic `config_revision`. After first run, reject tenant, operator, product key, connector type, and provider identity changes.
 - Rebind to the target tenant only after the platform-admin gate succeeds; every repository call remains RLS-scoped.
 - Add `ingestion_source` to the existing authorization-event vocabulary. In one transaction, write each mutation and its actor/reason/before/after configuration to the source row plus `authorization_events`.
-- Decommission disables scheduling and asks the product adapter to remove current documents through one-shot work; it never hard-deletes source history first.
-- Register ingestion as an explicit tenant/operator erasure step. Erasure retention rules override normal revision retention: final identity deletion waits for the product's confirmed non-retrievable outcome plus verified raw/product cleanup, or remains `needs_attention` in the existing erasure ledger. Never cascade away the only cleanup evidence and then claim cleanup can continue.
+- Decommission disables scheduling and asks the product adapter to make current documents logically
+  non-retrievable through one-shot work; it never hard-deletes source history or physical artifacts.
+- Register ingestion as an explicit tenant/operator erasure step only to disable scheduling, establish confirmed
+  logical non-retrievability, and preserve revision/artifact evidence. Physical raw/S3/vector cleanup remains
+  deferred. If the existing erasure workflow requires verified physical deletion before final identity deletion,
+  leave it honestly `needs_attention`; never cascade away the evidence or claim cleanup completed.
 
 **TDD:**
 
-- [ ] **Step 1:** Prove no token, ordinary user, tenant owner, and tenant settings admin are denied; only the configured staff group passes.
-- [ ] **Step 2:** Prove a platform admin may target another tenant only through the audited service and cannot bypass immutable identity fields.
-- [ ] **Step 3:** Prove mutation and audit event commit or roll back together.
-- [ ] **Step 4:** Prove decommission and tenant/operator teardown preserve source revision history and product cleanup evidence until product retrieval is blocked.
-- [ ] **Step 5:** Run the focused API tests and affected core authorization-event tests.
+- [x] **Step 1:** Prove no token, ordinary user, tenant owner, and tenant settings admin are denied; only the configured staff group passes.
+- [x] **Step 2:** Prove a platform admin may target another tenant only through the audited service and cannot bypass immutable identity fields.
+- [x] **Step 3:** Prove mutation and audit event commit or roll back together.
+- [x] **Step 4:** Prove decommission and tenant/operator teardown preserve source revision/artifact evidence,
+  block product retrieval, perform no physical deletion, and leave any physical-erasure requirement
+  `needs_attention`.
+- [x] **Step 5:** Run the focused API tests and affected core authorization-event tests.
 
 **Commits:**
 
@@ -772,6 +778,13 @@ must remain disabled until the named client fixtures and target-environment acti
 - `api`: `feat: add ingestion administration controls`
 
 **Phase 4 review gate:** Stop. Review the exact admin authorization claim, cross-tenant authorization and tenant context, audit records, teardown behavior, and absence of any dashboard/Document Hub change.
+
+**Phase 4 review result (2026-10-13):** Accepted with activation-only concerns after the requested three-agent
+development, testing and review workflow. The final focused evidence closed the transaction-durability,
+product-owned decommission, deterministic retry/fairness, exact target-operator binding, configuration-validation,
+fault-isolation, connector-validation and audit findings. Physical cleanup, rollback, dashboard/Document Hub and
+Phase 5 work remain absent. Guarded real-PostgreSQL concurrency/RLS verification remains required before source
+activation because this environment did not provide the explicit disposable owner/application-role credentials.
 
 ## Phase 5 — Packaging, deployment, and activation
 
@@ -860,9 +873,11 @@ must remain disabled until the named client fixtures and target-environment acti
 
 - Use a fake COMPLY server with paginated initial data, unchanged checksum, changed checksum, one deletion, one download failure, one checksum mismatch, and a newer revision that supersedes an older failure.
 - Run due source → one one-shot row → complete-window stage/checkpoint → Copilot adapter → report.
-- Prove successful documents are queryable while neighbors fail; failed update retains its old active answer; removed document is immediately absent while purge is forced to fail; older failed revision never reruns after the newer revision.
+- Prove successful documents are queryable while neighbors fail; failed update retains its old active answer;
+  removed documents are immediately absent while physical residue remains deliberately retained; older failed
+  revisions never rerun after a newer revision.
 - Kill the worker after enqueue, during download, before the product operation commits, and after product success. Prove recovery reuses the occurrence/run, gives the new take a different `started_at`, rejects the stale execution in shared and product settlement even when the attempt number is shared, and initiates at most one terminal report attempt.
-- Verify report counts/status at 0%, 5%, and >5% plus separate unresolved/cleanup backlog.
+- Verify report counts/status at 0%, 5%, and >5% plus the separate unresolved/deferred-cleanup backlog.
 
 **Activation order:**
 
@@ -873,7 +888,8 @@ must remain disabled until the named client fixtures and target-environment acti
 - [ ] **Step 5:** Create one disabled COMPLY source through the platform-admin route and run a manual dry-run/list-only validation that cannot advance the checkpoint.
 - [ ] **Step 6:** Enable one low-risk tenant/operator source, reconcile the first product outcome against the mandatory stores identified by Task 7, and verify the report email.
 - [ ] **Step 7:** Observe two scheduled runs, including one with a controlled document failure, before expanding.
-- [ ] **Step 8:** Keep physical cleanup disabled until retention behavior is confirmed; then enable it separately and verify object-version semantics.
+- [ ] **Step 8:** Keep physical cleanup disabled and record retention/reclamation as a later client-approved phase;
+  Phase 5 activation must not enable or claim physical cleanup.
 
 **Verification commands:**
 

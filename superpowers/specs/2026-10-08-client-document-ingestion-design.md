@@ -395,7 +395,11 @@ The first release has no UI. Source create/update, enable/disable and retry-rese
 minimal internal administration commands or API routes. Tenant, operator, product, connector type and provider
 identity are immutable after the first run; reassignment creates a new source and explicitly decommissions the
 old one. Every privileged mutation records actor, reason, time and the before/after configuration revision, and
-ingestion cleanup participates in tenant/operator erasure rather than leaving orphaned state.
+ingestion participates in tenant/operator erasure by disabling the source, blocking product retrieval through
+the existing logical-removal operation, and retaining the evidence required for later physical cleanup. The MVP
+does not physically delete raw, S3 or vector artifacts during decommission or erasure. Where an existing erasure
+workflow requires proof of physical deletion, ingestion leaves that workflow honestly `needs_attention` instead
+of deleting evidence or claiming completion.
 
 Current tenant-owner/settings-administrator permissions are not sufficient because client administrators must
 not configure provider connections. The implementation introduces a Flynapse-internal `platform_admin`
@@ -469,7 +473,8 @@ The first release is complete when:
    records but does not physically reclaim generation-qualified residue.
 5. A failed addition, change or removal does not disable the source or undo successful operations.
 6. Run status follows the agreed four-state model and one report email is attempted after every terminal run.
-7. Revision metadata remains queryable after superseded content cleanup.
+7. Revision metadata remains queryable after supersession or logical removal while physical residue remains
+   retained for the later client-approved cleanup phase.
 8. Only Flynapse internal platform administrators can configure or operate sources.
 9. No implementation code imports or depends on Document Hub.
 10. Adding a second provider for Copilot MRO requires a connector and registration/configuration only; adding a
