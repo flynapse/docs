@@ -1,9 +1,13 @@
 # Client document ingestion — design
 
-Status: **Approved for implementation planning (2026-10-08).** This document records the architecture and
-product decisions agreed during design discussion and the corrections accepted in the subsequent design
-audit. It does not by itself authorize implementation; execution begins only from an approved implementation
-plan.
+Status: **Approved for implementation planning (2026-10-08; amended through 2026-10-10).** This document records the
+architecture and product decisions agreed during design discussion and the corrections accepted in subsequent
+reviews. The 2026-10-09 amendment keeps source-level revision tracking in the shared package while moving every
+parser-specific revision and publication decision into the consuming product, and reduces new shared storage to
+the two relations that do not already exist. The 2026-10-10 review carries the automation take's native
+`started_at` fence through downstream writes and separates ingestion business outcome from the carrier's
+technical lifecycle status. It does not by itself authorize implementation; execution begins only from an
+approved implementation plan.
 
 ## 1. Problem statement
 
@@ -32,7 +36,8 @@ authoritative. Document Hub is a separate feature and is not part of this design
 - Detect actual COMPLY content changes by checksum and download only documents whose content signal changed.
 - Process additions, changes and removals independently; successful work remains applied even when other
   documents fail.
-- Persist current source state, revision metadata, retry state, checkpoints and run summaries.
+- Persist source configuration, source-level revision metadata, retry state and checkpoints in the two shared
+  relations, and persist execution summaries on the existing `automation_runs` row.
 - Send one email report after every sync execution reaches a terminal result.
 - Restrict source configuration and manual operational actions to Flynapse internal platform administrators.
 
@@ -101,7 +106,7 @@ The shared repository owns:
 - normalized change and downloaded-document models;
 - scheduling and due-source claiming;
 - change detection, download and checksum verification;
-- checkpoints, revision metadata, retry state and run summaries;
+- checkpoints, source-level revision metadata and retry state;
 - source-document staging and retention eligibility;
 - run status calculation;
 - email report composition and delivery through the existing shared email utility.
@@ -114,21 +119,36 @@ The initial package should stay small. Logical modules are `connectors`, `models
 
 ### 4.2 Copilot MRO
 
-Copilot MRO owns a `ProductDocumentConsumer` adapter that implements two operations:
+Copilot MRO owns a `ProductDocumentConsumer` adapter that implements three operations:
 
 - ingest a downloaded document and normalized metadata using existing Copilot MRO parsing, cataloguing and
-  indexing behavior, returning a durable product receipt only after every mandatory representation is
-  verified;
-- remove a document from every Copilot MRO datastore and index in which that ingestion placed it.
+  indexing behavior, returning an opaque durable product outcome only after the product's own success criteria
+  are satisfied;
+- remove a document from every Copilot MRO datastore and index in which that ingestion placed it;
+- expose the existing cleanup contract without enabling automated physical deletion until retention and deletion
+  requirements are approved.
+
+**Phase 3 MVP amendment (2026-10-13):** Phase 3 guarantees logical publication and non-retrievability, not
+physical artifact reclamation. It keeps immutable generation-qualified artifacts, one product writer, exact
+source/carrier fencing and an active publication pointer. It does not add durable per-provider-call admission,
+write-close leases, cleanup ownership/takeover, timed quiescence, rollback orchestration or an automated physical
+cleanup worker. A failed, superseded or removed generation may leave non-visible residue recorded in its bounded
+manifest. Reclamation and rollback are later work after the client retention policy is known.
 
 The adapter owns mapping client document metadata to Copilot MRO parser choices, tenant/operator attribution,
-product metadata and deletion details. It stages revision-qualified artifacts, catalog rows and index entries,
-records their product identifiers in the receipt, and atomically switches a product-owned active-revision
-pointer only after verification. Retrieval honors that pointer and the document tombstone, so a partial write
-cannot become agent-visible. The final pointer transaction also locks and verifies the shared revision's
-current ordinal, carrier run and carrier attempt, so a timed-out worker cannot publish after recovery has moved
-ownership. Unsupported or unclassifiable documents return a document-level failure; they do not move
-provider-specific logic into the shared runner.
+product metadata, product-side revision handling and deletion details. Phase 3 first inventories the existing
+`mro_documents`, `pilot_documents`, `crew_documents`, `chunks`, parser-specific Postgres relations, S3 layouts
+and Weaviate objects. It reuses them wherever they can satisfy product invariants and adds a product-owned
+column or relation only when that inventory proves a concrete gap. No shared design mandates an active-revision
+pointer, binding table, revision-qualified artifact layout or cutover algorithm.
+
+The shared call context carries the source revision identity and ordinal plus carrier run, attempt and the
+winning one-shot take's `started_at`. Copilot MRO uses those inputs in its own idempotency and stale-execution
+rules, chosen to match the parser family and its existing stores. The attempt remains a useful retry counter,
+but it is not a unique worker identity: recovery can briefly leave two executions in the same attempt
+namespace. The shared runner validates only the closed operation outcome and treats the remaining outcome
+payload as opaque product data. Unsupported or unclassifiable documents return a document-level failure; they
+do not move product-specific logic into the shared runner.
 
 Copilot MRO depends on the shared contract. The shared repository never depends on Copilot MRO. The API worker
 is the composition root that imports both.
@@ -176,15 +196,21 @@ or runtime plugin installation is out of scope.
 
 The COMPLY connector uses:
 
-- `GET /qp-data-share/api/documents/changes` for initial enumeration and incremental windows;
-- `POST /qp-data-share/api/documents/download-links` in batches of at most 50 identifiers;
+- `GET /qp-fileshare-service/api/comply/documents/changes` for initial enumeration and incremental windows;
+- `POST /qp-fileshare-service/api/comply/documents/download-links` in batches of at most 50 identifiers;
 - fresh signed links, which are valid for 15 minutes and are never persisted;
 - the bearer credential referenced by the source configuration.
 
-The client has confirmed that deletion information will be returned through the changes endpoint. The updated
-field shape or example deletion record is an implementation prerequisite for mapping the provider record to
-`REMOVED`, not a design decision. All other returned document records map to `UPSERT`. Until the deletion
-contract arrives, absence from a page or listing must never be interpreted as deletion.
+The 2026-10-09 vendor guide and its authoritative UAT Swagger contract define a required `status` field with
+the values `new`, `updated`, and `deleted`. `new` and `updated` map to `UPSERT`; `deleted` maps to `REMOVED`.
+A deleted record is not downloaded and may have a null or omitted checksum. Absence from a page or listing is
+never interpreted as deletion.
+
+The authoritative change schema requires `id`, `name`, `last_updated`, and `status`. It currently treats
+`checksum` as optional and nullable and does not advertise the older document metadata fields (`version`,
+`size_bytes`, `document_type`, or `updated_by`). The connector may preserve additional fields as opaque
+provider metadata, but it must not depend on those older fields. The download-link response filename is
+validated as response data but does not replace the name from the staged change record.
 
 The initial import enumerates the complete source without time filters; "100% initial import" means every page
 must be read and staged before that scan is trustworthy, not that already-successful documents wait for failed
@@ -195,9 +221,10 @@ absorbs the duplicate boundary record.
 
 Every normalized record in the fixed window is staged durably before processing. Staging the complete set and
 compare-and-set advancing the old checkpoint to the window end occur in one database transaction. A partial or
-unstable listing leaves the checkpoint unchanged. Before production activation, COMPLY must confirm the
-ordering and snapshot behavior of filtered pagination; if it is not snapshot-stable, the connector must use an
-agreed stabilizing re-scan/reconciliation rule rather than assuming page-number pagination is lossless.
+unstable listing leaves the checkpoint unchanged. The guide confirms newest-first (`last_updated` descending)
+ordering, which the connector validates within and across pages. Before production activation, COMPLY must
+still confirm the snapshot behavior of filtered pagination; if it is not snapshot-stable, the connector must
+use an agreed stabilizing re-scan/reconciliation rule rather than assuming page-number pagination is lossless.
 Document-level failures are processed from staged records independently after the checkpoint transaction, so
 checkpoint advancement cannot lose them.
 
@@ -212,14 +239,25 @@ For COMPLY, a changed checksum is the authoritative content-change signal:
 - same checksum on an active document: persist any updated provider metadata, but do not download, parse or
   index again;
 - changed checksum: create a revision, download, verify and send it to the product adapter;
+- `deleted`: create a removal revision from the required provider status without requiring or synthesizing a
+  checksum, and do not request a download link;
 - `UPSERT` after the document is tombstoned: create a higher-ordinal revision and reingest even if its checksum
   matches the last active revision; a prior removal cannot turn a reappearance into a metadata-only no-op;
 - downloaded checksum mismatch: fail that document operation and do not call the product adapter.
 
-The connector normalizes the documented `sha256:` form before comparison and verification. It never treats an
-abbreviated or malformed digest as authoritative content proof: the examples in the supplied API document are
-shortened, so production requires the client to confirm that real responses contain the complete digest. The
-client must confirm identifier stability and checksum algorithm/requiredness before production activation.
+For `new` and `updated`, the connector normalizes the documented `sha256:` form before comparison and
+verification. It never treats a missing, abbreviated, or malformed digest as authoritative content proof: such
+an active record is parked/failed for the run and is never assigned the fallback metadata signal. Before the
+source checkpoint advances, that parked observation is written atomically to the existing source-revision
+history with its provider timestamp, metadata and bounded failure code. It becomes the current observation and
+supersedes every older unfinished revision for that document, so neither a brand-new invalid record nor a newer
+invalid record can disappear after one report or allow older work to resume. An exact replay is a no-op; a later
+valid higher-timestamp observation supersedes the parked row and starts its own attempt sequence. This uses the
+existing revisions relation and does not create a third table or relax `NormalizedChange` checksum validity.
+The examples in the supplied API document are shortened, so production requires the client to confirm that
+real active responses contain the complete digest. The client must confirm identifier stability and
+active-document checksum algorithm/requiredness before production activation. A null checksum on `deleted` is
+valid and does not weaken the active-document rule.
 
 For a future connector that supplies no checksum, the fallback change signal is a composite of its stable
 remote identity, file name/path, size and modification timestamp plus any provider revision value. Only a
@@ -230,15 +268,15 @@ connector-owned.
 
 There is no source-level activation gate for either the initial or a recurring import.
 
-- A successfully added document becomes available only after Copilot MRO verifies every mandatory product
-  representation and publishes its active-revision pointer.
-- A successfully changed document is built under a revision-qualified identity and atomically replaces its
-  earlier product representation only after the new representation is verified.
+- A successfully added document becomes available only after Copilot MRO satisfies the publication guarantees
+  defined for the selected parser family and reports success.
+- A successfully changed document replaces or supersedes its earlier product representation according to that
+  product-owned strategy only after the new representation satisfies the same guarantees.
 - If a changed document fails, its last successful product representation remains available.
 - A failed new document remains unavailable until a later attempt succeeds.
-- A `REMOVED` event immediately tombstones the document for retrieval. Physical removal of product-specific
-  records, index entries and content is idempotent, retryable cleanup and cannot make the document visible
-  again while it is pending or failed.
+- A `REMOVED` event is successful only after the product reports that the document is no longer retrievable.
+  Phase 3 removes or gates every live product reference, but it does not physically reclaim generation-qualified
+  S3/Weaviate residue. That later cleanup cannot be allowed to reactivate a document.
 
 Successful operations are never rolled back because other documents in the run failed.
 
@@ -269,7 +307,8 @@ Each source stores:
 When a worker recovers and `next_run_at` is in the past, it enqueues the source once immediately and computes
 the next future schedule. It does not replay every missed slot. The idempotent one-shot run row for that source
 occurrence prevents overlap, is re-queued by the existing stale-run recovery path after a worker crash, and
-fences a superseded worker attempt from settling current state.
+fences a superseded worker execution from settling current state. The fence is the take's exact `started_at`,
+not the retry number alone.
 
 An individual failed document operation remains pending and is reconsidered on the next scheduled sync. The
 same document change receives at most five automatic retries after its first failed attempt. A later provider
@@ -297,7 +336,7 @@ The failure percentage is:
 
 A successful scan with no actionable documents has a zero percent failure rate.
 
-Run statuses are:
+Ingestion business statuses are:
 
 | Status | Meaning |
 |---|---|
@@ -306,7 +345,7 @@ Run statuses are:
 | `needs_attention` | The source scan completed and the failure percentage is greater than 5%. |
 | `failed` | The execution began but could not establish or complete a trustworthy source scan, so document percentages are unavailable or unreliable. |
 
-Every run that reaches one of these terminal statuses attempts one email report. The report contains
+Every run that reaches one of these terminal business statuses attempts one email report. The report contains
 source/client, run window, start/end time, status, added/changed/removed/failed counts, concise failure reasons,
 retry eligibility and the next scheduled run. Current-run counts stay limited to operations attempted in that
 run; an additional backlog section reports unresolved and retry-exhausted revisions so they cannot disappear
@@ -319,24 +358,36 @@ change the ingestion outcome.
 
 ## 9. Persistence model
 
-The shared repository owns four small Postgres relations:
+The shared repository adds only two Postgres relations:
 
 1. **Sources** — client/source identity, tenant and operator context, product key, connector type, non-secret
    connector configuration, secret reference, schedules, retention, recipients, enabled state and checkpoint.
-2. **Documents** — current state for `(source_id, external_document_id)`, target revision, active successful
-   revision, lifecycle/tombstone state and last successful product receipt.
-3. **Document revisions** — append-only metadata and processing outcomes for content revisions and removals,
-   including per-revision `pending`, `processing`, `succeeded`, `superseded` and `exhausted` state and attempts.
-4. **Runs** — sync window, terminal status, counts, bounded failure summary, report-delivery result and timing.
+2. **Document revisions** — source-level identity, append-only content/removal history and processing outcomes.
+   Each row carries `(source_id, external_document_id)`, change signal, provider metadata, ordinal, operation,
+   attempt state, the owning carrier run/attempt/`started_at` fence, supersession and raw-content cleanup state.
+   A partial unique current-row constraint provides the latest source observation without a separate documents
+   table. Same-signal metadata updates the current row and does not create a content revision.
+
+The existing tenant-scoped `automation_runs` relation is the only execution record. Its existing `params`
+contains the source/occurrence context and its existing structured `result` contains the fixed sync window,
+business status, outcome counts, bounded failures, backlog summary, next schedule and report-delivery state.
+The four ingestion outcomes live under a namespaced object in `result`; they are not new values for the
+generic `automation_runs.status` column. That column remains the carrier's technical worker lifecycle. A
+handled sync whose business outcome is `failed` or `needs_attention` can therefore close the carrier
+technically `completed` after persisting and reporting the truthful business result. An unhandled exception or
+timeout closes the carrier technically failed/timed out and must not invent document counts. The run's normal
+lifecycle columns remain the worker claim, recovery and execution audit. No
+`document_ingestion_documents` or `document_ingestion_runs` relation is added.
 
 Credentials and signed URLs are never stored in these tables. Connector credentials live in the deployment's
 secret manager; the source row stores only a secret reference.
 
-All four relations are tenant-classed with tenant-leading keys and forced row-level security. Global discovery
-uses the existing paged tenant registry, then binds exactly one tenant and the source's declared operator for
-source reads, connector state, adapter work and settlement. An immutable execution context carries tenant,
-operator, source, product and run identity through every adapter call. Repeated change records are idempotent:
-the same source, external document and change signal cannot create or apply the same revision twice.
+Both new relations are tenant-classed with tenant-leading keys and forced row-level security; the existing
+`automation_runs` relation already has tenant RLS. Global discovery uses the existing paged tenant registry,
+then binds exactly one tenant and the source's declared operator for source reads, connector state, adapter work
+and settlement. An immutable execution context carries tenant, operator, source, product, source revision,
+carrier run/attempt and carrier `started_at` through every adapter call. Repeated change records are idempotent:
+the same source, external document and change signal cannot create or apply the same source revision twice.
 
 ## 10. Administration and security
 
@@ -344,7 +395,11 @@ The first release has no UI. Source create/update, enable/disable and retry-rese
 minimal internal administration commands or API routes. Tenant, operator, product, connector type and provider
 identity are immutable after the first run; reassignment creates a new source and explicitly decommissions the
 old one. Every privileged mutation records actor, reason, time and the before/after configuration revision, and
-ingestion cleanup participates in tenant/operator erasure rather than leaving orphaned state.
+ingestion participates in tenant/operator erasure by disabling the source, blocking product retrieval through
+the existing logical-removal operation, and retaining the evidence required for later physical cleanup. The MVP
+does not physically delete raw, S3 or vector artifacts during decommission or erasure. Where an existing erasure
+workflow requires proof of physical deletion, ingestion leaves that workflow honestly `needs_attention` instead
+of deleting evidence or claiming completion.
 
 Current tenant-owner/settings-administrator permissions are not sufficient because client administrators must
 not configure provider connections. The implementation introduces a Flynapse-internal `platform_admin`
@@ -366,41 +421,44 @@ logs and traces, without logging document contents or credentials.
 - A download, checksum, parse, index or delete failure is document-scoped. It contributes to `failed` count
   and the run is classified from the percentage.
 - A report-email failure does not rewrite the ingestion status; the persisted run records delivery failure.
-- A worker restart cannot create concurrent runs for one source because the idempotent, recoverable one-shot
-  run row is the sole claim and every settlement is fenced to its current attempt.
+- A worker restart cannot create a second active carrier row for one source. Recovery can briefly overlap a
+  zombie and a fresh execution of that row, so every shared/result/product mutation is fenced to the winning
+  take's exact `started_at`; the retry number alone is insufficient.
 - A repeated inclusive-window record is a no-op after its revision identity has already succeeded.
 - A later `UPSERT` for a removed document creates a higher-ordinal revision even when it repeats the old
   checksum; only that newer revision may reactivate the document.
 - A newer revision supersedes older pending work before either can publish, and superseded work is never
   retried.
-- A new or changed document is never considered successful until the Copilot MRO adapter confirms its complete
-  parse/catalog/index operation with a verified product receipt and active-revision cutover.
+- A new, changed or removed document is never considered successful until the product adapter confirms the
+  product-defined operation outcome. The shared runner does not inspect or prescribe the product's internal
+  revision, publication or removal mechanism.
 
 ## 12. Validation strategy
 
 The implementation must prove the following without depending on a live COMPLY environment:
 
-- connector contract tests for pagination, 50-ID link batches, signed-link refresh, checksum normalization,
-  mixed success/error responses and the client-supplied deletion record;
+- connector contract tests for newest-first pagination, 50-ID link batches, signed-link refresh, checksum
+  normalization, mixed success/error responses, and authoritative `new`/`updated`/`deleted` records;
 - runner unit tests for unchanged, added, changed, removed and checksum-mismatch paths;
 - status tests at 0%, exactly 5% and greater than 5% failure boundaries;
 - retry tests proving the next-run pickup, five-retry ceiling and newer-revision supersession;
 - schedule tests for both local times, timezone conversion, idempotent enqueue, recovery catch-up and overlap
   prevention;
 - repository tests for tenant isolation, idempotency, atomic staging/checkpoint advancement, page mutation and
-  append-only revision metadata;
+  append-only content/removal revision history plus in-place same-signal current-metadata updates;
 - report tests proving current-run counts, unresolved/exhausted backlog and delivery are attempted for every
   terminal run;
-- a Copilot MRO adapter integration test that uses the existing parser/index path and a deletion test that
-  immediately blocks retrieval before retryable physical cleanup removes all product representations;
+- a Copilot MRO adapter assessment that inventories existing product tables and artifacts before any schema is
+  added, followed by integration tests for the selected parser-family publication and deletion strategy;
 - an end-to-end fixture run showing that successful documents remain usable when neighboring documents fail;
 - a second fake connector in tests only, proving the runner has no COMPLY-specific branches;
 - an import/dependency test proving `document-ingestion` does not import Copilot MRO or Document Hub.
 
-Production activation additionally requires the client's updated deletion record, confirmation that document
-IDs are stable across revisions, confirmation of checksum format and requiredness, and confirmation of the
-ordering/snapshot behavior of time-filtered pagination. Missing COMPLY checksums are deliberately not assigned a
-fallback until the client answers that contract question.
+Production activation additionally requires confirmation that document IDs are stable across revisions,
+confirmation of active-document checksum format and requiredness, and confirmation of the snapshot behavior of
+time-filtered pagination. Ordering direction and deletion mapping are now resolved by the vendor guide and
+authoritative Swagger contract. Missing COMPLY checksums on `new` or `updated` records are deliberately not
+assigned a fallback until the client answers the active-checksum contract question.
 
 ## 13. Acceptance criteria
 
@@ -411,11 +469,12 @@ The first release is complete when:
 2. The first and later scans make each successfully processed document available without waiting for the full
    source.
 3. Same-checksum records are not downloaded or reprocessed; changed checksums are downloaded and verified.
-4. COMPLY deletion events immediately remove the corresponding Copilot MRO document from agent use even while
-   physical cleanup is retrying.
+4. COMPLY deletion events immediately remove the corresponding Copilot MRO document from agent use; Phase 3
+   records but does not physically reclaim generation-qualified residue.
 5. A failed addition, change or removal does not disable the source or undo successful operations.
 6. Run status follows the agreed four-state model and one report email is attempted after every terminal run.
-7. Revision metadata remains queryable after superseded content cleanup.
+7. Revision metadata remains queryable after supersession or logical removal while physical residue remains
+   retained for the later client-approved cleanup phase.
 8. Only Flynapse internal platform administrators can configure or operate sources.
 9. No implementation code imports or depends on Document Hub.
 10. Adding a second provider for Copilot MRO requires a connector and registration/configuration only; adding a
@@ -432,6 +491,11 @@ The first release is complete when:
 - Copilot MRO already owns parser routing and LlamaIndex ingestion
   (`copilot_mro/app/services/s3_pdf_processor.py`,
   `copilot_mro/app/services/llama_index/llama_index_ingestion.py`).
+- Copilot MRO already owns the `mro_documents`, `pilot_documents`, `crew_documents` and `chunks` relations plus
+  parser-specific manual relations; Phase 3 must reuse these wherever possible and justify any additional
+  product schema from a demonstrated invariant gap.
+- Core's existing tenant-scoped `automation_runs` relation already stores one-shot context and a structured
+  result, so ingestion adds only generic occurrence/concurrency keys rather than a second run ledger.
 - The estate already has a shared SMTP email transport
   (`core/core/resources/notifications/services/email_dispatcher.py`, `utils/utils/smtp_email_service.py`).
 - Existing authorization exposes tenant-owner and capability concepts, not a confirmed Flynapse-internal

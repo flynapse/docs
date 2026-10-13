@@ -12,3 +12,22 @@
   is internal and the process is product-agnostic.
 - Do not expand the first release to cover every missed-run or monitoring edge case unless it protects a stated
   requirement.
+- Before adding a feature-specific table, inventory existing generic run records and product document stores.
+  Reuse them when they already own the lifecycle; add only the smallest relation needed for an uncovered
+  invariant.
+- Keep provider/source revision truth separate from product revision strategy. The shared ingestion layer may
+  carry source ordinals and opaque outcomes, but parser-specific publication, visibility, removal, and rollback
+  belong to the consuming product.
+- Do not freeze a product binding table or cutover algorithm before tracing every existing parser family's
+  persistence and retrieval paths.
+- When a later task is implemented out of order, immediately reconcile earlier plan tasks with the files,
+  names, dependencies, and interfaces that now exist. Mark partial scaffolding explicitly instead of asking a
+  future implementer to recreate it.
+- Verify plan commands in the environment and dependency state where they will actually run. A sibling package
+  is not importable from the API environment before its path dependency is installed unless the plan supplies
+  the temporary local import path.
+- When reusing a recoverable worker primitive, carry its native execution fence end to end. A retry counter is
+  useful context but may not uniquely identify a live execution; here `OneShotTake.started_at` must guard
+  shared settlement, run-result writes, reporting, and product handoff.
+- When the user reserves a review gate for plan changes, finish and present the plan-only diff before touching
+  application, infrastructure, or test code, even if implementation had previously been authorized in general.
