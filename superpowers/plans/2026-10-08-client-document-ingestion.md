@@ -1,17 +1,19 @@
 # Client Document Ingestion Implementation Plan
 
-Status: **Approved plan, amended through 2026-10-12** to keep product revision behavior in Copilot MRO, reuse
-existing persistence, reconcile the completed Task 5 implementation with the authoritative COMPLY File Share
-contract, and carry the automation worker's native `started_at` execution fence through shared and product-side
-writes.
+Status: **Approved through Task 11; Task 12 implementation, independent review, and Terraform-native formatting
+and validation completed in the working trees on 2026-10-13, with deployment-plan review still pending.** The Phase 5
+amendment keeps product revision behavior in Copilot MRO, reuses existing persistence, reconciles the
+authoritative COMPLY File Share contract, carries the automation take's native `started_at` execution fence
+through shared and product-side writes, and activates the MVP through the API container's existing embedded
+scheduler rather than a separate worker service.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task by task. Steps use checkbox (`- [ ]`) syntax for tracking. Update the status checklist and append implementation notes, learnings, and post-review changes under the task that produced them.
 
 **Goal:** Deliver a small, provider-neutral document synchronization package that runs COMPLY sources twice daily, publishes verified revisions safely into Copilot MRO, preserves per-document availability through partial failures, and attempts a persisted email report for every completed sync without coupling the feature to Document Hub.
 
-**Architecture:** A new `document-ingestion` Python repository owns provider connectors, schedules, two tenant-scoped source-state tables, retries, raw-content staging, run classification, and report composition. The existing API automation worker is the composition root and carries each source occurrence, summary, and report-delivery state on one fenced one-shot `automation_runs` row. Copilot MRO owns its parser-specific revision, publication, visibility, removal, and rollback strategy and reuses its existing document stores wherever possible. There is no connector service, event bus, workflow engine, dashboard, or Document Hub dependency.
+**Architecture:** A new `document-ingestion` Python repository owns provider connectors, schedules, two tenant-scoped source-state tables, retries, raw-content staging, run classification, and report composition. The API container's existing embedded automation scheduler and one-shot runtime are the composition and execution host; each source occurrence, summary, and report-delivery state stays on one fenced `automation_runs` row. Copilot MRO owns its parser-specific revision, publication, visibility, removal, and rollback strategy and reuses its existing document stores wherever possible. There is no connector service, separate ingestion/automation container, event bus, workflow engine, dashboard, or Document Hub dependency.
 
-**Tech Stack:** Python 3.11, Poetry, frozen dataclasses and typing protocols, HTTPX/httpcore, PostgreSQL with forced RLS, Flynapse `utils`, the existing automation worker, Copilot MRO parsers, S3, Weaviate, FastAPI for internal administration, Terraform, ECS Fargate, OpenTelemetry, and SMTP.
+**Tech Stack:** Python 3.11, Poetry, frozen dataclasses and typing protocols, HTTPX/httpcore, PostgreSQL with forced RLS, Flynapse `utils`, the existing App Runner API/embedded automation runtime, Copilot MRO parsers, S3, Weaviate, FastAPI for internal administration, Terraform, OpenTelemetry, and SMTP.
 
 **Spec:** [`../specs/2026-10-08-client-document-ingestion-design.md`](../specs/2026-10-08-client-document-ingestion-design.md)
 
@@ -24,6 +26,12 @@ writes.
 - Do not import Document Hub code, tables, routes, capabilities, or UI. Add an import-boundary test so this remains enforced.
 - `document-ingestion` may depend on `flynapse-utils`; it must not depend on `core`, `copilot-mro`, FastAPI, or dashboard code.
 - Copilot MRO may depend on the shared contract. The API may depend on both and is the only composition root.
+- Run ingestion through the API container's existing embedded scheduler and `automation_runs` queue. Do not add
+  an ECS/Fargate worker, ingestion-specific container, second scheduler, or ingestion deployment unit for the MVP.
+- Resolve AMM/SRM parser families inside Copilot MRO from deterministic filename rules configured per source.
+  Shared ingestion remains parser-agnostic, and no Document Hub code is imported or called.
+- Add run-, document-, and Copilot-operation spans plus structured lifecycle logs at the ingestion boundaries.
+  Reuse existing queue telemetry; do not add a dashboard or a second business-metrics system for the MVP.
 - COMPLY checksum is authoritative for `new` and `updated` records. Do not silently use the fallback metadata signal when an active COMPLY record lacks a complete canonical checksum; record the item as parked/failed for the run and surface it in the report. A `deleted` record may omit checksum and still maps authoritatively to `REMOVED`.
 - Treat the 2026-10-09 vendor guide plus its live UAT Swagger schema as the authoritative COMPLY wire contract: use `/qp-fileshare-service/api/comply/documents/changes` and `/qp-fileshare-service/api/comply/documents/download-links`; map required status `new|updated` to `UPSERT` and `deleted` to `REMOVED`; never infer deletion from absence.
 - One content revision gets an initial attempt plus at most five automatic retries. A newer revision atomically supersedes every older unfinished revision, and the older revision never runs or publishes again.
@@ -48,7 +56,7 @@ Review each phase specifically for:
 6. mutually exclusive run counts and the exact 5% boundary;
 7. credential, signed-URL, and content redaction;
 8. dependency direction and absence of Document Hub coupling;
-9. mixed-version deployment and rollback safety; and
+9. embedded-scheduler deployment and rollback safety; and
 10. whether a proposed abstraction is needed for COMPLY plus one test connector now.
 
 ## Implementation baselines and branch discipline
@@ -113,31 +121,34 @@ These local baselines and feature branches were rechecked on 2026-10-10. Fetch a
 | 1 | Shared contracts, two-table source state, and generic idempotent one-shot enqueue | `document-ingestion`, `core`, `api` tests, `copilot-mro` migration scripts |
 | 2 | Authoritative COMPLY contract reconciliation, lossless enumeration, scheduling, runner, retries, content staging, and reports | `document-ingestion` |
 | 3 | Copilot MRO storage assessment and product-owned revision, publication, visibility, and logical removal; physical cleanup deferred | `copilot-mro` |
-| 4 | Worker composition, platform-admin control plane, audit, and lifecycle wiring | `api`, `core`, `copilot-mro` |
-| 5 | Package closure, standalone worker deployment, acceptance fixture, and controlled activation | `api`, `copilot-mro`, `iac`, `docs` |
+| 4 | Embedded automation composition, platform-admin control plane, audit, and lifecycle wiring | `api`, `core`, `copilot-mro` |
+| 5 | Package closure, embedded-runtime readiness, acceptance fixture, and controlled activation | `document-ingestion`, `api`, `copilot-mro`, `iac`, `docs` |
 
 ## Current implementation status
 
-- [x] **Task 1** — Implemented and independently reviewed in the uncommitted `document-ingestion` working tree over baseline `a9babc1`; no commit was created under the review-before-commit policy.
-- [x] **Task 2** — Implemented and independently reviewed in the uncommitted `document-ingestion` and `copilot-mro` working trees; no `utils` change was required.
-- [x] **Task 3** — Implemented and independently reviewed in the uncommitted `core` and `api` working trees.
-- [x] **Task 4** — Implemented and independently reviewed after two focused fix rounds in the uncommitted `document-ingestion` working tree.
-- [x] **Task 5** — Implemented and reviewed in `document-ingestion` commit `a9babc1`; its original routes and skipped deletion assumption are historical and are superseded by mandatory Task 5A.
-- [x] **Task 5A** — Implemented, independently reviewed, and approved after one documentation-only fix round; no commit was created.
-- [x] **Task 6** — Implemented and independently approved after four focused fix rounds plus the Phase 2 whole-diff review; no commit was created. One non-blocking parked-observation deduplication optimization remains deferred before large-scale activation.
+- [x] **Tasks 1–6** — Implemented, independently reviewed, and incorporated into the current feature-branch
+  commits. No `utils` change was required. Task 5's original routes and skipped-deletion assumption are
+  historical and superseded by Task 5A. One non-blocking parked-observation deduplication optimization remains
+  deferred before large-scale activation.
 - [x] **Task 7** — Product storage/retrieval assessment independently accepted after five focused review rounds;
   exact Task 8 files, state machine, test obligations and activation prerequisites are locked.
-- [x] **Task 8** — Offline MVP implemented, independently tested, and accepted after three focused fix rounds.
+- [x] **Task 8** — Offline MVP implemented, independently tested, accepted after three focused fix rounds, and
+  incorporated into the current Copilot/Core/shared feature-branch commits.
   Copilot now owns AMM/SRM parsing, generation-qualified mandatory artifacts, exact publication/visibility,
   logical removal, and product-side revision fencing; Core retains only an opaque cache-version seam and shared
   ingestion retains only generic exact-final-carrier settlement. The 2026-10-13 MVP ruling removes automated
   physical cleanup, durable provider-call admission and rollback orchestration from Phase 3. Production activation
-  remains gated on client-approved fixtures and target S3/Weaviate acceptance. No commit was created.
-- [ ] **Task 9** — Not started.
-- [ ] **Task 10** — Not started.
-- [ ] **Task 11** — Not started; the local `document-ingestion` repository still needs its remote/default branch and protection before first push.
-- [ ] **Task 12** — Not started.
-- [ ] **Task 13** — Not started; production activation remains gated by the named client confirmations.
+  remains gated on client-approved fixtures and target S3/Weaviate acceptance.
+- [x] **Task 9** — Implemented and accepted as part of the Phase 4 orchestration commit.
+- [x] **Task 10** — Implemented and accepted as part of the Phase 4 orchestration/lifecycle commits.
+- [x] **Task 11** — Implemented, independently reviewed, and committed locally. The local
+  `document-ingestion` repository still needs its remote/default branch and protection before first push.
+- [ ] **Task 12** — Embedded execution, filename parser routing, observability, platform-admin configuration,
+  and least-privilege connector-secret access are implemented, independently reviewed, and committed locally.
+  Focused and repository regression suites plus native Terraform 1.12.2 formatting and validation pass.
+  Completion remains gated only on a deployment-plan review using the CI/owner inputs and permissions.
+- [ ] **Task 13** — Plan amended for embedded-runtime acceptance; no implementation has started and production
+  activation remains gated by the named client confirmations.
 
 ## Phase 1 — Shared foundation and execution claim
 
@@ -688,7 +699,12 @@ generic settlement exception above. Do not activate until the representative fix
 review. Product/shared/Core boundaries and the no-cleanup/no-rollback scope were preserved. The production source
 must remain disabled until the named client fixtures and target-environment activation gates are satisfied.
 
-## Phase 4 — Worker composition and administration
+**Phase 5 activation amendment (2026-10-13):** Task 8's source-wide `manual_type` selection is not sufficient for
+a source that can contain both AMM and SRM files. Before activation, Task 12 replaces that pre-production mapping
+with deterministic filename-to-parser-family rules owned entirely by Copilot MRO. This is an activation gap, not
+a transfer of parsing or revision responsibility into the shared ingestion package.
+
+## Phase 4 — Embedded automation composition and administration
 
 ### Task 9: Wire due-source production and the source-sync one-shot handler
 
@@ -722,7 +738,10 @@ must remain disabled until the named client fixtures and target-environment acti
 - [x] **Step 3:** Prove enqueue-disable stops new rows but still serves an existing claimed ingestion row.
 - [x] **Step 4:** From `api`, run the five focused test files named above, then the existing one-shot and worker-entrypoint suites.
 
-**Commit:** `feat: run client ingestion from automation worker`
+**Implementation result:** Complete in `api 4bcbcec`, with the shared orchestration support in
+`document-ingestion 42afacb`.
+
+**Commit:** `feat: operate client document ingestion pipeline`
 
 ### Task 10: Add the minimal platform-admin control plane and lifecycle hooks
 
@@ -773,9 +792,9 @@ must remain disabled until the named client fixtures and target-environment acti
 
 **Commits:**
 
-- `core`: `feat: audit ingestion source administration`
-- `copilot-mro`: `feat: include client documents in lifecycle teardown`
-- `api`: `feat: add ingestion administration controls`
+- `core 1de3c87`: `feat: support ingestion worker administration`
+- `copilot-mro 349abace`: `feat: include client documents in lifecycle teardown`
+- `api 4bcbcec`: `feat: operate client document ingestion pipeline`
 
 **Phase 4 review gate:** Stop. Review the exact admin authorization claim, cross-tenant authorization and tenant context, audit records, teardown behavior, and absence of any dashboard/Document Hub change.
 
@@ -841,47 +860,133 @@ commit-derived tags and committed-source staging. Commits: `api 98071fe`, `copil
 `iac 1c2e7fc`. No push occurred. The shared repository still has no configured remote, so its remote/default
 branch and branch protection remain mandatory before the first push and were not invented here.
 
-### Task 12: Deploy the existing worker as one background service
+**Phase 5 plan amendment (2026-10-13; Task 12 implementation reviewed, external gates pending):** The original standalone
+ECS/Fargate worker design is removed. The current deployment already runs the automation scheduler inside the
+API App Runner service, so Task 12 only closes parser-routing, telemetry, authorization-group,
+runtime-configuration, and connector-secret gaps in that existing deployment. It creates no new service or
+container.
+
+### Task 12: Complete embedded API ingestion readiness
 
 **Files:**
 
-- Create `iac/automation_worker.tf`
+- Create `document-ingestion/document_ingestion/telemetry.py`
+- Modify `document-ingestion/document_ingestion/runner.py`
+- Modify `document-ingestion/tests/unit/test_runner.py`
+- Create `copilot-mro/copilot_mro/app/services/client_document_ingestion/parser_mapping.py`
+- Modify `copilot-mro/copilot_mro/app/services/client_document_ingestion/parser_adapter.py`
+- Modify `copilot-mro/copilot_mro/app/services/client_document_ingestion/consumer.py`
+- Modify `copilot-mro/copilot_mro/app/services/client_document_ingestion/publication_repository.py`
+- Create `copilot-mro/tests/unit/client_document_ingestion/test_parser_mapping.py`
+- Modify `copilot-mro/tests/unit/client_document_ingestion/test_parser_adapter.py`
+- Modify `copilot-mro/tests/unit/client_document_ingestion/test_consumer.py`
+- Modify `api/flynapse_api/automations/document_ingestion_jobs.py`
+- Modify `api/flynapse_api/services/document_ingestion_admin.py`
+- Modify `api/tests/unit/automations/test_document_ingestion_jobs_handler.py`
+- Modify `api/tests/integration/document_ingestion/test_admin_routes.py`
 - Modify `iac/variables.tf`
 - Modify `iac/dev.tfvars`
 - Modify `iac/cognito.tf`
 - Modify `iac/apprunner.tf`
-- Modify `iac/apprunner_iam.tf` or extract shared runtime/task policies into a clearly named common file
-- Modify `iac/ec2.tf` and `iac/elasticache.tf` for worker security-group access to Postgres, Weaviate, Phoenix, OTLP, and Redis
-- Modify `iac/cloudwatch.tf`
-- Modify `iac/alarms.tf`
-- Create `iac/tests/unit/automation_worker/test_automation_worker_service.py`
+- Modify `iac/apprunner_iam.tf`
+- Create `iac/tests/unit/document_ingestion/test_embedded_scheduler_activation.py`
 - Modify `iac/README.md`
 
-**Behavior:**
+**Filename-to-parser routing:**
 
-- Create one ECS Fargate cluster/service using the existing API image with command `python -m flynapse_api.automations.worker`; do not create an ingestion-specific service or fake HTTP listener.
-- Run one desired task initially in a public subnet with a public IP for COMPLY/AWS egress, no inbound rule, and only the required database/vector-store/collector security-group paths. Do not add a NAT gateway solely for this worker.
-- Give the execution role ECR/log/declared runtime-secret access and the task role least-privilege S3 plus `GetSecretValue` for an explicit list of connector secret ARNs.
-- Create the configured `platform_admin` Cognito group in the internal/default user pool; user membership remains an explicit operator action and is never inferred from tenant roles.
-- Share the API's non-secret runtime map rather than copy a drifting second list. Set API scheduler mode to `off` and worker mode to `worker` in the same deployment.
-- Keep ingestion enqueue disabled on the first worker deploy. Enable existing worker liveness/error alarms only after logs prove `service.name=automation-worker` and five-minute liveness records.
-- Migration and RLS verification must complete before the worker task starts.
+- Replace the pre-activation source-wide `manual_type` selector with
+  `product_config.filename_parser_map`, containing supported Copilot parser families and their filename
+  tokens/phrases. The first COMPLY source maps AMM from `amm` or `aircraft maintenance manual` and SRM from
+  `srm` or `structural repair manual`; no generic fallback parser is allowed.
+- Resolve against the filename basename without its extension after lowercasing, replacing punctuation with
+  spaces, and collapsing whitespace. Match only complete normalized tokens/phrases and require exactly one
+  family. No match returns document-level `unsupported_parser_mapping`; more than one family returns
+  `ambiguous_parser_mapping`.
+- For UPSERT, resolve from the normalized change filename and retain the existing parsed-output family check.
+  For REMOVED, prefer the parser family on the current Copilot publication; only when no current publication
+  exists may Copilot resolve the deletion event's filename metadata. A configuration rename must not prevent
+  logical removal of an already-published document.
+- Validate the mapping on platform-admin create/update and again before enable. Reject unsupported family keys,
+  empty rules, rules that normalize to empty text, and duplicate normalized rules across families. Existing
+  disabled pre-activation sources using only `manual_type` must be updated before they can be enabled.
+- Keep every parser choice, revision rule, publication decision, index write, and removal rule in Copilot MRO.
+  The shared package carries filenames and opaque product outcomes only and remains unaware of AMM/SRM.
+
+**Observability:**
+
+- Reuse the existing generic `automation.queue.send` and `automation.queue.process` telemetry. Add the boundary
+  spans `document_ingestion.sync`, `document_ingestion.document`, and
+  `copilot_mro.document_ingestion.apply`, with run outcome recorded on terminal completion.
+- Emit structured start/finish/failure logs for each source run and actionable document. Correlate tenant,
+  source, automation run, external document, source revision, operation, parser family when known, and carrier
+  execution fence. Never log credentials, signed URLs, document content, checksum values, or raw exception text.
+- Keep run counts, business status, backlog, and email delivery in the persisted result/report already defined.
+  Do not create an ingestion dashboard, a new run table, or duplicate high-cardinality business metrics.
+
+**Embedded deployment:**
+
+- Keep `AUTOMATION_SCHEDULER_MODE=embedded` on the existing API App Runner service. Do not add an ECS cluster,
+  Fargate task/service, worker security group, worker log group, worker alarm set, or ingestion-specific image.
+- Pass the existing API settings through App Runner: `DOCUMENT_INGESTION_ENQUEUE_ENABLED=false` on first deploy,
+  document concurrency, run timeout, allowed report-recipient domains, and the configured
+  `FLYNAPSE_PLATFORM_ADMIN_GROUP`.
+- Create that `platform_admin` Cognito group in the internal/default pool. Membership remains an explicit Flynapse
+  operator action and is never inferred from tenant roles.
+- Grant the existing App Runner instance role `secretsmanager:GetSecretValue` only for an explicit configured
+  list of COMPLY connector-secret ARNs. Do not broaden the existing Postgres/SMTP grants or put credentials in
+  Terraform state, source configuration, environment variables, logs, or reports.
+- Preserve the existing API network path, S3/SES access, OTLP endpoint, and `automation_worker_deployed=false`.
+  Complete migrations, RLS verification, admin-group membership, and secret access before enabling a source.
+- Configure each source for two local-time runs: one at `00:00` and one explicit business-hours time (initially
+  `12:00` unless operations selects another value). The scheduler catches up once after API recovery under the
+  existing occurrence-dedupe rules.
 
 **TDD and validation:**
 
-- [ ] **Step 1:** Add static tests for desired count, command, network exposure, scheduler modes, secret references, task/execution role separation, log group, and alarm gate.
-- [ ] **Step 2:** Run `terraform fmt -check`, `terraform validate`, and the focused IaC unit tests.
-- [ ] **Step 3:** Review `terraform plan` for exactly one worker service, no public listener, API scheduler off, required SG additions, and alarms gated correctly.
-- [ ] **Step 4:** Deploy with enqueue disabled; verify boot preflights, liveness logs, OTLP identity, DB/Weaviate access, and clean SIGTERM drain.
+- [x] **Step 1:** Add failing Copilot tests for AMM, SRM, unmapped, ambiguous, token-boundary, configuration-validation,
+  parsed-family mismatch, and removal using the stored publication family before implementing the resolver.
+- [x] **Step 2:** Add failing shared/API/Copilot telemetry tests for span boundaries, trace continuity, terminal
+  outcomes, required correlation fields, and redaction before adding the logs/spans.
+- [x] **Step 3:** Add failing IaC static tests proving embedded mode, disabled-first-deploy enqueue, existing API
+  configuration, platform-admin group, exact connector-secret grants, and absence of standalone worker resources.
+- [x] **Step 4:** Run focused shared, API, Copilot, and IaC tests; then run `terraform fmt -check` and
+  `terraform validate`.
+- [ ] **Step 5:** Review `terraform plan` for changes only to the existing App Runner configuration/IAM and the
+  Cognito group. It must show no new compute service, container, listener, security group, log group, or alarm.
 
-**Commit:** `feat: deploy standalone automation worker`
+**Commits:**
+
+- `document-ingestion`: `feat: trace document ingestion execution`
+- `copilot-mro`: `feat: route ingested filenames to parsers`
+- `api`: `feat: expose ingestion runtime observability`
+- `iac`: `feat: configure embedded document ingestion`
+
+**Task 12 implementation result (2026-10-13):** The three parallel implementation/testing lanes and three
+independent review lanes completed. Copilot MRO now performs deterministic per-file AMM/SRM routing (including
+stored-family removal), shared/API execution has sanitized run/document/product telemetry with one canonical
+correlation schema, and the existing API App Runner service receives disabled-first-deploy ingestion settings,
+the internal `platform_admin` group, and explicit concrete connector-secret grants. No standalone worker,
+container, scheduler, dashboard, or ingestion deployment unit was added.
+
+Review found and closed one product publication-family precedence issue, one cross-span attribute-name mismatch,
+two observability-test weaknesses, and four IaC validation/test weaknesses. Final controller evidence is
+**195 shared unit tests passed**, **72 Copilot client-ingestion tests passed**, **65 API ingestion/automation
+tests passed**, and **707 IaC tests passed with 5 skipped**. Scoped formatting, lint, typing, and diff checks
+are clean. A checksum-verified temporary Terraform 1.12.2 binary found and corrected canonical alignment in
+`apprunner.tf`; repository-wide `terraform fmt -check -recursive` and isolated `terraform validate` then passed.
+The fresh post-format IaC suite reported **707 passed with 5 skipped**. A remote-state plan was attempted but
+could not complete: the checked-in `dev.tfvars` deliberately has no built API image SHA, and the current
+EngineeringAccess role cannot describe the existing Postgres/SMTP secret metadata. The existing CI/owner plan,
+which supplies those protected inputs and permissions, remains the final deployment review gate. No Task 12
+push has been made. Local production commits are `document-ingestion 5fe028a`, `copilot-mro 26561d75`,
+`api ac5b1cd`, and `iac 4e5d2fd`; the plan and lessons are committed separately in `docs`.
 
 ### Task 13: Prove the end-to-end acceptance path and enable one source
 
 **Files:**
 
 - Create `api/tests/e2e/document_ingestion/test_comply_fixture_sync.py`
-- Create `api/tests/e2e/document_ingestion/test_worker_recovery.py`
+- Create `api/tests/e2e/document_ingestion/test_embedded_scheduler_recovery.py`
 - Create `api/tests/e2e/document_ingestion/test_mixed_document_outcomes.py`
 - Create `docs/runbooks/client-document-ingestion.md`
 - Update `docs/superpowers/specs/2026-10-08-client-document-ingestion-design.md` only if client answers change a parked contract
@@ -889,20 +994,33 @@ branch and branch protection remain mandatory before the first push and were not
 **Acceptance fixture:**
 
 - Use a fake COMPLY server with paginated initial data, unchanged checksum, changed checksum, one deletion, one download failure, one checksum mismatch, and a newer revision that supersedes an older failure.
-- Run due source → one one-shot row → complete-window stage/checkpoint → Copilot adapter → report.
+- Run an embedded scheduler tick → one one-shot row → complete-window stage/checkpoint → Copilot adapter → report.
 - Prove successful documents are queryable while neighbors fail; failed update retains its old active answer;
   removed documents are immediately absent while physical residue remains deliberately retained; older failed
   revisions never rerun after a newer revision.
-- Kill the worker after enqueue, during download, before the product operation commits, and after product success. Prove recovery reuses the occurrence/run, gives the new take a different `started_at`, rejects the stale execution in shared and product settlement even when the attempt number is shared, and initiates at most one terminal report attempt.
+- Interrupt the embedded executor after enqueue, during download, before the product operation commits, and after
+  product success; then recover through the existing stale-run/API-restart path. Prove recovery reuses the
+  occurrence/run, gives the new take a different `started_at`, rejects the stale execution in shared and product
+  settlement even when the attempt number is shared, and initiates at most one terminal report attempt.
+- Prove representative COMPLY filenames select AMM or SRM, an AMM+SRM filename fails as ambiguous, an unmatched
+  filename fails as unsupported, and a removal continues to use its stored publication family.
+- Prove queue, sync, document, and Copilot spans share trace context and that logs contain the stable correlation
+  identifiers without credentials, signed links, content, checksum values, or raw exception text.
 - Verify report counts/status at 0%, 5%, and >5% plus the separate unresolved/deferred-cleanup backlog.
 
 **Activation order:**
 
-- [ ] **Step 1:** Commit sanitized contract fixtures for `new`, `updated`, and `deleted`; record the still-required stable-ID, active-checksum, and filtered-pagination snapshot confirmations in the runbook. The fixtures prove the documented shape but do not replace those production confirmations.
+- [ ] **Step 1:** Commit sanitized contract fixtures for `new`, `updated`, and `deleted`, plus the exact accepted
+  AMM/SRM filename samples. Record the still-required stable-ID, active-checksum, and filtered-pagination snapshot
+  confirmations in the runbook. Fixtures prove the documented shape but do not replace production confirmation.
 - [ ] **Step 2:** Run all non-live suites, disposable Postgres RLS/schema suites, and disposable Weaviate/S3-compatible integration suites.
 - [ ] **Step 3:** Apply the two shared tables, generic `automation_runs` columns/indexes, and only the minimal product migration approved by Task 7, with enqueue disabled.
-- [ ] **Step 4:** Deploy the approved Copilot product strategy, adapter, API wiring, and worker; verify legacy retrieval unchanged.
-- [ ] **Step 5:** Create one disabled COMPLY source through the platform-admin route and run a manual dry-run/list-only validation that cannot advance the checkpoint.
+- [ ] **Step 4:** Deploy the approved Copilot product strategy, adapter, and API image with the embedded scheduler
+  still running and ingestion enqueue disabled; verify legacy retrieval unchanged, platform-admin group access,
+  connector-secret access, telemetry export, and no new deployment unit.
+- [ ] **Step 5:** Create one disabled COMPLY source through the platform-admin route with both `00:00` and the
+  approved business-hours schedule plus its reviewed filename parser map. Run a manual dry-run/list-only
+  validation that cannot advance the checkpoint.
 - [ ] **Step 6:** Enable one low-risk tenant/operator source, reconcile the first product outcome against the mandatory stores identified by Task 7, and verify the report email.
 - [ ] **Step 7:** Observe two scheduled runs, including one with a controlled document failure, before expanding.
 - [ ] **Step 8:** Keep physical cleanup disabled and record retention/reclamation as a later client-approved phase;
@@ -920,6 +1038,16 @@ DEBUG=false poetry run pytest tests/integration/automations/test_document_ingest
 DEBUG=false poetry run pytest tests/integration/automations/test_document_ingestion_one_shot_dispatch.py -q
 DEBUG=false poetry run pytest ../copilot-mro/tests/unit/client_document_ingestion -q
 DEBUG=false poetry run pytest ../copilot-mro/tests/integration/client_document_ingestion -q
+```
+
+Focused Task 12 readiness checks:
+
+```bash
+DEBUG=false poetry run pytest ../document-ingestion/tests/unit/test_runner.py -q
+DEBUG=false poetry run pytest ../copilot-mro/tests/unit/client_document_ingestion/test_parser_mapping.py -q
+DEBUG=false poetry run pytest ../copilot-mro/tests/unit/client_document_ingestion/test_consumer.py -q
+DEBUG=false poetry run pytest tests/unit/automations/test_document_ingestion_jobs_handler.py -q
+python3 -m pytest ../iac/tests/unit/document_ingestion/test_embedded_scheduler_activation.py -q
 ```
 
 Against a disposable Postgres database:
@@ -941,14 +1069,19 @@ DEBUG=false poetry run pytest ../copilot-mro/tests -m "not db and not postgres a
 - `api`: `test: prove client ingestion acceptance path`
 - `docs`: `docs: add client ingestion runbook`
 
-**Phase 5 review gate:** Stop before enabling the production source. Present client contract evidence, full test results, migration/RLS verification, Terraform plan/deploy evidence, one disabled-source dry run, rollback readiness, and the exact activation change.
+**Phase 5 review gate:** Stop before enabling the production source. Present client contract and filename-mapping
+evidence, focused/full test results, migration/RLS verification, existing-App-Runner Terraform plan/deploy
+evidence, telemetry evidence, one disabled-source dry run, rollback readiness, and the exact activation change.
 
 ## Mixed-version and rollback plan
 
 1. Expand Postgres first. The new nullable `automation_runs.dedupe_key`/`concurrency_key`, two shared tables and any Task 7-approved additive product change must be proven safe for older API/workers.
 2. Deploy any product-side visibility or retrieval change required by the approved Copilot strategy before ingestion can write product data. Legacy behavior must be proven first.
-3. Deploy the capable worker with enqueue disabled. Older workers ignore an unregistered kind, but the environment must never enqueue ingestion work when no capable worker is present.
-4. Stop new work by disabling ingestion enqueue and sources; let claimed rows drain or be recovered by the existing one-shot reaper.
+3. Deploy the capable API image with ingestion enqueue disabled while keeping the existing scheduler embedded.
+   Do not enable a source until the healthy deployment proves the ingestion handler, parser map, secrets, and
+   telemetry are present on the serving API revision.
+4. Stop new work by disabling ingestion enqueue and sources; let claimed rows drain or be recovered by the
+   existing one-shot reaper. Roll back only to an API image that will not enqueue unsupported ingestion work.
 5. Preserve the two shared tables, checkpoints, source revision/removal history, opaque product outcomes, approved product-side state, and one-shot dedupe columns during rollback. Never roll a checkpoint backward or erase removal history automatically.
 6. Product-data rollback follows the parser-family strategy approved in Task 7. Restore a prior representation only when that product's retained artifacts and retrieval invariants re-verify; otherwise reingest.
 7. Do not automatically undo a provider removal. Resurrection requires a later, higher-ordinal UPSERT or an explicit audited administrator action after client confirmation.
@@ -966,5 +1099,8 @@ DEBUG=false poetry run pytest ../copilot-mro/tests -m "not db and not postgres a
 - Exactly five automatic retries means six total attempts.
 - Run counts exclude unchanged documents and inactive backlog; the report still exposes unresolved backlog.
 - Platform-admin authorization is server-side, staff-only, cross-tenant, and audited.
-- The deploy uses one existing automation-worker process, not one service per connector.
-- Production activation remains blocked on stable document IDs, active-document checksum format/requiredness, filtered-pagination snapshot behavior, and supported parser mapping. Deletion mapping and newest-first ordering are resolved and must remain covered by contract tests.
+- The deploy uses the existing API container's embedded automation scheduler and creates no standalone
+  automation or ingestion service.
+- Production activation remains blocked on stable document IDs, active-document checksum format/requiredness,
+  filtered-pagination snapshot behavior, and accepted AMM/SRM filename fixtures/rules. Deletion mapping and
+  newest-first ordering are resolved and must remain covered by contract tests.

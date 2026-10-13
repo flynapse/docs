@@ -29,3 +29,5 @@
 - When reusing a recoverable worker primitive, carry its native execution fence end to end. A retry counter is
   useful context but may not uniquely identify a live execution; here `OneShotTake.started_at` must guard
   shared settlement, run-result writes, reporting, and product handoff.
+- When the user reserves a review gate for plan changes, finish and present the plan-only diff before touching
+  application, infrastructure, or test code, even if implementation had previously been authorized in general.
