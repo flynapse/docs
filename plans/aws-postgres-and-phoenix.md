@@ -432,8 +432,9 @@ tunnel, with no change in AWS (Owner decisions). The owner answered the design's
 - **Before the deploy:**
   - stop the box before the first apply: it replaces the volume attachment, which was recorded without the new
     stop flag;
-  - fast-forward copilot-mro `main` to `langgraph-merge` and push it, with the owner's approval. Check that the
-    branch holds `deployment/demo/postgres/`;
+  - create or fast-forward copilot-mro `aws-deploy` from `langgraph-merge` and push it, never `main` (the owner's
+    "protect it" decision above supersedes the original "fast-forward `main`" step). Check that the branch holds
+    `deployment/demo/postgres/`;
   - create the four box parameters. The API's Phoenix key gets no placeholder: it is minted and stored before the
     full apply (deploy step 5).
 - **After first boot:**

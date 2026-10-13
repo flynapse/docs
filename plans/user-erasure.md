@@ -1592,7 +1592,8 @@ Each lane: a fresh Opus implementer, a task review, a `--no-ff` merge, the full 
      retention" says how), or the receipt gains a limit key for it.
 5. Owner-run: prod migrations/provisioning, the iac apply, the Cognito proof user, `AUTOMATION_SCHEDULER_MODE` (the
    owner's choice on 2026-10-01: the scheduler runs on AWS, so erasures and `/goodbye` finish on their own).
-   Rollback: cancel open requests via the CLI, then redeploy the previous image. Cancel first: the previous image
+   Rollback: cancel open requests via the CLI, then redeploy the previous image, but never an image below X3 on a
+   database X3 has served (item 7). Cancel first: the previous image
    stands down (disables) the automations of anyone still frozen, and a later cancel does not re-enable them (Task 12
    review M-4). A request that can no longer be cancelled (immediate, or past its `erase_after`) keeps
    its person frozen: finish it with `--run-due` first, or re-enable those automations afterwards.
