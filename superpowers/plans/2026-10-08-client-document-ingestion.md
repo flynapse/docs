@@ -813,16 +813,33 @@ activation because this environment did not provide the explicit disposable owne
 
 **TDD:**
 
-- [ ] **Step 1:** Make the image-closure test fail on the new path dependency.
-- [ ] **Step 2:** Update manifests/locks and build-script assertions.
-- [ ] **Step 3:** From `api`, run `poetry check`, the import-boundary tests, and focused package tests.
-- [ ] **Step 4:** From `iac`, run the demo-box image tests and the build script's non-network validation path.
+- [x] **Step 1:** Make the image-closure test fail on the new path dependency.
+- [x] **Step 2:** Update manifests/locks and build-script assertions.
+- [x] **Step 3:** From `api`, run `poetry check`, the import-boundary tests, and focused package tests.
+- [x] **Step 4:** From `iac`, run the demo-box image tests and the build script's non-network validation path.
 
 **Commits:**
 
 - `api`: `build: add document ingestion package`
 - `copilot-mro`: `build: depend on document ingestion contract`
 - `iac`: `build: stage document ingestion in api image`
+
+**Task 11 implementation result (2026-10-13):** Complete for the local packaging/image MVP. API and
+Copilot MRO now lock and install `flynapse-document-ingestion` from the sibling checkout, while API's
+test bootstrap pins the `document_ingestion` import to the matching checkout. The existing API image
+builder stages all seven repositories with `git archive`, validates the complete path-dependency closure,
+and records every full commit in an image label; its documented invocation now requires the shared-repo
+commit. The script's commit map was made compatible with the macOS Bash 3.2 used for the non-network
+test without changing its argument or image behavior.
+
+Fresh focused evidence: both Poetry checks passed; API and Copilot imports resolved to the local
+`document-ingestion` checkout; API package/import tests reported **50 passed, 17 skipped**; IaC image and
+runbook tests reported **94 passed**; Bash syntax and all three repository diff checks passed. Independent
+review found no Critical or Important issue. It recorded two minor prose inaccuracies for later cleanup
+and the inherited fact that the ECR repository itself remains mutable even though the workflow uses
+commit-derived tags and committed-source staging. Commits: `api 98071fe`, `copilot-mro 807f6706`, and
+`iac 1c2e7fc`. No push occurred. The shared repository still has no configured remote, so its remote/default
+branch and branch protection remain mandatory before the first push and were not invented here.
 
 ### Task 12: Deploy the existing worker as one background service
 
